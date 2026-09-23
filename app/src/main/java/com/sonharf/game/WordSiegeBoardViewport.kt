@@ -15,8 +15,8 @@ internal enum class WordSiegeBoardTapAction { PLACE, TOGGLE_VIEWPORT }
 
 internal const val WORD_SIEGE_DESIRED_SCREEN_BORDER_DP = 1.3f
 internal const val WORD_SIEGE_MIN_SCREEN_BORDER_DP = 1f
-internal const val WORD_SIEGE_ONLINE_ZOOM_FACTOR = 1.85f
-internal const val WORD_SIEGE_ONLINE_MAX_CLOSE_SCALE = 1f
+internal const val WORD_SIEGE_ONLINE_ZOOM_FACTOR = 2.00f
+internal const val WORD_SIEGE_ONLINE_MAX_CLOSE_SCALE = 1.12f
 internal const val WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.68f
 internal const val WORD_SIEGE_PRACTICE_MIN_SCALE = 0.62f
 internal const val WORD_SIEGE_PRACTICE_MAX_SCALE = 1.24f

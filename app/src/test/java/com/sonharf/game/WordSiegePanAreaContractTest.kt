@@ -22,7 +22,7 @@ class WordSiegePanAreaContractTest {
         assertTrue(pan.contains("closeScale = closeScale"))
         assertTrue(pan.contains("WordSiegeBoardViewportMode.CLOSE"))
         assertTrue(viewport.contains("WordSiegeBoardViewportMode.FIT"))
-        assertTrue(viewport.contains("WORD_SIEGE_ONLINE_ZOOM_FACTOR = 1.85f"))
+        assertTrue(viewport.contains("WORD_SIEGE_ONLINE_ZOOM_FACTOR = 2.00f"))
         assertTrue(viewport.contains("wordSiegeFitScale"))
         assertTrue(pan.contains("translationX = transform.pan.x"))
         assertTrue(pan.contains("translationY = transform.pan.y"))

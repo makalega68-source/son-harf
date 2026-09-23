@@ -111,6 +111,7 @@ internal fun WordSiegePanMatch(
     val displayedCurrentPlayerId = game.currentPlayerId
     var fallbackPracticeActive by remember(game.id) { mutableStateOf(false) }
     var shuffleSeed by remember(game.id) { mutableIntStateOf(0) }
+    var boardViewportMode by remember(game.id) { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     val visualMyTurn = game.status == "playing" && displayedCurrentPlayerId == me
     val rackOrder = remember(rack, shuffleSeed) {
         if (shuffleSeed == 0) rack.indices.toList() else wordSiegeShuffledRackIndices(rack.length, shuffleSeed)
@@ -147,6 +148,7 @@ internal fun WordSiegePanMatch(
             .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        if (boardViewportMode == WordSiegeBoardViewportMode.FIT) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 Icon(Icons.Rounded.ArrowBack, sh("Oyunlar", "Games"), tint = WordSiegeGameUi.Text)
@@ -165,6 +167,8 @@ internal fun WordSiegePanMatch(
             IconButton(onClick = onForfeit, enabled = game.status == "playing" && !busy, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = WordSiegeGameUi.Red)
             }
+        }
+
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -194,7 +198,7 @@ internal fun WordSiegePanMatch(
             )
         }
 
-        WordSiegeOwnershipLegend()
+        if (boardViewportMode == WordSiegeBoardViewportMode.FIT) WordSiegeOwnershipLegend()
 
         if (game.status == "waiting") {
             Surface(
@@ -240,26 +244,30 @@ internal fun WordSiegePanMatch(
             myOwner = myOwner,
             enabled = canAct,
             lastMove = lastMove,
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+            viewportMode = boardViewportMode,
+            onViewportModeChange = { boardViewportMode = it },
+            modifier = Modifier.fillMaxSize(),
             onCell = onBoardCell,
             onChat = onChat,
         )
         }
 
         if (game.status == "playing") {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (placements.isNotEmpty()) {
-                    Text(readyFeedback.message, color = PanSiegeMineBorder, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                } else Spacer(Modifier.weight(1f))
-                Spacer(Modifier.weight(1f))
-                Text(sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"), color = WordSiegeGameUi.Muted, fontSize = 8.sp)
-            }
+            if (boardViewportMode == WordSiegeBoardViewportMode.FIT) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (placements.isNotEmpty()) {
+                        Text(readyFeedback.message, color = PanSiegeMineBorder, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    } else Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.weight(1f))
+                    Text(sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"), color = WordSiegeGameUi.Muted, fontSize = 8.sp)
+                }
 
-            WordSiegePremiumPanel(
-                game = game,
-                placements = placements,
-                canAct = canAct,
-            )
+                WordSiegePremiumPanel(
+                    game = game,
+                    placements = placements,
+                    canAct = canAct,
+                )
+            }
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 rackOrder.forEach { rackIndex ->
@@ -314,7 +322,7 @@ internal fun WordSiegePanMatch(
         }
 
         notice?.let { PanSiegeNotice(it) }
-        lastMove?.let { PanSiegeLastMoveInfo(it) }
+        if (boardViewportMode == WordSiegeBoardViewportMode.FIT) lastMove?.let { PanSiegeLastMoveInfo(it) }
     }
     }
 }
@@ -328,6 +336,8 @@ private fun PanSiegeBoard(
     myOwner: Int,
     enabled: Boolean,
     lastMove: WordSiegeMoveDto?,
+    viewportMode: WordSiegeBoardViewportMode,
+    onViewportModeChange: (WordSiegeBoardViewportMode) -> Unit,
     modifier: Modifier = Modifier,
     onCell: (Int) -> Unit,
     onChat: () -> Unit,
@@ -343,7 +353,6 @@ private fun PanSiegeBoard(
     var actionVfxMoveId by remember(gameId) { mutableStateOf<Long?>(null) }
     var highlightedIndices by remember(gameId) { mutableStateOf<Set<Int>>(emptySet()) }
     val highlightAlpha = remember(gameId) { Animatable(0f) }
-    var viewportMode by remember(gameId) { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     val closeScale = remember(viewport, boardPx) {
         wordSiegeOnlineCloseScale(
             viewportWidthPx = viewport.width.toFloat(),
@@ -389,7 +398,7 @@ private fun PanSiegeBoard(
         if (nextMode == WordSiegeBoardViewportMode.CLOSE) {
             closePan = centerCloseOn(focusIndex)
         }
-        viewportMode = nextMode
+        onViewportModeChange(nextMode)
     }
 
     LaunchedEffect(viewport, gameId, boardPx, closeScale) {
@@ -464,7 +473,7 @@ private fun PanSiegeBoard(
                 .clip(RoundedCornerShape(14.dp))
                 .background(
                     Brush.linearGradient(
-                        listOf(Color(0xFF3B2518), Color(0xFF6A452B), Color(0xFF4A2F1E), Color(0xFF785238))
+                        listOf(Color(0xFFE8D8BF), Color(0xFFD8BE98), Color(0xFFF1E6D4), Color(0xFFCFAE7E))
                     )
                 )
                 .border(1.dp, Color(0xFFB88C55), RoundedCornerShape(14.dp))
@@ -527,10 +536,7 @@ private fun PanSiegeBoard(
             )
 
             SmallFloatingActionButton(
-                onClick = {
-                    viewportMode = WordSiegeBoardViewportMode.CLOSE
-                    closePan = centerCloseOn(WordSiegeBoardSpec.CenterIndex)
-                },
+                onClick = { toggleViewport(WordSiegeBoardSpec.CenterIndex) },
                 modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
                 shape = CircleShape,
                 containerColor = Color.White.copy(alpha = .94f),
@@ -622,27 +628,14 @@ private fun PanSiegeBoardCell(
         else -> PanSiegeNeutralBorder
     }
     val regionGap = 1.25.dp
+    val boardInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
 
     Box(
         Modifier
             .size(size)
-            .padding(regionGap)
-            .clip(RoundedCornerShape(7.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        androidx.compose.ui.graphics.lerp(displayBase, Color.White, .18f),
-                        displayBase,
-                        androidx.compose.ui.graphics.lerp(displayBase, Color.Black, .07f),
-                    )
-                )
-            )
-            .border(
-                width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
-                color = PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),
-                shape = RoundedCornerShape(7.dp),
-            )
             .combinedClickable(
+                interactionSource = boardInteraction,
+                indication = null,
                 onClick = {
                     dispatchWordSiegeBoardTap(
                         WordSiegeBoardTapAction.PLACE,
@@ -659,6 +652,22 @@ private fun PanSiegeBoardCell(
                         onDoubleClick,
                     )
                 },
+            )
+            .padding(regionGap)
+            .clip(RoundedCornerShape(7.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        androidx.compose.ui.graphics.lerp(displayBase, Color.White, .18f),
+                        displayBase,
+                        androidx.compose.ui.graphics.lerp(displayBase, Color.Black, .07f),
+                    )
+                )
+            )
+            .border(
+                width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
+                color = PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),
+                shape = RoundedCornerShape(7.dp),
             ),
         contentAlignment = Alignment.Center,
     ) {
