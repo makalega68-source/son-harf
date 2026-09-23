@@ -21,6 +21,28 @@ import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.sin
 
+/** Reusable expression vocabulary for future game events and mascot screens. */
+internal enum class WordSiegeMascotEmotion {
+    CALM, FOCUS, HAPPY, LAUGH, EXCITED, SURPRISED, SAD, ANGRY, STRESSED,
+    PROUD, SPEAKING, TEARY, BOWED, JUMP,
+}
+
+/** Local event-driven reaction selection; deterministic per move, with no network or model cost. */
+internal object WordSiegeMascotBehavior {
+    fun choose(moveId: Long, mine: Boolean, score: Int, captured: Int, stolen: Int): WordSiegeMascotEmotion {
+        val variation = (moveId % 4L).toInt()
+        return when {
+            mine && (score >= 25 || captured >= 3 || stolen > 0) && variation == 0 -> WordSiegeMascotEmotion.JUMP
+            mine && (score >= 25 || captured >= 3 || stolen > 0) -> WordSiegeMascotEmotion.PROUD
+            mine && variation == 3 -> WordSiegeMascotEmotion.JUMP
+            mine && variation == 1 -> WordSiegeMascotEmotion.LAUGH
+            mine -> WordSiegeMascotEmotion.HAPPY
+            score >= 25 || stolen > 0 -> if (variation % 2 == 0) WordSiegeMascotEmotion.TEARY else WordSiegeMascotEmotion.BOWED
+            else -> WordSiegeMascotEmotion.SURPRISED
+        }
+    }
+}
+
 /** Lightweight, independent 2D rig. All face textures come from the approved orb artwork. */
 internal class WordSiegeMascotView(context: Context) : View(context) {
     private val names = listOf(
@@ -34,11 +56,11 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 7f
+        strokeWidth = 4f
         shader = SweepGradient(660f, 630f, intArrayOf(
-            0xFF8B65F0.toInt(), 0xFFFF8EC5.toInt(), 0xFFFFAE67.toInt(),
-            0xFF52E9F5.toInt(), 0xFF42AFFF.toInt(), 0xFF8B65F0.toInt(),
-        ), null)
+            0xFFFFAD72.toInt(), 0xFF56E4F7.toInt(), 0xFF307AF1.toInt(),
+            0xFFB266F5.toInt(), 0xFFFFAD72.toInt(),
+        ), floatArrayOf(0f, .25f, .5f, .75f, 1f))
     }
     private val detailPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var startedAt = SystemClock.uptimeMillis()
@@ -47,7 +69,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private var hasInitialMove = false
     private var reactionUntil = 0L
     private var heartsStartedAt = 0L
-    private var reaction = Reaction.CALM
+    private var reaction = WordSiegeMascotEmotion.CALM
+    private var externalEmotion: WordSiegeMascotEmotion? = null
     private var gazeX = 0f
     private var gazeY = 0f
     private var targetX = 0f
@@ -55,25 +78,20 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private var pendingCount = 0
     private var reactionCell: Int? = null
 
-    private enum class Reaction { CALM, FOCUS, HAPPY, PROUD, SURPRISED, SAD }
-
     fun updateGame(
         moveId: Long?, lastMoveMine: Boolean, moveScore: Int, capturedCells: Int,
         opponentCaptured: Int, moveCell: Int?, pendingCells: Collection<Int>, playerTurn: Boolean,
+        requestedEmotion: WordSiegeMascotEmotion?,
     ) {
+        externalEmotion = requestedEmotion
         if (!hasInitialMove) {
             lastMoveId = moveId
             hasInitialMove = true
         } else if (moveId != null && moveId != lastMoveId) {
             lastMoveId = moveId
-            reaction = when {
-                lastMoveMine && (moveScore >= 25 || capturedCells >= 3 || opponentCaptured > 0) -> Reaction.PROUD
-                lastMoveMine -> Reaction.HAPPY
-                opponentCaptured > 0 -> Reaction.SAD
-                else -> Reaction.SURPRISED
-            }
+            reaction = WordSiegeMascotBehavior.choose(moveId, lastMoveMine, moveScore, capturedCells, opponentCaptured)
             val now = SystemClock.uptimeMillis()
-            reactionUntil = now + if (reaction == Reaction.SAD) 1_700L else 1_350L
+            reactionUntil = now + if (reaction == WordSiegeMascotEmotion.TEARY || reaction == WordSiegeMascotEmotion.BOWED) 1_700L else 1_350L
             reactionCell = moveCell
             if (lastMoveMine) heartsStartedAt = now
         }
@@ -82,12 +100,12 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             ?: reactionCell?.takeIf { reactionUntil > SystemClock.uptimeMillis() }
         targetX = if (cell != null) ((cell % WordSiegeBoardSpec.Size - WordSiegeBoardSpec.CenterColumn) / 7f).coerceIn(-1f, 1f) else 0f
         targetY = if (cell != null) ((cell / WordSiegeBoardSpec.Size - WordSiegeBoardSpec.CenterRow) / 7f).coerceIn(-1f, 1f) else .2f
-        if (!playerTurn && cell == null && reactionUntil < SystemClock.uptimeMillis()) reaction = Reaction.CALM
+        if (!playerTurn && cell == null && reactionUntil < SystemClock.uptimeMillis()) reaction = WordSiegeMascotEmotion.CALM
         invalidate()
     }
 
     fun reactToTap() {
-        reaction = Reaction.SURPRISED
+        reaction = WordSiegeMascotEmotion.SURPRISED
         reactionUntil = SystemClock.uptimeMillis() + 650L
         invalidate()
     }
@@ -105,23 +123,27 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
         gazeX += (targetX - gazeX) * .14f
         gazeY += (targetY - gazeY) * .14f
-        val mood = if (now < reactionUntil) reaction else if (pendingCount > 0) Reaction.FOCUS else Reaction.CALM
+        val mood = if (now < reactionUntil) reaction
+            else externalEmotion ?: if (pendingCount > 0) WordSiegeMascotEmotion.FOCUS else WordSiegeMascotEmotion.CALM
         val lid = max(blink, when (mood) {
-            Reaction.CALM -> 0f
-            Reaction.FOCUS -> .18f
-            Reaction.HAPPY -> .32f
-            Reaction.PROUD -> .23f
-            Reaction.SURPRISED -> 0f
-            Reaction.SAD -> .25f
+            WordSiegeMascotEmotion.FOCUS, WordSiegeMascotEmotion.STRESSED -> .26f
+            WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.LAUGH, WordSiegeMascotEmotion.JUMP -> .42f
+            WordSiegeMascotEmotion.PROUD -> .25f
+            WordSiegeMascotEmotion.SAD, WordSiegeMascotEmotion.TEARY, WordSiegeMascotEmotion.BOWED -> .52f
+            WordSiegeMascotEmotion.ANGRY -> .38f
+            else -> 0f
         })
         val size = minOf(width, height).toFloat()
         canvas.save()
         canvas.translate((width - size) / 2f, (height - size) / 2f)
         canvas.scale(size / 1_254f, size / 1_254f)
-        canvas.translate(0f, sin(elapsed / 640f) * 3f)
+        val reactionProgress = ((now - (reactionUntil - 1_350L)) / 1_350f).coerceIn(0f, 1f)
+        val jump = if (mood == WordSiegeMascotEmotion.JUMP) sin(reactionProgress * PI * 3).toFloat().coerceAtLeast(0f) * 94f else 0f
+        canvas.translate(0f, sin(elapsed / 640f) * 3f - jump + if (mood == WordSiegeMascotEmotion.BOWED) 25f else 0f)
+        if (mood == WordSiegeMascotEmotion.BOWED) canvas.rotate(5f, 650f, 650f)
         drawLayer(canvas, "orb_face_base")
         // A fine color-matched contour softens the dark silhouette without changing the orb.
-        edgePaint.alpha = (175 + 25 * sin(elapsed / 950f) + if (mood == Reaction.PROUD) 35 else 0).toInt().coerceIn(0, 255)
+        edgePaint.alpha = (175 + 25 * sin(elapsed / 950f) + if (mood == WordSiegeMascotEmotion.PROUD) 35 else 0).toInt().coerceIn(0, 255)
         canvas.drawOval(RectF(258f, 231f, 1057f, 1052f), edgePaint)
         drawLayer(canvas, "eye_left")
         drawLayer(canvas, "eye_right")
@@ -130,25 +152,25 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         drawLid(canvas, 515f, 653f, 127f, 132f, lid)
         drawLid(canvas, 877f, 653f, 126f, 131f, lid)
         val browY = when (mood) {
-            Reaction.CALM -> 0f
-            Reaction.FOCUS -> 9f
-            Reaction.HAPPY -> -12f
-            Reaction.PROUD -> -16f
-            Reaction.SURPRISED -> -25f
-            Reaction.SAD -> 12f
+            WordSiegeMascotEmotion.FOCUS, WordSiegeMascotEmotion.STRESSED -> 12f
+            WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.LAUGH, WordSiegeMascotEmotion.JUMP -> -22f
+            WordSiegeMascotEmotion.PROUD, WordSiegeMascotEmotion.EXCITED -> -27f
+            WordSiegeMascotEmotion.SURPRISED -> -34f
+            WordSiegeMascotEmotion.SAD, WordSiegeMascotEmotion.TEARY, WordSiegeMascotEmotion.BOWED -> 18f
+            else -> 0f
         }
         val browRotation = when (mood) {
-            Reaction.FOCUS -> -.13f
-            Reaction.PROUD -> .09f
-            Reaction.SAD -> .15f
+            WordSiegeMascotEmotion.FOCUS, WordSiegeMascotEmotion.STRESSED, WordSiegeMascotEmotion.ANGRY -> -.21f
+            WordSiegeMascotEmotion.PROUD -> .12f
+            WordSiegeMascotEmotion.SAD, WordSiegeMascotEmotion.TEARY, WordSiegeMascotEmotion.BOWED -> .2f
             else -> 0f
         }
         drawLayer(canvas, "brow_left", 0f, browY, 536f, 458f, browRotation)
         drawLayer(canvas, "brow_right", 0f, browY, 870f, 458f, -browRotation)
         val cheekStrength = when (mood) {
-            Reaction.HAPPY -> 50
-            Reaction.PROUD -> 60
-            Reaction.SURPRISED -> 28
+            WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.LAUGH, WordSiegeMascotEmotion.JUMP -> 65
+            WordSiegeMascotEmotion.PROUD, WordSiegeMascotEmotion.EXCITED -> 72
+            WordSiegeMascotEmotion.SURPRISED -> 35
             else -> 16
         }
         drawCheekLight(canvas, 403f, 770f, cheekStrength)
@@ -158,27 +180,45 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.save()
         canvas.translate(708f, 800f)
         val mouthX = when (mood) {
-            Reaction.HAPPY -> 1.18f
-            Reaction.PROUD -> 1.2f
-            Reaction.SURPRISED -> .65f
-            Reaction.SAD -> .82f
+            WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.LAUGH, WordSiegeMascotEmotion.JUMP -> 1.38f
+            WordSiegeMascotEmotion.PROUD, WordSiegeMascotEmotion.EXCITED -> 1.3f
+            WordSiegeMascotEmotion.SURPRISED, WordSiegeMascotEmotion.SPEAKING -> .72f
+            WordSiegeMascotEmotion.SAD, WordSiegeMascotEmotion.TEARY, WordSiegeMascotEmotion.BOWED -> .74f
             else -> 1f
         }
         val mouthY = when (mood) {
-            Reaction.FOCUS -> .65f
-            Reaction.HAPPY -> 1.3f
-            Reaction.PROUD -> 1.16f
-            Reaction.SURPRISED -> 1.2f
-            Reaction.SAD -> .35f
+            WordSiegeMascotEmotion.FOCUS, WordSiegeMascotEmotion.STRESSED, WordSiegeMascotEmotion.ANGRY -> .55f
+            WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.LAUGH, WordSiegeMascotEmotion.JUMP -> 1.42f
+            WordSiegeMascotEmotion.PROUD, WordSiegeMascotEmotion.EXCITED -> 1.24f
+            WordSiegeMascotEmotion.SURPRISED -> 1.4f
+            WordSiegeMascotEmotion.SPEAKING -> .8f + .5f * sin(elapsed / 115f)
+            WordSiegeMascotEmotion.SAD, WordSiegeMascotEmotion.TEARY, WordSiegeMascotEmotion.BOWED -> .4f
             else -> 1f
         }
         canvas.scale(mouthX, mouthY)
         canvas.translate(-708f, -800f)
         drawLayer(canvas, "mouth")
         canvas.restore()
+        if (mood == WordSiegeMascotEmotion.TEARY) drawTears(canvas, now)
         drawHearts(canvas, now)
         canvas.restore()
         if (isAttachedToWindow && visibility == VISIBLE) postInvalidateDelayed(33L)
+    }
+
+    private fun drawTears(canvas: Canvas, now: Long) {
+        val drift = ((now - (reactionUntil - 1_700L)) / 1_700f).coerceIn(0f, 1f) * 130f
+        detailPaint.color = 0xFF99E9FF.toInt()
+        detailPaint.alpha = 190
+        for (x in floatArrayOf(468f, 938f)) {
+            val y = 730f + drift
+            val tear = Path().apply {
+                moveTo(x, y - 22f)
+                cubicTo(x - 12f, y + 5f, x - 15f, y + 27f, x, y + 29f)
+                cubicTo(x + 15f, y + 27f, x + 12f, y + 5f, x, y - 22f)
+            }
+            canvas.drawPath(tear, detailPaint)
+        }
+        detailPaint.alpha = 255
     }
 
     private fun drawCheekLight(canvas: Canvas, x: Float, y: Float, strength: Int) {
@@ -192,14 +232,14 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private fun drawHearts(canvas: Canvas, now: Long) {
         val age = now - heartsStartedAt
         if (heartsStartedAt == 0L || age !in 0L..1_350L) return
-        val colors = intArrayOf(0xFFFF668E.toInt(), 0xFFFF94B4.toInt(), 0xFFFF658C.toInt())
-        repeat(3) { index ->
+        val colors = intArrayOf(0xFFFF4F89.toInt(), 0xFFFF8CAE.toInt(), 0xFFFF658C.toInt(), 0xFFFF649E.toInt())
+        repeat(4) { index ->
             val progress = ((age - index * 125L) / 900f).coerceIn(0f, 1f)
             if (progress <= 0f || progress >= 1f) return@repeat
             val alpha = (255f * minOf(1f, progress * 5f, (1f - progress) * 3f)).toInt()
-            val x = 425f + index * 205f + sin(progress * 5f + index) * 22f
+            val x = 330f + index * 190f + sin(progress * 5f + index) * 22f
             val y = 370f - progress * (240f + index * 35f)
-            val radius = 29f + index * 5f
+            val radius = 42f + index * 5f
             val heart = Path().apply {
                 moveTo(x, y + radius)
                 cubicTo(x - radius * 2f, y - radius * .1f, x - radius, y - radius * 1.5f, x, y - radius * .38f)
@@ -250,6 +290,7 @@ internal fun WordSiegeMascot(
     moveCell: Int? = null,
     pendingCells: Collection<Int>,
     playerTurn: Boolean,
+    requestedEmotion: WordSiegeMascotEmotion? = null,
     modifier: Modifier = Modifier.size(42.dp),
     onTap: () -> Unit = {},
 ) {
@@ -257,7 +298,7 @@ internal fun WordSiegeMascot(
         modifier = modifier,
         factory = { context -> WordSiegeMascotView(context).apply { isClickable = true } },
         update = {
-            it.updateGame(moveId, lastMoveMine, moveScore, capturedCells, opponentCaptured, moveCell, pendingCells, playerTurn)
+            it.updateGame(moveId, lastMoveMine, moveScore, capturedCells, opponentCaptured, moveCell, pendingCells, playerTurn, requestedEmotion)
             it.setOnClickListener { view ->
                 (view as WordSiegeMascotView).reactToTap()
                 onTap()

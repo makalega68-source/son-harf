@@ -272,7 +272,7 @@ internal fun WordSiegePracticeBoard(
                 modifier = Modifier
                     .align(if (mascotAtBottom) Alignment.BottomStart else Alignment.TopStart)
                     .padding(7.dp)
-                    .size(76.dp),
+                    .size(94.dp),
                 onTap = { mascotAtBottom = !mascotAtBottom },
             )
         }
