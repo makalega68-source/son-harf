@@ -39,8 +39,8 @@ class WordSiegeEntryModesContractTest {
     fun onlineBoardKeepsOwnershipRulesAndAddsPremiumFrame() {
         val board = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
 
-        assertTrue(board.contains("PanSiegeMine = Color(0xFFA8D5B5)"))
-        assertTrue(board.contains("PanSiegeRival = Color(0xFFE4AEAA)"))
+        assertTrue(board.contains("PanSiegeMine = Color(0xFF8BD8AA)"))
+        assertTrue(board.contains("PanSiegeRival = Color(0xFFEDA09B)"))
         assertTrue(board.contains("color = Color(0xFF2F1D13)"))
         assertTrue(board.contains("shadowElevation = 14.dp"))
         assertTrue(board.contains("border = BorderStroke(2.dp, Color(0xFFC6A56B))"))

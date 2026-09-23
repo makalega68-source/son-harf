@@ -48,10 +48,10 @@ class KelimeKusatmasiFinalBrandingContractTest {
     @Test fun onlineBoardKeepsTerritoryOwnershipAndStrategicZonePresentation() {
         val online = source("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
 
-        assertTrue(online.contains("PanSiegeMine = Color(0xFFA8D5B5)"))
-        assertTrue(online.contains("PanSiegeRival = Color(0xFFE4AEAA)"))
-        assertTrue(online.contains("PanSiegeMineBorder = Color(0xFF3F7C53)"))
-        assertTrue(online.contains("PanSiegeRivalBorder = Color(0xFF9B4D4A)"))
+        assertTrue(online.contains("PanSiegeMine = Color(0xFF8BD8AA)"))
+        assertTrue(online.contains("PanSiegeRival = Color(0xFFEDA09B)"))
+        assertTrue(online.contains("PanSiegeMineBorder = Color(0xFF2D7B4C)"))
+        assertTrue(online.contains("PanSiegeRivalBorder = Color(0xFFA33F3B)"))
         assertTrue(online.contains("WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)"))
         assertTrue(online.contains("val regionGap = 1.25.dp"))
         assertTrue(online.contains("HAMLEYİ ONAYLA"))

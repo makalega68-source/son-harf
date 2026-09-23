@@ -45,6 +45,8 @@ class WordSiegePracticeUxAndBotRegressionTest {
 
         assertFalse(screen.contains("WordSiegePracticeTutorialPrefs.isCompleted(context)"))
         assertTrue(screen.contains("Icons.Rounded.HelpOutline"))
+        assertTrue(screen.contains("SOHBET"))
+        assertTrue(screen.contains("WordSiegePracticeResultDialog("))
         assertTrue(screen.contains("WordSiegePracticeTutorialCard("))
         assertTrue(screen.contains("if (selecting && tutorialStep == 1) tutorialStep = 2"))
         assertTrue(screen.contains("if (tutorialStep == 2) tutorialStep = 3"))

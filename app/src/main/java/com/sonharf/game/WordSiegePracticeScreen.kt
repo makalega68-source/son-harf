@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -44,10 +46,10 @@ private val WordSiegePracticeBots = listOf(
     PracticeBotProfile("Ceren", "kadın"),
 )
 
-private val PracticePlayerAccent = Color(0xFF567A64)
-private val PracticePlayerFill = Color(0xFFA8C7B1)
-private val PracticeRivalAccent = Color(0xFF9B4D4A)
-private val PracticeRivalFill = Color(0xFFE4AEAA)
+private val PracticePlayerAccent = Color(0xFF3C8E62)
+private val PracticePlayerFill = Color(0xFF8FD6AA)
+private val PracticeRivalAccent = Color(0xFFA84642)
+private val PracticeRivalFill = Color(0xFFEDA39E)
 private val PracticeNeutralFill = Color(0xFFE7E8E1)
 private val PracticeSiegeWarm = Color(0xFFE3A64F)
 
@@ -113,6 +115,9 @@ private fun WordSiegePracticeContent(
     var showSiegePulse by remember { mutableStateOf(false) }
     var zoneInfoCode by remember { mutableStateOf<String?>(null) }
     var tutorialStep by remember { mutableIntStateOf(-1) }
+    var showChat by remember { mutableStateOf(false) }
+    var chatDraft by remember { mutableStateOf("") }
+    var chatMessages by remember { mutableStateOf<List<Pair<Boolean, String>>>(emptyList()) }
 
     val playerTargetScore = WordSiegePracticeEngine.totalScore(state, 1)
     val botTargetScore = WordSiegePracticeEngine.totalScore(state, 2)
@@ -218,9 +223,9 @@ private fun WordSiegePracticeContent(
         tutorialStep = -1
     }
 
-    fun startAgain() {
+    fun resetMatch(changeOpponent: Boolean) {
         state = WordSiegePracticeEngine.newGame(state.language)
-        botProfile = WordSiegePracticeBots.random()
+        if (changeOpponent) botProfile = WordSiegePracticeBots.random()
         botDecisionSalt = kotlin.random.Random.nextLong()
         lastMove = null
         shuffleSeed = 0
@@ -246,8 +251,14 @@ private fun WordSiegePracticeContent(
                 "Your first move is yours. Cross the Crown Zone.",
             )
         }
+        showChat = false
+        chatDraft = ""
+        chatMessages = emptyList()
         clearSelection()
     }
+
+    fun startAgain() = resetMatch(changeOpponent = true)
+    fun startRematch() = resetMatch(changeOpponent = false)
 
     fun applyPlayerMove() {
         if (!dictionaryReady) {
@@ -598,10 +609,10 @@ private fun WordSiegePracticeContent(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         WordSiegeSideAction(
-                            sh("YARDIM", "HELP"),
-                            Icons.Rounded.HelpOutline,
+                            sh("SOHBET", "CHAT"),
+                            Icons.Rounded.Chat,
                             modifier = Modifier.width(74.dp),
-                        ) { tutorialStep = 0 }
+                        ) { showChat = true }
                         Button(
                             onClick = ::applyPlayerMove,
                             shape = RoundedCornerShape(10.dp),
@@ -714,7 +725,7 @@ private fun WordSiegePracticeContent(
             title = { Text(sh("Turu geç?", "Pass this turn?"), fontWeight = FontWeight.Black) },
             text = {
                 Text(
-                    sh("İki oyuncu art arda pas verirse maç biter.", "Two consecutive passes end the match."),
+                    sh("Torbada 20’den az harf varken art arda 4 pas ve/veya değişim maçı bitirir.", "When fewer than 20 tiles remain, 4 consecutive passes and/or exchanges end the match."),
                     color = WordSiegeGameUi.Muted,
                 )
             },
@@ -791,12 +802,182 @@ private fun WordSiegePracticeContent(
         )
     }
 
+    if (showChat) {
+        AlertDialog(
+            onDismissRequest = { showChat = false },
+            title = { Text(sh("SOHBET • ${botProfile.name}", "CHAT • ${botProfile.name}"), fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (chatMessages.isEmpty()) {
+                        Text(
+                            sh("Botla kısa mesajlaşabilirsin.", "You can exchange short messages with the bot."),
+                            color = WordSiegeGameUi.Muted,
+                            fontSize = 12.sp,
+                        )
+                    } else {
+                        chatMessages.takeLast(5).forEach { (mine, message) ->
+                            Surface(
+                                modifier = Modifier.align(if (mine) Alignment.End else Alignment.Start),
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (mine) PracticePlayerAccent.copy(alpha = .13f) else PracticeRivalAccent.copy(alpha = .10f),
+                            ) {
+                                Text(
+                                    (if (mine) sh("Sen: ", "You: ") else "${botProfile.name}: ") + message,
+                                    Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                                    color = WordSiegeGameUi.Text,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = chatDraft,
+                        onValueChange = { chatDraft = it.take(80) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text(sh("Mesaj", "Message")) },
+                        trailingIcon = {
+                            IconButton(
+                                enabled = chatDraft.isNotBlank(),
+                                onClick = {
+                                    val message = chatDraft.trim()
+                                    if (message.isNotEmpty()) {
+                                        chatMessages = (chatMessages + (true to message) +
+                                            (false to sh("İyi oyunlar!", "Good game!"))).takeLast(8)
+                                        chatDraft = ""
+                                    }
+                                },
+                            ) { Icon(Icons.Rounded.Send, sh("Gönder", "Send")) }
+                        },
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showChat = false }) {
+                    Text(sh("KAPAT", "CLOSE"), fontWeight = FontWeight.Black)
+                }
+            },
+        )
+    }
+
+    if (state.status == "finished") {
+        WordSiegePracticeResultDialog(
+            winnerOwner = state.winnerOwner,
+            opponentName = botProfile.name,
+            playerScore = WordSiegePracticeEngine.totalScore(state, 1),
+            botScore = WordSiegePracticeEngine.totalScore(state, 2),
+            onRematch = ::startRematch,
+            onExit = onExit,
+        )
+    }
+
     zoneInfoCode?.let { code ->
         WordSiegePracticeZoneInfoDialog(
             code = code,
             onDismiss = { zoneInfoCode = null },
         )
     }
+}
+
+@Composable
+private fun WordSiegePracticeResultDialog(
+    winnerOwner: Int?,
+    opponentName: String,
+    playerScore: Int,
+    botScore: Int,
+    onRematch: () -> Unit,
+    onExit: () -> Unit,
+) {
+    var entered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { entered = true }
+    val scale by animateFloatAsState(
+        targetValue = if (entered) 1f else .84f,
+        animationSpec = tween(420),
+        label = "practiceResultScale",
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (entered) 1f else 0f,
+        animationSpec = tween(300),
+        label = "practiceResultAlpha",
+    )
+    val won = winnerOwner == 1
+    val draw = winnerOwner == null
+    val accent = when {
+        won -> PracticePlayerAccent
+        draw -> WordSiegeGameUi.Gold
+        else -> PracticeRivalAccent
+    }
+    val title = when {
+        won -> sh("KAZANDIN", "YOU WON")
+        draw -> sh("BERABERE", "DRAW")
+        else -> sh("KAYBETTİN", "YOU LOST")
+    }
+
+    AlertDialog(
+        onDismissRequest = {},
+        modifier = Modifier.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+            this.alpha = alpha
+        },
+        icon = {
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = accent.copy(alpha = .14f),
+                border = BorderStroke(1.dp, accent.copy(alpha = .35f)),
+            ) {
+                Icon(
+                    Icons.Rounded.EmojiEvents,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.padding(10.dp).size(32.dp),
+                )
+            }
+        },
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(title, color = accent, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                Text(
+                    "$playerScore  —  $botScore",
+                    color = WordSiegeGameUi.Text,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                Text(
+                    if (won) sh("$opponentName karşısında tahtı aldın.", "You took the throne against $opponentName.")
+                    else if (draw) sh("Puanlar eşitlendi.", "The scores are tied.")
+                    else sh("$opponentName bu maçı aldı.", "$opponentName won this match."),
+                    color = WordSiegeGameUi.Muted,
+                    textAlign = TextAlign.Center,
+                    fontSize = 12.sp,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(sh("RÖVANŞ?", "REMATCH?"), color = WordSiegeGameUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                Text(sh("Aynı rakiple hemen tekrar oyna.", "Play the same opponent again now."), color = WordSiegeGameUi.Muted, fontSize = 11.sp)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onRematch,
+                colors = ButtonDefaults.buttonColors(containerColor = PracticePlayerAccent, contentColor = Color.White),
+                shape = RoundedCornerShape(10.dp),
+            ) { Text(sh("EVET", "YES"), fontWeight = FontWeight.Black) }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onExit, shape = RoundedCornerShape(10.dp)) {
+                Text(sh("HAYIR", "NO"), fontWeight = FontWeight.Black)
+            }
+        },
+    )
 }
 
 @Composable

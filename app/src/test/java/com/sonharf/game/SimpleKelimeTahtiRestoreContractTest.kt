@@ -19,10 +19,10 @@ class SimpleKelimeKusatmasiRestoreContractTest {
         assertTrue(spec.contains("Harf\\n×2"))
         assertTrue(spec.contains("Kelime\\n×2"))
 
-        assertTrue(online.contains("PanSiegeMine = Color(0xFFA8D5B5)"))
-        assertTrue(online.contains("PanSiegeRival = Color(0xFFE4AEAA)"))
-        assertTrue(board.contains("PracticeSiegeMine = Color(0xFFA8D5B5)"))
-        assertTrue(board.contains("PracticeSiegeRival = Color(0xFFE4AEAA)"))
+        assertTrue(online.contains("PanSiegeMine = Color(0xFF8BD8AA)"))
+        assertTrue(online.contains("PanSiegeRival = Color(0xFFEDA09B)"))
+        assertTrue(board.contains("PracticeSiegeMine = Color(0xFF8BD8AA)"))
+        assertTrue(board.contains("PracticeSiegeRival = Color(0xFFEDA09B)"))
         assertTrue(board.contains("if (mode == WordSiegeBoardViewportMode.CLOSE)"))
         assertFalse(board.contains("WordSiegeBoardViewportMode.CLOSE && !enabled"))
 

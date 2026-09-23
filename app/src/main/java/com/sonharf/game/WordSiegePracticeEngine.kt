@@ -42,6 +42,8 @@ internal class WordSiegePracticeError(val code: String) : IllegalArgumentExcepti
 
 /** Local practice rules backed by the same canonical dictionary service used by Son Harf. */
 internal object WordSiegePracticeEngine {
+    private const val PracticeInactivityLimit = 4
+    private const val PracticeInactivityBagThreshold = 20
     fun newGame(language: String = "tr", random: Random = Random.Default): WordSiegePracticeState {
         val lang = SharedDictionaryService.canonicalLanguage(language)
         val shuffled = WordSiegeBoardSpec.shuffledBag(lang, random)
@@ -50,9 +52,9 @@ internal object WordSiegePracticeEngine {
             board = List(WordSiegeBoardSpec.CellCount) { index ->
                 WordSiegeCellDto(bonus = bonuses[index])
             },
-            playerRack = shuffled.take(7),
-            botRack = shuffled.drop(7).take(7),
-            bag = shuffled.drop(14),
+            playerRack = shuffled.take(WordSiegeBoardSpec.RackSize),
+            botRack = shuffled.drop(WordSiegeBoardSpec.RackSize).take(WordSiegeBoardSpec.RackSize),
+            bag = shuffled.drop(WordSiegeBoardSpec.RackSize * 2),
             language = lang,
         )
     }
@@ -84,7 +86,7 @@ internal object WordSiegePracticeEngine {
         horizontal: Boolean,
     ): Pair<WordSiegePracticeState, WordSiegePracticeMove> {
         requireActiveTurn(state, owner)
-        if (placements.size !in 1..7) fail("word_siege_invalid_placements")
+        if (placements.size !in 1..WordSiegeBoardSpec.RackSize) fail("word_siege_invalid_placements")
         val rack = rackFor(state, owner)
         if (placements.keys.any { !WordSiegeBoardSpec.isValidIndex(it) }) fail("word_siege_invalid_cell")
         if (placements.values.distinct().size != placements.size || placements.values.any { it !in rack.indices }) {
@@ -163,7 +165,7 @@ internal object WordSiegePracticeEngine {
             )
         }
         val remainingRack = rack.filterIndexed { index, _ -> index !in placements.values }
-        val drawCount = (7 - remainingRack.length).coerceAtLeast(0)
+        val drawCount = (WordSiegeBoardSpec.RackSize - remainingRack.length).coerceAtLeast(0)
         val draw = state.bag.take(drawCount)
         val nextRack = remainingRack + draw
         val nextBag = state.bag.drop(draw.length)
@@ -209,32 +211,33 @@ internal object WordSiegePracticeEngine {
         requireActiveTurn(state, owner)
         val next = state.copy(
             currentOwner = other(owner),
-            consecutivePasses = (state.consecutivePasses + 1).coerceAtMost(2),
+            consecutivePasses = (state.consecutivePasses + 1).coerceAtMost(PracticeInactivityLimit),
             moveCount = state.moveCount + 1,
             lastAction = "pass",
         )
-        return if (next.consecutivePasses >= 2) finish(next, "consecutive_passes") else next
+        return finishForInactivityIfNeeded(next)
     }
 
     fun exchange(state: WordSiegePracticeState, owner: Int, rackIndices: Set<Int>): WordSiegePracticeState {
         requireActiveTurn(state, owner)
         val rack = rackFor(state, owner)
-        if (rackIndices.isEmpty() || rackIndices.size > 7 || rackIndices.any { it !in rack.indices } || state.bag.length < rackIndices.size) {
+        if (rackIndices.isEmpty() || rackIndices.size > WordSiegeBoardSpec.RackSize || rackIndices.any { it !in rack.indices } || state.bag.length < rackIndices.size) {
             fail("word_siege_invalid_exchange")
         }
         val returned = rack.filterIndexed { index, _ -> index in rackIndices }
         val remain = rack.filterIndexed { index, _ -> index !in rackIndices }
         val draw = state.bag.take(rackIndices.size)
         val nextBag = (state.bag.drop(draw.length) + returned).toList().shuffled().joinToString("")
-        return state.copy(
+        val next = state.copy(
             bag = nextBag,
             playerRack = if (owner == 1) remain + draw else state.playerRack,
             botRack = if (owner == 2) remain + draw else state.botRack,
             currentOwner = other(owner),
-            consecutivePasses = 0,
+            consecutivePasses = (state.consecutivePasses + 1).coerceAtMost(PracticeInactivityLimit),
             moveCount = state.moveCount + 1,
             lastAction = "exchange",
         )
+        return finishForInactivityIfNeeded(next)
     }
 
     fun forfeit(state: WordSiegePracticeState, owner: Int): WordSiegePracticeState =
@@ -424,6 +427,13 @@ internal object WordSiegePracticeEngine {
             current = next
         }
         return result
+    }
+
+    private fun finishForInactivityIfNeeded(state: WordSiegePracticeState): WordSiegePracticeState {
+        val eligible = state.bag.length < PracticeInactivityBagThreshold
+        return if (eligible && state.consecutivePasses >= PracticeInactivityLimit) {
+            finish(state, "consecutive_passes")
+        } else state
     }
 
     private fun finish(state: WordSiegePracticeState, reason: String, forcedWinner: Int? = null): WordSiegePracticeState {

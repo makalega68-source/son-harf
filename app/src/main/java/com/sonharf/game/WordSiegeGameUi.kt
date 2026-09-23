@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -127,13 +128,13 @@ internal fun WordSiegeScoreCard(
     ) {
         Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box {
+                Box(Modifier.padding(top = if (leading) 4.dp else 0.dp)) {
                     ProfilePhotoAvatarWithGender(
                         avatarPath = avatarPath, gender = gender, name = name,
                         size = 52.dp, accent = accent, visible = avatarVisible,
                     )
                     if (leading) {
-                        Box(Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp)) {
+                        Box(Modifier.align(Alignment.TopCenter).offset(y = (-7).dp)) {
                             WordSiegeLeaderCrown()
                         }
                     }
@@ -149,14 +150,15 @@ internal fun WordSiegeScoreCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(sh("$area küp", "$area cubes"), color = WordSiegeGameUi.Muted, fontSize = 9.sp, lineHeight = 11.sp, maxLines = 1)
-                        if (isBot) {
-                            Surface(shape = RoundedCornerShape(99.dp), color = accent.copy(alpha = .12f)) {
-                                Text("BOT", Modifier.padding(horizontal = 5.dp, vertical = 1.dp), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                            }
-                        }
-                    }
+                    Text(
+                        if (isBot) sh("$area küp • BOT", "$area cubes • BOT") else sh("$area küp", "$area cubes"),
+                        color = WordSiegeGameUi.Muted,
+                        fontSize = 9.sp,
+                        lineHeight = 11.sp,
+                        fontWeight = if (isBot) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
                 val totalDescription = sh("Toplam $score", "Total $score")
                 Box(
@@ -297,17 +299,35 @@ internal fun WordSiegeOwnershipLegend() {
 @Composable
 private fun WordSiegeLeaderCrown() {
     val description = sh("Lider", "Leader")
-    Canvas(Modifier.size(13.dp).semantics { contentDescription = description }) {
+    Canvas(
+        Modifier
+            .size(width = 23.dp, height = 17.dp)
+            .semantics { contentDescription = description },
+    ) {
         val crown = Path().apply {
-            moveTo(size.width * .08f, size.height * .28f)
-            lineTo(size.width * .3f, size.height * .48f)
-            lineTo(size.width * .5f, size.height * .1f)
-            lineTo(size.width * .7f, size.height * .48f)
-            lineTo(size.width * .92f, size.height * .28f)
-            lineTo(size.width * .8f, size.height * .86f)
-            lineTo(size.width * .2f, size.height * .86f)
+            moveTo(size.width * .08f, size.height * .32f)
+            lineTo(size.width * .28f, size.height * .55f)
+            lineTo(size.width * .39f, size.height * .19f)
+            lineTo(size.width * .50f, size.height * .51f)
+            lineTo(size.width * .62f, size.height * .12f)
+            lineTo(size.width * .72f, size.height * .55f)
+            lineTo(size.width * .92f, size.height * .30f)
+            lineTo(size.width * .82f, size.height * .86f)
+            lineTo(size.width * .18f, size.height * .86f)
             close()
         }
-        drawPath(crown, WordSiegeGameUi.Gold)
+        val gold = Brush.verticalGradient(
+            listOf(Color(0xFFFFF0A8), Color(0xFFF4C44F), Color(0xFFD69424)),
+        )
+        drawPath(crown, brush = gold)
+        drawPath(crown, color = Color(0xFF7A5218), style = Stroke(width = 1.05.dp.toPx()))
+        drawLine(
+            color = Color(0xFFFFF4C4),
+            start = Offset(size.width * .22f, size.height * .70f),
+            end = Offset(size.width * .78f, size.height * .70f),
+            strokeWidth = 1.2.dp.toPx(),
+        )
+        drawCircle(Color(0xFFE85D5D), 1.35.dp.toPx(), Offset(size.width * .39f, size.height * .61f))
+        drawCircle(Color(0xFF4E8FD4), 1.35.dp.toPx(), Offset(size.width * .62f, size.height * .59f))
     }
 }

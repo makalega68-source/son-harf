@@ -47,9 +47,10 @@ class WordSiegePracticeBoardContractTest {
         val engine = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
         val spec = projectFile("app/src/main/java/com/sonharf/game/WordSiegeBoardSpec.kt").readText()
         assertTrue(engine.contains("WordSiegeBoardSpec.shuffledBag"))
-        assertTrue(engine.contains("playerRack = shuffled.take(7)"))
-        assertTrue(engine.contains("botRack = shuffled.drop(7).take(7)"))
+        assertTrue(engine.contains("playerRack = shuffled.take(WordSiegeBoardSpec.RackSize)"))
+        assertTrue(engine.contains("botRack = shuffled.drop(WordSiegeBoardSpec.RackSize).take(WordSiegeBoardSpec.RackSize)"))
         assertTrue(spec.contains("canonicalBag"))
+        assertTrue(spec.contains("const val RackSize = 7"))
         assertTrue(spec.contains("shuffle(random)"))
         assertFalse(engine.contains("playerRack = if (english) \"PLANETS\" else \"KALEMTR\""))
     }
