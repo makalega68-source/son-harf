@@ -6,6 +6,9 @@ on:
       - claude/kelime-tahti-home-redesign-7ojb7d
     paths:
       - '.github/workflows/siege-readability-v35.yml'
+      - 'app/src/main/java/com/sonharf/game/WordSiegeMascotView.kt'
+      - 'app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt'
+      - 'app/src/main/assets/word_siege_mascot/**'
   workflow_dispatch:
 
 permissions:
@@ -46,13 +49,13 @@ jobs:
         shell: bash
         run: |
           mkdir -p final-apk
-          cp app/build/outputs/apk/debug/app-debug.apk final-apk/Kelime-Tahti-Guncel-v35.apk
-          sha256sum final-apk/Kelime-Tahti-Guncel-v35.apk > final-apk/SHA256.txt
+          cp app/build/outputs/apk/debug/app-debug.apk final-apk/Kelime-Tahti-Guncel.apk
+          sha256sum final-apk/Kelime-Tahti-Guncel.apk > final-apk/SHA256.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: kelime-tahti-siege-v35
+          name: kelime-tahti-mascot-v35
           path: final-apk/
           if-no-files-found: error
           retention-days: 7

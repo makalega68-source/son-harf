@@ -268,6 +268,12 @@ internal fun WordSiegePanMatch(
                     fontWeight = FontWeight.Black,
                 )
             }
+            WordSiegeMascot(
+                moveId = lastMove?.id,
+                lastMoveMine = lastMove?.playerId == me,
+                pendingCells = placements.keys,
+                playerTurn = myTurn,
+            )
             IconButton(onClick = onForfeit, enabled = game.status == "playing" && !busy, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = WordSiegeGameUi.Red)
             }
