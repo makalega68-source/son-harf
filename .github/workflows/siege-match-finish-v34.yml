@@ -7,6 +7,7 @@ on:
     paths:
       - 'tools/polish_siege_match_finish_v34.py'
       - 'tools/fix_v34_generated_contract.py'
+      - 'tools/fix_v34_remaining_contracts.py'
       - '.github/workflows/siege-match-finish-v34.yml'
   workflow_dispatch:
 
@@ -46,6 +47,7 @@ jobs:
         run: |
           python3 tools/polish_siege_match_finish_v34.py
           python3 tools/fix_v34_generated_contract.py
+          python3 tools/fix_v34_remaining_contracts.py
 
       - name: Unit tests and debug APK
         run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
@@ -62,12 +64,22 @@ jobs:
                   app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt \
                   app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt \
                   app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt \
+                  app/src/test/java/com/sonharf/game/AssetIntegrationContractTest.kt \
                   app/src/test/java/com/sonharf/game/SimpleKelimeTahtiRestoreContractTest.kt \
+                  app/src/test/java/com/sonharf/game/KelimeTahtiFinalBrandingContractTest.kt \
+                  app/src/test/java/com/sonharf/game/KelimeTahtiDifferentiationContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeEntryModesContractTest.kt \
                   app/src/test/java/com/sonharf/game/WordSiegeFinalRulesTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeOnlineBoardVisualContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePanAreaContractTest.kt \
                   app/src/test/java/com/sonharf/game/WordSiegeBoardSpecTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePracticeBoardContractTest.kt \
                   app/src/test/java/com/sonharf/game/WordSiegePracticeEngineTest.kt \
-                  app/src/test/java/com/sonharf/game/WordSiegePracticeUxAndBotRegressionTest.kt
-          git rm tools/polish_siege_match_finish_v34.py tools/fix_v34_generated_contract.py
+                  app/src/test/java/com/sonharf/game/WordSiegePracticeVisualContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePracticeUxAndBotRegressionTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeProfileRegressionTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeReadabilityContractTest.kt
+          git rm tools/polish_siege_match_finish_v34.py tools/fix_v34_generated_contract.py tools/fix_v34_remaining_contracts.py
           git diff --cached --check
           git commit -m "Polish siege board, chat and rematch flow"
           git push origin HEAD:claude/kelime-tahti-home-redesign-7ojb7d
