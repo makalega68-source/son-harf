@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/kelime-kusatmasi-viewport-polish.yml'
       - 'tools/kelime_kusatmasi_viewport_pass.py'
+      - 'tools/kelime_kusatmasi_viewport_contract_alignment.py'
   workflow_dispatch:
 
 permissions:
@@ -41,7 +42,9 @@ jobs:
           validate-wrappers: false
 
       - name: Apply Kelime Kusatmasi viewport polish
-        run: python3 tools/kelime_kusatmasi_viewport_pass.py
+        run: |
+          python3 tools/kelime_kusatmasi_viewport_pass.py
+          python3 tools/kelime_kusatmasi_viewport_contract_alignment.py
 
       - name: Unit tests and debug APK
         run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
