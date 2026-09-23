@@ -8,11 +8,12 @@ import org.junit.Test
 /** Guards the cosmetic paths that are visible in the live Premier match and store. */
 class PremiumCosmeticApplicationContractTest {
     @Test
-    fun premierMatchUsesTheEquippedKeyboardAndNameStyle() {
+    fun premierMatchUsesNativeAndroidImeAndEquippedNameStyle() {
         val premier = source("PremierWordDuelScreen.kt")
 
-        assertTrue(premier.contains("val palette = SonHarfCosmetics.keyboardPalette"))
-        assertTrue(premier.contains("color = palette.background"))
+        assertTrue(premier.contains("LocalSoftwareKeyboardController.current"))
+        assertTrue(premier.contains("ImeAction.Done"))
+        assertTrue(premier.contains("keyboardController?.show()"))
         assertTrue(premier.contains("nameColor = SonHarfCosmetics.playerNameColor"))
     }
 

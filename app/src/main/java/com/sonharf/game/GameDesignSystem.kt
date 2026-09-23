@@ -45,6 +45,25 @@ internal object GameColors {
     val HeroMiddle = Color(0xFF174A66)
     val HeroEnd = Color(0xFF23526A)
 
+    // Son Harf uses a quieter, warm arena palette while remaining inside the shared design system.
+    val SonHarfBackground = Color(0xFFF3EEE5)
+    val SonHarfSurface = Color(0xFFFFFBF4)
+    val SonHarfInk = Color(0xFF173247)
+    val SonHarfMuted = Color(0xFF6F7B7C)
+    val SonHarfOcean = Color(0xFF4F8F96)
+    val SonHarfOceanDeep = Color(0xFF2F6970)
+    val SonHarfSky = Color(0xFF8EB7B5)
+    val SonHarfIce = Color(0xFFE6EFEB)
+    val SonHarfBorder = Color(0xFFD8D0C4)
+    val SonHarfGreen = Color(0xFF789B73)
+    val SonHarfGreenSoft = Color(0xFFE5ECDD)
+    val SonHarfRed = Color(0xFFC86459)
+    val SonHarfRedSoft = Color(0xFFF4DDD7)
+    val SonHarfGold = Color(0xFFD1A13E)
+    val SonHarfGoldSoft = Color(0xFFF5E8BB)
+    val SonHarfRival = Color(0xFFD27869)
+    val SonHarfRivalSoft = Color(0xFFF6E2DC)
+
     val Disabled = Color(0xFF2A3544)
     val DisabledContent = Color(0xFF728197)
 }

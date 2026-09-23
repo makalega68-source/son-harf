@@ -82,8 +82,14 @@ class PremiumStoreProContractTest {
         assertTrue(history.contains("game_words_participant_history_v1"))
 
         val screen = repoFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
-        assertTrue(screen.contains("PRO • Tüm oynanan kelimeler"))
-        assertTrue(screen.contains("val ordered = if (isPro) words.reversed()"))
+        assertTrue(screen.contains("val isPro = me?.isVip == true"))
+        assertTrue(screen.contains("private fun PremierProWordPanel("))
+        assertTrue(screen.contains("title = pt(language, \"Bulunan Kelimeler\", \"Found Words\")"))
+        assertTrue(screen.contains("title = pt(language, \"Kelime Geçmişi\", \"Word History\")"))
+        assertTrue(screen.contains("if (!isPro)"))
+        assertTrue(screen.contains("Sadece PRO üyeler görebilir"))
+        assertTrue(screen.contains("val lastWord = words.lastOrNull()"))
+        assertTrue(screen.contains("PremierLastWordBar(language = language, word = lastWord, meId = meId)"))
     }
 
     @Test
