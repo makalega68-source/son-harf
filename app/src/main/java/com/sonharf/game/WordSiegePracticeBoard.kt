@@ -70,6 +70,7 @@ internal fun WordSiegePracticeBoard(
     myOwner: Int,
     enabled: Boolean,
     moveEventKey: Int? = null,
+    lastMoveMine: Boolean = false,
     resolvedIndices: Set<Int> = emptySet(),
     captureEffect: WordSiegeCaptureEffect? = null,
     language: String = SonHarfUiState.language,
@@ -257,7 +258,7 @@ internal fun WordSiegePracticeBoard(
             }
             WordSiegeMascot(
                 moveId = moveEventKey?.toLong(),
-                lastMoveMine = true,
+                lastMoveMine = lastMoveMine,
                 pendingCells = placements.keys,
                 playerTurn = enabled,
                 modifier = Modifier

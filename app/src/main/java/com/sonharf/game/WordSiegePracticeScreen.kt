@@ -499,6 +499,7 @@ private fun WordSiegePracticeContent(
                         myOwner = 1,
                         enabled = canPlayerAct,
                         moveEventKey = actionVfxEvent.takeIf { it > 0 },
+                        lastMoveMine = state.currentOwner == 2,
                         resolvedIndices = lastMove?.placements?.keys ?: emptySet(),
                         captureEffect = captureEffect,
                         modifier = if (boardViewportMode == WordSiegeBoardViewportMode.CLOSE) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(1f),

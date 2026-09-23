@@ -6,6 +6,10 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RadialGradient
+import android.graphics.RectF
+import android.graphics.Shader
+import android.graphics.SweepGradient
 import android.os.SystemClock
 import android.view.View
 import androidx.compose.foundation.layout.size
@@ -28,11 +32,21 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             ?: error("Missing mascot layer: $name")
     }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 7f
+        shader = SweepGradient(660f, 630f, intArrayOf(
+            0xFF8B65F0.toInt(), 0xFFFF8EC5.toInt(), 0xFFFFAE67.toInt(),
+            0xFF52E9F5.toInt(), 0xFF42AFFF.toInt(), 0xFF8B65F0.toInt(),
+        ), null)
+    }
+    private val detailPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var startedAt = SystemClock.uptimeMillis()
     private var lastBlink = startedAt
     private var lastMoveId: Long? = null
     private var hasInitialMove = false
     private var reactionUntil = 0L
+    private var heartsStartedAt = 0L
     private var reaction = Reaction.CALM
     private var gazeX = 0f
     private var gazeY = 0f
@@ -49,7 +63,9 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         } else if (moveId != null && moveId != lastMoveId) {
             lastMoveId = moveId
             reaction = if (lastMoveMine) Reaction.HAPPY else Reaction.SURPRISED
-            reactionUntil = SystemClock.uptimeMillis() + 1_350L
+            val now = SystemClock.uptimeMillis()
+            reactionUntil = now + 1_350L
+            if (lastMoveMine) heartsStartedAt = now
         }
         pendingCount = pendingCells.size
         val cell = pendingCells.lastOrNull()
@@ -82,6 +98,9 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.scale(size / 1_254f, size / 1_254f)
         canvas.translate(0f, sin(elapsed / 640f) * 3f)
         drawLayer(canvas, "orb_face_base")
+        // A fine color-matched contour softens the dark silhouette without changing the orb.
+        edgePaint.alpha = (175 + 25 * sin(elapsed / 950f)).toInt().coerceIn(0, 255)
+        canvas.drawOval(RectF(258f, 231f, 1057f, 1052f), edgePaint)
         drawLayer(canvas, "eye_left")
         drawLayer(canvas, "eye_right")
         drawLayer(canvas, "iris_left", gazeX * 22f, gazeY * 17f)
@@ -102,6 +121,13 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
         drawLayer(canvas, "brow_left", 0f, browY, 536f, 458f, browRotation)
         drawLayer(canvas, "brow_right", 0f, browY, 870f, 458f, -browRotation)
+        val cheekStrength = when (mood) {
+            Reaction.HAPPY -> 50
+            Reaction.SURPRISED -> 28
+            else -> 16
+        }
+        drawCheekLight(canvas, 403f, 770f, cheekStrength)
+        drawCheekLight(canvas, 951f, 770f, cheekStrength)
         drawLayer(canvas, "cheek_left")
         drawLayer(canvas, "cheek_right")
         canvas.save()
@@ -123,8 +149,41 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.translate(-708f, -800f)
         drawLayer(canvas, "mouth")
         canvas.restore()
+        drawHearts(canvas, now)
         canvas.restore()
         if (isAttachedToWindow && visibility == VISIBLE) postInvalidateDelayed(33L)
+    }
+
+    private fun drawCheekLight(canvas: Canvas, x: Float, y: Float, strength: Int) {
+        detailPaint.shader = RadialGradient(x, y, 92f,
+            intArrayOf((strength shl 24) or 0xFF70B4, 0x00FF70B4), null,
+            Shader.TileMode.CLAMP)
+        canvas.drawCircle(x, y, 92f, detailPaint)
+        detailPaint.shader = null
+    }
+
+    private fun drawHearts(canvas: Canvas, now: Long) {
+        val age = now - heartsStartedAt
+        if (heartsStartedAt == 0L || age !in 0L..1_350L) return
+        val colors = intArrayOf(0xFFFF668E.toInt(), 0xFFFF94B4.toInt(), 0xFFFF658C.toInt())
+        repeat(3) { index ->
+            val progress = ((age - index * 125L) / 900f).coerceIn(0f, 1f)
+            if (progress <= 0f || progress >= 1f) return@repeat
+            val alpha = (255f * minOf(1f, progress * 5f, (1f - progress) * 3f)).toInt()
+            val x = 425f + index * 205f + sin(progress * 5f + index) * 22f
+            val y = 370f - progress * (240f + index * 35f)
+            val radius = 29f + index * 5f
+            val heart = Path().apply {
+                moveTo(x, y + radius)
+                cubicTo(x - radius * 2f, y - radius * .1f, x - radius, y - radius * 1.5f, x, y - radius * .38f)
+                cubicTo(x + radius, y - radius * 1.5f, x + radius * 2f, y - radius * .1f, x, y + radius)
+                close()
+            }
+            detailPaint.color = colors[index]
+            detailPaint.alpha = alpha
+            canvas.drawPath(heart, detailPaint)
+        }
+        detailPaint.alpha = 255
     }
 
     private fun drawLayer(canvas: Canvas, name: String, dx: Float = 0f, dy: Float = 0f,
