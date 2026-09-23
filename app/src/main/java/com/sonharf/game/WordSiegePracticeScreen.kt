@@ -8,6 +8,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -808,6 +811,10 @@ private fun WordSiegePracticeContent(
             title = { Text(sh("SOHBET • ${botProfile.name}", "CHAT • ${botProfile.name}"), fontWeight = FontWeight.Black) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val chatListState = rememberLazyListState()
+                    LaunchedEffect(chatMessages.size) {
+                        if (chatMessages.isNotEmpty()) chatListState.animateScrollToItem(chatMessages.lastIndex)
+                    }
                     if (chatMessages.isEmpty()) {
                         Text(
                             sh("Botla kısa mesajlaşabilirsin.", "You can exchange short messages with the bot."),
@@ -815,19 +822,28 @@ private fun WordSiegePracticeContent(
                             fontSize = 12.sp,
                         )
                     } else {
-                        chatMessages.takeLast(5).forEach { (mine, message) ->
-                            Surface(
-                                modifier = Modifier.align(if (mine) Alignment.End else Alignment.Start),
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (mine) PracticePlayerAccent.copy(alpha = .13f) else PracticeRivalAccent.copy(alpha = .10f),
-                            ) {
-                                Text(
-                                    (if (mine) sh("Sen: ", "You: ") else "${botProfile.name}: ") + message,
-                                    Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
-                                    color = WordSiegeGameUi.Text,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                )
+                        LazyColumn(
+                            state = chatListState,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 170.dp, max = 320.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            itemsIndexed(chatMessages) { _, item ->
+                                val (mine, message) = item
+                                Box(Modifier.fillMaxWidth()) {
+                                    Surface(
+                                        modifier = Modifier.align(if (mine) Alignment.CenterEnd else Alignment.CenterStart),
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (mine) PracticePlayerAccent.copy(alpha = .13f) else PracticeRivalAccent.copy(alpha = .10f),
+                                    ) {
+                                        Text(
+                                            (if (mine) sh("Sen: ", "You: ") else "${botProfile.name}: ") + message,
+                                            Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                            color = WordSiegeGameUi.Text,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -843,8 +859,8 @@ private fun WordSiegePracticeContent(
                                 onClick = {
                                     val message = chatDraft.trim()
                                     if (message.isNotEmpty()) {
-                                        chatMessages = (chatMessages + (true to message) +
-                                            (false to sh("İyi oyunlar!", "Good game!"))).takeLast(8)
+                                        chatMessages = chatMessages + (true to message) +
+                                            (false to sh("İyi oyunlar!", "Good game!"))
                                         chatDraft = ""
                                     }
                                 },

@@ -194,26 +194,49 @@ private fun WordSiegeBagDialog(
                 failed && proAccess == null -> Text(sh("PRO erişimi şu anda doğrulanamadı.", "PRO access could not be verified right now."), color = WordSiegeGameUi.Muted)
                 proAccess != true -> Text(sh("Hangi harflerin kaldığını görmek PRO üyeliğe özeldir.", "Viewing the remaining letters is a PRO feature."), color = WordSiegeGameUi.Muted)
                 rows.isEmpty() -> Text(sh("Torbada harf kalmadı.", "The bag is empty."), color = WordSiegeGameUi.Muted)
-                else -> Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    rows.chunked(6).forEach { group ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                else -> Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    val total = rows.sumOf { it.second }
+                    Text(
+                        sh("Torbada $total harf", "$total tiles in bag"),
+                        color = WordSiegeGameUi.Muted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    rows.chunked(5).forEach { group ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                             group.forEach { (letter, count) ->
                                 Surface(
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = WordSiegeGameUi.SurfaceSoft,
-                                    border = BorderStroke(1.dp, WordSiegeGameUi.Border),
+                                    modifier = Modifier.weight(1f).height(58.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFFF8FBFB),
+                                    border = BorderStroke(1.dp, WordSiegeGameUi.Border.copy(alpha = .72f)),
+                                    shadowElevation = 1.dp,
                                 ) {
-                                    Text(
-                                        "$letter $count",
-                                        Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
-                                        color = WordSiegeGameUi.Text,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Black,
-                                    )
+                                    Column(
+                                        modifier = Modifier.fillMaxSize().padding(vertical = 6.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center,
+                                    ) {
+                                        Text(
+                                            letter,
+                                            color = WordSiegeGameUi.Navy,
+                                            fontSize = 18.sp,
+                                            lineHeight = 19.sp,
+                                            fontWeight = FontWeight.Black,
+                                            maxLines = 1,
+                                        )
+                                        Text(
+                                            "×$count",
+                                            color = WordSiegeGameUi.Muted,
+                                            fontSize = 10.sp,
+                                            lineHeight = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                        )
+                                    }
                                 }
                             }
-                            repeat(6 - group.size) { Spacer(Modifier.weight(1f)) }
+                            repeat(5 - group.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }

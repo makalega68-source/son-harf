@@ -95,7 +95,7 @@ class AssetIntegrationContractTest {
 
         listOf(
             "0xFF8EA697", "0xFF8BD8AA", "0xFFEDA09B", "0xFF2D7B4C", "0xFFA33F3B",
-            "0xFFC8E7F4", "0xFF9CCFEA", "0xFFDEC8EF", "0xFFC5A3E2", "0xFFF1B95E", "0xFFF4C95F",
+            "0xFFEAF5F8", "0xFFDDEDF4", "0xFFF3EEF7", "0xFFECE4F2", "0xFFF6EEDC", "0xFFF8F0D6",
         ).forEach { assertTrue(online.contains(it)) }
         assertTrue(online.contains("border.copy(alpha = .92f)"))
         assertTrue(online.contains("val regionGap = 1.25.dp"))
