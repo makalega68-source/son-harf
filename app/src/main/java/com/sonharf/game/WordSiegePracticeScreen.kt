@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -98,6 +99,13 @@ private fun WordSiegePracticeContent(
     var shuffleSeed by remember { mutableIntStateOf(0) }
     var boardViewportMode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     var actionVfxEvent by remember { mutableIntStateOf(0) }
+    var captureQueue by remember { mutableStateOf<List<WordSiegeCaptureBatch>>(emptyList()) }
+    var pendingPlayerCapturePoints by remember { mutableIntStateOf(0) }
+    var pendingBotCapturePoints by remember { mutableIntStateOf(0) }
+    var playerScoreArrivalTick by remember { mutableIntStateOf(0) }
+    var botScoreArrivalTick by remember { mutableIntStateOf(0) }
+    var playerScoreTargetInWindow by remember { mutableStateOf(Offset.Unspecified) }
+    var botScoreTargetInWindow by remember { mutableStateOf(Offset.Unspecified) }
     var showSiegePulse by remember { mutableStateOf(false) }
     var zoneInfoCode by remember { mutableStateOf<String?>(null) }
     var tutorialStep by remember {
@@ -108,8 +116,8 @@ private fun WordSiegePracticeContent(
 
     val playerTargetScore = WordSiegePracticeEngine.totalScore(state, 1)
     val botTargetScore = WordSiegePracticeEngine.totalScore(state, 2)
-    val displayedPlayerScore by animateIntAsState(playerTargetScore, tween(260), label = "practice-player-score")
-    val displayedBotScore by animateIntAsState(botTargetScore, tween(260), label = "practice-bot-score")
+    val displayedPlayerScore = wordSiegeDisplayedScore(playerTargetScore, pendingPlayerCapturePoints)
+    val displayedBotScore = wordSiegeDisplayedScore(botTargetScore, pendingBotCapturePoints)
     val displayedOwner = state.currentOwner
     // Tile selection and board placement must stay responsive even while the dictionary snapshot is warming up.
     // Dictionary readiness is enforced only when the player submits the move.
@@ -183,6 +191,19 @@ private fun WordSiegePracticeContent(
         exchangeSelection = emptySet()
     }
 
+    fun enqueueCapture(previous: WordSiegePracticeState, next: WordSiegePracticeState, owner: Int) {
+        val batch = wordSiegeCaptureBatch(
+            updateKey = "practice:${next.moveCount}:$owner",
+            previousOwners = previous.board.map { it.owner },
+            currentOwners = next.board.map { it.owner },
+            capturingOwner = owner,
+        ) ?: return
+        if (captureQueue.any { it.updateKey == batch.updateKey }) return
+        captureQueue = captureQueue + batch
+        if (owner == 1) pendingPlayerCapturePoints += batch.points
+        else pendingBotCapturePoints += batch.points
+    }
+
     fun completeTutorial() {
         WordSiegePracticeTutorialPrefs.markCompleted(context)
         tutorialStep = -1
@@ -196,6 +217,11 @@ private fun WordSiegePracticeContent(
         shuffleSeed = 0
         boardViewportMode = WordSiegeBoardViewportMode.FIT
         actionVfxEvent = 0
+        captureQueue = emptyList()
+        pendingPlayerCapturePoints = 0
+        pendingBotCapturePoints = 0
+        playerScoreArrivalTick = 0
+        botScoreArrivalTick = 0
         notice = if (matchmakingFallback) {
             sh(
                 "Yeni bot maçı başladı. Gerçek rakip araması sürüyor.",
@@ -221,6 +247,7 @@ private fun WordSiegePracticeContent(
         }
         runCatching { WordSiegePracticeEngine.applyMove(state, 1, placements) }
             .onSuccess { (next, move) ->
+                enqueueCapture(state, next, 1)
                 state = next
                 lastMove = move
                 actionVfxEvent += 1
@@ -237,6 +264,29 @@ private fun WordSiegePracticeContent(
                 notice = wordSiegeFriendlyError(it.message.orEmpty())
                 SonHarfSoundFx.warning()
             }
+    }
+
+    val activeCapture = captureQueue.firstOrNull()
+    val captureEffect = activeCapture?.let { batch ->
+        WordSiegeCaptureEffect(
+            batch = batch,
+            targetInWindow = if (batch.owner == 1) playerScoreTargetInWindow else botScoreTargetInWindow,
+            accent = if (batch.owner == 1) PracticePlayerAccent else PracticeRivalAccent,
+            onCubeArrived = {
+                if (batch.owner == 1) {
+                    pendingPlayerCapturePoints =
+                        (pendingPlayerCapturePoints - WORD_SIEGE_CAPTURE_POINTS_PER_CUBE).coerceAtLeast(0)
+                    playerScoreArrivalTick += 1
+                } else {
+                    pendingBotCapturePoints =
+                        (pendingBotCapturePoints - WORD_SIEGE_CAPTURE_POINTS_PER_CUBE).coerceAtLeast(0)
+                    botScoreArrivalTick += 1
+                }
+            },
+            onFinished = {
+                captureQueue = captureQueue.filterNot { it.updateKey == batch.updateKey }
+            },
+        )
     }
 
     BackHandler(onBack = onExit)
@@ -278,6 +328,7 @@ private fun WordSiegePracticeContent(
                 }
             } else {
                 val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements)
+                enqueueCapture(state, next, 2)
                 state = next
                 lastMove = move
                 actionVfxEvent += 1
@@ -375,6 +426,8 @@ private fun WordSiegePracticeContent(
                         avatarVisible = playerProfile?.avatarVisibility != "hidden",
                         isBot = false,
                         modifier = Modifier.weight(1f),
+                        scoreArrivalTick = playerScoreArrivalTick,
+                        onScoreCenterChanged = { playerScoreTargetInWindow = it },
                     )
                     WordSiegePracticeScoreCard(
                         name = botProfile.name,
@@ -391,6 +444,8 @@ private fun WordSiegePracticeContent(
                         avatarVisible = true,
                         isBot = true,
                         modifier = Modifier.weight(1f),
+                        scoreArrivalTick = botScoreArrivalTick,
+                        onScoreCenterChanged = { botScoreTargetInWindow = it },
                     )
                 }
 
@@ -441,6 +496,7 @@ private fun WordSiegePracticeContent(
                         enabled = canPlayerAct,
                         moveEventKey = actionVfxEvent.takeIf { it > 0 },
                         resolvedIndices = lastMove?.placements?.keys ?: emptySet(),
+                        captureEffect = captureEffect,
                         modifier = if (boardViewportMode == WordSiegeBoardViewportMode.CLOSE) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(1f),
                         onViewportModeChange = { boardViewportMode = it },
                         onCell = { boardIndex ->
@@ -751,6 +807,8 @@ private fun WordSiegePracticeScoreCard(
     avatarVisible: Boolean,
     isBot: Boolean,
     modifier: Modifier = Modifier,
+    scoreArrivalTick: Int = 0,
+    onScoreCenterChanged: (Offset) -> Unit = {},
 ) {
     WordSiegeScoreCard(
         name = name, score = score, wordPoints = wordPoints,
@@ -758,5 +816,7 @@ private fun WordSiegePracticeScoreCard(
         active = active, leading = leading, avatarPath = avatarPath,
         gender = gender, avatarVisible = avatarVisible, isBot = isBot,
         modifier = modifier,
+        scoreArrivalTick = scoreArrivalTick,
+        onScoreCenterChanged = onScoreCenterChanged,
     )
 }

@@ -1,17 +1,24 @@
 package com.sonharf.game
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -19,6 +26,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 /** Match-only presentation. Never changes the selected cosmetic theme or game state. */
 internal object WordSiegeGameUi {
@@ -71,8 +80,28 @@ internal fun WordSiegeScoreCard(
     avatarVisible: Boolean,
     isBot: Boolean,
     modifier: Modifier = Modifier,
+    scoreArrivalTick: Int = 0,
+    onScoreCenterChanged: (Offset) -> Unit = {},
 ) {
     val edge = if (active) accent else WordSiegeGameUi.Border
+    val scoreScale = remember { Animatable(1f) }
+    val scoreGlow = remember { Animatable(0f) }
+
+    LaunchedEffect(scoreArrivalTick) {
+        if (scoreArrivalTick <= 0) return@LaunchedEffect
+        scoreScale.snapTo(1f)
+        scoreGlow.snapTo(0f)
+        coroutineScope {
+            launch {
+                scoreScale.animateTo(1.14f, tween(90))
+                scoreScale.animateTo(1f, tween(170))
+            }
+            launch {
+                scoreGlow.animateTo(1f, tween(70))
+                scoreGlow.animateTo(0f, tween(260))
+            }
+        }
+    }
     Surface(
         modifier = modifier,
         color = lerp(WordSiegeGameUi.Surface, accent, if (active) .065f else .025f),
@@ -119,20 +148,45 @@ internal fun WordSiegeScoreCard(
                     Spacer(Modifier.width(4.dp))
                 }
                 val totalDescription = sh("Toplam $score", "Total $score")
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = accent.copy(alpha = .10f),
-                    border = BorderStroke(1.dp, accent.copy(alpha = .18f)),
+                Box(
+                    modifier = Modifier
+                        .graphicsLayer {
+                            scaleX = scoreScale.value
+                            scaleY = scoreScale.value
+                        }
+                        .drawBehind {
+                            if (scoreGlow.value > 0f) {
+                                drawCircle(
+                                    color = accent.copy(alpha = .55f * scoreGlow.value),
+                                    radius = size.maxDimension * (.58f + .10f * scoreGlow.value),
+                                    style = Stroke(width = 2.dp.toPx()),
+                                )
+                            }
+                        }
+                        .onGloballyPositioned { coordinates ->
+                            onScoreCenterChanged(
+                                coordinates.localToWindow(
+                                    Offset(coordinates.size.width / 2f, coordinates.size.height / 2f),
+                                ),
+                            )
+                        },
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        "$score",
-                        Modifier.padding(horizontal = 8.dp, vertical = 4.dp).semantics { contentDescription = totalDescription },
-                        color = accent,
-                        fontSize = 21.sp,
-                        lineHeight = 24.sp,
-                        fontWeight = FontWeight.Black,
-                        maxLines = 1,
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = accent.copy(alpha = .10f),
+                        border = BorderStroke(1.dp, accent.copy(alpha = .18f)),
+                    ) {
+                        Text(
+                            "$score",
+                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp).semantics { contentDescription = totalDescription },
+                            color = accent,
+                            fontSize = 21.sp,
+                            lineHeight = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -104,8 +104,90 @@ internal fun WordSiegePanMatch(
     val rivalTerritoryPoints = WordSiegeFinalRules.cubeTransfer(rivalAreaCount)
     val myTargetScore = WordSiegeFinalRules.currentTerritoryScore(myWordPoints, myAreaCount)
     val rivalTargetScore = WordSiegeFinalRules.currentTerritoryScore(rivalWordPoints, rivalAreaCount)
-    val displayedMyScore by animateIntAsState(myTargetScore, tween(260), label = "siege-my-score")
-    val displayedRivalScore by animateIntAsState(rivalTargetScore, tween(260), label = "siege-rival-score")
+    val boardOwners = game.board.map { it.owner }
+    val captureTracker = remember(game.id) {
+        WordSiegeCaptureTracker(
+            initialUpdateKey = lastMove?.id?.toString(),
+            initialOwners = boardOwners,
+        )
+    }
+    var captureQueue by remember(game.id) { mutableStateOf<List<WordSiegeCaptureBatch>>(emptyList()) }
+    var pendingMyCapturePoints by remember(game.id) { mutableIntStateOf(0) }
+    var pendingRivalCapturePoints by remember(game.id) { mutableIntStateOf(0) }
+    var myScoreArrivalTick by remember(game.id) { mutableIntStateOf(0) }
+    var rivalScoreArrivalTick by remember(game.id) { mutableIntStateOf(0) }
+    var myScoreTargetInWindow by remember(game.id) { mutableStateOf(Offset.Unspecified) }
+    var rivalScoreTargetInWindow by remember(game.id) { mutableStateOf(Offset.Unspecified) }
+
+    val moveOwner = when (lastMove?.playerId) {
+        game.playerOneId -> 1
+        game.playerTwoId -> 2
+        else -> null
+    }
+    val captureCandidate = captureTracker.preview(
+        updateKey = lastMove?.id?.toString(),
+        currentOwners = boardOwners,
+        capturingOwner = moveOwner,
+        expectedCaptured = lastMove?.capturedCells ?: 0,
+    )
+    val candidateAlreadyQueued = captureCandidate?.let { candidate ->
+        captureQueue.any { it.updateKey == candidate.updateKey }
+    } ?: false
+    val candidateMyPoints =
+        if (!candidateAlreadyQueued && captureCandidate?.owner == myOwner) captureCandidate.points else 0
+    val candidateRivalPoints =
+        if (!candidateAlreadyQueued && captureCandidate?.owner == rivalOwner) captureCandidate.points else 0
+    val displayedMyScore =
+        wordSiegeDisplayedScore(myTargetScore, pendingMyCapturePoints + candidateMyPoints)
+    val displayedRivalScore =
+        wordSiegeDisplayedScore(rivalTargetScore, pendingRivalCapturePoints + candidateRivalPoints)
+
+    LaunchedEffect(lastMove?.id, boardOwners) {
+        val move = lastMove ?: return@LaunchedEffect
+        val owner = when (move.playerId) {
+            game.playerOneId -> 1
+            game.playerTwoId -> 2
+            else -> return@LaunchedEffect
+        }
+        val batch = captureTracker.preview(
+            updateKey = move.id.toString(),
+            currentOwners = boardOwners,
+            capturingOwner = owner,
+            expectedCaptured = move.capturedCells,
+        ) ?: return@LaunchedEffect
+        captureTracker.consume(batch, boardOwners)
+        if (captureQueue.none { it.updateKey == batch.updateKey }) {
+            captureQueue = captureQueue + batch
+            if (batch.owner == myOwner) {
+                pendingMyCapturePoints += batch.points
+            } else if (batch.owner == rivalOwner) {
+                pendingRivalCapturePoints += batch.points
+            }
+        }
+    }
+
+    val activeCapture = captureQueue.firstOrNull()
+    val captureEffect = activeCapture?.let { batch ->
+        WordSiegeCaptureEffect(
+            batch = batch,
+            targetInWindow = if (batch.owner == myOwner) myScoreTargetInWindow else rivalScoreTargetInWindow,
+            accent = if (batch.owner == myOwner) PanSiegeMineBorder else PanSiegeRivalBorder,
+            onCubeArrived = {
+                if (batch.owner == myOwner) {
+                    pendingMyCapturePoints =
+                        (pendingMyCapturePoints - WORD_SIEGE_CAPTURE_POINTS_PER_CUBE).coerceAtLeast(0)
+                    myScoreArrivalTick += 1
+                } else {
+                    pendingRivalCapturePoints =
+                        (pendingRivalCapturePoints - WORD_SIEGE_CAPTURE_POINTS_PER_CUBE).coerceAtLeast(0)
+                    rivalScoreArrivalTick += 1
+                }
+            },
+            onFinished = {
+                captureQueue = captureQueue.filterNot { it.updateKey == batch.updateKey }
+            },
+        )
+    }
     val myMapControl = ((myAreaCount * 100f) / WordSiegeBoardSpec.CellCount).toInt().coerceIn(0, 100)
     val rivalMapControl = ((rivalAreaCount * 100f) / WordSiegeBoardSpec.CellCount).toInt().coerceIn(0, 100)
     val displayedCurrentPlayerId = game.currentPlayerId
@@ -183,6 +265,8 @@ internal fun WordSiegePanMatch(
                 active = displayedCurrentPlayerId == me,
                 leading = myTargetScore > rivalTargetScore,
                 modifier = Modifier.weight(1f),
+                scoreArrivalTick = myScoreArrivalTick,
+                onScoreCenterChanged = { myScoreTargetInWindow = it },
             )
             PanSiegePlayerCard(
                 profile = opponent,
@@ -195,6 +279,8 @@ internal fun WordSiegePanMatch(
                 active = displayedCurrentPlayerId == opponentId,
                 leading = rivalTargetScore > myTargetScore,
                 modifier = Modifier.weight(1f),
+                scoreArrivalTick = rivalScoreArrivalTick,
+                onScoreCenterChanged = { rivalScoreTargetInWindow = it },
             )
         }
 
@@ -244,6 +330,7 @@ internal fun WordSiegePanMatch(
             myOwner = myOwner,
             enabled = canAct,
             lastMove = lastMove,
+            captureEffect = captureEffect,
             viewportMode = boardViewportMode,
             onViewportModeChange = { boardViewportMode = it },
             modifier = Modifier.fillMaxSize(),
@@ -336,6 +423,7 @@ private fun PanSiegeBoard(
     myOwner: Int,
     enabled: Boolean,
     lastMove: WordSiegeMoveDto?,
+    captureEffect: WordSiegeCaptureEffect? = null,
     viewportMode: WordSiegeBoardViewportMode,
     onViewportModeChange: (WordSiegeBoardViewportMode) -> Unit,
     modifier: Modifier = Modifier,
@@ -349,6 +437,7 @@ private fun PanSiegeBoard(
     var closePan by remember(gameId) { mutableStateOf(Offset.Zero) }
     var dragging by remember(gameId) { mutableStateOf(false) }
     var initialized by remember(gameId) { mutableStateOf(false) }
+    var viewportOriginInWindow by remember(gameId) { mutableStateOf(Offset.Unspecified) }
     var observedMoveId by remember(gameId) { mutableStateOf(lastMove?.id) }
     var actionVfxMoveId by remember(gameId) { mutableStateOf<Long?>(null) }
     var highlightedIndices by remember(gameId) { mutableStateOf<Set<Int>>(emptySet()) }
@@ -478,7 +567,10 @@ private fun PanSiegeBoard(
                 )
                 .border(1.dp, Color(0xFFB88C55), RoundedCornerShape(14.dp))
                 .clipToBounds()
-                .onGloballyPositioned { viewport = it.size }
+                .onGloballyPositioned {
+                    viewport = it.size
+                    viewportOriginInWindow = it.localToWindow(Offset.Zero)
+                }
                 .pointerInput(gameId, viewportMode, viewport, boardPx, closeScale) {
                     if (viewportMode == WordSiegeBoardViewportMode.CLOSE) {
                         detectDragGestures(
@@ -534,6 +626,22 @@ private fun PanSiegeBoard(
                 cellSizePx = tilePx,
                 modifier = Modifier.matchParentSize(),
             )
+
+            captureEffect?.let { effect ->
+                val sourcePositions = effect.batch.indices.associateWith { index ->
+                    wordSiegeCaptureCellCenterInWindow(
+                        index = index,
+                        transform = transform,
+                        cellSizePx = tilePx,
+                        viewportOriginInWindow = viewportOriginInWindow,
+                    )
+                }
+                WordSiegeCaptureFlightOverlay(
+                    effect = effect,
+                    sourcePositionsInWindow = sourcePositions,
+                    anchorOriginInWindow = viewportOriginInWindow,
+                )
+            }
 
             SmallFloatingActionButton(
                 onClick = { toggleViewport(WordSiegeBoardSpec.CenterIndex) },
@@ -786,6 +894,8 @@ private fun PanSiegePlayerCard(
     active: Boolean,
     leading: Boolean,
     modifier: Modifier = Modifier,
+    scoreArrivalTick: Int = 0,
+    onScoreCenterChanged: (Offset) -> Unit = {},
 ) {
     WordSiegeScoreCard(
         name = profile?.displayName ?: fallbackName,
@@ -794,6 +904,8 @@ private fun PanSiegePlayerCard(
         avatarPath = profile?.avatarPath, gender = profile?.gender,
         avatarVisible = profile?.avatarVisibility != "hidden", isBot = false,
         modifier = modifier,
+        scoreArrivalTick = scoreArrivalTick,
+        onScoreCenterChanged = onScoreCenterChanged,
     )
 }
 

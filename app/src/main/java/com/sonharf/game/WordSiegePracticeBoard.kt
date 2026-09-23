@@ -71,6 +71,7 @@ internal fun WordSiegePracticeBoard(
     enabled: Boolean,
     moveEventKey: Int? = null,
     resolvedIndices: Set<Int> = emptySet(),
+    captureEffect: WordSiegeCaptureEffect? = null,
     language: String = SonHarfUiState.language,
     modifier: Modifier = Modifier,
     onViewportModeChange: (WordSiegeBoardViewportMode) -> Unit = {},
@@ -83,6 +84,7 @@ internal fun WordSiegePracticeBoard(
     var closePan by remember { mutableStateOf(Offset.Zero) }
     var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE) }
     var initialized by remember { mutableStateOf(false) }
+    var viewportOriginInWindow by remember { mutableStateOf(Offset.Unspecified) }
     var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     val transform by remember(mode, viewport, boardPx, closePan, closeScale) {
         derivedStateOf {
@@ -170,7 +172,10 @@ internal fun WordSiegePracticeBoard(
                 .clip(RoundedCornerShape(14.dp))
                 .background(Brush.linearGradient(listOf(Color(0xFFF0E6D7), Color(0xFFE5D2B7), Color(0xFFF7F1E8), Color(0xFFD9BE98))))
                 .clipToBounds()
-                .onGloballyPositioned { viewport = it.size }
+                .onGloballyPositioned {
+                    viewport = it.size
+                    viewportOriginInWindow = it.localToWindow(Offset.Zero)
+                }
                 .pointerInput(mode, viewport, boardPx, closeScale) {
                     if (mode == WordSiegeBoardViewportMode.CLOSE) {
                         detectTransformGestures { centroid, pan, zoom, _ ->
@@ -233,6 +238,22 @@ internal fun WordSiegePracticeBoard(
                 cellSizePx = tilePx,
                 modifier = Modifier.matchParentSize(),
             )
+
+            captureEffect?.let { effect ->
+                val sourcePositions = effect.batch.indices.associateWith { index ->
+                    wordSiegeCaptureCellCenterInWindow(
+                        index = index,
+                        transform = transform,
+                        cellSizePx = tilePx,
+                        viewportOriginInWindow = viewportOriginInWindow,
+                    )
+                }
+                WordSiegeCaptureFlightOverlay(
+                    effect = effect,
+                    sourcePositionsInWindow = sourcePositions,
+                    anchorOriginInWindow = viewportOriginInWindow,
+                )
+            }
         }
     }
 
