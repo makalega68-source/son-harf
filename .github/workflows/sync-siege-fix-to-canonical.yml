@@ -1,0 +1,26 @@
+name: Sync Siege Fix To Canonical
+
+on:
+  push:
+    branches:
+      - codex/siege-capture-score-flight
+    paths:
+      - '.github/workflows/sync-siege-fix-to-canonical.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fast-forward canonical branch
+        shell: bash
+        run: |
+          git fetch origin claude/kelime-tahti-home-redesign-7ojb7d codex/siege-capture-score-flight
+          SOURCE_SHA="${GITHUB_SHA}^"
+          git merge-base --is-ancestor origin/claude/kelime-tahti-home-redesign-7ojb7d "$SOURCE_SHA"
+          git push origin "$SOURCE_SHA":refs/heads/claude/kelime-tahti-home-redesign-7ojb7d
