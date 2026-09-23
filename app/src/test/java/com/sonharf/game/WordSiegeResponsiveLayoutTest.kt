@@ -20,7 +20,10 @@ class WordSiegeResponsiveLayoutTest {
         assertTrue(source.contains("showExchange = true"))
         assertTrue(source.contains("onClick = ::applyPlayerMove"))
         assertTrue(source.contains("HAMLEYİ ONAYLA"))
-        assertFalse("Main match surface must not use vertical scrolling", source.contains(".verticalScroll("))
+
+        val chatDialogStart = source.indexOf("if (showChat)")
+        val fixedMatchSurface = if (chatDialogStart > 0) source.substring(0, chatDialogStart) else source
+        assertFalse("Main match surface must not use vertical scrolling", fixedMatchSurface.contains(".verticalScroll("))
         assertTrue("Chat history is intentionally scrollable", source.contains("itemsIndexed(chatMessages)"))
     }
 
