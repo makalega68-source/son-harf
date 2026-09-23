@@ -268,12 +268,6 @@ internal fun WordSiegePanMatch(
                     fontWeight = FontWeight.Black,
                 )
             }
-            WordSiegeMascot(
-                moveId = lastMove?.id,
-                lastMoveMine = lastMove?.playerId == me,
-                pendingCells = placements.keys,
-                playerTurn = myTurn,
-            )
             IconButton(onClick = onForfeit, enabled = game.status == "playing" && !busy, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = WordSiegeGameUi.Red)
             }
@@ -358,6 +352,8 @@ internal fun WordSiegePanMatch(
             placements = placements,
             myOwner = myOwner,
             enabled = canAct,
+            playerTurn = myTurn,
+            lastMoveMine = lastMove?.playerId == me,
             lastMove = lastMove,
             captureEffect = captureEffect,
             viewportMode = boardViewportMode,
@@ -472,6 +468,8 @@ private fun PanSiegeBoard(
     placements: Map<Int, Int>,
     myOwner: Int,
     enabled: Boolean,
+    playerTurn: Boolean,
+    lastMoveMine: Boolean,
     lastMove: WordSiegeMoveDto?,
     captureEffect: WordSiegeCaptureEffect? = null,
     viewportMode: WordSiegeBoardViewportMode,
@@ -484,6 +482,7 @@ private fun PanSiegeBoard(
     val tilePx = with(density) { PanSiegeCellSize.toPx() }
     val boardPx = tilePx * WordSiegeBoardSpec.Size
     var viewport by remember(gameId) { mutableStateOf(IntSize.Zero) }
+    var mascotAtBottom by remember(gameId) { mutableStateOf(false) }
     var closePan by remember(gameId) { mutableStateOf(Offset.Zero) }
     var dragging by remember(gameId) { mutableStateOf(false) }
     var initialized by remember(gameId) { mutableStateOf(false) }
@@ -692,6 +691,18 @@ private fun PanSiegeBoard(
                     anchorOriginInWindow = viewportOriginInWindow,
                 )
             }
+
+            WordSiegeMascot(
+                moveId = lastMove?.id,
+                lastMoveMine = lastMoveMine,
+                pendingCells = placements.keys,
+                playerTurn = playerTurn,
+                modifier = Modifier
+                    .align(if (mascotAtBottom) Alignment.BottomStart else Alignment.TopStart)
+                    .padding(7.dp)
+                    .size(76.dp),
+                onTap = { mascotAtBottom = !mascotAtBottom },
+            )
 
             SmallFloatingActionButton(
                 onClick = { toggleViewport(WordSiegeBoardSpec.CenterIndex) },

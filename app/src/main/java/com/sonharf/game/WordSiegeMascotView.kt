@@ -160,11 +160,15 @@ internal fun WordSiegeMascot(
     lastMoveMine: Boolean,
     pendingCells: Collection<Int>,
     playerTurn: Boolean,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier.size(42.dp),
+    onTap: () -> Unit = {},
 ) {
     AndroidView(
-        modifier = modifier.size(42.dp),
-        factory = { context -> WordSiegeMascotView(context) },
-        update = { it.updateGame(moveId, lastMoveMine, pendingCells, playerTurn) },
+        modifier = modifier,
+        factory = { context -> WordSiegeMascotView(context).apply { isClickable = true } },
+        update = {
+            it.updateGame(moveId, lastMoveMine, pendingCells, playerTurn)
+            it.setOnClickListener { onTap() }
+        },
     )
 }

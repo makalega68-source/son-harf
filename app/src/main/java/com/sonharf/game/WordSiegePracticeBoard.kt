@@ -81,6 +81,7 @@ internal fun WordSiegePracticeBoard(
     val tilePx = with(density) { PracticeSiegeCellSize.toPx() }
     val boardPx = tilePx * WordSiegeBoardSpec.Size
     var viewport by remember { mutableStateOf(IntSize.Zero) }
+    var mascotAtBottom by remember { mutableStateOf(false) }
     var closePan by remember { mutableStateOf(Offset.Zero) }
     var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE) }
     var initialized by remember { mutableStateOf(false) }
@@ -254,6 +255,17 @@ internal fun WordSiegePracticeBoard(
                     anchorOriginInWindow = viewportOriginInWindow,
                 )
             }
+            WordSiegeMascot(
+                moveId = moveEventKey?.toLong(),
+                lastMoveMine = true,
+                pendingCells = placements.keys,
+                playerTurn = enabled,
+                modifier = Modifier
+                    .align(if (mascotAtBottom) Alignment.BottomStart else Alignment.TopStart)
+                    .padding(7.dp)
+                    .size(76.dp),
+                onTap = { mascotAtBottom = !mascotAtBottom },
+            )
         }
     }
 
