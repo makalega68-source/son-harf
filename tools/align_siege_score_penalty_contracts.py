@@ -49,6 +49,11 @@ replace_once(
     '        assertTrue(guidance.contains("sahip olduğun hücre başına 2 puan"))',
     '        assertTrue(guidance.contains("Kazandığın her küp +2 bölge puanı"))',
 )
+replace_once(
+    'app/src/test/java/com/sonharf/game/WordSiegePracticeUxAndBotRegressionTest.kt',
+    '        assertTrue(guidance.contains("kelime puanı kalıcıdır"))',
+    '        assertTrue(guidance.contains("Kelime puanı kalıcıdır"))',
+)
 
 replace_once(
     'app/src/test/java/com/sonharf/game/WordSiegeStableRegressionTest.kt',
