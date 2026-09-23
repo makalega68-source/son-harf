@@ -923,13 +923,35 @@ private fun PremierArena(
     val latestMove = words.lastOrNull()
     val latestPlayedWord = latestMove?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
     val latestMoveScore = latestMove?.let { DictionaryEngine.calculatePoints(it.normalizedWord.ifBlank { it.word }, language) } ?: 0
+    // Round results get a longer reaction than single words: a celebration or a bowed head.
+    var mascotRoundReaction by remember(room.id) { mutableStateOf<WordSiegeMascotEmotion?>(null) }
+    var seenMyRounds by remember(room.id) { mutableIntStateOf(myRounds) }
+    var seenRivalRounds by remember(room.id) { mutableIntStateOf(rivalRounds) }
+    LaunchedEffect(room.id, myRounds, rivalRounds) {
+        val reaction = when {
+            myRounds > seenMyRounds -> WordSiegeMascotEmotion.EXCITED
+            rivalRounds > seenRivalRounds -> WordSiegeMascotEmotion.BOWED
+            else -> null
+        }
+        seenMyRounds = myRounds
+        seenRivalRounds = rivalRounds
+        mascotRoundReaction = reaction
+        if (reaction != null) {
+            delay(2_600)
+            mascotRoundReaction = null
+        }
+    }
     val mascotEmotion = when {
+        mascotRoundReaction != null -> mascotRoundReaction
         moveFeedback?.accepted == true && latestMoveScore >= 20 -> WordSiegeMascotEmotion.PROUD
         moveFeedback?.accepted == true -> WordSiegeMascotEmotion.HAPPY
-        moveFeedback?.accepted == false -> WordSiegeMascotEmotion.STRESSED
+        moveFeedback?.accepted == false -> WordSiegeMascotEmotion.SAD
+        myTurn && turnSeconds in 1..5 -> WordSiegeMascotEmotion.STRESSED
         myTurn -> WordSiegeMascotEmotion.FOCUS
         else -> WordSiegeMascotEmotion.CALM
     }
+    val mascotUrgency = if (myTurn && turnSeconds in 1..5) (6 - turnSeconds) / 5f else 0f
+    val mascotMomentum = (myScore - rivalScore) / maxOf(30, myScore + rivalScore).toFloat()
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val veryCompact = maxHeight < 610.dp
@@ -981,6 +1003,12 @@ private fun PremierArena(
                         playerTurn = myTurn,
                         requestedEmotion = mascotEmotion,
                         modifier = Modifier.align(Alignment.CenterEnd).size(mascotSize),
+                        urgency = mascotUrgency,
+                        momentum = mascotMomentum,
+                        // Watch the keyboard on our turn, the rival's card on theirs.
+                        idleGazeX = if (myTurn) -.2f else .35f,
+                        idleGazeY = if (myTurn) .75f else -.85f,
+                        typingKey = input.length,
                     )
                 }
                 Spacer(Modifier.height(primaryGap))
