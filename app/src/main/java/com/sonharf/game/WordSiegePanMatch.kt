@@ -362,9 +362,11 @@ internal fun WordSiegePanMatch(
             mascotSignal = lastMove?.let { move ->
                 val mineMove = move.playerId == me
                 when {
+                    mineMove && move.primaryWord.length >= 8 ->
+                        WordSiegeMascotSignal("rare:${move.id}", WordSiegeMascotEvent.RARE_WORD, word = move.primaryWord)
                     mineMove && (move.totalScore >= 25 || move.capturedCells >= 3 || move.opponentCaptured > 0) ->
-                        WordSiegeMascotSignal("big:${move.id}", WordSiegeMascotEvent.BIG_PRAISE)
-                    mineMove -> WordSiegeMascotSignal("ok:${move.id}", WordSiegeMascotEvent.PRAISE)
+                        WordSiegeMascotSignal("big:${move.id}", WordSiegeMascotEvent.BIG_PRAISE, word = move.primaryWord)
+                    mineMove -> WordSiegeMascotSignal("ok:${move.id}", WordSiegeMascotEvent.PRAISE, word = move.primaryWord)
                     move.totalScore >= 25 || move.opponentCaptured > 0 ->
                         WordSiegeMascotSignal("rival:${move.id}", WordSiegeMascotEvent.RIVAL_STRONG)
                     rivalTargetScore - myTargetScore >= 40 ->
@@ -512,6 +514,7 @@ private fun PanSiegeBoard(
     var dragging by remember(gameId) { mutableStateOf(false) }
     var initialized by remember(gameId) { mutableStateOf(false) }
     var viewportOriginInWindow by remember(gameId) { mutableStateOf(Offset.Unspecified) }
+    val mascotTouches = remember(gameId) { WordSiegeMascotTouchState() }
     var observedMoveId by remember(gameId) { mutableStateOf(lastMove?.id) }
     var actionVfxMoveId by remember(gameId) { mutableStateOf<Long?>(null) }
     var highlightedIndices by remember(gameId) { mutableStateOf<Set<Int>>(emptySet()) }
@@ -645,6 +648,7 @@ private fun PanSiegeBoard(
                     viewport = it.size
                     viewportOriginInWindow = it.localToWindow(Offset.Zero)
                 }
+                .wordSiegeMascotTouchWatcher(mascotTouches)
                 .pointerInput(gameId, viewportMode, viewport, boardPx, closeScale) {
                     if (viewportMode == WordSiegeBoardViewportMode.CLOSE) {
                         detectDragGestures(
@@ -734,6 +738,19 @@ private fun PanSiegeBoard(
                 signal = mascotSignal,
                 outcome = mascotOutcome,
                 playerName = playerName,
+                touches = mascotTouches,
+                // After a strong capture it may fly over to admire the new territory.
+                visit = lastMove?.takeIf { lastMoveMine && (it.capturedCells >= 2 || it.opponentCaptured > 0) }?.let { move ->
+                    wordSiegeMascotCellVisit(
+                        key = "cap:${move.id}",
+                        indices = move.placedTiles.map { it.index },
+                        transform = transform,
+                        cellSizePx = tilePx,
+                        viewportWidthPx = viewport.width.toFloat(),
+                        viewportHeightPx = viewport.height.toFloat(),
+                        kind = WordSiegeMascotVisitKind.CAPTURE,
+                    )
+                },
             )
 
             SmallFloatingActionButton(
@@ -1069,3 +1086,22 @@ internal val WordSiegeBoardMascotPerches = listOf(
     Offset(.5f, 1f),
     Offset(1f, .5f),
 )
+
+/** Converts board cells into a mascot visit point (viewport fraction); null when off-screen. */
+internal fun wordSiegeMascotCellVisit(
+    key: String,
+    indices: Collection<Int>,
+    transform: WordSiegeBoardTransform,
+    cellSizePx: Float,
+    viewportWidthPx: Float,
+    viewportHeightPx: Float,
+    kind: WordSiegeMascotVisitKind,
+): WordSiegeMascotVisit? {
+    if (indices.isEmpty() || viewportWidthPx <= 0f || viewportHeightPx <= 0f) return null
+    val row = indices.map { WordSiegeBoardSpec.row(it) + .5f }.average().toFloat()
+    val column = indices.map { WordSiegeBoardSpec.column(it) + .5f }.average().toFloat()
+    val x = (transform.pan.x + column * cellSizePx * transform.scale) / viewportWidthPx
+    val y = (transform.pan.y + row * cellSizePx * transform.scale) / viewportHeightPx
+    if (x !in .06f..0.94f || y !in .06f..0.94f) return null
+    return WordSiegeMascotVisit(key, Offset(x, y), kind)
+}

@@ -519,9 +519,11 @@ private fun WordSiegePracticeContent(
                         mascotSignal = lastMove?.takeIf { actionVfxEvent > 0 }?.let { move ->
                             val mineMove = state.currentOwner == 2
                             when {
+                                mineMove && move.primaryWord.length >= 8 ->
+                                    WordSiegeMascotSignal("rare:$actionVfxEvent", WordSiegeMascotEvent.RARE_WORD, word = move.primaryWord)
                                 mineMove && (move.wordScore >= 25 || move.capturedCells >= 3 || move.opponentCaptured > 0) ->
-                                    WordSiegeMascotSignal("big:$actionVfxEvent", WordSiegeMascotEvent.BIG_PRAISE)
-                                mineMove -> WordSiegeMascotSignal("ok:$actionVfxEvent", WordSiegeMascotEvent.PRAISE)
+                                    WordSiegeMascotSignal("big:$actionVfxEvent", WordSiegeMascotEvent.BIG_PRAISE, word = move.primaryWord)
+                                mineMove -> WordSiegeMascotSignal("ok:$actionVfxEvent", WordSiegeMascotEvent.PRAISE, word = move.primaryWord)
                                 move.wordScore >= 25 || move.opponentCaptured > 0 ->
                                     WordSiegeMascotSignal("rival:$actionVfxEvent", WordSiegeMascotEvent.RIVAL_STRONG)
                                 botTargetScore - playerTargetScore >= 40 ->

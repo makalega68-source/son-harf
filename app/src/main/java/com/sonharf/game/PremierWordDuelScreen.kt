@@ -957,11 +957,36 @@ private fun PremierArena(
     }
     val mascotUrgency = if (myTurn && turnSeconds in 1..5) (6 - turnSeconds) / 5f else 0f
     val mascotMomentum = (myScore - rivalScore) / maxOf(30, myScore + rivalScore).toFloat()
+    // Streaks are detected from changes, so a new streak step or a broken streak is one signal.
+    var mascotStreakSignal by remember(room.id) { mutableStateOf<WordSiegeMascotSignal?>(null) }
+    var seenMyStreak by remember(room.id) { mutableIntStateOf(myStreak) }
+    LaunchedEffect(room.id, myStreak) {
+        val previous = seenMyStreak
+        seenMyStreak = myStreak
+        val next = when {
+            myStreak >= 3 && myStreak > previous ->
+                WordSiegeMascotSignal("streak:${room.id}:${room.roundNo}:$myStreak", WordSiegeMascotEvent.STREAK, count = myStreak)
+            previous >= 3 && myStreak < previous ->
+                WordSiegeMascotSignal("streak-lost:${room.id}:${words.size}", WordSiegeMascotEvent.STREAK_LOST)
+            else -> null
+        }
+        mascotStreakSignal = next
+        if (next != null) {
+            delay(1_500)
+            mascotStreakSignal = null
+        }
+    }
+    val latestWordText = latestMove?.let { it.normalizedWord.ifBlank { it.word } }.orEmpty()
     // Moments the companion may respond to; it decides itself whether to speak.
-    val mascotSignal = when {
+    val mascotSignal = mascotStreakSignal ?: when {
         moveFeedback?.accepted == true -> WordSiegeMascotSignal(
             "ok:${room.id}:${room.validWordCount}",
-            if (latestMoveScore >= 20) WordSiegeMascotEvent.BIG_PRAISE else WordSiegeMascotEvent.PRAISE,
+            when {
+                latestWordText.length >= 8 -> WordSiegeMascotEvent.RARE_WORD
+                latestMoveScore >= 20 -> WordSiegeMascotEvent.BIG_PRAISE
+                else -> WordSiegeMascotEvent.PRAISE
+            },
+            word = premierUpper(latestWordText, language),
         )
         moveFeedback?.accepted == false -> WordSiegeMascotSignal("no:${room.id}:${words.size}:${moveFeedback.message}", WordSiegeMascotEvent.COMFORT)
         myTurn && turnSeconds in 1..5 -> WordSiegeMascotSignal("time:${room.id}:${room.roundNo}:${words.size}", WordSiegeMascotEvent.CRITICAL)
@@ -975,12 +1000,16 @@ private fun PremierArena(
     var arenaOrigin by remember { mutableStateOf(Offset.Zero) }
     var arenaSize by remember { mutableStateOf(IntSize.Zero) }
     var mascotSlotCenter by remember { mutableStateOf<Offset?>(null) }
+    val mascotTouches = remember { WordSiegeMascotTouchState() }
 
     BoxWithConstraints(
-        Modifier.fillMaxSize().onGloballyPositioned {
-            arenaOrigin = it.positionInRoot()
-            arenaSize = it.size
-        }
+        Modifier
+            .fillMaxSize()
+            .onGloballyPositioned {
+                arenaOrigin = it.positionInRoot()
+                arenaSize = it.size
+            }
+            .wordSiegeMascotTouchWatcher(mascotTouches)
     ) {
         val veryCompact = maxHeight < 610.dp
         val compact = maxHeight < 700.dp
@@ -1128,6 +1157,7 @@ private fun PremierArena(
             typingKey = input.length,
             signal = mascotSignal,
             playerName = me?.displayName,
+            touches = mascotTouches,
         )
 
         if (myTurn && room.validWordCount > 0) {

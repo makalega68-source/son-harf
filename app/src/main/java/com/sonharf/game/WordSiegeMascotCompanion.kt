@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
@@ -22,12 +23,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -59,13 +64,68 @@ import kotlinx.coroutines.launch
 
 /** Game moments the companion may respond to. The mascot decides itself whether and how. */
 internal enum class WordSiegeMascotEvent {
-    PRAISE, BIG_PRAISE, COMFORT, CRITICAL, BEHIND, RIVAL_STRONG, AHEAD,
+    PRAISE, BIG_PRAISE, RARE_WORD, COMFORT, CRITICAL, BEHIND, RIVAL_STRONG, AHEAD, STREAK, STREAK_LOST,
 }
 
 internal enum class WordSiegeMascotOutcome { WIN, LOSS, DRAW }
 
 /** One occurrence of a game moment; a new [key] means a new occurrence. */
-internal data class WordSiegeMascotSignal(val key: String, val event: WordSiegeMascotEvent)
+internal data class WordSiegeMascotSignal(
+    val key: String,
+    val event: WordSiegeMascotEvent,
+    /** The player's word for praise events, remembered as a shared memory. */
+    val word: String = "",
+    /** Streak length for [WordSiegeMascotEvent.STREAK]. */
+    val count: Int = 0,
+)
+
+internal enum class WordSiegeMascotVisitKind { CAPTURE, HINT }
+
+/** A spot in the game area worth flying to: fresh territory, or (practice only) a bonus square. */
+internal data class WordSiegeMascotVisit(
+    val key: String,
+    /** Fraction (0..1) of the companion area. */
+    val point: Offset,
+    val kind: WordSiegeMascotVisitKind,
+)
+
+/** Where the player last touched, observed without consuming the touch. */
+internal class WordSiegeMascotTouchState {
+    var position by mutableStateOf(Offset.Unspecified)
+    var tick by mutableIntStateOf(0)
+    var dragPosition by mutableStateOf(Offset.Unspecified)
+    var dragTick by mutableIntStateOf(0)
+    var lastDragAt = 0L
+}
+
+/**
+ * Lets the mascot notice touches on the game area. Put it on the same parent that hosts the
+ * companion. Events are only observed, never consumed, so game gestures work as before.
+ */
+internal fun Modifier.wordSiegeMascotTouchWatcher(state: WordSiegeMascotTouchState): Modifier =
+    pointerInput(state) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val change = event.changes.firstOrNull() ?: continue
+                when (event.type) {
+                    PointerEventType.Press -> {
+                        state.position = change.position
+                        state.tick += 1
+                    }
+                    PointerEventType.Move -> if (change.pressed) {
+                        val now = SystemClock.uptimeMillis()
+                        if (now - state.lastDragAt > 120L) {
+                            state.lastDragAt = now
+                            state.dragPosition = change.position
+                            state.dragTick += 1
+                        }
+                    }
+                    else -> Unit
+                }
+            }
+        }
+    }
 
 /** Friendship memory between the player and the mascot. Stored only on this device. */
 internal class WordSiegeMascotBond(context: Context) {
@@ -80,14 +140,16 @@ internal class WordSiegeMascotBond(context: Context) {
 
     /** Registers a meeting; returns the meeting count and the days since the previous one. */
     fun meet(): Pair<Int, Long> {
-        val today = System.currentTimeMillis() / 86_400_000L
+        val today = today()
         val lastDay = prefs.getLong(KEY_LAST_DAY, -1L)
         val meetings = prefs.getInt(KEY_MEETINGS, 0) + 1
-        prefs.edit()
+        val editor = prefs.edit()
             .putInt(KEY_MEETINGS, meetings)
             .putLong(KEY_LAST_DAY, today)
             .putInt(KEY_BOND, min(MAX_BOND, points + 2))
-            .apply()
+            .putInt(KEY_MOOD, mood - mood.sign)
+        if (prefs.getLong(KEY_FIRST_DAY, -1L) < 0L) editor.putLong(KEY_FIRST_DAY, today)
+        editor.apply()
         return meetings to if (lastDay < 0L) 0L else today - lastDay
     }
 
@@ -95,12 +157,48 @@ internal class WordSiegeMascotBond(context: Context) {
         prefs.edit().putInt(KEY_BOND, (points + amount).coerceIn(0, MAX_BOND)).apply()
     }
 
+    val wins: Int get() = prefs.getInt(KEY_WINS, 0)
+    val winStreak: Int get() = prefs.getInt(KEY_WIN_STREAK, 0)
+    val bestWinStreak: Int get() = prefs.getInt(KEY_BEST_WIN_STREAK, 0)
+    val longestWord: String get() = prefs.getString(KEY_LONGEST_WORD, "").orEmpty()
+
+    /** -5 (down after losses) .. 5 (buoyant after wins); drifts back toward 0 every meeting. */
+    val mood: Int get() = prefs.getInt(KEY_MOOD, 0)
+
+    /** Whole days since the first meeting, or -1 before it. */
+    fun daysTogether(): Long {
+        val first = prefs.getLong(KEY_FIRST_DAY, -1L)
+        return if (first < 0L) -1L else today() - first
+    }
+
     fun recordWin() {
+        val streak = winStreak + 1
         prefs.edit()
-            .putInt(KEY_WINS, prefs.getInt(KEY_WINS, 0) + 1)
+            .putInt(KEY_WINS, wins + 1)
+            .putInt(KEY_WIN_STREAK, streak)
+            .putInt(KEY_BEST_WIN_STREAK, max(bestWinStreak, streak))
+            .putInt(KEY_MOOD, (mood + 2).coerceIn(-5, 5))
             .putInt(KEY_BOND, min(MAX_BOND, points + 6))
             .apply()
     }
+
+    fun recordLoss() {
+        prefs.edit()
+            .putInt(KEY_WIN_STREAK, 0)
+            .putInt(KEY_MOOD, (mood - 2).coerceIn(-5, 5))
+            .putInt(KEY_BOND, min(MAX_BOND, points + 2))
+            .apply()
+    }
+
+    /** Remembers the longest word the player has played in front of the mascot. */
+    fun recordWord(word: String) {
+        val clean = word.trim()
+        if (clean.length > longestWord.length && clean.length <= 20) {
+            prefs.edit().putString(KEY_LONGEST_WORD, clean).apply()
+        }
+    }
+
+    private fun today(): Long = System.currentTimeMillis() / 86_400_000L
 
     private companion object {
         const val FILE = "word_siege_mascot_bond"
@@ -108,6 +206,11 @@ internal class WordSiegeMascotBond(context: Context) {
         const val KEY_MEETINGS = "meetings"
         const val KEY_LAST_DAY = "last_day"
         const val KEY_WINS = "wins"
+        const val KEY_WIN_STREAK = "win_streak"
+        const val KEY_BEST_WIN_STREAK = "best_win_streak"
+        const val KEY_LONGEST_WORD = "longest_word"
+        const val KEY_MOOD = "mood"
+        const val KEY_FIRST_DAY = "first_day"
         const val MAX_BOND = 1_000
     }
 }
@@ -215,13 +318,71 @@ internal object WordSiegeMascotLines {
         "İyi mücadeleydi, seninle gurur duyuyorum." to "Good fight, I'm proud of you.",
         "Yanındayım, rövanşı alırız!" to "I'm with you, we'll get our revenge!",
     )
+    val morning = listOf(
+        "Günaydın %s! ☀️ Güne bir zaferle başlayalım." to "Good morning, %s! ☀️ Let's start the day with a win.",
+        "Günaydın! Kahveni aldıysan başlayalım ☕" to "Good morning! Got your coffee? Let's go ☕",
+    )
+    val night = listOf(
+        "Geç oldu… bir maç daha, sonra uyu 🌙" to "It's late… one more match, then sleep 🌙",
+        "Gece kuşu %s! Ben de uykusuzum 🦉" to "Night owl %s! I can't sleep either 🦉",
+    )
+    val milestone = listOf(
+        "Bu bizim %n. buluşmamız! 🎉" to "This is our meeting number %n! 🎉",
+        "%n kez birlikte oynadık, harikasın! ✨" to "We've played together %n times, you're amazing! ✨",
+    )
+    val anniversary = listOf(
+        "Bugün tanışmamızın yıldönümü! 🎂" to "Today is our anniversary! 🎂",
+    )
+    val memoryLongest = listOf(
+        "En uzun kelimen hâlâ %w, rekoru kırar mısın?" to "Your longest word is still %w. Can you beat it?",
+        "%w kelimesini hiç unutmayacağım!" to "I'll never forget the word %w!",
+    )
+    val memoryWins = listOf(
+        "Birlikte %n maç kazandık!" to "We've won %n matches together!",
+        "Tam %n galibiyetimiz var, devam!" to "We have %n wins, let's keep going!",
+    )
+    val memoryStreak = listOf(
+        "Üst üste %n galibiyet! Seriyi bozmayalım 🔥" to "%n wins in a row! Let's keep the streak 🔥",
+    )
+    val sadMood = listOf(
+        "Son maçlar zor geçti… ama birlikte toparlarız." to "The last matches were tough… but we'll bounce back together.",
+    )
+    val happyMood = listOf(
+        "Bugün çok iyi hissediyorum! ✨" to "I feel great today! ✨",
+    )
+    val streak = listOf(
+        "%n'lü seri! 🔥" to "%n in a row! 🔥",
+        "Durdurulamıyorsun! 🔥" to "You're unstoppable! 🔥",
+        "Seri devam ediyor, harikasın!" to "The streak goes on, amazing!",
+    )
+    val streakLost = listOf(
+        "Seri bitti ama sorun yok, yenisini yaparız." to "The streak ended, no worries, we'll start a new one.",
+        "Olsun! Yeni seri seni bekliyor." to "That's okay! A new streak awaits.",
+    )
+    val rareWord = listOf(
+        "Bu kelimeyi nereden buldun?! 😲" to "Where did you find that word?! 😲",
+        "Vay, %w! Sözlük gibisin." to "Wow, %w! You're a walking dictionary.",
+        "Böyle uzun kelime görmemiştim!" to "I've never seen such a long word!",
+    )
+    val capture = listOf(
+        "Burası artık bizim! 🏰" to "This is ours now! 🏰",
+        "Bayrağı diktik! 🚩" to "Flag planted! 🚩",
+    )
+    val hint = listOf(
+        "Şuradaki bonus kareye bir bak 👀" to "Take a look at this bonus square 👀",
+        "Burası puanı katlayabilir…" to "This spot could multiply your points…",
+    )
+    val chaseCatch = listOf(
+        "Yakaladım! ✨" to "Got it! ✨",
+        "Hop! Bir harf daha bizim." to "Whee! Another letter for us.",
+    )
     val draw = listOf(
         "Berabere! Ne çekişmeydi!" to "A draw! What a battle!",
         "Kıl payı… rövanşa ne dersin?" to "So close… rematch?",
     )
 }
 
-internal enum class WordSiegeMascotIdle { WATCH, LOOK_AROUND, NOD, HOP, SPARKLE, TWIRL, FLIP, CHAT, WANDER }
+internal enum class WordSiegeMascotIdle { WATCH, LOOK_AROUND, NOD, HOP, SPARKLE, TWIRL, FLIP, CHAT, WANDER, PEEK, CHASE }
 
 /**
  * The mascot's decision making: weighted choices with cooldowns and a short memory of what it did
@@ -243,7 +404,13 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
 
     fun nextIdleDelay(): Long = 4_500L + random.nextLong(7_500L)
 
-    fun pickIdle(now: Long, bondLevel: Int, stayCalm: Boolean): WordSiegeMascotIdle {
+    fun pickIdle(
+        now: Long,
+        bondLevel: Int,
+        stayCalm: Boolean,
+        rivalTurn: Boolean = false,
+        playfulness: Float = 1f,
+    ): WordSiegeMascotIdle {
         val options = if (stayCalm) {
             // The player is thinking or under pressure: do not distract.
             listOf(WordSiegeMascotIdle.WATCH to 8f, WordSiegeMascotIdle.NOD to .5f)
@@ -252,12 +419,15 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
                 WordSiegeMascotIdle.WATCH to 6f,
                 WordSiegeMascotIdle.LOOK_AROUND to 1.5f,
                 WordSiegeMascotIdle.NOD to .7f,
-                WordSiegeMascotIdle.HOP to .8f,
+                WordSiegeMascotIdle.HOP to .8f * playfulness,
                 WordSiegeMascotIdle.SPARKLE to .8f,
-                WordSiegeMascotIdle.TWIRL to .5f,
-                WordSiegeMascotIdle.FLIP to .28f,
-                WordSiegeMascotIdle.CHAT to .55f + .25f * bondLevel,
+                WordSiegeMascotIdle.TWIRL to .5f * playfulness,
+                WordSiegeMascotIdle.FLIP to .28f * playfulness,
+                WordSiegeMascotIdle.CHAT to (.55f + .25f * bondLevel) * playfulness,
                 WordSiegeMascotIdle.WANDER to .3f,
+                // Curious about the rival's move: stretches up to peek.
+                WordSiegeMascotIdle.PEEK to (if (rivalTurn) 1.3f else 0f),
+                WordSiegeMascotIdle.CHASE to .22f * playfulness,
             )
         }
         val weighted = options.map { (idle, weight) ->
@@ -295,17 +465,20 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
         WordSiegeMascotIdle.FLIP -> 140_000L
         WordSiegeMascotIdle.CHAT -> 50_000L
         WordSiegeMascotIdle.WANDER -> 120_000L
+        WordSiegeMascotIdle.PEEK -> 20_000L
+        WordSiegeMascotIdle.CHASE -> 240_000L
     }
 
     /** Picks a line it has not said recently. */
-    fun line(options: List<Pair<String, String>>, name: String?): String {
+    fun line(options: List<Pair<String, String>>, name: String?, number: Int = 0, word: String = ""): String {
         val usable = options.filter { name != null || !it.first.contains("%s") }.ifEmpty { options }
         val fresh = usable.filter { it.first !in recentLines }.ifEmpty { usable }
         val chosen = fresh[random.nextInt(fresh.size)]
         recentLines.addLast(chosen.first)
         while (recentLines.size > 12) recentLines.removeFirst()
         val text = sh(chosen.first, chosen.second)
-        return text.replace("%s", name ?: "").replace(" !", "!").replace(" ,", ",").trim()
+        return text.replace("%s", name ?: "").replace("%n", number.toString()).replace("%w", word)
+            .replace(" !", "!").replace(" ,", ",").trim()
     }
 
     private companion object {
@@ -314,12 +487,17 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
 }
 
 private const val STAGE = -1
+private const val VISIT = -2
+
+/** A drifting letter the mascot sometimes chases for fun. Positions are area fractions. */
+private data class WordSiegeMascotChase(val id: Int, val letter: String, val start: Offset, val end: Offset)
 
 /**
  * A living companion layer: place it over a game area with `Modifier.matchParentSize()`.
  * The mascot flies in, perches on one of [anchors] (fractions of the area, 0..1, of its centre),
  * flies to another perch when tapped, celebrates a win on centre stage, comforts after a loss and
- * sometimes speaks in a bubble. Touches outside the mascot pass through to the game.
+ * sometimes speaks in a bubble. Touches outside the mascot pass through to the game; with
+ * [touches] (see [wordSiegeMascotTouchWatcher]) it glances wherever the player touches.
  */
 @Composable
 internal fun WordSiegeMascotCompanion(
@@ -346,6 +524,8 @@ internal fun WordSiegeMascotCompanion(
     greet: Boolean = true,
     stageY: Float = .42f,
     celebrationScale: Float = 1.7f,
+    touches: WordSiegeMascotTouchState? = null,
+    visit: WordSiegeMascotVisit? = null,
 ) {
     if (anchors.isEmpty()) return
     val context = LocalContext.current
@@ -355,6 +535,8 @@ internal fun WordSiegeMascotCompanion(
     val firstName = playerName?.trim()?.split(' ')?.firstOrNull()?.takeIf { it.isNotBlank() && it.length <= 14 }
 
     var anchorIndex by remember { mutableIntStateOf(0) }
+    var homeIndex by remember { mutableIntStateOf(0) }
+    var visitPoint by remember { mutableStateOf(Offset(.5f, .5f)) }
     var fromPosition by remember { mutableStateOf(Offset.Unspecified) }
     val flight = remember { Animatable(0f) }
     var flying by remember { mutableStateOf(false) }
@@ -369,17 +551,35 @@ internal fun WordSiegeMascotCompanion(
     var stageEmotion by remember { mutableStateOf<WordSiegeMascotEmotion?>(null) }
     var busy by remember { mutableStateOf(false) }
     var lastTypingAt by remember { mutableLongStateOf(0L) }
+    var lastInteractionAt by remember { mutableLongStateOf(SystemClock.uptimeMillis()) }
+    var glanceKey by remember { mutableIntStateOf(0) }
+    var glance by remember { mutableStateOf(Offset.Zero) }
+    var lastFlinchAt by remember { mutableLongStateOf(0L) }
+    var chase by remember { mutableStateOf<WordSiegeMascotChase?>(null) }
+    val chaseProgress = remember { Animatable(0f) }
     val tapTimes = remember { ArrayDeque<Long>() }
     var tapBond by remember { mutableIntStateOf(0) }
     val initialSignalKey = remember { signal?.key }
+    val initialVisitKey = remember { visit?.key }
     val initialOutcome = remember { outcome }
+    // A win earns a party hat (or the purchased victory crown) for the rest of the screen.
+    val hat = when {
+        outcome != WordSiegeMascotOutcome.WIN -> WordSiegeMascotHat.NONE
+        SonHarfCosmetics.crownVictory -> WordSiegeMascotHat.CROWN
+        else -> WordSiegeMascotHat.PARTY
+    }
 
     val currentUrgency by rememberUpdatedState(urgency)
     val currentPendingCount by rememberUpdatedState(pendingCells.size)
     val currentAnchors by rememberUpdatedState(anchors)
     val currentName by rememberUpdatedState(firstName)
+    val currentPlayerTurn by rememberUpdatedState(playerTurn)
 
-    LaunchedEffect(typingKey) { lastTypingAt = SystemClock.uptimeMillis() }
+    LaunchedEffect(typingKey) {
+        lastTypingAt = SystemClock.uptimeMillis()
+        lastInteractionAt = lastTypingAt
+    }
+    LaunchedEffect(moveId, pendingCells.size) { lastInteractionAt = SystemClock.uptimeMillis() }
 
     BoxWithConstraints(modifier) {
         val density = LocalDensity.current
@@ -392,11 +592,13 @@ internal fun WordSiegeMascotCompanion(
         fun anchorCenter(index: Int, sizePx: Float): Offset {
             val w = area.width
             val h = area.height
-            val raw = if (index == STAGE) {
-                Offset(w / 2f, h * stageY)
-            } else {
-                val anchor = currentAnchors[index.coerceIn(0, currentAnchors.lastIndex)]
-                Offset(anchor.x * w, anchor.y * h)
+            val raw = when (index) {
+                STAGE -> Offset(w / 2f, h * stageY)
+                VISIT -> Offset(visitPoint.x * w, visitPoint.y * h)
+                else -> {
+                    val anchor = currentAnchors[index.coerceIn(0, currentAnchors.lastIndex)]
+                    Offset(anchor.x * w, anchor.y * h)
+                }
             }
             val half = sizePx / 2f + marginPx
             return Offset(
@@ -426,6 +628,16 @@ internal fun WordSiegeMascotCompanion(
             actionKey += 1L
         }
 
+        /** Makes the eyes dart toward a point of the area (in pixels). */
+        fun lookAt(point: Offset) {
+            val here = currentCenter()
+            glance = Offset(
+                ((point.x - here.x) / (area.width * .45f)).coerceIn(-1f, 1f),
+                ((point.y - here.y) / (area.height * .45f)).coerceIn(-1f, 1f),
+            )
+            glanceKey += 1
+        }
+
         fun say(text: String, holdExtraMillis: Long = 0L) {
             speechJob?.cancel()
             speechId += 1
@@ -442,11 +654,23 @@ internal fun WordSiegeMascotCompanion(
         suspend fun flyTo(index: Int, durationMillis: Int) {
             fromPosition = currentCenter()
             anchorIndex = index
+            if (index >= 0) homeIndex = index
             flying = true
             flight.snapTo(0f)
             flight.animateTo(1f, tween(durationMillis, easing = FastOutSlowInEasing))
             flying = false
             perform(WordSiegeMascotAction.LAND)
+        }
+
+        /** Flies beside [point] (area fraction) so it does not hide what it is showing. */
+        suspend fun flyBeside(point: Offset, durationMillis: Int, onTop: Boolean = false) {
+            val sideX = if (point.x > .5f) -.65f else .65f
+            visitPoint = if (onTop) point else Offset(
+                point.x + sideX * baseSizePx / max(1f, area.width),
+                point.y - .35f * baseSizePx / max(1f, area.height),
+            )
+            flyTo(VISIT, durationMillis)
+            lookAt(Offset(point.x * area.width, point.y * area.height))
         }
 
         fun otherAnchor(): Int {
@@ -461,6 +685,17 @@ internal fun WordSiegeMascotCompanion(
             return sorted[Random.nextInt(min(2, sorted.size))]
         }
 
+        fun memoryLine(): String? {
+            val options = buildList {
+                if (bond.longestWord.length >= 5) add(mind.line(WordSiegeMascotLines.memoryLongest, currentName, word = bond.longestWord))
+                if (bond.wins >= 3) add(mind.line(WordSiegeMascotLines.memoryWins, currentName, number = bond.wins))
+                if (bond.winStreak >= 2) add(mind.line(WordSiegeMascotLines.memoryStreak, currentName, number = bond.winStreak))
+                if (bond.mood <= -3) add(mind.line(WordSiegeMascotLines.sadMood, currentName))
+                if (bond.mood >= 3) add(mind.line(WordSiegeMascotLines.happyMood, currentName))
+            }
+            return options.randomOrNull()
+        }
+
         // Life loop: arrive, greet, then mostly watch with an occasional, never-repeating gesture.
         LaunchedEffect(Unit) {
             delay(250L)
@@ -468,21 +703,44 @@ internal fun WordSiegeMascotCompanion(
             if (greet && initialOutcome == null) {
                 val (meetings, daysAway) = bond.meet()
                 delay(350L)
-                val lines = when {
-                    meetings <= 1 -> WordSiegeMascotLines.greetFirst
-                    daysAway >= 3L -> WordSiegeMascotLines.missed
-                    bond.level >= 2 -> WordSiegeMascotLines.greetBest
-                    bond.level == 1 -> WordSiegeMascotLines.greetFriend
-                    else -> WordSiegeMascotLines.greet
+                val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val together = bond.daysTogether()
+                when {
+                    meetings in MILESTONES -> {
+                        perform(WordSiegeMascotAction.CHEER)
+                        say(mind.line(WordSiegeMascotLines.milestone, currentName, number = meetings), holdExtraMillis = 800L)
+                    }
+                    together > 0L && together % 365L == 0L -> {
+                        perform(WordSiegeMascotAction.SPARKLE)
+                        say(mind.line(WordSiegeMascotLines.anniversary, currentName), holdExtraMillis = 800L)
+                    }
+                    meetings <= 1 -> say(mind.line(WordSiegeMascotLines.greetFirst, currentName))
+                    daysAway >= 3L -> say(mind.line(WordSiegeMascotLines.missed, currentName))
+                    mind.chance(.7f) -> {
+                        val lines = when {
+                            hour in 5..10 && mind.chance(.6f) -> WordSiegeMascotLines.morning
+                            (hour >= 23 || hour < 5) && mind.chance(.7f) -> WordSiegeMascotLines.night
+                            bond.level >= 2 -> WordSiegeMascotLines.greetBest
+                            bond.level == 1 -> WordSiegeMascotLines.greetFriend
+                            else -> WordSiegeMascotLines.greet
+                        }
+                        say(mind.line(lines, currentName))
+                    }
                 }
-                if (meetings <= 1 || mind.chance(.7f)) say(mind.line(lines, currentName))
             }
             while (true) {
-                delay(mind.nextIdleDelay())
-                if (busy || flying || speech != null) continue
+                // After losses it is a little quieter; after wins a little livelier.
+                val moodFactor = 1f + bond.mood * .08f
+                delay((mind.nextIdleDelay() / moodFactor.coerceIn(.6f, 1.4f)).toLong())
+                if (busy || flying || speech != null || chase != null) continue
                 val now = SystemClock.uptimeMillis()
+                // Nobody around for a while: just keep watching (the rig dozes off by itself).
+                if (now - lastInteractionAt > 40_000L) {
+                    watching = true
+                    continue
+                }
                 val stayCalm = currentUrgency > .3f || currentPendingCount > 0 || now - lastTypingAt < 3_000L
-                val choice = mind.pickIdle(now, bond.level, stayCalm)
+                val choice = mind.pickIdle(now, bond.level, stayCalm, rivalTurn = !currentPlayerTurn, playfulness = moodFactor)
                 when (choice) {
                     WordSiegeMascotIdle.WATCH -> watching = true
                     WordSiegeMascotIdle.LOOK_AROUND -> {
@@ -512,12 +770,43 @@ internal fun WordSiegeMascotCompanion(
                         }
                     }
                     WordSiegeMascotIdle.CHAT -> {
+                        val memory = if (mind.chance(.35f)) memoryLine() else null
                         val lines = if (bond.level >= 1 && mind.chance(.5f)) WordSiegeMascotLines.chatFriend else WordSiegeMascotLines.chat
-                        say(mind.line(lines, currentName))
+                        say(memory ?: mind.line(lines, currentName))
                     }
                     WordSiegeMascotIdle.WANDER -> {
                         watching = false
                         if (currentAnchors.size > 1) flyTo(otherAnchor(), 1_100)
+                    }
+                    WordSiegeMascotIdle.PEEK -> {
+                        watching = false
+                        perform(WordSiegeMascotAction.PEEK)
+                    }
+                    WordSiegeMascotIdle.CHASE -> {
+                        // A glowing letter drifts by; it follows it with its eyes, then catches it.
+                        watching = false
+                        val fromLeft = Random.nextBoolean()
+                        val letters = if (SonHarfUiState.language == "en") "ABCDEFGHIJKLMNOPRSTUVWYZ" else "ABCÇDEFGĞHIİKLMNOÖPRSŞTUÜVYZ"
+                        val next = WordSiegeMascotChase(
+                            id = Random.nextInt(),
+                            letter = letters[Random.nextInt(letters.length)].toString(),
+                            start = Offset(if (fromLeft) -.05f else 1.05f, .15f + Random.nextFloat() * .35f),
+                            end = Offset(if (fromLeft) .7f else .3f, .2f + Random.nextFloat() * .4f),
+                        )
+                        chase = next
+                        chaseProgress.snapTo(0f)
+                        launch { chaseProgress.animateTo(1f, tween(2_700, easing = LinearEasing)) }
+                        repeat(9) {
+                            lookAt(chasePosition(next, chaseProgress.value, area))
+                            delay(180L)
+                        }
+                        val home = homeIndex
+                        flyBeside(next.end, 1_000, onTop = true)
+                        chase = null
+                        perform(WordSiegeMascotAction.SPARKLE)
+                        if (mind.chance(.6f)) say(mind.line(WordSiegeMascotLines.chaseCatch, currentName))
+                        delay(1_100L)
+                        flyTo(home, 1_000)
                     }
                 }
                 if (choice != WordSiegeMascotIdle.WATCH) {
@@ -532,10 +821,12 @@ internal fun WordSiegeMascotCompanion(
             val current = signal ?: return@LaunchedEffect
             if (current.key == initialSignalKey || busy) return@LaunchedEffect
             val now = SystemClock.uptimeMillis()
+            lastInteractionAt = now
+            if (current.word.isNotBlank()) bond.recordWord(current.word)
             fun speakIf(topic: String, cooldown: Long, probability: Float, lines: List<Pair<String, String>>) {
                 if (mind.ready("talk:$topic", cooldown, now) && mind.chance(probability)) {
                     mind.mark("talk:$topic", now)
-                    say(mind.line(lines, currentName))
+                    say(mind.line(lines, currentName, number = current.count, word = current.word))
                 }
             }
             when (current.event) {
@@ -549,6 +840,11 @@ internal fun WordSiegeMascotCompanion(
                         perform(WordSiegeMascotAction.SPARKLE)
                     }
                     speakIf("praise", 10_000L, .75f, WordSiegeMascotLines.bigPraise)
+                }
+                WordSiegeMascotEvent.RARE_WORD -> {
+                    delay(500L)
+                    perform(WordSiegeMascotAction.SPARKLE)
+                    speakIf("rare", 20_000L, .85f, WordSiegeMascotLines.rareWord)
                 }
                 WordSiegeMascotEvent.COMFORT -> speakIf("comfort", 14_000L, .6f, WordSiegeMascotLines.comfort)
                 WordSiegeMascotEvent.CRITICAL -> {
@@ -565,6 +861,82 @@ internal fun WordSiegeMascotCompanion(
                     if (mind.ready("talk:ahead", 90_000L, now) && mind.chance(.35f)) perform(WordSiegeMascotAction.NOD)
                     speakIf("ahead", 90_000L, .35f, WordSiegeMascotLines.ahead)
                 }
+                WordSiegeMascotEvent.STREAK -> {
+                    // Each step of a streak is celebrated a little bigger.
+                    delay(600L)
+                    perform(if (current.count >= 5) WordSiegeMascotAction.TWIRL else WordSiegeMascotAction.CHEER)
+                    speakIf("streak", 8_000L, if (current.count >= 5) 1f else .7f, WordSiegeMascotLines.streak)
+                }
+                WordSiegeMascotEvent.STREAK_LOST -> {
+                    perform(WordSiegeMascotAction.SHRUG)
+                    speakIf("streak-lost", 30_000L, .6f, WordSiegeMascotLines.streakLost)
+                }
+            }
+        }
+
+        // Places worth a visit: freshly won territory, or (practice) a bonus square as a hint.
+        LaunchedEffect(visit?.key) {
+            val current = visit ?: return@LaunchedEffect
+            if (current.key == initialVisitKey) return@LaunchedEffect
+            when (current.kind) {
+                WordSiegeMascotVisitKind.CAPTURE -> {
+                    delay(900L)
+                    val now = SystemClock.uptimeMillis()
+                    if (busy || flying || !mind.ready("visit:capture", 25_000L, now) || !mind.chance(.6f)) return@LaunchedEffect
+                    mind.mark("visit:capture", now)
+                    val home = homeIndex
+                    flyBeside(current.point, 900)
+                    perform(WordSiegeMascotAction.TWIRL)
+                    if (mind.chance(.5f)) say(mind.line(WordSiegeMascotLines.capture, currentName))
+                    delay(1_600L)
+                    flyTo(home, 900)
+                }
+                WordSiegeMascotVisitKind.HINT -> {
+                    // Only when the player seems stuck: their turn, nothing placed, no touches for a while.
+                    delay(12_000L)
+                    val now = SystemClock.uptimeMillis()
+                    if (busy || flying || !currentPlayerTurn || currentPendingCount > 0) return@LaunchedEffect
+                    if (now - lastInteractionAt < 10_000L || !mind.ready("visit:hint", 45_000L, now)) return@LaunchedEffect
+                    mind.mark("visit:hint", now)
+                    val home = homeIndex
+                    flyBeside(current.point, 900)
+                    perform(WordSiegeMascotAction.NOD)
+                    say(mind.line(WordSiegeMascotLines.hint, currentName), holdExtraMillis = 1_000L)
+                    delay(3_200L)
+                    flyTo(home, 900)
+                }
+            }
+        }
+
+        // Touches on the game: glance at them; flinch if a finger comes too close.
+        LaunchedEffect(touches?.tick) {
+            val touch = touches?.position ?: return@LaunchedEffect
+            if (!touch.isSpecified || flying || busy) return@LaunchedEffect
+            val now = SystemClock.uptimeMillis()
+            lastInteractionAt = now
+            val here = currentCenter()
+            val radius = baseSizePx * scale.value / 2f
+            val distance = (touch - here).getDistance()
+            when {
+                distance <= radius -> Unit // A tap on the mascot itself is handled by onTap.
+                distance < radius * 2.1f && now - lastFlinchAt > 4_000L -> {
+                    lastFlinchAt = now
+                    perform(WordSiegeMascotAction.FLINCH)
+                }
+                else -> lookAt(touch)
+            }
+        }
+        LaunchedEffect(touches?.dragTick) {
+            val drag = touches?.dragPosition ?: return@LaunchedEffect
+            if (!drag.isSpecified || flying || busy) return@LaunchedEffect
+            val now = SystemClock.uptimeMillis()
+            lastInteractionAt = now
+            val here = currentCenter()
+            val radius = baseSizePx * scale.value / 2f
+            val distance = (drag - here).getDistance()
+            if (distance > radius && distance < radius * 1.8f && now - lastFlinchAt > 4_000L) {
+                lastFlinchAt = now
+                perform(WordSiegeMascotAction.FLINCH)
             }
         }
 
@@ -573,6 +945,7 @@ internal fun WordSiegeMascotCompanion(
             val result = outcome ?: return@LaunchedEffect
             busy = true
             watching = false
+            chase = null
             speechJob?.cancel()
             speech = null
             when (result) {
@@ -582,7 +955,12 @@ internal fun WordSiegeMascotCompanion(
                     launch { scale.animateTo(celebrationScale, tween(900)) }
                     flyTo(STAGE, 950)
                     perform(WordSiegeMascotAction.CHEER)
-                    say(mind.line(WordSiegeMascotLines.win, currentName), holdExtraMillis = 1_200L)
+                    val line = if (bond.winStreak >= 2 && mind.chance(.6f)) {
+                        mind.line(WordSiegeMascotLines.memoryStreak, currentName, number = bond.winStreak)
+                    } else {
+                        mind.line(WordSiegeMascotLines.win, currentName)
+                    }
+                    say(line, holdExtraMillis = 1_200L)
                     delay(1_500L)
                     perform(WordSiegeMascotAction.TWIRL)
                     delay(1_300L)
@@ -597,6 +975,7 @@ internal fun WordSiegeMascotCompanion(
                     }
                 }
                 WordSiegeMascotOutcome.LOSS -> {
+                    bond.recordLoss()
                     stageEmotion = WordSiegeMascotEmotion.TEARY
                     launch { scale.animateTo(1.3f, tween(900)) }
                     flyTo(STAGE, 1_100)
@@ -632,6 +1011,33 @@ internal fun WordSiegeMascotCompanion(
         val start = if (fromPosition.isSpecified) fromPosition else Offset(areaWidth + baseSizePx, -baseSizePx)
         val direction = if (flying) sign(target.x - start.x) else 0f
 
+        chase?.let { current ->
+            val p = chasePosition(current, chaseProgress.value, Size(areaWidth, areaHeight))
+            val tilePx = with(density) { 30.dp.toPx() }
+            Box(
+                Modifier
+                    .offset { IntOffset((p.x - tilePx / 2f).roundToInt(), (p.y - tilePx / 2f).roundToInt()) }
+                    .requiredSize(30.dp)
+                    .graphicsLayer {
+                        rotationZ = kotlin.math.sin(chaseProgress.value * 12f) * 12f
+                        alpha = min(1f, chaseProgress.value * 5f)
+                    }
+                    .drawBehind {
+                        drawCircle(
+                            brush = Brush.radialGradient(listOf(Color(0x99FFF4C2), Color.Transparent)),
+                            radius = size.minDimension * .9f,
+                        )
+                        drawRoundRect(
+                            brush = Brush.linearGradient(listOf(Color(0xFF8AF1FF), Color(0xFFB266F5))),
+                            cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
+                        )
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(current.letter, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            }
+        }
+
         Box(
             Modifier
                 .offset { IntOffset((center.x - sizePx / 2f).roundToInt(), (center.y - sizePx / 2f).roundToInt()) }
@@ -649,7 +1055,7 @@ internal fun WordSiegeMascotCompanion(
                 requestedEmotion = stageEmotion ?: requestedEmotion,
                 modifier = Modifier.matchParentSize(),
                 urgency = urgency,
-                momentum = momentum,
+                momentum = (momentum + bond.mood * .05f).coerceIn(-1f, 1f),
                 idleGazeX = idleGazeX,
                 idleGazeY = idleGazeY,
                 typingKey = typingKey,
@@ -659,11 +1065,16 @@ internal fun WordSiegeMascotCompanion(
                 flightDirection = direction,
                 speaking = talking,
                 watching = watching && !busy,
+                glanceKey = glanceKey,
+                glanceX = glance.x,
+                glanceY = glance.y,
+                hat = hat,
                 onTap = {
                     val now = SystemClock.uptimeMillis()
+                    lastInteractionAt = now
                     tapTimes.addLast(now)
                     while (tapTimes.size > 4) tapTimes.removeFirst()
-                    if (!busy && !flying) {
+                    if (!busy && !flying && chase == null) {
                         if (tapBond < 5) {
                             tapBond += 1
                             bond.add(1)
@@ -701,6 +1112,17 @@ internal fun WordSiegeMascotCompanion(
         }
     }
 }
+
+private val MILESTONES = setOf(10, 25, 50, 100, 250, 500, 1_000)
+
+/** Position (px) of a chased letter: a lazy drift with a gentle wave. */
+private fun chasePosition(chase: WordSiegeMascotChase, t: Float, area: Size): Offset {
+    val x = chase.start.x + (chase.end.x - chase.start.x) * t
+    val y = chase.start.y + (chase.end.y - chase.start.y) * t + kotlin.math.sin(t * 3f * PI_F) * .05f
+    return Offset(x * area.width, y * area.height)
+}
+
+private const val PI_F = 3.1415927f
 
 /** Silent speech: a small comic bubble that types out what the mascot says. */
 @Composable

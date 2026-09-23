@@ -93,6 +93,7 @@ internal fun WordSiegePracticeBoard(
     var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE) }
     var initialized by remember { mutableStateOf(false) }
     var viewportOriginInWindow by remember { mutableStateOf(Offset.Unspecified) }
+    val mascotTouches = remember { WordSiegeMascotTouchState() }
     var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     val transform by remember(mode, viewport, boardPx, closePan, closeScale) {
         derivedStateOf {
@@ -184,6 +185,7 @@ internal fun WordSiegePracticeBoard(
                     viewport = it.size
                     viewportOriginInWindow = it.localToWindow(Offset.Zero)
                 }
+                .wordSiegeMascotTouchWatcher(mascotTouches)
                 .pointerInput(mode, viewport, boardPx, closeScale) {
                     if (mode == WordSiegeBoardViewportMode.CLOSE) {
                         detectTransformGestures { centroid, pan, zoom, _ ->
@@ -277,6 +279,33 @@ internal fun WordSiegePracticeBoard(
                 signal = mascotSignal,
                 outcome = mascotOutcome,
                 playerName = playerName,
+                touches = mascotTouches,
+                visit = when {
+                    // Fresh territory after the player's own strong move.
+                    moveEventKey != null && lastMoveMine && capturedCells >= 2 && moveCell != null ->
+                        wordSiegeMascotCellVisit(
+                            key = "cap:$moveEventKey",
+                            indices = listOf(moveCell),
+                            transform = transform,
+                            cellSizePx = tilePx,
+                            viewportWidthPx = viewport.width.toFloat(),
+                            viewportHeightPx = viewport.height.toFloat(),
+                            kind = WordSiegeMascotVisitKind.CAPTURE,
+                        )
+                    // Practice only: a gentle pointer to a playable bonus square if the player is stuck.
+                    enabled && placements.isEmpty() -> practiceBonusHint(board)?.let { index ->
+                        wordSiegeMascotCellVisit(
+                            key = "hint:$index:${moveEventKey ?: 0}",
+                            indices = listOf(index),
+                            transform = transform,
+                            cellSizePx = tilePx,
+                            viewportWidthPx = viewport.width.toFloat(),
+                            viewportHeightPx = viewport.height.toFloat(),
+                            kind = WordSiegeMascotVisitKind.HINT,
+                        )
+                    }
+                    else -> null
+                },
             )
         }
     }
@@ -575,4 +604,25 @@ private fun practiceLetterValue(letter: String): String = when (letter) {
     "Ğ" -> "8"
     "J" -> "10"
     else -> "1"
+}
+
+/** The most valuable empty bonus square that touches an existing letter, if any. */
+private fun practiceBonusHint(board: List<WordSiegeCellDto>): Int? {
+    val rank = mapOf("3K" to 4, "3H" to 3, "2K" to 2, "2H" to 1)
+    return board.indices
+        .filter { index ->
+            val cell = board[index]
+            val bonus = cell.bonus ?: WordSiegeBoardSpec.bonusAt(index)
+            cell.letter == null && !cell.bonusUsed && bonus in rank && practiceHasLetterNeighbour(board, index)
+        }
+        .maxByOrNull { rank[board[it].bonus ?: WordSiegeBoardSpec.bonusAt(it)] ?: 0 }
+}
+
+private fun practiceHasLetterNeighbour(board: List<WordSiegeCellDto>, index: Int): Boolean {
+    val row = WordSiegeBoardSpec.row(index)
+    val column = WordSiegeBoardSpec.column(index)
+    return listOf(row - 1 to column, row + 1 to column, row to column - 1, row to column + 1).any { (r, c) ->
+        r in 0 until WordSiegeBoardSpec.Size && c in 0 until WordSiegeBoardSpec.Size &&
+            board.getOrNull(WordSiegeBoardSpec.index(r, c))?.letter != null
+    }
 }
