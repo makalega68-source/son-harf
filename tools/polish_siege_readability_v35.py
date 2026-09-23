@@ -109,12 +109,14 @@ new_bag = '''                else -> Column(verticalArrangement = Arrangement.sp
                 }'''
 replace(bag_path, old_bag, new_bag)
 
-# Practice chat: retain history and make it vertically scrollable.
+# Practice chat: retain history and make only the dialog history vertically scrollable.
+# Do not use LazyColumn here: the gameplay screen has a regression contract forbidding
+# lazy scrolling in the main match surface, and a bounded verticalScroll is sufficient.
 practice_path = 'app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt'
 replace(
     practice_path,
     'import androidx.compose.foundation.layout.*\nimport androidx.compose.foundation.shape.RoundedCornerShape',
-    'import androidx.compose.foundation.layout.*\nimport androidx.compose.foundation.lazy.LazyColumn\nimport androidx.compose.foundation.lazy.itemsIndexed\nimport androidx.compose.foundation.lazy.rememberLazyListState\nimport androidx.compose.foundation.shape.RoundedCornerShape',
+    'import androidx.compose.foundation.layout.*\nimport androidx.compose.foundation.rememberScrollState\nimport androidx.compose.foundation.verticalScroll\nimport androidx.compose.foundation.shape.RoundedCornerShape',
 )
 old_chat = '''                    if (chatMessages.isEmpty()) {
                         Text(
@@ -139,9 +141,11 @@ old_chat = '''                    if (chatMessages.isEmpty()) {
                             }
                         }
                     }'''
-new_chat = '''                    val chatListState = rememberLazyListState()
-                    LaunchedEffect(chatMessages.size) {
-                        if (chatMessages.isNotEmpty()) chatListState.animateScrollToItem(chatMessages.lastIndex)
+new_chat = '''                    val chatScrollState = rememberScrollState()
+                    LaunchedEffect(chatMessages.size, chatScrollState.maxValue) {
+                        if (chatMessages.isNotEmpty() && chatScrollState.maxValue > 0) {
+                            chatScrollState.animateScrollTo(chatScrollState.maxValue)
+                        }
                     }
                     if (chatMessages.isEmpty()) {
                         Text(
@@ -150,13 +154,14 @@ new_chat = '''                    val chatListState = rememberLazyListState()
                             fontSize = 12.sp,
                         )
                     } else {
-                        LazyColumn(
-                            state = chatListState,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 170.dp, max = 320.dp),
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 170.dp, max = 320.dp)
+                                .verticalScroll(chatScrollState),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            itemsIndexed(chatMessages) { _, item ->
-                                val (mine, message) = item
+                            chatMessages.forEach { (mine, message) ->
                                 Box(Modifier.fillMaxWidth()) {
                                     Surface(
                                         modifier = Modifier.align(if (mine) Alignment.CenterEnd else Alignment.CenterStart),
@@ -216,11 +221,12 @@ class WordSiegeReadabilityV35ContractTest {
 
     @Test fun practiceChatKeepsAndScrollsFullHistory() {
         val screen = read("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt")
-        assertTrue(screen.contains("LazyColumn("))
-        assertTrue(screen.contains("rememberLazyListState()"))
-        assertTrue(screen.contains("itemsIndexed(chatMessages)"))
+        assertTrue(screen.contains("rememberScrollState()"))
+        assertTrue(screen.contains(".verticalScroll(chatScrollState)"))
+        assertTrue(screen.contains("chatMessages.forEach"))
         assertFalse(screen.contains("chatMessages.takeLast(5)"))
         assertFalse(screen.contains("takeLast(8)"))
+        assertFalse(screen.contains("LazyColumn"))
     }
 
     @Test fun strategicBonusesStayQuieterThanOwnedLetters() {
