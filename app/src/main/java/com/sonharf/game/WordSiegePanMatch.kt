@@ -369,7 +369,6 @@ internal fun WordSiegePanMatch(
                         Text(readyFeedback.message, color = PanSiegeMineBorder, fontSize = 9.sp, fontWeight = FontWeight.Black)
                     } else Spacer(Modifier.weight(1f))
                     Spacer(Modifier.weight(1f))
-                    Text(sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"), color = WordSiegeGameUi.Muted, fontSize = 8.sp)
                 }
 
                 WordSiegePremiumPanel(
@@ -408,24 +407,38 @@ internal fun WordSiegePanMatch(
                 WordSiegeCompactAction(sh("DEĞİŞTİR", "EXCHANGE"), Icons.Rounded.SwapHoriz,
                     canAct && game.bag.isNotEmpty(), Modifier.weight(1f), onExchange)
             }
-            Row(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                WordSiegeSideAction(
+                    sh("SOHBET", "CHAT"),
+                    Icons.Rounded.Chat,
+                    modifier = Modifier.width(74.dp),
+                    onClick = onChat,
+                )
                 Button(
                     onClick = onSubmit,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
                     enabled = canAct && placements.isNotEmpty(),
-                    modifier = Modifier.weight(1f).height(52.dp),
+                    modifier = Modifier.weight(1f).height(40.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = PanSiegeMineBorder,
                         contentColor = Color.White,
                         disabledContainerColor = WordSiegeGameUi.DisabledBackground,
                         disabledContentColor = WordSiegeGameUi.DisabledContent,
                     ),
-                    contentPadding = PaddingValues(horizontal = 5.dp),
+                    contentPadding = PaddingValues(horizontal = 3.dp),
                 ) {
-                    if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-                    else Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    if (busy) CircularProgressIndicator(Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
+                    else Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
                 }
+                WordSiegeOnlineBagButton(
+                    game = game,
+                    modifier = Modifier.width(82.dp),
+                )
             }
         } else {
             PanSiegeFinishedCard(game, me)
@@ -433,6 +446,14 @@ internal fun WordSiegePanMatch(
 
         notice?.let { PanSiegeNotice(it) }
         if (boardViewportMode == WordSiegeBoardViewportMode.FIT) lastMove?.let { PanSiegeLastMoveInfo(it) }
+        if (game.status == "playing") {
+            WordSiegeTurnStrip(
+                text = if (visualMyTurn) sh("SIRA SENDE • Kelimeni oluştur", "YOUR TURN • Build your word") else sh("RAKİP OYNUYOR", "RIVAL IS PLAYING"),
+                playerTurn = visualMyTurn,
+                playerAccent = PanSiegeMineBorder,
+                rivalAccent = PanSiegeRivalBorder,
+            )
+        }
     }
     }
 }

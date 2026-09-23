@@ -35,8 +35,8 @@ class WordSiegeCaptureMotionTest {
 
     @Test fun multipleCubesUseShortSequentialStagger() {
         assertEquals(0L, wordSiegeCaptureStaggerDelayMs(0))
-        assertEquals(85L, wordSiegeCaptureStaggerDelayMs(1))
-        assertEquals(255L, wordSiegeCaptureStaggerDelayMs(3))
+        assertEquals(95L, wordSiegeCaptureStaggerDelayMs(1))
+        assertEquals(285L, wordSiegeCaptureStaggerDelayMs(3))
     }
 
     private fun assertOffsetEquals(expected: Offset, actual: Offset) {

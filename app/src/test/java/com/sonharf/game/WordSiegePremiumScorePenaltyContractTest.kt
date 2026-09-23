@@ -13,8 +13,8 @@ class WordSiegePremiumScorePenaltyContractTest {
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val migration = projectFile("supabase/migrations/20260923131500_word_siege_capture_loss_penalty_v8.sql").readText()
 
-        assertTrue(ui.contains("size = 50.dp"))
-        assertTrue(ui.contains("modifier = modifier.height(96.dp)"))
+        assertTrue(ui.contains("size = 52.dp"))
+        assertTrue(ui.contains("modifier = modifier.height(92.dp)"))
         assertFalse(practice.contains("WordSiegeOwnershipLegend()"))
         assertFalse(pan.contains("WordSiegeOwnershipLegend()"))
         assertTrue(practice.contains("mutableIntStateOf(-1)"))
@@ -22,6 +22,10 @@ class WordSiegePremiumScorePenaltyContractTest {
         assertTrue(pan.contains("Color.Black.copy(alpha = .52f)"))
         assertTrue(practice.contains("pendingBotLossPoints"))
         assertTrue(pan.contains("pendingRivalLossPoints"))
+        assertTrue(practice.contains("WordSiegeTurnStrip("))
+        assertTrue(pan.contains("WordSiegeTurnStrip("))
+        assertTrue(practice.contains("WordSiegePracticeBagButton("))
+        assertTrue(pan.contains("WordSiegeOnlineBagButton("))
         assertTrue(migration.contains("-v_opponent_captured"))
     }
 

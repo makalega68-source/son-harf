@@ -153,6 +153,7 @@ internal fun WordSiegePremiumPanel(
     }
 
     val resolvedAccess = access ?: return
+    if (placements.isEmpty()) return
     val hasAnyPremiumTool = resolvedAccess.scoreCalculatorAccess || resolvedAccess.letterTableAccess
 
     Surface(

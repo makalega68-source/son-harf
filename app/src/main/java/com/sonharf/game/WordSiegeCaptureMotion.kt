@@ -28,8 +28,8 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-internal const val WORD_SIEGE_CAPTURE_FLIGHT_MS = 540
-internal const val WORD_SIEGE_CAPTURE_STAGGER_MS = 85L
+internal const val WORD_SIEGE_CAPTURE_FLIGHT_MS = 720
+internal const val WORD_SIEGE_CAPTURE_STAGGER_MS = 95L
 
 internal data class WordSiegeCaptureEffect(
     val batch: WordSiegeCaptureBatch,
@@ -156,7 +156,7 @@ internal fun WordSiegeCaptureFlightOverlay(
             ) {
                 Canvas(Modifier.fillMaxSize()) {
                     val center = Offset(size.width / 2f, size.height / 2f)
-                    if (progress < .20f) {
+                    if (progress < .26f) {
                         val flash = (1f - progress / .20f).coerceIn(0f, 1f)
                         drawCircle(
                             color = effect.accent.copy(alpha = .28f * flash),

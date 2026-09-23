@@ -475,41 +475,7 @@ private fun WordSiegePracticeContent(
                 }
 
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = if (displayedOwner == 1) PracticePlayerAccent else PracticeRivalFill.copy(alpha = .42f),
-                    shape = RoundedCornerShape(11.dp),
-                    border = BorderStroke(1.dp, if (displayedOwner == 1) PracticePlayerAccent else PracticeRivalAccent),
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 9.dp, vertical = if (compact) 3.dp else 5.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (botThinking) CircularProgressIndicator(Modifier.size(14.dp), color = PracticeRivalAccent, strokeWidth = 2.dp)
-                        else Icon(
-                            if (displayedOwner == 1) Icons.Rounded.TouchApp else Icons.Rounded.SmartToy,
-                            null,
-                            tint = if (displayedOwner == 1) Color.White else PracticeRivalAccent,
-                            modifier = Modifier.size(15.dp),
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            when {
-                                state.status == "finished" && matchmakingFallback -> sh("BOT MAÇI BİTTİ • RAKİP ARAMASI SÜRÜYOR", "BOT MATCH FINISHED • MATCHMAKING CONTINUES")
-                                state.status == "finished" -> sh("ALIŞTIRMA BİTTİ", "PRACTICE FINISHED")
-                                botThinking -> sh("${botProfile.name.uppercase()} HAMLESİNİ HAZIRLIYOR", "${botProfile.name.uppercase()} IS PREPARING A MOVE")
-                                displayedOwner == 1 -> sh("SIRA SENDE • Kelimeni oluştur", "YOUR TURN • Build your word")
-                                else -> sh("${botProfile.name.uppercase()} OYNUYOR", "${botProfile.name.uppercase()} IS PLAYING")
-                            },
-                            color = if (displayedOwner == 1) Color.White else WordSiegeGameUi.Text,
-                            fontSize = if (compact) 11.sp else 13.sp,
-                            lineHeight = 16.sp,
-                            fontWeight = FontWeight.Black,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
+
 
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                     WordSiegePracticeBoard(
@@ -582,13 +548,6 @@ private fun WordSiegePracticeContent(
                             )
                         }
                         Spacer(Modifier.weight(1f))
-                        Text(
-                            sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"),
-                            color = WordSiegeGameUi.Muted,
-                            fontSize = 10.sp,
-                            lineHeight = 14.sp,
-                            maxLines = 1,
-                        )
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -633,23 +592,36 @@ private fun WordSiegePracticeContent(
                             exchangeSelection = emptySet(); showExchange = true
                         }
                     }
-                    Row(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        WordSiegeSideAction(
+                            sh("YARDIM", "HELP"),
+                            Icons.Rounded.HelpOutline,
+                            modifier = Modifier.width(74.dp),
+                        ) { tutorialStep = 0 }
                         Button(
                             onClick = ::applyPlayerMove,
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(10.dp),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
                             enabled = canPlayerAct && placements.isNotEmpty(),
-                            modifier = Modifier.weight(1f).height(52.dp),
+                            modifier = Modifier.weight(1f).height(40.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = PracticePlayerAccent,
                                 contentColor = Color.White,
                                 disabledContainerColor = WordSiegeGameUi.DisabledBackground,
                                 disabledContentColor = WordSiegeGameUi.DisabledContent,
                             ),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            contentPadding = PaddingValues(horizontal = 3.dp),
                         ) {
-                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 14.sp, fontWeight = FontWeight.Black)
+                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
                         }
+                        WordSiegePracticeBagButton(
+                            bag = state.bag,
+                            modifier = Modifier.width(82.dp),
+                        )
                     }
                 } else {
                     val won = state.winnerOwner == 1
@@ -697,6 +669,18 @@ private fun WordSiegePracticeContent(
                     "Pick a tile → place it → complete a word → CONFIRM MOVE",
                 )
                 if (boardViewportMode == WordSiegeBoardViewportMode.FIT) WordSiegePracticeStatusBar(statusMessage, compact)
+                WordSiegeTurnStrip(
+                    text = when {
+                        state.status == "finished" && matchmakingFallback -> sh("BOT MAÇI BİTTİ • RAKİP ARAMASI SÜRÜYOR", "BOT MATCH FINISHED • MATCHMAKING CONTINUES")
+                        state.status == "finished" -> sh("ALIŞTIRMA BİTTİ", "PRACTICE FINISHED")
+                        botThinking -> sh("${botProfile.name.uppercase()} HAMLESİNİ HAZIRLIYOR", "${botProfile.name.uppercase()} IS PREPARING A MOVE")
+                        displayedOwner == 1 -> sh("SIRA SENDE • Kelimeni oluştur", "YOUR TURN • Build your word")
+                        else -> sh("${botProfile.name.uppercase()} OYNUYOR", "${botProfile.name.uppercase()} IS PLAYING")
+                    },
+                    playerTurn = displayedOwner == 1 && !botThinking,
+                    playerAccent = PracticePlayerAccent,
+                    rivalAccent = PracticeRivalAccent,
+                )
             }
         }
     }

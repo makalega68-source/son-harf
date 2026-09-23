@@ -120,22 +120,22 @@ internal fun WordSiegeScoreCard(
         }
     }
     Surface(
-        modifier = modifier.height(96.dp),
+        modifier = modifier.height(92.dp),
         color = lerp(WordSiegeGameUi.Surface, accent, if (active) .055f else .018f),
         shape = RoundedCornerShape(18.dp),
         shadowElevation = if (active) 3.dp else 1.dp,
     ) {
         Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = RoundedCornerShape(15.dp),
-                    color = accent.copy(alpha = .075f),
-                ) {
-                    Box(Modifier.padding(2.dp)) {
-                        ProfilePhotoAvatarWithGender(
-                            avatarPath = avatarPath, gender = gender, name = name,
-                            size = 50.dp, accent = accent, visible = avatarVisible,
-                        )
+                Box {
+                    ProfilePhotoAvatarWithGender(
+                        avatarPath = avatarPath, gender = gender, name = name,
+                        size = 52.dp, accent = accent, visible = avatarVisible,
+                    )
+                    if (leading) {
+                        Box(Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp)) {
+                            WordSiegeLeaderCrown()
+                        }
                     }
                 }
                 Spacer(Modifier.width(6.dp))
@@ -143,8 +143,8 @@ internal fun WordSiegeScoreCard(
                     Text(
                         name,
                         color = WordSiegeGameUi.Text,
-                        fontSize = 12.sp,
-                        lineHeight = 14.sp,
+                        fontSize = 11.sp,
+                        lineHeight = 13.sp,
                         fontWeight = FontWeight.Black,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -158,15 +158,11 @@ internal fun WordSiegeScoreCard(
                         }
                     }
                 }
-                if (leading) {
-                    WordSiegeLeaderCrown()
-                    Spacer(Modifier.width(4.dp))
-                }
                 val totalDescription = sh("Toplam $score", "Total $score")
                 Box(
                     modifier = Modifier
-                        .width(58.dp)
-                        .height(48.dp)
+                        .width(52.dp)
+                        .height(46.dp)
                         .graphicsLayer {
                             val combinedScale = scoreScale.value * lossScale.value
                             scaleX = combinedScale
@@ -255,9 +251,9 @@ internal fun WordSiegeCompactAction(
     TextButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(48.dp).padding(horizontal = 2.dp),
-        shape = RoundedCornerShape(12.dp),
-        contentPadding = PaddingValues(2.dp),
+        modifier = modifier.height(40.dp).padding(horizontal = 1.dp),
+        shape = RoundedCornerShape(10.dp),
+        contentPadding = PaddingValues(1.dp),
         colors = ButtonDefaults.textButtonColors(
             contentColor = WordSiegeGameUi.Navy,
             disabledContentColor = WordSiegeGameUi.DisabledContent,
@@ -265,8 +261,8 @@ internal fun WordSiegeCompactAction(
         border = BorderStroke(1.dp, if (enabled) WordSiegeGameUi.Border else WordSiegeGameUi.Border.copy(alpha = .45f)),
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Icon(icon, null, Modifier.size(17.dp))
-            Text(label, fontSize = 10.sp, lineHeight = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Icon(icon, null, Modifier.size(15.dp))
+            Text(label, fontSize = 9.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
 }
