@@ -35,7 +35,9 @@ jobs:
           validate-wrappers: false
 
       - name: Apply capture score flight patch
-        run: python3 tools/complete_capture_score_flight.py
+        run: |
+          python3 tools/complete_capture_score_flight.py
+          sed -i 's/import androidx.compose.foundation.drawBehind/import androidx.compose.ui.draw.drawBehind/' app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt
 
       - name: Unit tests and debug build
         run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
