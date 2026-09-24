@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -796,12 +797,21 @@ private fun StoreCollectionsTab(catalog: @Composable () -> Unit, season: @Compos
     var sub by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
         SegmentedGameTabs(
-            labels = listOf(gameText("Koleksiyonlar", "Collections"), gameText("Sezon", "Season")),
+            labels = listOf(gameText("Koleksiyonlar", "Collections"), gameText("Maskotlar", "Mascots"), gameText("Sezon", "Season")),
             selectedIndex = sub,
             onSelected = { sub = it },
             modifier = Modifier.padding(horizontal = 12.dp),
         )
-        Box(Modifier.weight(1f)) { if (sub == 1) season() else catalog() }
+        Box(Modifier.weight(1f)) {
+            when (sub) {
+                // Mascot characters are permanent Google Play products; ownership comes from the server.
+                1 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                    MascotStoreSection()
+                }
+                2 -> season()
+                else -> catalog()
+            }
+        }
     }
 }
 

@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.VipEntitlementsDto
+import com.sonharf.game.data.WordSiegeLaunchConfig
 import com.sonharf.game.data.getVipEntitlements
 
 private enum class WordSiegeEntryMode { STANDARD, SERIES }
@@ -41,10 +42,15 @@ internal fun WordSiegeEntryScreen(
         mutableStateOf(if (shortcut) WordSiegeEntryMode.STANDARD else null)
     }
 
+    // Turn length for new standard games; the server validates it (12 or 24 hours).
+    var selectedClassicHours by remember { mutableIntStateOf(12) }
+
     when (mode) {
         WordSiegeEntryMode.STANDARD -> {
+            WordSiegeLaunchConfig.classicTurnHours = if (shortcut) 12 else selectedClassicHours
             // Opened from a PLAY shortcut: leaving returns there instead of to this chooser.
             ProfessionalWordSiegeExperienceScreen(initialAction = initialAction, initialGameId = initialGameId) {
+                WordSiegeLaunchConfig.classicTurnHours = 12
                 if (shortcut) onExit() else mode = null
             }
             return
@@ -101,6 +107,26 @@ internal fun WordSiegeEntryScreen(
                 accent = GameColors.PlayGreen,
                 onClick = { mode = WordSiegeEntryMode.STANDARD },
             )
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(12 to sh("12 SAAT", "12 HOURS"), 24 to sh("24 SAAT", "24 HOURS")).forEach { (hours, label) ->
+                    FilterChip(
+                        selected = selectedClassicHours == hours,
+                        onClick = {
+                            selectedClassicHours = hours
+                            if (hours == 24) WordSiegeLaunchConfig.classicTurnHours = 24
+                        },
+                        label = { Text(sh("$label hamle süresi", "$label per turn"), fontWeight = FontWeight.Bold) },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = GameColors.PrimarySurface,
+                            labelColor = GameColors.TextSecondary,
+                            selectedContainerColor = GameColors.PlayGreen.copy(alpha = .18f),
+                            selectedLabelColor = GameColors.TextPrimary,
+                        ),
+                    )
+                }
+            }
 
             val access = entitlements
             val seriesOwned = access?.seriesGameAccess == true

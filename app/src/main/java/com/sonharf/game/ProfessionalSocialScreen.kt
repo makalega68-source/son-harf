@@ -184,6 +184,9 @@ internal fun ProfessionalSocialScreen(
             }
         }
 
+        // Invite someone who does not play yet (WhatsApp, Telegram, SMS...); no account or PRO needed.
+        item(key = "invite-card") { InviteFriendsCard(playerName = null) }
+
         item(key = "tabs") {
             SegmentedGameTabs(
                 labels = listOf(

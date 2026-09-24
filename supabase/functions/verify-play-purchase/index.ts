@@ -4,9 +4,14 @@ import { GoogleAuth } from "npm:google-auth-library@9";
 
 const jsonHeaders = { "Content-Type": "application/json", "Cache-Control": "no-store" };
 const subscriptionProducts = new Set(["vip_monthly", "vip_yearly", "season_pass", "season_pass_monthly"]);
-const premiumProducts = new Set(["series_game", "letter_table", "score_calculator", "pro_lifetime"]);
+const mascotProducts = [
+  "mascot_klasik", "mascot_pembe", "mascot_mavi_seytancik", "mascot_kirmizi_seytancik",
+  "mascot_tekir", "mascot_robot", "mascot_astronot",
+];
+const premiumProducts = new Set(["series_game", "letter_table", "score_calculator", "pro_lifetime", ...mascotProducts]);
 const oneTimeProducts = new Set([
   "series_game", "letter_table", "score_calculator", "pro_lifetime",
+  ...mascotProducts,
   "coins_500", "coins_1500", "coins_3500", "coins_8000",
   // Historical IDs remain recognizable so the server can return an explicit
   // product_disabled response instead of silently treating an old receipt as unknown.

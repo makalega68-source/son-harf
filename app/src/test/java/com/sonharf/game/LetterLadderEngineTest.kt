@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LetterLadderEngineTest {
-    private val chain = listOf("kalın", "yalın", "yalan", "yalak", "yamak", "yumak")
+    private val chain = listOf("kalın", "yalın", "yalan", "yalak", "yamak")
     private val puzzle = LetterLadderPuzzle(
         id = "test",
         start = chain.first(),
@@ -18,15 +18,15 @@ class LetterLadderEngineTest {
     private val dictionary = chain.toSet() + setOf("salın")
 
     @Test
-    fun knownFiveMoveChainChangesEveryPositionExactlyOnce() {
+    fun knownFourMoveChainChangesFourPositionsExactlyOnce() {
         val used = mutableSetOf<Int>()
         chain.zipWithNext().forEach { (from, to) ->
             val changed = LetterLadderEngine.changedIndex(from, to)
             assertNotNull(changed)
             assertTrue("position $changed changed more than once", used.add(changed!!))
         }
-        assertEquals(setOf(0, 1, 2, 3, 4), used)
-        assertEquals("yumak", chain.last())
+        assertEquals(setOf(0, 2, 3, 4), used)
+        assertEquals("yamak", chain.last())
     }
 
     @Test
@@ -56,7 +56,7 @@ class LetterLadderEngineTest {
     }
 
     @Test
-    fun validSequenceReachesTargetInExactlyFiveMoves() {
+    fun validSequenceReachesTargetInExactlyFourMoves() {
         var current = puzzle.start
         val used = mutableSetOf<Int>()
         chain.drop(1).forEach { next ->
@@ -72,7 +72,7 @@ class LetterLadderEngineTest {
             used += result.changedIndex!!
             current = next
         }
-        assertEquals(5, used.size)
+        assertEquals(4, used.size)
         assertEquals(puzzle.target, current)
     }
 
@@ -139,7 +139,7 @@ class LetterLadderEngineTest {
     }
 
     @Test
-    fun generatorReturnsALegalFiveMovePuzzleFromCanonicalCandidates() {
+    fun generatorReturnsALegalFourMovePuzzleFromCanonicalCandidates() {
         val generated = LetterLadderEngine.generate(
             sourceWords = chain.toSet(),
             language = "tr",
@@ -147,16 +147,16 @@ class LetterLadderEngineTest {
         )
         assertNotNull(generated)
         generated!!
-        assertEquals(6, generated.solution.size)
+        assertEquals(5, generated.solution.size)
         assertEquals(generated.start, generated.solution.first())
         assertEquals(generated.target, generated.solution.last())
-        assertTrue((0 until 5).all { generated.start[it] != generated.target[it] })
+        assertEquals(1, (0 until 5).count { generated.start[it] == generated.target[it] })
     }
 
     @Test
     fun generatorExcludesRecentlyPlayedRouteInEitherDirection() {
-        val firstRoute = listOf("abcde", "fbcde", "fgcde", "fghde", "fghie", "fghij")
-        val secondRoute = listOf("klmno", "plmno", "pqmno", "pqrno", "pqrso", "pqrst")
+        val firstRoute = listOf("abcde", "fbcde", "fgcde", "fghde", "fghie")
+        val secondRoute = listOf("klmno", "plmno", "pqmno", "pqrno", "pqrso")
         val source = (firstRoute + secondRoute).toSet()
         val first = LetterLadderEngine.generate(source, "en", seed = 7L)
         assertNotNull(first)

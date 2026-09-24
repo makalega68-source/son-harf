@@ -289,7 +289,7 @@ internal fun MainVipScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                color = MainUi.Blue,
+                color = SonHarfTheme.HeroMiddle,
             ) {
                 Column(
                     Modifier.fillMaxWidth().padding(20.dp),

@@ -43,16 +43,15 @@ class UnifiedThemeSourceContractTest {
         assertTrue(design.contains("val SonHarfGreen = Color(0xFF789B73)"))
         assertTrue(design.contains("val SonHarfRival = Color(0xFFD27869)"))
 
-        assertTrue(premier.contains("val Background = GameColors.SonHarfBackground"))
-        assertTrue(premier.contains("val Surface = GameColors.SonHarfSurface"))
-        assertTrue(premier.contains("val Ink = GameColors.SonHarfInk"))
-        assertTrue(premier.contains("val Ocean = GameColors.SonHarfOcean"))
-        assertTrue(premier.contains("val Sky = GameColors.SonHarfSky"))
-        assertTrue(premier.contains("val Green = GameColors.SonHarfGreen"))
-        assertTrue(premier.contains("val Red = GameColors.SonHarfRed"))
+        // Son Harf keeps the PR #459 board on the navy design system; the mascot is moment-only.
+        assertTrue(premier.contains("val Background = GameColors.AppBackground"))
+        assertTrue(premier.contains("val Surface = GameColors.PrimarySurface"))
+        assertTrue(premier.contains("val BackgroundTop = GameColors.AppBackground"))
         assertTrue(premier.contains("Brush.verticalGradient(listOf(PremierUi.Surface, PremierUi.Background))"))
+        assertTrue(premier.contains("PremierKeyboard(language, input"))
+        assertTrue(premier.contains("rememberWordSiegeMascotMoment("))
+        assertFalse(premier.contains("Color(0xFFEAF8FF)"))
         assertFalse(premier.contains("val Background = Color(0xFFF3EEE5)"))
-        assertFalse(premier.contains("val Surface = Color(0xFFFFFBF4)"))
         assertFalse(premier.contains("MageCatCompanion("))
     }
 

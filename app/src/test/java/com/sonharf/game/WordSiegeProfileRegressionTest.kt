@@ -29,7 +29,7 @@ class WordSiegeProfileRegressionTest {
         assertTrue(practice.contains("WordSiegeScoreCard("))
         assertTrue(scoreCard.contains("ProfilePhotoAvatarWithGender("))
         assertTrue(scoreCard.contains("if (isBot)"))
-        assertTrue(scoreCard.contains("\"BOT\""))
+        assertTrue(scoreCard.contains("• BOT"))
 
         assertTrue(profileRuntime.contains("SyntheticProfilePortrait"))
         assertTrue(profileRuntime.contains("Icons.Rounded.Face"))

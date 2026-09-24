@@ -9,7 +9,7 @@ class WordSiegeHudReadabilityContractTest {
     fun `word siege hud keeps avatars map control and split score readable`() {
         val source = repoFile("app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt").readText()
 
-        assertTrue(source.contains("size = 40.dp"))
+        assertTrue(source.contains("size = 52.dp"))
         assertTrue(source.contains("WordSiegeBoardSpec.CellCount"))
         assertTrue(source.contains("Harita %\$mapControl"))
         assertTrue(source.contains("Map \$mapControl%"))

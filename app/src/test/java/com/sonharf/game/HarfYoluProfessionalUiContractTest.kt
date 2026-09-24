@@ -88,10 +88,9 @@ class HarfYoluProfessionalUiContractTest {
     fun `Harf Yolu keeps start four intermediate rows and target flow`() {
         val game = source("LetterLadderGame.kt")
 
-        assertTrue(game.contains("Text(sh(\"BAŞLANGIÇ\", \"START\")"))
         assertTrue(game.contains("for (move in 1 until LetterLadderEngine.MOVE_COUNT)"))
-        assertTrue(game.contains("const val MOVE_COUNT = 5"))
-        assertTrue(game.contains("Text(sh(\"HEDEF\", \"TARGET\")"))
+        // Harf Yolu redesign (PR #459): four moves per ladder.
+        assertTrue(game.contains("const val MOVE_COUNT = 4"))
         assertTrue(game.contains("path.size == LetterLadderEngine.MOVE_COUNT + 1"))
         assertFalse(game.contains("Text(\"5\""))
     }

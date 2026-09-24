@@ -16,7 +16,7 @@ class BrandStartupRegressionTest {
         val adaptiveIcon = File("src/main/res/mipmap-anydpi-v26/ic_kelime_tahti.xml")
         val adaptiveFallback = File("src/main/res/mipmap-anydpi/ic_kelime_tahti.xml")
         val launcherForeground = File("src/main/res/drawable/kelime_kusatmasi_launcher_foreground.xml")
-        val launcherBadge = File("src/main/res/drawable-nodpi/word_siege_home_badge.webp")
+        val launcherBadge = File("src/main/res/drawable/word_siege_home_badge.xml")
         val launcherVector = File("src/main/res/drawable/kelime_tahti_app_icon.xml")
         val homeVector = File("src/main/res/drawable/son_harf_app_icon_master.xml")
         val authVector = File("src/main/res/drawable/son_harf_gold_teal_logo.xml")
@@ -32,13 +32,15 @@ class BrandStartupRegressionTest {
         assertTrue(launcherForeground.isFile)
         assertTrue(launcherForeground.readText().contains("@drawable/word_siege_home_badge"))
         assertTrue(launcherBadge.isFile)
+        assertTrue(launcherBadge.readText().contains("<vector"))
+        assertFalse(File("src/main/res/drawable-nodpi/word_siege_home_badge.webp").exists())
 
         assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(authGate.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertFalse(authGate.contains("painterResource(R.drawable.son_harf_gold_teal_logo)"))
         assertTrue(siegeHub.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(home.contains("R.drawable.son_harf_app_icon_master"))
-        listOf(launcherVector, homeVector, authVector, gameVector).forEach {
+        listOf(launcherBadge, launcherVector, homeVector, authVector, gameVector).forEach {
             assertTrue("Missing compatibility vector drawable: ${it.path}", it.isFile)
             assertTrue(it.readText().contains("<vector"))
         }

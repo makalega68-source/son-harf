@@ -123,3 +123,13 @@ Yalnız yeni, sürümlü fonksiyonlar eklendi; mevcut fonksiyon, tablo, trigger 
 - `get_public_cosmetics_v1`: başka oyuncunun takılı profil kozmetikleri, karşılıklı engel varsa boş.
 
 Hepsi `SECURITY DEFINER`, boş `search_path`, `auth.uid()` ile çalışır; anon execute kapalıdır. Doğrulama: geri alınan (`raise exception`) test blokları — geçmiş/rakip, görev ilerlemesi, çift talep, tamamlanmamış/bilinmeyen görev, oturumsuz erişim, döngü günü ve PRO çarpanı, bakiye ve defter kayıtları.
+
+## 24 Eylül 2026 — Maskot mağazası
+
+- `20260924090000_mascot_store_v1` production'a MCP ile uygulandı: `store_catalog_enabled_product_guard_v3`, 7 `mascot_*` katalog satırı, `apply_verified_premium_purchase_v1` maskot entitlement eşlemesi ve `get_my_mascots_v1()` (yalnız authenticated).
+- `verify-play-purchase` edge function maskot ürünlerini one-time premium ürün olarak tanıyacak şekilde yeniden deploy edildi.
+- Sahip hesabına test amaçlı 7 maskot entitlement'ı verildi (`source_id = owner_mascot_test_20260924`); gerektiğinde bu source_id ile geri alınabilir.
+- `20260924120000_sonharf_ai_bot_v2` production'a MCP ile uygulandı: `sonharf_letter_openings` (RLS açık, istemciye kapalı) ve `private.sonharf_refresh_letter_openings_v1()`; `bot_take_turn_normal_v1` stratejik kelime seçimi (zor son harf + uzun kelime bonusu), skora göre uyarlanan beceri ve insan benzeri nadir takılma ile güncellendi. Yetkiler öncekiyle aynı (yalnız service_role; erişim `bot_take_turn` üzerinden). Rollback'li canlı testte hamle süresi 1–118 ms.
+- `20260924140000_owner_test_accounts_full_access` production'a MCP ile uygulandı (yalnız veri): makalega68@gmail.com ve makalega58@gmail.com için `free_test_purchases`, `is_vip`, kalıcı `pro_lifetime`/`series_game`/`letter_table`/`score_calculator`/7 maskot entitlement'ı (`source_id = owner_full_access_20260924`), 2099'a kadar sezon kartı, tüm `shop_items` envanteri ve 999999 elmas.
+- `20260924160000_sonharf_fifteen_second_turns_round_prep` production'a MCP ile uygulandı: tüm odalarda turu 10 sn'ye kırpan eski `game_rooms_bomb_duel_deadline_v1` tetikleyicisi kaldırıldı (Bomb Duel odası yok); her raund 15 sn; yeni raundun (ve ani ölümün) ilk turuna 20 sn hazırlık ekleyen `game_rooms_round_prep_v1` tetikleyicisi eklendi. Rollback'li testte normal tur 15,0 sn, yeni raund ilk turu 35,0 sn.
+- `20260924170000_sonharf_bot_balance_v3` production'a MCP ile uygulandı: puanlama kelime başına ~10 olduğundan botun skor dengesi artık kelime cinsinden farkı ölçüyor; normal bot bonus peşinde uzun kelimeler yerine 5-7 harfli günlük kelimeleri seçiyor.

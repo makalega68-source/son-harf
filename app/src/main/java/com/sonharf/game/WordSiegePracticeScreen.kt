@@ -1,12 +1,16 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -15,7 +19,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,10 +49,10 @@ private val WordSiegePracticeBots = listOf(
     PracticeBotProfile("Ceren", "kadın"),
 )
 
-private val PracticePlayerAccent = Color(0xFF567A64)
-private val PracticePlayerFill = Color(0xFFA8C7B1)
-private val PracticeRivalAccent = Color(0xFF9B4D4A)
-private val PracticeRivalFill = Color(0xFFE4AEAA)
+private val PracticePlayerAccent = Color(0xFF3C8E62)
+private val PracticePlayerFill = Color(0xFF8FD6AA)
+private val PracticeRivalAccent = Color(0xFFA84642)
+private val PracticeRivalFill = Color(0xFFEDA39E)
 private val PracticeNeutralFill = Color(0xFFE7E8E1)
 private val PracticeSiegeWarm = Color(0xFFE3A64F)
 
@@ -96,19 +102,44 @@ private fun WordSiegePracticeContent(
     var showExchange by remember { mutableStateOf(false) }
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var shuffleSeed by remember { mutableIntStateOf(0) }
+    var boardViewportMode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     var actionVfxEvent by remember { mutableIntStateOf(0) }
+    // The result dialog waits a moment so the mascot's celebration on the board is seen first.
+    var showPracticeResult by remember { mutableStateOf(false) }
+    LaunchedEffect(state.status) {
+        showPracticeResult = false
+        if (state.status == "finished") {
+            // Only an owned mascot has a celebration to show first.
+            if (WordSiegeMascotOwnership.hasAny) delay(3_600L)
+            showPracticeResult = true
+        }
+    }
+    var captureQueue by remember { mutableStateOf<List<WordSiegeCaptureBatch>>(emptyList()) }
+    var pendingPlayerCapturePoints by remember { mutableIntStateOf(0) }
+    var pendingBotCapturePoints by remember { mutableIntStateOf(0) }
+    var pendingPlayerLossPoints by remember { mutableIntStateOf(0) }
+    var pendingBotLossPoints by remember { mutableIntStateOf(0) }
+    var playerScoreArrivalTick by remember { mutableIntStateOf(0) }
+    var botScoreArrivalTick by remember { mutableIntStateOf(0) }
+    var playerScoreLossTick by remember { mutableIntStateOf(0) }
+    var botScoreLossTick by remember { mutableIntStateOf(0) }
+    var playerScoreTargetInWindow by remember { mutableStateOf(Offset.Unspecified) }
+    var botScoreTargetInWindow by remember { mutableStateOf(Offset.Unspecified) }
     var showSiegePulse by remember { mutableStateOf(false) }
     var zoneInfoCode by remember { mutableStateOf<String?>(null) }
-    var tutorialStep by remember {
-        mutableIntStateOf(
-            if (!matchmakingFallback && !WordSiegePracticeTutorialPrefs.isCompleted(context)) 0 else -1,
-        )
-    }
+    var tutorialStep by remember { mutableIntStateOf(-1) }
+    var showChat by remember { mutableStateOf(false) }
+    var chatDraft by remember { mutableStateOf("") }
+    var chatMessages by remember { mutableStateOf<List<Pair<Boolean, String>>>(emptyList()) }
 
     val playerTargetScore = WordSiegePracticeEngine.totalScore(state, 1)
     val botTargetScore = WordSiegePracticeEngine.totalScore(state, 2)
-    val displayedPlayerScore by animateIntAsState(playerTargetScore, tween(260), label = "practice-player-score")
-    val displayedBotScore by animateIntAsState(botTargetScore, tween(260), label = "practice-bot-score")
+    val displayedPlayerScore = wordSiegeDisplayedScore(
+        playerTargetScore, pendingPlayerCapturePoints, pendingPlayerLossPoints,
+    )
+    val displayedBotScore = wordSiegeDisplayedScore(
+        botTargetScore, pendingBotCapturePoints, pendingBotLossPoints,
+    )
     val displayedOwner = state.currentOwner
     // Tile selection and board placement must stay responsive even while the dictionary snapshot is warming up.
     // Dictionary readiness is enforced only when the player submits the move.
@@ -122,8 +153,8 @@ private fun WordSiegePracticeContent(
         turkish = !SonHarfUiState.isEnglish,
     )
     val previewCapturedCells = placements.keys.count { index -> state.board.getOrNull(index)?.owner != 1 }
-    val playerTerritoryPoints = WordSiegeFinalRules.cubeTransfer(state.playerArea)
-    val botTerritoryPoints = WordSiegeFinalRules.cubeTransfer(state.botArea)
+    val playerTerritoryPoints = state.playerAreaScore
+    val botTerritoryPoints = state.botAreaScore
     val playerMapControl = ((state.playerArea * 100f) / WordSiegeBoardSpec.CellCount).toInt().coerceIn(0, 100)
     val botMapControl = ((state.botArea * 100f) / WordSiegeBoardSpec.CellCount).toInt().coerceIn(0, 100)
     val latestAreaPoints = (lastMove?.capturedCells ?: 0) * WordSiegeFinalRules.CUBE_TRANSFER_POINTS
@@ -182,18 +213,46 @@ private fun WordSiegePracticeContent(
         exchangeSelection = emptySet()
     }
 
+    fun enqueueCapture(previous: WordSiegePracticeState, next: WordSiegePracticeState, owner: Int) {
+        val batch = wordSiegeCaptureBatch(
+            updateKey = "practice:${next.moveCount}:$owner",
+            previousOwners = previous.board.map { it.owner },
+            currentOwners = next.board.map { it.owner },
+            capturingOwner = owner,
+        ) ?: return
+        if (captureQueue.any { it.updateKey == batch.updateKey }) return
+        captureQueue = captureQueue + batch
+        if (owner == 1) {
+            pendingPlayerCapturePoints += batch.points
+            pendingBotLossPoints += batch.opponentLossPoints
+        } else {
+            pendingBotCapturePoints += batch.points
+            pendingPlayerLossPoints += batch.opponentLossPoints
+        }
+    }
+
     fun completeTutorial() {
         WordSiegePracticeTutorialPrefs.markCompleted(context)
         tutorialStep = -1
     }
 
-    fun startAgain() {
+    fun resetMatch(changeOpponent: Boolean) {
         state = WordSiegePracticeEngine.newGame(state.language)
-        botProfile = WordSiegePracticeBots.random()
+        if (changeOpponent) botProfile = WordSiegePracticeBots.random()
         botDecisionSalt = kotlin.random.Random.nextLong()
         lastMove = null
         shuffleSeed = 0
+        boardViewportMode = WordSiegeBoardViewportMode.FIT
         actionVfxEvent = 0
+        captureQueue = emptyList()
+        pendingPlayerCapturePoints = 0
+        pendingBotCapturePoints = 0
+        pendingPlayerLossPoints = 0
+        pendingBotLossPoints = 0
+        playerScoreArrivalTick = 0
+        botScoreArrivalTick = 0
+        playerScoreLossTick = 0
+        botScoreLossTick = 0
         notice = if (matchmakingFallback) {
             sh(
                 "Yeni bot maçı başladı. Gerçek rakip araması sürüyor.",
@@ -205,8 +264,14 @@ private fun WordSiegePracticeContent(
                 "Your first move is yours. Cross the Crown Zone.",
             )
         }
+        showChat = false
+        chatDraft = ""
+        chatMessages = emptyList()
         clearSelection()
     }
+
+    fun startAgain() = resetMatch(changeOpponent = true)
+    fun startRematch() = resetMatch(changeOpponent = false)
 
     fun applyPlayerMove() {
         if (!dictionaryReady) {
@@ -219,6 +284,7 @@ private fun WordSiegePracticeContent(
         }
         runCatching { WordSiegePracticeEngine.applyMove(state, 1, placements) }
             .onSuccess { (next, move) ->
+                enqueueCapture(state, next, 1)
                 state = next
                 lastMove = move
                 actionVfxEvent += 1
@@ -235,6 +301,39 @@ private fun WordSiegePracticeContent(
                 notice = wordSiegeFriendlyError(it.message.orEmpty())
                 SonHarfSoundFx.warning()
             }
+    }
+
+    val activeCapture = captureQueue.firstOrNull()
+    val captureEffect = activeCapture?.let { batch ->
+        WordSiegeCaptureEffect(
+            batch = batch,
+            targetInWindow = if (batch.owner == 1) playerScoreTargetInWindow else botScoreTargetInWindow,
+            accent = if (batch.owner == 1) PracticePlayerAccent else PracticeRivalAccent,
+            onCubeArrived = { index ->
+                if (batch.owner == 1) {
+                    pendingPlayerCapturePoints =
+                        (pendingPlayerCapturePoints - WORD_SIEGE_CAPTURE_POINTS_PER_CUBE).coerceAtLeast(0)
+                    playerScoreArrivalTick += 1
+                    if (index in batch.opponentIndices) {
+                        pendingBotLossPoints =
+                            (pendingBotLossPoints - WORD_SIEGE_OPPONENT_LOSS_PER_CUBE).coerceAtLeast(0)
+                        botScoreLossTick += 1
+                    }
+                } else {
+                    pendingBotCapturePoints =
+                        (pendingBotCapturePoints - WORD_SIEGE_CAPTURE_POINTS_PER_CUBE).coerceAtLeast(0)
+                    botScoreArrivalTick += 1
+                    if (index in batch.opponentIndices) {
+                        pendingPlayerLossPoints =
+                            (pendingPlayerLossPoints - WORD_SIEGE_OPPONENT_LOSS_PER_CUBE).coerceAtLeast(0)
+                        playerScoreLossTick += 1
+                    }
+                }
+            },
+            onFinished = {
+                captureQueue = captureQueue.filterNot { it.updateKey == batch.updateKey }
+            },
+        )
     }
 
     BackHandler(onBack = onExit)
@@ -276,6 +375,7 @@ private fun WordSiegePracticeContent(
                 }
             } else {
                 val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements)
+                enqueueCapture(state, next, 2)
                 state = next
                 lastMove = move
                 actionVfxEvent += 1
@@ -301,6 +401,7 @@ private fun WordSiegePracticeContent(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp),
             ) {
+                if (boardViewportMode == WordSiegeBoardViewportMode.FIT) {
                 Row(
                     modifier = Modifier.fillMaxWidth().height(if (compact) 46.dp else 52.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -354,6 +455,7 @@ private fun WordSiegePracticeContent(
                         Icon(Icons.Rounded.Refresh, sh("Yeni oyun", "New game"), tint = WordSiegeGameUi.Blue)
                     }
                 }
+                }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     WordSiegePracticeScoreCard(
@@ -371,6 +473,9 @@ private fun WordSiegePracticeContent(
                         avatarVisible = playerProfile?.avatarVisibility != "hidden",
                         isBot = false,
                         modifier = Modifier.weight(1f),
+                        scoreArrivalTick = playerScoreArrivalTick,
+                        scoreLossTick = playerScoreLossTick,
+                        onScoreCenterChanged = { playerScoreTargetInWindow = it },
                     )
                     WordSiegePracticeScoreCard(
                         name = botProfile.name,
@@ -387,46 +492,14 @@ private fun WordSiegePracticeContent(
                         avatarVisible = true,
                         isBot = true,
                         modifier = Modifier.weight(1f),
+                        scoreArrivalTick = botScoreArrivalTick,
+                        scoreLossTick = botScoreLossTick,
+                        onScoreCenterChanged = { botScoreTargetInWindow = it },
                     )
                 }
 
-                WordSiegeOwnershipLegend()
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = if (displayedOwner == 1) PracticePlayerAccent else PracticeRivalFill.copy(alpha = .42f),
-                    shape = RoundedCornerShape(11.dp),
-                    border = BorderStroke(1.dp, if (displayedOwner == 1) PracticePlayerAccent else PracticeRivalAccent),
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 9.dp, vertical = if (compact) 3.dp else 5.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (botThinking) CircularProgressIndicator(Modifier.size(14.dp), color = PracticeRivalAccent, strokeWidth = 2.dp)
-                        else Icon(
-                            if (displayedOwner == 1) Icons.Rounded.TouchApp else Icons.Rounded.SmartToy,
-                            null,
-                            tint = if (displayedOwner == 1) Color.White else PracticeRivalAccent,
-                            modifier = Modifier.size(15.dp),
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            when {
-                                state.status == "finished" && matchmakingFallback -> sh("BOT MAÇI BİTTİ • RAKİP ARAMASI SÜRÜYOR", "BOT MATCH FINISHED • MATCHMAKING CONTINUES")
-                                state.status == "finished" -> sh("ALIŞTIRMA BİTTİ", "PRACTICE FINISHED")
-                                botThinking -> sh("${botProfile.name.uppercase()} HAMLESİNİ HAZIRLIYOR", "${botProfile.name.uppercase()} IS PREPARING A MOVE")
-                                displayedOwner == 1 -> sh("SIRA SENDE • Kelimeni oluştur", "YOUR TURN • Build your word")
-                                else -> sh("${botProfile.name.uppercase()} OYNUYOR", "${botProfile.name.uppercase()} IS PLAYING")
-                            },
-                            color = if (displayedOwner == 1) Color.White else WordSiegeGameUi.Text,
-                            fontSize = if (compact) 11.sp else 13.sp,
-                            lineHeight = 16.sp,
-                            fontWeight = FontWeight.Black,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
+
 
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                     WordSiegePracticeBoard(
@@ -436,8 +509,41 @@ private fun WordSiegePracticeContent(
                         myOwner = 1,
                         enabled = canPlayerAct,
                         moveEventKey = actionVfxEvent.takeIf { it > 0 },
+                        lastMoveMine = state.currentOwner == 2,
+                        moveScore = lastMove?.wordScore ?: 0,
+                        capturedCells = lastMove?.capturedCells ?: 0,
+                        opponentCaptured = lastMove?.opponentCaptured ?: 0,
+                        moveCell = lastMove?.placements?.keys?.firstOrNull(),
                         resolvedIndices = lastMove?.placements?.keys ?: emptySet(),
-                        modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                        captureEffect = captureEffect,
+                        modifier = if (boardViewportMode == WordSiegeBoardViewportMode.CLOSE) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(1f),
+                        mascotSignal = lastMove?.takeIf { actionVfxEvent > 0 }?.let { move ->
+                            val mineMove = state.currentOwner == 2
+                            when {
+                                mineMove && move.primaryWord.length >= 8 ->
+                                    WordSiegeMascotSignal("rare:$actionVfxEvent", WordSiegeMascotEvent.RARE_WORD, word = move.primaryWord)
+                                mineMove && (move.wordScore >= 25 || move.capturedCells >= 3 || move.opponentCaptured > 0) ->
+                                    WordSiegeMascotSignal("big:$actionVfxEvent", WordSiegeMascotEvent.BIG_PRAISE, word = move.primaryWord)
+                                mineMove -> WordSiegeMascotSignal("ok:$actionVfxEvent", WordSiegeMascotEvent.PRAISE, word = move.primaryWord)
+                                move.wordScore >= 25 || move.opponentCaptured > 0 ->
+                                    WordSiegeMascotSignal("rival:$actionVfxEvent", WordSiegeMascotEvent.RIVAL_STRONG)
+                                botTargetScore - playerTargetScore >= 40 ->
+                                    WordSiegeMascotSignal("behind:$actionVfxEvent", WordSiegeMascotEvent.BEHIND)
+                                else -> null
+                            }
+                        },
+                        mascotOutcome = if (state.status == "finished") {
+                            when (state.winnerOwner) {
+                                1 -> WordSiegeMascotOutcome.WIN
+                                null -> WordSiegeMascotOutcome.DRAW
+                                else -> WordSiegeMascotOutcome.LOSS
+                            }
+                        } else {
+                            null
+                        },
+                        playerName = playerProfile?.displayName,
+                        playerGender = playerProfile?.gender,
+                        onViewportModeChange = { boardViewportMode = it },
                         onCell = { boardIndex ->
                             if (!canPlayerAct) return@WordSiegePracticeBoard
                             if (placements.containsKey(boardIndex)) {
@@ -470,7 +576,7 @@ private fun WordSiegePracticeContent(
                 }
 
                 if (state.status == "playing") {
-                    Row(
+                    if (boardViewportMode == WordSiegeBoardViewportMode.FIT) Row(
                         Modifier.fillMaxWidth().height(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -497,13 +603,6 @@ private fun WordSiegePracticeContent(
                             )
                         }
                         Spacer(Modifier.weight(1f))
-                        Text(
-                            sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"),
-                            color = WordSiegeGameUi.Muted,
-                            fontSize = 10.sp,
-                            lineHeight = 14.sp,
-                            maxLines = 1,
-                        )
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -548,23 +647,36 @@ private fun WordSiegePracticeContent(
                             exchangeSelection = emptySet(); showExchange = true
                         }
                     }
-                    Row(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        WordSiegeSideAction(
+                            sh("SOHBET", "CHAT"),
+                            Icons.Rounded.Chat,
+                            modifier = Modifier.width(74.dp),
+                        ) { showChat = true }
                         Button(
                             onClick = ::applyPlayerMove,
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(10.dp),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
                             enabled = canPlayerAct && placements.isNotEmpty(),
-                            modifier = Modifier.weight(1f).height(52.dp),
+                            modifier = Modifier.weight(1f).height(40.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = PracticePlayerAccent,
                                 contentColor = Color.White,
                                 disabledContainerColor = WordSiegeGameUi.DisabledBackground,
                                 disabledContentColor = WordSiegeGameUi.DisabledContent,
                             ),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            contentPadding = PaddingValues(horizontal = 3.dp),
                         ) {
-                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 14.sp, fontWeight = FontWeight.Black)
+                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
                         }
+                        WordSiegePracticeBagButton(
+                            bag = state.bag,
+                            modifier = Modifier.width(82.dp),
+                        )
                     }
                 } else {
                     val won = state.winnerOwner == 1
@@ -611,7 +723,19 @@ private fun WordSiegePracticeContent(
                     "Harf seç → boş hücreye yerleştir → kelimeyi tamamla → HAMLEYİ ONAYLA",
                     "Pick a tile → place it → complete a word → CONFIRM MOVE",
                 )
-                WordSiegePracticeStatusBar(statusMessage, compact)
+                if (boardViewportMode == WordSiegeBoardViewportMode.FIT) WordSiegePracticeStatusBar(statusMessage, compact)
+                WordSiegeTurnStrip(
+                    text = when {
+                        state.status == "finished" && matchmakingFallback -> sh("BOT MAÇI BİTTİ • RAKİP ARAMASI SÜRÜYOR", "BOT MATCH FINISHED • MATCHMAKING CONTINUES")
+                        state.status == "finished" -> sh("ALIŞTIRMA BİTTİ", "PRACTICE FINISHED")
+                        botThinking -> sh("${botProfile.name.uppercase()} HAMLESİNİ HAZIRLIYOR", "${botProfile.name.uppercase()} IS PREPARING A MOVE")
+                        displayedOwner == 1 -> sh("SIRA SENDE • Kelimeni oluştur", "YOUR TURN • Build your word")
+                        else -> sh("${botProfile.name.uppercase()} OYNUYOR", "${botProfile.name.uppercase()} IS PLAYING")
+                    },
+                    playerTurn = displayedOwner == 1 && !botThinking,
+                    playerAccent = PracticePlayerAccent,
+                    rivalAccent = PracticeRivalAccent,
+                )
             }
         }
     }
@@ -645,7 +769,7 @@ private fun WordSiegePracticeContent(
             title = { Text(sh("Turu geç?", "Pass this turn?"), fontWeight = FontWeight.Black) },
             text = {
                 Text(
-                    sh("İki oyuncu art arda pas verirse maç biter.", "Two consecutive passes end the match."),
+                    sh("Torbada 20’den az harf varken art arda 4 pas ve/veya değişim maçı bitirir.", "When fewer than 20 tiles remain, 4 consecutive passes and/or exchanges end the match."),
                     color = WordSiegeGameUi.Muted,
                 )
             },
@@ -722,12 +846,195 @@ private fun WordSiegePracticeContent(
         )
     }
 
+    if (showChat) {
+        AlertDialog(
+            onDismissRequest = { showChat = false },
+            title = { Text(sh("SOHBET • ${botProfile.name}", "CHAT • ${botProfile.name}"), fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val chatListState = rememberLazyListState()
+                    LaunchedEffect(chatMessages.size) {
+                        if (chatMessages.isNotEmpty()) chatListState.animateScrollToItem(chatMessages.lastIndex)
+                    }
+                    if (chatMessages.isEmpty()) {
+                        Text(
+                            sh("Botla kısa mesajlaşabilirsin.", "You can exchange short messages with the bot."),
+                            color = WordSiegeGameUi.Muted,
+                            fontSize = 12.sp,
+                        )
+                    } else {
+                        LazyColumn(
+                            state = chatListState,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 170.dp, max = 320.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            itemsIndexed(chatMessages) { _, item ->
+                                val (mine, message) = item
+                                Box(Modifier.fillMaxWidth()) {
+                                    Surface(
+                                        modifier = Modifier.align(if (mine) Alignment.CenterEnd else Alignment.CenterStart),
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (mine) PracticePlayerAccent.copy(alpha = .13f) else PracticeRivalAccent.copy(alpha = .10f),
+                                    ) {
+                                        Text(
+                                            (if (mine) sh("Sen: ", "You: ") else "${botProfile.name}: ") + message,
+                                            Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                            color = WordSiegeGameUi.Text,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = chatDraft,
+                        onValueChange = { chatDraft = it.take(80) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text(sh("Mesaj", "Message")) },
+                        trailingIcon = {
+                            IconButton(
+                                enabled = chatDraft.isNotBlank(),
+                                onClick = {
+                                    val message = chatDraft.trim()
+                                    if (message.isNotEmpty()) {
+                                        chatMessages = chatMessages + (true to message) +
+                                            (false to sh("İyi oyunlar!", "Good game!"))
+                                        chatDraft = ""
+                                    }
+                                },
+                            ) { Icon(Icons.Rounded.Send, sh("Gönder", "Send")) }
+                        },
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showChat = false }) {
+                    Text(sh("KAPAT", "CLOSE"), fontWeight = FontWeight.Black)
+                }
+            },
+        )
+    }
+
+    if (state.status == "finished" && showPracticeResult) {
+        WordSiegePracticeResultDialog(
+            winnerOwner = state.winnerOwner,
+            opponentName = botProfile.name,
+            playerScore = WordSiegePracticeEngine.totalScore(state, 1),
+            botScore = WordSiegePracticeEngine.totalScore(state, 2),
+            onRematch = ::startRematch,
+            onExit = onExit,
+        )
+    }
+
     zoneInfoCode?.let { code ->
         WordSiegePracticeZoneInfoDialog(
             code = code,
             onDismiss = { zoneInfoCode = null },
         )
     }
+}
+
+@Composable
+private fun WordSiegePracticeResultDialog(
+    winnerOwner: Int?,
+    opponentName: String,
+    playerScore: Int,
+    botScore: Int,
+    onRematch: () -> Unit,
+    onExit: () -> Unit,
+) {
+    var entered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { entered = true }
+    val scale by animateFloatAsState(
+        targetValue = if (entered) 1f else .84f,
+        animationSpec = tween(420),
+        label = "practiceResultScale",
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (entered) 1f else 0f,
+        animationSpec = tween(300),
+        label = "practiceResultAlpha",
+    )
+    val won = winnerOwner == 1
+    val draw = winnerOwner == null
+    val accent = when {
+        won -> PracticePlayerAccent
+        draw -> WordSiegeGameUi.Gold
+        else -> PracticeRivalAccent
+    }
+    val title = when {
+        won -> sh("KAZANDIN", "YOU WON")
+        draw -> sh("BERABERE", "DRAW")
+        else -> sh("KAYBETTİN", "YOU LOST")
+    }
+
+    AlertDialog(
+        onDismissRequest = {},
+        modifier = Modifier.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+            this.alpha = alpha
+        },
+        icon = {
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = accent.copy(alpha = .14f),
+                border = BorderStroke(1.dp, accent.copy(alpha = .35f)),
+            ) {
+                Icon(
+                    Icons.Rounded.EmojiEvents,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.padding(10.dp).size(32.dp),
+                )
+            }
+        },
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(title, color = accent, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                Text(
+                    "$playerScore  —  $botScore",
+                    color = WordSiegeGameUi.Text,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                Text(
+                    if (won) sh("$opponentName karşısında tahtı aldın.", "You took the throne against $opponentName.")
+                    else if (draw) sh("Puanlar eşitlendi.", "The scores are tied.")
+                    else sh("$opponentName bu maçı aldı.", "$opponentName won this match."),
+                    color = WordSiegeGameUi.Muted,
+                    textAlign = TextAlign.Center,
+                    fontSize = 12.sp,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(sh("RÖVANŞ?", "REMATCH?"), color = WordSiegeGameUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                Text(sh("Aynı rakiple hemen tekrar oyna.", "Play the same opponent again now."), color = WordSiegeGameUi.Muted, fontSize = 11.sp)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onRematch,
+                colors = ButtonDefaults.buttonColors(containerColor = PracticePlayerAccent, contentColor = Color.White),
+                shape = RoundedCornerShape(10.dp),
+            ) { Text(sh("EVET", "YES"), fontWeight = FontWeight.Black) }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onExit, shape = RoundedCornerShape(10.dp)) {
+                Text(sh("HAYIR", "NO"), fontWeight = FontWeight.Black)
+            }
+        },
+    )
 }
 
 @Composable
@@ -746,6 +1053,9 @@ private fun WordSiegePracticeScoreCard(
     avatarVisible: Boolean,
     isBot: Boolean,
     modifier: Modifier = Modifier,
+    scoreArrivalTick: Int = 0,
+    scoreLossTick: Int = 0,
+    onScoreCenterChanged: (Offset) -> Unit = {},
 ) {
     WordSiegeScoreCard(
         name = name, score = score, wordPoints = wordPoints,
@@ -753,5 +1063,8 @@ private fun WordSiegePracticeScoreCard(
         active = active, leading = leading, avatarPath = avatarPath,
         gender = gender, avatarVisible = avatarVisible, isBot = isBot,
         modifier = modifier,
+        scoreArrivalTick = scoreArrivalTick,
+        scoreLossTick = scoreLossTick,
+        onScoreCenterChanged = onScoreCenterChanged,
     )
 }

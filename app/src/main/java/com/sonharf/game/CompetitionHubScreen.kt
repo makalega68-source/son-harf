@@ -745,7 +745,7 @@ private fun WeeklyTournamentTab() {
                                 },
                                 enabled = !busy,
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF2A210F)),
+                                colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF0B1B33)),
                             ) { Text(sh("ÜCRETSİZ KATIL", "JOIN FREE"), fontWeight = FontWeight.Black) }
                         } else {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -1409,7 +1409,7 @@ private fun ClubMissionCard(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (mission.claimed) SonHarfGreen else SonHarfGold,
-                    contentColor = Color(0xFF2A210F),
+                    contentColor = Color(0xFF0B1B33),
                     disabledContainerColor = if (mission.claimed) SonHarfGreen.copy(alpha = .18f) else SonHarfMuted.copy(alpha = .10f),
                     disabledContentColor = if (mission.claimed) SonHarfGreen else SonHarfMuted,
                 ),

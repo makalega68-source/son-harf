@@ -1,16 +1,37 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.Verified
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,8 +48,8 @@ import com.sonharf.game.data.previewPremiumWordSiegeMove
 /**
  * Premium in-match tools. Score preview and letter counts are server-authoritative and
  * entitlement-gated again on the RPC side, so UI state cannot unlock paid data by itself.
- * Transport failures stay distinct from a real locked entitlement so purchased features
- * never appear unowned during a temporary backend problem.
+ * Transport failures are kept distinct from a real "locked" entitlement to avoid making
+ * purchased features look unowned during a temporary backend problem.
  */
 @Composable
 internal fun WordSiegePremiumPanel(
@@ -65,28 +86,19 @@ internal fun WordSiegePremiumPanel(
                 }
             }
             .onFailure {
-                // Preserve the last known entitlement instead of downgrading a paid user to locked.
+                // Preserve the last known entitlement instead of downgrading a paid user to "locked".
                 entitlementError = true
             }
     }
 
     val access = entitlements
 
-    LaunchedEffect(
-        game.id,
-        game.moveCount,
-        placements,
-        canAct,
-        access?.scoreCalculatorAccess,
-    ) {
+    LaunchedEffect(game.id, game.moveCount, placements, canAct, access?.scoreCalculatorAccess) {
         preview = null
         previewError = false
-        if (!canAct || placements.isEmpty() || access?.scoreCalculatorAccess != true) {
-            return@LaunchedEffect
-        }
-        val orientation = runCatching {
-            WordSiegeFinalRules.detectOrientation(game.board, placements.keys)
-        }.getOrNull() ?: return@LaunchedEffect
+        if (!canAct || placements.isEmpty() || access?.scoreCalculatorAccess != true) return@LaunchedEffect
+        val orientation = runCatching { WordSiegeFinalRules.detectOrientation(game.board, placements.keys) }.getOrNull()
+            ?: return@LaunchedEffect
         val request = placements.entries
             .sortedBy { it.key }
             .map { WordSiegePlacement(index = it.key, rackIndex = it.value) }
@@ -106,38 +118,24 @@ internal fun WordSiegePremiumPanel(
     if (access == null || entitlementError) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = GameShapes.Medium,
-            color = GameColors.SecondarySurface,
-            border = BorderStroke(1.dp, GameColors.Border),
+            shape = RoundedCornerShape(14.dp),
+            color = WordSiegeGameUi.PremiumSurface,
+            border = BorderStroke(1.dp, WordSiegeGameUi.PremiumBorder.copy(alpha = .55f)),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Icon(
-                    Icons.Rounded.Refresh,
-                    contentDescription = null,
-                    tint = GameColors.PrimaryBlue,
-                    modifier = Modifier.size(18.dp),
-                )
+                Icon(Icons.Rounded.Refresh, null, tint = WordSiegeGameUi.Gold)
                 Text(
                     if (access == null && !entitlementError) {
-                        sh(
-                            "Premium araçlar kontrol ediliyor…",
-                            "Checking premium tools…",
-                        )
+                        sh("Premium araçlar kontrol ediliyor…", "Checking premium tools…")
                     } else {
-                        sh(
-                            "Premium erişimi doğrulanamadı. Satın alımların kilitlenmedi; yeniden dene.",
-                            "Premium access could not be verified. Your purchases are not locked; retry.",
-                        )
+                        sh("Premium erişimi doğrulanamadı. Satın alımların kilitlenmedi; yeniden dene.", "Premium access could not be verified. Your purchases are not locked; retry.")
                     },
                     modifier = Modifier.weight(1f),
-                    color = GameColors.TextSecondary,
-                    style = MaterialTheme.typography.labelSmall,
+                    color = WordSiegeGameUi.Text,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -146,12 +144,7 @@ internal fun WordSiegePremiumPanel(
                         onClick = { entitlementRetry++ },
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                     ) {
-                        Text(
-                            sh("YENİLE", "RETRY"),
-                            color = GameColors.PrimaryBlue,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Black,
-                        )
+                        Text(sh("YENİLE", "RETRY"), fontSize = 9.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -160,134 +153,120 @@ internal fun WordSiegePremiumPanel(
     }
 
     val resolvedAccess = access ?: return
+    if (placements.isEmpty()) return
+    val hasAnyPremiumTool = resolvedAccess.scoreCalculatorAccess || resolvedAccess.letterTableAccess
 
-    Row(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = if (hasAnyPremiumTool) WordSiegeGameUi.PremiumSurface else WordSiegeGameUi.Surface,
+        border = BorderStroke(
+            1.dp,
+            if (hasAnyPremiumTool) WordSiegeGameUi.PremiumBorder.copy(alpha = .60f) else WordSiegeGameUi.Border,
+        ),
+        shadowElevation = if (hasAnyPremiumTool) 2.dp else 0.dp,
     ) {
-        Surface(
-            modifier = Modifier.weight(1f),
-            shape = GameShapes.Medium,
-            color = GameColors.SecondarySurface,
-            border = BorderStroke(
-                1.dp,
-                if (resolvedAccess.scoreCalculatorAccess) {
-                    GameColors.PrimaryBlue.copy(alpha = .30f)
-                } else {
-                    GameColors.Border
-                },
-            ),
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    if (resolvedAccess.scoreCalculatorAccess) {
-                        Icons.Rounded.Calculate
-                    } else {
-                        Icons.Rounded.Lock
-                    },
-                    contentDescription = null,
-                    tint = if (resolvedAccess.scoreCalculatorAccess) {
-                        GameColors.PrimaryBlue
-                    } else {
-                        GameColors.TextTertiary
-                    },
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(6.dp))
+        Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(99.dp),
+                    color = if (hasAnyPremiumTool) WordSiegeGameUi.Gold else WordSiegeGameUi.NavySoft,
+                ) {
+                    Row(Modifier.padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (hasAnyPremiumTool) Icons.Rounded.Verified else Icons.Rounded.Lock,
+                            null,
+                            modifier = Modifier.padding(end = 4.dp),
+                            tint = Color.White,
+                        )
+                        Text("PRO", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+                Spacer(Modifier.width(7.dp))
                 Text(
-                    when {
-                        !resolvedAccess.scoreCalculatorAccess -> sh(
-                            "Puan Hesaplayıcı • Kilitli",
-                            "Score Calculator • Locked",
-                        )
-                        placements.isEmpty() -> sh(
-                            "Puan Hesaplayıcı • Harf yerleştir",
-                            "Score Calculator • Place tiles",
-                        )
-                        preview != null -> sh(
-                            "Kelime +${preview!!.wordScore} • Bölge +${preview!!.areaScore} • Toplam +${preview!!.totalScore}",
-                            "Word +${preview!!.wordScore} • Territory +${preview!!.areaScore} • Total +${preview!!.totalScore}",
-                        )
-                        previewError -> sh(
-                            "Önizleme alınamadı • hamleyi kontrol et",
-                            "Preview unavailable • check the move",
-                        )
-                        else -> sh("Hesaplanıyor…", "Calculating…")
-                    },
-                    color = GameColors.TextPrimary,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    modifier = Modifier.weight(1f),
+                    sh("KUŞATMA ARAÇLARI", "SIEGE TOOLS"),
+                    color = WordSiegeGameUi.Text,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = .4.sp,
                 )
             }
-        }
 
-        OutlinedButton(
-            onClick = {
-                if (resolvedAccess.letterTableAccess) showLetterTable = true
-            },
-            enabled = resolvedAccess.letterTableAccess,
-            shape = GameShapes.Medium,
-            border = BorderStroke(
-                1.dp,
-                if (resolvedAccess.letterTableAccess) {
-                    GameColors.TacticalTurquoise.copy(alpha = .45f)
-                } else {
-                    GameColors.Border
-                },
-            ),
-            contentPadding = PaddingValues(horizontal = 9.dp, vertical = 6.dp),
-        ) {
-            Icon(
-                if (resolvedAccess.letterTableAccess) {
-                    Icons.Rounded.GridView
-                } else {
-                    Icons.Rounded.Lock
-                },
-                contentDescription = null,
-                tint = if (resolvedAccess.letterTableAccess) {
-                    GameColors.TacticalTurquoise
-                } else {
-                    GameColors.TextTertiary
-                },
-                modifier = Modifier.size(17.dp),
-            )
-            Spacer(Modifier.width(4.dp))
-            Text(
-                sh("HARFLER", "LETTERS"),
-                color = if (resolvedAccess.letterTableAccess) {
-                    GameColors.TacticalTurquoise
-                } else {
-                    GameColors.TextTertiary
-                },
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Black,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    color = WordSiegeGameUi.Surface,
+                    border = BorderStroke(1.dp, WordSiegeGameUi.Border.copy(alpha = .85f)),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            if (resolvedAccess.scoreCalculatorAccess) Icons.Rounded.Calculate else Icons.Rounded.Lock,
+                            contentDescription = null,
+                            tint = if (resolvedAccess.scoreCalculatorAccess) WordSiegeGameUi.Gold else WordSiegeGameUi.Muted,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                sh("TOPLAM PUAN", "TOTAL SCORE"),
+                                color = WordSiegeGameUi.Text,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                            Text(
+                                when {
+                                    !resolvedAccess.scoreCalculatorAccess -> sh("PRO özelliği", "PRO feature")
+                                    placements.isEmpty() -> sh("Harf yerleştir", "Place tiles")
+                                    preview != null -> sh(
+                                        "Toplam ${preview!!.totalScore} • Kelime ${preview!!.wordScore} • Bölge ${preview!!.areaScore}",
+                                        "Total ${preview!!.totalScore} • Word ${preview!!.wordScore} • Territory ${preview!!.areaScore}",
+                                    )
+                                    previewError -> sh("Önizleme alınamadı", "Preview unavailable")
+                                    else -> sh("Hesaplanıyor…", "Calculating…")
+                                },
+                                color = WordSiegeGameUi.Muted,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 2,
+                                lineHeight = 12.sp,
+                            )
+                        }
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = { if (resolvedAccess.letterTableAccess) showLetterTable = true },
+                    enabled = resolvedAccess.letterTableAccess,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(
+                        1.dp,
+                        if (resolvedAccess.letterTableAccess) WordSiegeGameUi.PremiumBorder else WordSiegeGameUi.Border,
+                    ),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Icon(
+                        if (resolvedAccess.letterTableAccess) Icons.Rounded.GridView else Icons.Rounded.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                    Text(sh("KALAN HARFLER", "REMAINING"), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+            }
         }
     }
 
     if (showLetterTable) {
         AlertDialog(
             onDismissRequest = { showLetterTable = false },
-            icon = {
-                Icon(
-                    Icons.Rounded.GridView,
-                    contentDescription = null,
-                    tint = GameColors.TacticalTurquoise,
-                )
-            },
-            title = {
-                Text(
-                    sh("Harf Tablosu", "Letter Table"),
-                    color = GameColors.TextPrimary,
-                    fontWeight = FontWeight.Black,
-                )
-            },
+            icon = { Icon(Icons.Rounded.GridView, null, tint = WordSiegeGameUi.Gold) },
+            title = { Text(sh("Kalan Harfler", "Remaining Letters"), fontWeight = FontWeight.Black) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -295,56 +274,41 @@ internal fun WordSiegePremiumPanel(
                             "Tahtadaki harfler ve kendi elin çıkarıldıktan sonra oyunda görünmeyen harf adetleri.",
                             "Unseen letter counts after subtracting the board and your own rack.",
                         ),
-                        color = GameColors.TextSecondary,
-                        style = MaterialTheme.typography.bodySmall,
+                        color = WordSiegeGameUi.Muted,
+                        fontSize = 11.sp,
                     )
-                    when {
-                        letterTableError -> Text(
-                            sh(
-                                "Harf tablosu şu anda alınamadı. Pencereyi kapatıp yeniden deneyebilirsin.",
-                                "Letter counts are temporarily unavailable. Close and retry.",
-                            ),
-                            color = GameColors.TextPrimary,
-                            style = MaterialTheme.typography.bodySmall,
+                    if (letterTableError) {
+                        Text(
+                            sh("Harf tablosu şu anda alınamadı. Pencereyi kapatıp yeniden deneyebilirsin.", "Letter counts are temporarily unavailable. Close and retry."),
+                            color = WordSiegeGameUi.Text,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                         )
-                        letterTable.isEmpty() -> Text(
-                            sh(
-                                "Harf bilgisi yükleniyor…",
-                                "Loading letter counts…",
-                            ),
-                            color = GameColors.TextSecondary,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        else -> {
-                            letterTable.chunked(6).forEach { group ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                                ) {
-                                    group.forEach { item ->
-                                        Surface(
-                                            modifier = Modifier.weight(1f),
-                                            shape = GameShapes.Small,
-                                            color = GameColors.ElevatedBackground,
-                                            border = BorderStroke(1.dp, GameColors.Border),
-                                        ) {
-                                            Text(
-                                                "${item.letter} ${item.remaining}",
-                                                modifier = Modifier.padding(
-                                                    horizontal = 5.dp,
-                                                    vertical = 7.dp,
-                                                ),
-                                                color = GameColors.TextPrimary,
-                                                fontWeight = FontWeight.Black,
-                                                style = MaterialTheme.typography.labelSmall,
-                                            )
-                                        }
-                                    }
-                                    repeat((6 - group.size).coerceAtLeast(0)) {
-                                        Spacer(Modifier.weight(1f))
+                    } else if (letterTable.isEmpty()) {
+                        Text(sh("Harf bilgisi yükleniyor…", "Loading letter counts…"), color = WordSiegeGameUi.Muted, fontSize = 11.sp)
+                    } else {
+                        letterTable.chunked(6).forEach { group ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            ) {
+                                group.forEach { item ->
+                                    Surface(
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(9.dp),
+                                        color = WordSiegeGameUi.SurfaceSoft,
+                                        border = BorderStroke(1.dp, WordSiegeGameUi.Border),
+                                    ) {
+                                        Text(
+                                            "${item.letter} ${item.remaining}",
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 7.dp),
+                                            color = WordSiegeGameUi.Text,
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 11.sp,
+                                        )
                                     }
                                 }
+                                repeat((6 - group.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
                             }
                         }
                     }
@@ -352,16 +316,9 @@ internal fun WordSiegePremiumPanel(
             },
             confirmButton = {
                 TextButton(onClick = { showLetterTable = false }) {
-                    Text(
-                        sh("KAPAT", "CLOSE"),
-                        color = GameColors.PrimaryBlue,
-                        fontWeight = FontWeight.Black,
-                    )
+                    Text(sh("KAPAT", "CLOSE"), fontWeight = FontWeight.Black)
                 }
             },
-            containerColor = GameColors.PrimarySurface,
-            titleContentColor = GameColors.TextPrimary,
-            textContentColor = GameColors.TextSecondary,
         )
     }
 }
