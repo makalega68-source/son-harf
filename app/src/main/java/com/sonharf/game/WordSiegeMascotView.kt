@@ -189,6 +189,20 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private var skin = WordSiegeMascotSkin.ORB
     private var decor = WordSiegeMascotDecor.of(WordSiegeMascotSkin.ORB)
     private val eyePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+    // Two small round hands float beside the body (never touching it) and follow the mood.
+    private val hand = FloatArray(4).also { it[0] = ORB_CX - HAND_OUT; it[1] = HAND_Y; it[2] = ORB_CX + HAND_OUT; it[3] = HAND_Y }
+    private val handVelocity = FloatArray(4)
+    private val handTarget = FloatArray(4)
+    private val handPath = Path()
+    private val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { setShadowLayer(14f, 0f, 8f, 0x400C061E) }
+    private val handLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 8f
+        color = 0xFF140A2A.toInt()
+    }
+    private val handCoverPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val padPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFF9FC0.toInt() }
     private val girlLashPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -298,6 +312,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
 
     init {
         contentDescription = "Maskot"
+        updateHandShader()
     }
 
     fun updateGame(
@@ -429,9 +444,15 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         skinShader = BitmapShader(layers.getValue("orb_face_base"), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
         skinPaint.shader = skinShader
         decor = WordSiegeMascotDecor.of(next)
+        updateHandShader()
         edgePaint.shader = decor.ringShader()
         wingPaint.shader = decor.wingShader()
         invalidate()
+    }
+
+    private fun updateHandShader() {
+        handPaint.shader = RadialGradient(-18f, -23f, 74f, decor.handColors, null, Shader.TileMode.CLAMP)
+        handCoverPaint.shader = handPaint.shader
     }
 
     /** Game context that is not tied to a single move: clock pressure, who is ahead, typing. */
@@ -806,6 +827,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.restore()
 
         if (mood == WordSiegeMascotEmotion.STRESSED || urgency > .45f) drawSweat(canvas, now)
+        drawHands(canvas, now, mood, dt)
         if (hat != WordSiegeMascotHat.NONE) drawHat(canvas, now) else decor.drawTuft(canvas, now)
         decor.drawFront(canvas)
         if (sleeping) drawSleepZ(canvas, now)
@@ -1272,6 +1294,89 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
     }
 
+    /**
+     * Hands: bob gently at rest, go up when happy (waving), hang low when sad, lift beside the
+     * face when surprised, flutter in flight and gesture while talking. They stay clear of the body.
+     */
+    private fun drawHands(canvas: Canvas, now: Long, mood: WordSiegeMascotEmotion, dt: Float) {
+        val cheering = actionKind == WordSiegeMascotAction.CHEER && now < actionUntil
+        var out = HAND_OUT
+        var y = HAND_Y
+        var waveL = 0f
+        var waveR = 0f
+        when {
+            flying -> {
+                y = 650f
+                waveL = sin(now / 90f) * 16f
+                waveR = sin(now / 90f + 1f) * 16f
+            }
+            cheering || mood == WordSiegeMascotEmotion.HAPPY || mood == WordSiegeMascotEmotion.LAUGH ||
+                mood == WordSiegeMascotEmotion.EXCITED || mood == WordSiegeMascotEmotion.JUMP -> {
+                y = 470f
+                out = 520f
+                waveL = sin(now / 130f) * 18f
+                waveR = sin(now / 130f + 1.6f) * 18f
+            }
+            mood == WordSiegeMascotEmotion.SURPRISED -> {
+                y = 600f
+                out = 545f
+            }
+            mood.isSorrow() || sleeping -> {
+                y = 935f
+                out = 500f
+            }
+            mood == WordSiegeMascotEmotion.STRESSED -> {
+                y = 720f
+                waveL = sin(now / 70f) * 3f
+                waveR = sin(now / 70f + 2f) * 3f
+            }
+            mood == WordSiegeMascotEmotion.PROUD -> y = 780f
+        }
+        val bobSpeed = if (sleeping) 1_300f else 650f
+        handTarget[0] = ORB_CX - out
+        handTarget[1] = y + sin(now / bobSpeed) * 9f + waveL
+        handTarget[2] = ORB_CX + out
+        handTarget[3] = y + sin(now / bobSpeed + 1.3f) * 9f + waveR
+        // While talking (and not cheering) the right hand gestures along.
+        if (speaking && y > 600f) {
+            handTarget[3] = 700f + sin(now / 180f) * 30f
+            handTarget[2] = ORB_CX + out + sin(now / 260f) * 14f
+        }
+        val k = 70f
+        val c = 2f * sqrt(k) * .8f
+        for (i in 0 until 4) {
+            handVelocity[i] += (k * (handTarget[i] - hand[i]) - c * handVelocity[i]) * dt
+            hand[i] += handVelocity[i] * dt
+        }
+        drawHand(canvas, hand[0].coerceIn(70f, 1_184f), hand[1], -1f)
+        drawHand(canvas, hand[2].coerceIn(70f, 1_184f), hand[3], 1f)
+    }
+
+    private fun drawHand(canvas: Canvas, x: Float, y: Float, side: Float) {
+        canvas.save()
+        canvas.translate(x, y)
+        canvas.scale(side, 1f)
+        // A round mitten with a small thumb pointing up towards the body.
+        handPath.rewind()
+        handPath.addCircle(0f, 0f, 58f, Path.Direction.CW)
+        handPath.addCircle(-42f, -35f, 24f, Path.Direction.CW)
+        canvas.drawPath(handPath, handPaint)
+        canvas.drawCircle(0f, 0f, 58f, handLinePaint)
+        canvas.drawCircle(-42f, -35f, 24f, handLinePaint)
+        // Hide the outline where the thumb meets the palm.
+        canvas.drawCircle(-28f, -21f, 18f, handCoverPaint)
+        if (decor.pawPads) {
+            canvas.drawCircle(5f, 12f, 20f, padPaint)
+            canvas.drawCircle(-16f, -18f, 9f, padPaint)
+            canvas.drawCircle(9f, -25f, 9f, padPaint)
+            canvas.drawCircle(30f, -9f, 9f, padPaint)
+        }
+        detailPaint.color = 0xCCFFFFFF.toInt()
+        canvas.drawCircle(18f, -23f, 12f, detailPaint)
+        detailPaint.alpha = 255
+        canvas.restore()
+    }
+
     private fun drawSleepZ(canvas: Canvas, now: Long) {
         // Three soft "z" letters drift up from the side of the head.
         for (i in 0 until 3) {
@@ -1428,6 +1533,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         const val MOUTH_Y = 790f
         const val DROWSY_AFTER = 22_000L
         const val SLEEP_AFTER = 50_000L
+        const val HAND_OUT = 535f
+        const val HAND_Y = 820f
 
         const val TEAR_CYCLE = 1_700L
         val SPARKLE_X = floatArrayOf(250f, 1_080f, 330f, 1_010f)

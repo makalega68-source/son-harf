@@ -104,6 +104,18 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
     val ringColors: IntArray
     val wingColors: IntArray
 
+    /** Floating round hands: light and dark tone, and whether they get pink paw pads. */
+    val handColors: IntArray = when (skin) {
+        WordSiegeMascotSkin.ORB -> intArrayOf(0xFF9CF3FF.toInt(), 0xFF2F6DFF.toInt())
+        WordSiegeMascotSkin.PINK -> intArrayOf(0xFFFFD3EC.toInt(), 0xFFE2408F.toInt())
+        WordSiegeMascotSkin.DEVIL_BLUE -> intArrayOf(0xFFA9DEFF.toInt(), 0xFF1D3FB8.toInt())
+        WordSiegeMascotSkin.DEVIL_RED -> intArrayOf(0xFFFFB98A.toInt(), 0xFFB3121C.toInt())
+        WordSiegeMascotSkin.CAT -> intArrayOf(0xFFFFF6E8.toInt(), 0xFFE0B27A.toInt())
+        WordSiegeMascotSkin.ROBOT -> intArrayOf(0xFFF4F7FB.toInt(), 0xFF6D7A8C.toInt())
+        WordSiegeMascotSkin.ASTRONAUT -> intArrayOf(0xFFFFFFFF.toInt(), 0xFFB8C6D8.toInt())
+    }
+    val pawPads = skin == WordSiegeMascotSkin.CAT
+
     /** Whether fangs are drawn (they hang from the upper lip, so the rig passes the mouth top). */
     val hasFangs = skin == WordSiegeMascotSkin.DEVIL_BLUE || skin == WordSiegeMascotSkin.DEVIL_RED
     private val fangs = ArrayList<Op>()
