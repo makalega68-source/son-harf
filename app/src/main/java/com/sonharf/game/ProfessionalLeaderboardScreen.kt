@@ -4,9 +4,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Leaderboard
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material3.*
@@ -32,6 +34,9 @@ internal fun ProfessionalLeaderboardScreen(
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf(false) }
     val me = remember { backend.currentUserId() }
+    var filter by remember { mutableIntStateOf(0) }
+    var weekly by remember { mutableStateOf<List<WeeklyTopPlayerV210>>(emptyList()) }
+    var friendRanking by remember { mutableStateOf<List<ProfileDto>>(emptyList()) }
 
     suspend fun reload() {
         loading = true
@@ -46,6 +51,12 @@ internal fun ProfessionalLeaderboardScreen(
             }
             profiles = mapped
         }.onFailure { error = true }
+        weekly = runCatching { backend.getWeeklyTopV210(limit = 50) }.getOrDefault(emptyList())
+        // Friends ranking: accepted friends plus the player, ordered by their real rating.
+        friendRanking = runCatching {
+            val mine = me?.let { id -> runCatching { backend.getProfile(id) }.getOrNull() }
+            (backend.getFriends().map { it.second } + listOfNotNull(mine)).distinctBy { it.id }.sortedByDescending { it.rating }
+        }.getOrDefault(emptyList())
         loading = false
     }
 
@@ -53,8 +64,8 @@ internal fun ProfessionalLeaderboardScreen(
 
     Column(Modifier.fillMaxSize()) {
         GameTopBar(
-            title = gameText("Liderlik Tablosu", "Leaderboard"),
-            subtitle = gameText("Sezon sıralaması ve lig rekabeti", "Season ranking and league competition"),
+            title = gameText("Lig", "League"),
+            subtitle = gameText("Liderlik Tablosu • sezon, haftalık ve arkadaşlar", "Leaderboard • season, weekly and friends"),
             onBack = onBack,
         )
 
@@ -122,6 +133,33 @@ internal fun ProfessionalLeaderboardScreen(
                             LeaderboardMetric(Modifier.weight(1f), current.wins.toString(), gameText("Galibiyet", "Wins"), GameColors.PlayGreen)
                             LeaderboardMetric(Modifier.weight(1f), current.matches.toString(), gameText("Maç", "Matches"), GameColors.Lavender)
                         }
+                        // Next target from the same thresholds as the server's league_for_rating_v1.
+                        val progress = ratingLeagueProgress(current.rating)
+                        Spacer(Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                current.leagueName,
+                                Modifier.weight(1f),
+                                color = GameColors.PrestigeGold,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Black,
+                            )
+                            Text(
+                                progress.nextAt?.let { gameText("Sonraki hedef: $it", "Next target: $it") } ?: gameText("En yüksek lig", "Top league"),
+                                color = GameColors.TextSecondary,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        LeagueProgress(progress.progress)
+                        progress.nextAt?.let {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                gameText("${progress.nextLeagueName} için ${progress.pointsToNext} RP", "${progress.pointsToNext} RP to ${progress.nextLeagueName}"),
+                                color = GameColors.TextTertiary,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
                     }
                 }
             }
@@ -137,7 +175,47 @@ internal fun ProfessionalLeaderboardScreen(
                 }
             }
 
-            if (!loading && rows.isEmpty()) {
+            item(key = "league-filter") {
+                SegmentedGameTabs(
+                    labels = listOf(gameText("Genel", "Overall"), gameText("Haftalık", "Weekly"), gameText("Arkadaşlar", "Friends")),
+                    selectedIndex = filter,
+                    onSelected = { filter = it },
+                )
+            }
+
+            if (filter == 1) {
+                if (!loading && weekly.isEmpty()) item {
+                    GameEmptyState(
+                        icon = Icons.Rounded.Leaderboard,
+                        title = gameText("Haftalık sıralama henüz yok", "No weekly ranking yet"),
+                        body = gameText("Bu hafta oynanan dereceli maçlar burada sıralanır.", "Ranked matches played this week are ranked here."),
+                    )
+                }
+                itemsIndexed(weekly, key = { _, row -> "w-" + row.userId }) { index, row ->
+                    LeagueRankRow(index + 1, row.username, gameText("Bu hafta", "This week"), "${row.rp} RP", row.userId == me)
+                }
+            }
+
+            if (filter == 2) {
+                if (!loading && friendRanking.size <= 1) item {
+                    GameEmptyState(
+                        icon = Icons.Rounded.Groups,
+                        title = gameText("Arkadaş sıralaması boş", "No friends to rank yet"),
+                        body = gameText("Arkadaş ekledikçe aranızdaki lig sıralaması burada görünür.", "Add friends to see how you rank against them."),
+                    )
+                }
+                itemsIndexed(friendRanking, key = { _, p -> "f-" + p.id }) { index, player ->
+                    LeagueRankRow(
+                        index + 1,
+                        player.displayName,
+                        ratingLeagueProgress(player.rating).leagueName,
+                        "${player.rating} RP",
+                        player.id == me,
+                    )
+                }
+            }
+
+            if (filter == 0 && !loading && rows.isEmpty()) {
                 item {
                     GameEmptyState(
                         icon = Icons.Rounded.Leaderboard,
@@ -151,11 +229,11 @@ internal fun ProfessionalLeaderboardScreen(
                 }
             }
 
-            if (rows.isNotEmpty()) {
+            if (filter == 0 && rows.isNotEmpty()) {
                 item { ProfessionalPodium(rows.take(3), profiles, me) }
             }
 
-            if (rows.size > 3) {
+            if (filter == 0 && rows.size > 3) {
                 item { GameSectionHeader(gameText("Sezon Sıralaması", "Season Ranking")) }
                 items(rows.drop(3), key = { it.userId }) { row ->
                     LeaderboardCompactRow(
@@ -308,6 +386,37 @@ private fun LeaderboardMetric(
         Column(Modifier.padding(vertical = 9.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, color = accent, fontWeight = FontWeight.Black, fontSize = 15.sp)
             Text(label, color = GameColors.TextSecondary, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun LeagueRankRow(rank: Int, name: String, detail: String, value: String, isMe: Boolean) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = GameShapes.Medium,
+        color = if (isMe) GameColors.PrimaryBlue.copy(alpha = .10f) else GameColors.PrimarySurface,
+        border = BorderStroke(1.dp, if (isMe) GameColors.PrimaryBlue.copy(alpha = .55f) else GameColors.Border),
+    ) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "#$rank",
+                modifier = Modifier.width(38.dp),
+                color = when (rank) { 1 -> GameColors.PrestigeGold; 2, 3 -> GameColors.RewardAmber; else -> GameColors.TextSecondary },
+                fontWeight = FontWeight.Black,
+                fontSize = 12.sp,
+            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (isMe) gameText("$name • SEN", "$name • YOU") else name,
+                    color = GameColors.TextPrimary,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(detail, color = GameColors.TextSecondary, style = MaterialTheme.typography.labelSmall)
+            }
+            Text(value, color = if (isMe) GameColors.PrimaryBlue else GameColors.TextPrimary, fontWeight = FontWeight.Black, fontSize = 12.sp)
         }
     }
 }

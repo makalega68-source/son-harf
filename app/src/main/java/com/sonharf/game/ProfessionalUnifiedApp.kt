@@ -16,6 +16,7 @@ private enum class ProfessionalDestination {
     HOME,
     PLAY,
     MATCHES,
+    RULES,
     LEADERBOARD,
     COMPETE,
     RETENTION,
@@ -144,6 +145,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
             ProfessionalDestination.RETENTION -> ProfessionalDestination.HOME
             ProfessionalDestination.COMPETE -> ProfessionalDestination.LEADERBOARD
             ProfessionalDestination.MATCHES -> matchesReturn
+            ProfessionalDestination.RULES -> ProfessionalDestination.PLAY
             ProfessionalDestination.ACCOUNT -> ProfessionalDestination.SETTINGS
             ProfessionalDestination.SERIES -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
@@ -238,7 +240,10 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                         },
                         onLastLetter = { openGame(ProfessionalDestination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(ProfessionalDestination.LETTER_PATH, letterPathLanguage) },
+                        onRules = { destination = ProfessionalDestination.RULES },
                     )
+
+                    ProfessionalDestination.RULES -> RulesScreen(onBack = { destination = ProfessionalDestination.PLAY })
 
                     ProfessionalDestination.LEADERBOARD -> ProfessionalLeaderboardScreen(
                         backend = backend,

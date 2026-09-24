@@ -93,6 +93,23 @@ class ProfessionalShellScreenshotTest {
     @Config(qualifiers = "w412dp-h915dp-xxhdpi")
     fun playerProfileStranger_412x915() = capturePlayerProfile("player_profile_stranger_412x915", PlayerRelation.NONE, null)
 
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun rules_360x800() = captureRules("rules_360x800", setOf("what", "area_points"))
+
+    @Test
+    @Config(qualifiers = "w412dp-h915dp-xxhdpi")
+    fun rules_412x915() = captureRules("rules_412x915", setOf("word", "map", "win"))
+
+    private fun captureRules(name: String, open: Set<String>) {
+        compose.setContent {
+            GameTheme {
+                Box(Modifier.fillMaxSize().background(GameColors.AppBackground)) { RulesContent(open = open, onToggle = {}) }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/$name.png")
+    }
+
     private fun capturePlayerProfile(name: String, relation: PlayerRelation, record: PlayerHeadToHead?) {
         val player = com.sonharf.game.data.ProfileDto(
             id = "p1",

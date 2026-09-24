@@ -45,6 +45,14 @@ internal fun ProfessionalSettingsScreen(
     var notice by remember { mutableStateOf<String?>(null) }
     var helpDialog by remember { mutableStateOf(false) }
     var logoutDialog by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
+    var language by remember { mutableStateOf(SonHarfUiState.language) }
+
+    if (showRules) {
+        androidx.activity.compose.BackHandler { showRules = false }
+        RulesScreen(onBack = { showRules = false })
+        return
+    }
 
     LaunchedEffect(Unit) {
         val id = backend.currentUserId()
@@ -56,8 +64,8 @@ internal fun ProfessionalSettingsScreen(
         GameTopBar(
             title = gameText("Ayarlar", "Settings"),
             subtitle = gameText(
-                "Ses, bildirim, gizlilik ve hesap",
-                "Audio, notifications, privacy and account",
+                "Oyun, sosyal, görünüm, hesap ve uygulama",
+                "Game, social, appearance, account and app",
             ),
             onBack = onBack,
         )
@@ -68,7 +76,7 @@ internal fun ProfessionalSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                ProfessionalSettingsGroup(gameText("SES VE DOKUNUŞ", "AUDIO & HAPTICS")) {
+                ProfessionalSettingsGroup(gameText("OYUN", "GAME")) {
                     ProfessionalToggleSetting(
                         icon = Icons.Rounded.MusicNote,
                         title = gameText("Müzik", "Music"),
@@ -104,15 +112,7 @@ internal fun ProfessionalSettingsScreen(
             }
 
             item {
-                GameSurface(borderColor = GameColors.TacticalTurquoise.copy(alpha = .28f)) {
-                    GameSectionHeader(gameText("KİŞİSELLEŞTİRME", "PERSONALIZATION"))
-                    Spacer(Modifier.height(4.dp))
-                    ProfileOwnedThemesSection(backend)
-                }
-            }
-
-            item {
-                ProfessionalSettingsGroup(gameText("BİLDİRİMLER", "NOTIFICATIONS")) {
+                ProfessionalSettingsGroup(gameText("SOSYAL", "SOCIAL")) {
                     ProfessionalToggleSetting(
                         Icons.Rounded.SportsEsports,
                         gameText("Oyun davetleri", "Game invitations"),
@@ -132,21 +132,19 @@ internal fun ProfessionalSettingsScreen(
                         friendRequests = it
                         SonHarfPreferences.setFriendRequestNotificationsEnabled(context, it)
                     }
-                    SettingsDivider()
-                    ProfessionalToggleSetting(
-                        Icons.Rounded.Notifications,
-                        gameText("Sistem duyuruları", "System announcements"),
-                        gameText("Ödül, bakım ve önemli haberler", "Rewards, maintenance and important news"),
-                        systemNotifications,
-                    ) {
-                        systemNotifications = it
-                        SonHarfPreferences.setSystemNotificationsEnabled(context, it)
-                    }
                 }
             }
 
             item {
-                ProfessionalSettingsGroup(gameText("PROFİL GÖRÜNÜRLÜĞÜ", "PROFILE VISIBILITY")) {
+                GameSurface(borderColor = GameColors.TacticalTurquoise.copy(alpha = .28f)) {
+                    GameSectionHeader(gameText("GÖRÜNÜM • TEMA VE TAHTA", "APPEARANCE • THEME AND BOARD"))
+                    Spacer(Modifier.height(4.dp))
+                    ProfileOwnedThemesSection(backend)
+                }
+            }
+
+            item {
+                ProfessionalSettingsGroup(gameText("GÖRÜNÜM • PROFİL", "APPEARANCE • PROFILE")) {
                     ProfessionalToggleSetting(
                         icon = Icons.Rounded.Visibility,
                         title = gameText("Profil fotoğrafını göster", "Show profile photo"),
@@ -181,7 +179,60 @@ internal fun ProfessionalSettingsScreen(
             }
 
             item {
-                ProfessionalSettingsGroup(gameText("GİZLİLİK VE DESTEK", "PRIVACY & SUPPORT")) {
+                ProfessionalSettingsGroup(gameText("HESAP", "ACCOUNT")) {
+                    val email = runCatching { SupabaseProvider.client.auth.currentUserOrNull()?.email }
+                        .getOrNull()
+                        .orEmpty()
+                    if (email.isNotBlank()) {
+                        Text(
+                            email,
+                            color = GameColors.TextPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                    }
+                    LanguageSetting(language) { next ->
+                        language = next
+                        SonHarfPreferences.setLanguage(context, next)
+                    }
+                    SettingsDivider()
+                    ProfessionalSettingsLink(
+                        Icons.Rounded.ManageAccounts,
+                        gameText("Hesap ve gizlilik", "Account & privacy"),
+                        gameText("Engellenenler ve hesap silme", "Blocked users and account deletion"),
+                        onAccount,
+                    )
+                    SettingsDivider()
+                    ProfessionalSettingsLink(
+                        Icons.Rounded.Logout,
+                        gameText("Çıkış yap", "Sign out"),
+                        gameText("Bu cihazdaki oturumu kapat", "End the session on this device"),
+                        danger = true,
+                    ) { logoutDialog = true }
+                }
+            }
+
+            item {
+                ProfessionalSettingsGroup(gameText("UYGULAMA", "APP")) {
+                    ProfessionalToggleSetting(
+                        Icons.Rounded.Notifications,
+                        gameText("Sistem duyuruları", "System announcements"),
+                        gameText("Ödül, bakım ve önemli haberler", "Rewards, maintenance and important news"),
+                        systemNotifications,
+                    ) {
+                        systemNotifications = it
+                        SonHarfPreferences.setSystemNotificationsEnabled(context, it)
+                    }
+                    SettingsDivider()
+                    ProfessionalSettingsLink(
+                        Icons.Rounded.MenuBook,
+                        gameText("Nasıl oynanır / Kurallar", "How to play / Rules"),
+                        gameText("Kelime Kuşatması, Son Harf ve Harf Yolu", "Kelime Kuşatması, Last Letter and Letter Path"),
+                    ) { showRules = true }
+                    SettingsDivider()
                     ProfessionalSettingsLink(
                         Icons.Rounded.PrivacyTip,
                         gameText("Reklam gizlilik seçenekleri", "Ad privacy options"),
@@ -209,38 +260,6 @@ internal fun ProfessionalSettingsScreen(
                         gameText("Yardım", "Help"),
                         gameText("Oyun ve hesap yardımı", "Game and account help"),
                     ) { helpDialog = true }
-                }
-            }
-
-            item {
-                ProfessionalSettingsGroup(gameText("HESAP", "ACCOUNT")) {
-                    val email = runCatching { SupabaseProvider.client.auth.currentUserOrNull()?.email }
-                        .getOrNull()
-                        .orEmpty()
-                    if (email.isNotBlank()) {
-                        Text(
-                            email,
-                            color = GameColors.TextPrimary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                    }
-                    ProfessionalSettingsLink(
-                        Icons.Rounded.ManageAccounts,
-                        gameText("Hesap ve gizlilik", "Account & privacy"),
-                        gameText("Engellenenler ve hesap silme", "Blocked users and account deletion"),
-                        onAccount,
-                    )
-                    SettingsDivider()
-                    ProfessionalSettingsLink(
-                        Icons.Rounded.Logout,
-                        gameText("Çıkış yap", "Sign out"),
-                        gameText("Bu cihazdaki oturumu kapat", "End the session on this device"),
-                        danger = true,
-                    ) { logoutDialog = true }
                 }
             }
 
@@ -433,4 +452,20 @@ private fun ProfessionalSettingsLink(
 @Composable
 private fun SettingsDivider() {
     HorizontalDivider(color = GameColors.Divider)
+}
+
+/** Interface language: Turkish and English only. */
+@Composable
+private fun LanguageSetting(current: String, onSelect: (String) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Rounded.Language, null, tint = GameColors.PrimaryBlue, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(gameText("Dil", "Language"), Modifier.weight(1f), color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+        SegmentedGameTabs(
+            labels = listOf("TÜRKÇE", "ENGLISH"),
+            selectedIndex = if (current == "en") 1 else 0,
+            onSelected = { onSelect(if (it == 1) "en" else "tr") },
+            modifier = Modifier.width(210.dp),
+        )
+    }
 }

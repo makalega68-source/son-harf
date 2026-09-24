@@ -45,6 +45,7 @@ internal fun PlayHubScreen(
     onPrivateRoom: () -> Unit,
     onLastLetter: () -> Unit,
     onLetterPath: () -> Unit,
+    onRules: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     var summary by remember { mutableStateOf(PlayHubSiegeSummary()) }
@@ -104,6 +105,7 @@ internal fun PlayHubScreen(
         },
         onLastLetter = onLastLetter,
         onLetterPath = onLetterPath,
+        onRules = onRules,
     )
 }
 
@@ -120,6 +122,7 @@ internal fun PlayHubContent(
     onRematch: () -> Unit,
     onLastLetter: () -> Unit,
     onLetterPath: () -> Unit,
+    onRules: () -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -127,6 +130,14 @@ internal fun PlayHubContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item(key = "play-hero") { PlayHubSiegeHero(summary, onQuickMatch) }
+
+        item(key = "play-rules") {
+            TextButton(onClick = onRules, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
+                Icon(Icons.Rounded.MenuBook, null, tint = GameColors.TacticalTurquoise, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(gameText("Nasıl oynanır? 30 saniyede öğren", "How to play? Learn in 30 seconds"), color = GameColors.TacticalTurquoise, style = MaterialTheme.typography.labelMedium)
+            }
+        }
 
         if (summary.activeGames > 0) {
             item(key = "play-active") { PlayHubActiveGames(summary, onMyGames) }
