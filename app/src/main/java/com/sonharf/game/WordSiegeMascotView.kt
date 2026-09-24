@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.sin
 
@@ -63,7 +65,11 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         ), floatArrayOf(0f, .25f, .5f, .75f, 1f))
     }
     private val detailPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF111A33.toInt()
+    }
     private var startedAt = SystemClock.uptimeMillis()
+    private var lastFrameAt = startedAt
     private var lastBlink = startedAt
     private var lastMoveId: Long? = null
     private var hasInitialMove = false
@@ -114,6 +120,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         super.onDraw(canvas)
         val now = SystemClock.uptimeMillis()
         val elapsed = now - startedAt
+        val frameDeltaSeconds = ((now - lastFrameAt).coerceIn(0L, 80L)) / 1_000.0
+        lastFrameAt = now
         if (now - lastBlink > 2_600L + ((elapsed / 2_600L) % 3L) * 450L) lastBlink = now
         val blinkProgress = (now - lastBlink) / 210f
         val blink = if (blinkProgress in 0f..1f) sin(blinkProgress * PI).toFloat().coerceAtLeast(0f) else 0f
@@ -121,8 +129,10 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             targetX = 0f
             targetY = .2f
         }
-        gazeX += (targetX - gazeX) * .14f
-        gazeY += (targetY - gazeY) * .14f
+        // Time-based smoothing keeps gaze speed stable when rendering cadence changes.
+        val gazeBlend = (1.0 - exp(-5.0 * frameDeltaSeconds)).toFloat().coerceIn(0f, 1f)
+        gazeX += (targetX - gazeX) * gazeBlend
+        gazeY += (targetY - gazeY) * gazeBlend
         val mood = if (now < reactionUntil) reaction
             else externalEmotion ?: if (pendingCount > 0) WordSiegeMascotEmotion.FOCUS else WordSiegeMascotEmotion.CALM
         val lid = max(blink, when (mood) {
@@ -139,7 +149,9 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.scale(size / 1_254f, size / 1_254f)
         val reactionProgress = ((now - (reactionUntil - 1_350L)) / 1_350f).coerceIn(0f, 1f)
         val jump = if (mood == WordSiegeMascotEmotion.JUMP) sin(reactionProgress * PI * 3).toFloat().coerceAtLeast(0f) * 94f else 0f
-        canvas.translate(0f, sin(elapsed / 640f) * 3f - jump + if (mood == WordSiegeMascotEmotion.BOWED) 25f else 0f)
+        val idleBob = sin(elapsed / 640f) * 3f
+        drawGroundShadow(canvas, elapsed, jump)
+        canvas.translate(0f, idleBob - jump + if (mood == WordSiegeMascotEmotion.BOWED) 25f else 0f)
         if (mood == WordSiegeMascotEmotion.BOWED) canvas.rotate(5f, 650f, 650f)
         drawLayer(canvas, "orb_face_base")
         // A fine color-matched contour softens the dark silhouette without changing the orb.
@@ -149,6 +161,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         drawLayer(canvas, "eye_right")
         drawLayer(canvas, "iris_left", gazeX * 22f, gazeY * 17f)
         drawLayer(canvas, "iris_right", gazeX * 22f, gazeY * 17f)
+        drawEyeHighlights(canvas, elapsed)
         drawLid(canvas, 515f, 653f, 127f, 132f, lid)
         drawLid(canvas, 877f, 653f, 126f, 131f, lid)
         val browY = when (mood) {
@@ -203,6 +216,42 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         drawHearts(canvas, now)
         canvas.restore()
         if (isAttachedToWindow && visibility == VISIBLE) postInvalidateDelayed(33L)
+    }
+
+    private fun drawGroundShadow(canvas: Canvas, elapsed: Long, jump: Float) {
+        val jumpFraction = (jump / 94f).coerceIn(0f, 1f)
+        val breathing = abs(sin(elapsed / 900f))
+        val halfWidth = 245f * (1f + jumpFraction * .18f + breathing * .025f)
+        val halfHeight = 27f * (1f - jumpFraction * .16f)
+        val centerX = 658f
+        val centerY = 1_070f
+        val alpha = (58f - 25f * jumpFraction).toInt().coerceIn(24, 58)
+        shadowPaint.alpha = alpha / 2
+        canvas.drawOval(
+            RectF(centerX - halfWidth * 1.08f, centerY - halfHeight * 1.35f, centerX + halfWidth * 1.08f, centerY + halfHeight * 1.35f),
+            shadowPaint,
+        )
+        shadowPaint.alpha = alpha
+        canvas.drawOval(
+            RectF(centerX - halfWidth, centerY - halfHeight, centerX + halfWidth, centerY + halfHeight),
+            shadowPaint,
+        )
+        shadowPaint.alpha = 255
+    }
+
+    private fun drawEyeHighlights(canvas: Canvas, elapsed: Long) {
+        val shimmer = (.92f + .08f * sin(elapsed / 760f)).coerceIn(.84f, 1f)
+        val gazeDx = gazeX * 22f
+        val gazeDy = gazeY * 17f
+        detailPaint.shader = null
+        detailPaint.color = 0xFFFFFFFF.toInt()
+        for (cx in floatArrayOf(515f, 877f)) {
+            detailPaint.alpha = (218f * shimmer).toInt().coerceIn(0, 255)
+            canvas.drawCircle(cx + gazeDx - 30f, 653f + gazeDy - 31f, 13.5f, detailPaint)
+            detailPaint.alpha = (128f * shimmer).toInt().coerceIn(0, 255)
+            canvas.drawCircle(cx + gazeDx + 15f, 653f + gazeDy + 14f, 5.5f, detailPaint)
+        }
+        detailPaint.alpha = 255
     }
 
     private fun drawTears(canvas: Canvas, now: Long) {
