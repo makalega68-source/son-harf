@@ -228,6 +228,11 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private var gazeY = .2f
     private var gazeVelX = 0f
     private var gazeVelY = 0f
+    // The head follows the eyes slowly, like a real head: eyes dart, the head turns calmly.
+    private var headX = 0f
+    private var headY = .2f
+    private var headVelX = 0f
+    private var headVelY = 0f
 
     private var nextBlinkAt = SystemClock.uptimeMillis() + 1_600L
     private var blinkStartedAt = -1L
@@ -641,6 +646,12 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         gazeX += gazeVelX * dt
         gazeY += gazeVelY * dt
         val tremor = sin(now / 47f) * .012f
+        val headK = 16f
+        val headC = 2f * sqrt(headK)
+        headVelX += (headK * (gazeX - headX) - headC * headVelX) * dt
+        headVelY += (headK * (gazeY - headY) - headC * headVelY) * dt
+        headX += headVelX * dt
+        headY += headVelY * dt
 
         // ---- Blink scheduler: quick close, slower open, occasional double blink ---------------
         if (blinkStartedAt < 0L && now >= nextBlinkAt) {
@@ -685,7 +696,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         var sx = 1f - breath * .006f * breathDepth + poseValue[P_PUFF] + bow * .02f
         var sy = 1f + breath * .013f * breathDepth + poseValue[P_PUFF] - bow * .045f
         val sway = if (watching) .35f else 1.1f
-        var rotation = poseValue[P_TILT] + gazeX * (if (lookAround) 4.5f else 2.2f) + sin(now / 2_300f) * sway
+        var rotation = poseValue[P_TILT] + headX * (if (lookAround) 3.5f else 2f) + sin(now / 2_300f) * sway
         var spin = 0f
 
         // Wings unfold with a slightly bouncy spring and fold away after landing.
@@ -712,7 +723,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             dx += m[0]; dy += m[1]; sx *= m[2]; sy *= m[3]; rotation += m[4]; spin += m[5]
         }
         if (mood == WordSiegeMascotEmotion.STRESSED || urgency > .3f) {
-            dx += sin(now / 40f) * 1.1f * max(urgency, .4f)
+            // A slight nervous shiver, not a head shake.
+            dy += sin(now / 60f) * .8f * max(urgency, .4f)
         }
 
         // ---- Draw -------------------------------------------------------------------------------
@@ -736,8 +748,10 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
 
         // Face features ride slightly ahead of the orb: they follow the gaze and fold downward when
         // the head bows, which gives the round body a sense of depth.
-        featureMatrix.setTranslate((gazeX + tremor) * 16f, gazeY * 10f + bow * 62f)
-        featureMatrix.preScale(1f, 1f - bow * .12f, FACE_CX, FACE_CY)
+        // Features shift gently with the (slow) head and only a little when bowing, so the eyes
+        // stay in their sockets; the bow itself is carried by the body tilt and the gaze.
+        featureMatrix.setTranslate(headX * 12f, headY * 6f + bow * 18f)
+        featureMatrix.preScale(1f, 1f - bow * .05f, FACE_CX, FACE_CY)
         // The lid texture is counter-transformed so it always lines up with the orb underneath,
         // otherwise the moving features would reveal seams at the lid edges.
         if (featureMatrix.invert(skinMatrix)) {
