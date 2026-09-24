@@ -30,6 +30,7 @@ private enum class ProfessionalSiegeSection { WAITING, YOUR_TURN, OPPONENT, SLEE
 @Composable
 internal fun ProfessionalWordSiegeExperienceScreen(
     initialAction: WordSiegeEntryAction? = null,
+    initialGameId: String? = null,
     onExit: () -> Unit,
 ) {
     val backend = remember { OnlineGameBackend() }
@@ -37,7 +38,9 @@ internal fun ProfessionalWordSiegeExperienceScreen(
     val me = remember { backend.currentUserId() }
     var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
     var profiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
-    var selectedGameId by remember { mutableStateOf<String?>(null) }
+    var selectedGameId by remember { mutableStateOf(initialGameId) }
+    // A match opened from the match center goes back there, not to this lobby.
+    val openedDirectly = initialGameId != null
     var currentGame by remember { mutableStateOf<WordSiegeGameDto?>(null) }
     var moves by remember { mutableStateOf<List<WordSiegeMoveDto>>(emptyList()) }
     var messages by remember { mutableStateOf<List<WordSiegeMessageDto>>(emptyList()) }
@@ -121,7 +124,9 @@ internal fun ProfessionalWordSiegeExperienceScreen(
     }
 
     BackHandler {
-        if (selectedGameId != null) {
+        if (selectedGameId != null && openedDirectly) {
+            onExit()
+        } else if (selectedGameId != null) {
             selectedGameId = null
             currentGame = null
             placements = emptyMap()
@@ -224,8 +229,12 @@ internal fun ProfessionalWordSiegeExperienceScreen(
                     busy = busy,
                     notice = notice,
                     onBack = {
-                        selectedGameId = null
-                        currentGame = null
+                        if (openedDirectly) {
+                            onExit()
+                        } else {
+                            selectedGameId = null
+                            currentGame = null
+                        }
                     },
                     onBoardCell = { boardIndex ->
                         if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegePanMatch

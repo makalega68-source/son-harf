@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -56,6 +57,51 @@ class ProfessionalShellScreenshotTest {
         }
     }
 
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun matchCenterActive_360x800() = captureMatchCenter("match_center_active_360x800", MatchCenterTab.ACTIVE)
+
+    @Test
+    @Config(qualifiers = "w390dp-h844dp-xxhdpi")
+    fun matchCenterFinished_390x844() = captureMatchCenter("match_center_finished_390x844", MatchCenterTab.FINISHED)
+
+    @Test
+    @Config(qualifiers = "w412dp-h915dp-xxhdpi")
+    fun matchCenterInvites_412x915() = captureMatchCenter("match_center_invites_412x915", MatchCenterTab.INVITES)
+
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun matchCenterEmpty_360x800() = captureMatchCenter("match_center_empty_360x800", MatchCenterTab.ACTIVE, empty = true)
+
+    private fun captureMatchCenter(name: String, tab: MatchCenterTab, empty: Boolean = false) {
+        compose.setContent {
+            GameTheme {
+                Box(
+                    Modifier.fillMaxSize().background(GameColors.AppBackground),
+                ) {
+                    MatchCenterContent(
+                        tab = tab,
+                        onTab = {},
+                        active = if (empty) emptyList() else sampleActive,
+                        finished = if (empty) emptyList() else sampleFinished,
+                        invites = if (empty) emptyList() else sampleInvites,
+                        loading = false,
+                        busy = false,
+                        notice = null,
+                        onBack = {},
+                        onRefresh = {},
+                        onOpenMatch = {},
+                        onQuickMatch = {},
+                        onRematch = {},
+                        onRespond = { _, _ -> },
+                        now = java.time.Instant.parse("2026-09-24T12:00:00Z"),
+                    )
+                }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/$name.png")
+    }
+
     private fun capturePlayTab(name: String, summary: PlayHubSiegeSummary = sampleSummary) {
         compose.setContent { ShellFrame { PlayHubPreview(summary) } }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/$name.png")
@@ -91,6 +137,41 @@ class ProfessionalShellScreenshotTest {
     }
 
     private companion object {
+        fun match(
+            id: String,
+            rival: String,
+            myTurn: Boolean,
+            waiting: Boolean = false,
+            result: String? = null,
+        ) = SiegeMatchCard(
+            gameId = id,
+            rivalId = if (waiting) null else "r-$id",
+            rivalName = rival,
+            rivalRating = if (waiting) null else 1284,
+            rivalAvatar = null,
+            waitingForRival = waiting,
+            myTurn = myTurn,
+            myWordScore = 42,
+            myAreaScore = 36,
+            rivalWordScore = 57,
+            rivalAreaScore = 14,
+            myMapControl = 29,
+            rivalMapControl = 11,
+            lastMoveAt = "2026-09-24T09:30:00Z",
+            result = result,
+        )
+
+        val sampleActive = listOf(
+            match("1", "Deniz", myTurn = true),
+            match("2", "Ece", myTurn = false),
+            match("3", "", myTurn = false, waiting = true),
+        )
+        val sampleFinished = listOf(
+            match("4", "Mert", myTurn = false, result = "win"),
+            match("5", "Selin Yıldırım Uzunsoyadlı", myTurn = false, result = "loss"),
+        )
+        val sampleInvites = listOf(SiegeInviteCard("i1", "Kaan", "tr"), SiegeInviteCard("i2", "Zeynep", "en"))
+
         // Layout fixture for rendering only; the app reads these values from the server.
         val sampleSummary = PlayHubSiegeSummary(
             activeGames = 3,

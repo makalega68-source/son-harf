@@ -39,6 +39,9 @@ internal fun ProfessionalHomeScreen(
     onPro: () -> Unit,
     onCollection: () -> Unit,
     onRetention: () -> Unit,
+    onContinueMatch: (String) -> Unit = {},
+    onMatches: () -> Unit = {},
+    onTournament: () -> Unit = onLeague,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var weekly by remember { mutableStateOf<List<HomeRankItem>>(emptyList()) }
@@ -46,6 +49,9 @@ internal fun ProfessionalHomeScreen(
     var streakDays by remember { mutableIntStateOf(0) }
     var dailyProgress by remember { mutableFloatStateOf(0f) }
     var dailyLabel by remember { mutableStateOf(gameText("Görevler yükleniyor", "Loading missions")) }
+    var continueMatch by remember { mutableStateOf<SiegeMatchCard?>(null) }
+    var activeMatches by remember { mutableIntStateOf(0) }
+    var tournament by remember { mutableStateOf<WeeklyTournamentDto?>(null) }
 
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) {
@@ -75,6 +81,20 @@ internal fun ProfessionalHomeScreen(
                 dailyLabel = gameText("Görevler yenilenemedi", "Missions unavailable")
             }
 
+        // The match to continue: one where it is the player's turn first, else the latest active one.
+        val me = backend.currentUserId()
+        runCatching { backend.getWordSiegeGames() }.onSuccess { games ->
+            val active = games.filter { it.status == "playing" }
+            activeMatches = active.size
+            val pick = active.firstOrNull { it.currentPlayerId == me } ?: active.firstOrNull()
+            continueMatch = pick?.let { game ->
+                val rivalId = if (game.playerOneId == me) game.playerTwoId else game.playerOneId
+                val rival = rivalId?.let { id -> runCatching { backend.getProfile(id) }.getOrNull() }
+                siegeMatchCard(game, me, listOfNotNull(rival).associateBy { it.id })
+            }
+        }
+        tournament = runCatching { backend.getWeeklyTournament() }.getOrNull()
+
         weekly = runCatching { backend.getWeeklyTopV210(limit = 3) }
             .getOrDefault(emptyList())
             .take(3)
@@ -90,6 +110,11 @@ internal fun ProfessionalHomeScreen(
         ) {
             item(key = "player_bar") {
                 HomePlayerBar(profile = profile, onProfile = onProfile, onSocial = onSocial, onPro = onPro)
+            }
+            continueMatch?.let { card ->
+                item(key = "continue") {
+                    HomeContinueCard(card, activeMatches, onContinue = { onContinueMatch(card.gameId) }, onMatches = onMatches)
+                }
             }
             item(key = "siege_hero") {
                 SiegeHero(onPlay = onSiege)
@@ -107,6 +132,9 @@ internal fun ProfessionalHomeScreen(
             }
             item(key = "weekly") {
                 WeeklyTopThree(players = weekly, loading = weeklyLoading, onLeague = onLeague)
+            }
+            tournament?.let { event ->
+                item(key = "tournament") { HomeTournamentCard(event, onTournament) }
             }
             item(key = "quick_access") {
                 HomeQuickAccess(onLeague = onLeague, onPro = onPro, onCollection = onCollection)
@@ -450,6 +478,100 @@ private fun QuickAccessItem(
             Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
             Spacer(Modifier.height(5.dp))
             Text(text, color = GameColors.TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun HomeContinueCard(card: SiegeMatchCard, activeMatches: Int, onContinue: () -> Unit, onMatches: () -> Unit) {
+    val accent = if (card.myTurn) GameColors.PlayGreen else GameColors.PrimaryBlue
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = GameShapes.Large,
+        color = GameColors.PrimarySurface,
+        border = BorderStroke(1.dp, accent.copy(alpha = .5f)),
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        if (card.myTurn) gameText("SIRA SENDE", "YOUR TURN") else gameText("AKTİF MAÇ", "ACTIVE MATCH"),
+                        color = accent,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Text(
+                        gameText("${card.rivalName} ile kuşatma", "Siege vs ${card.rivalName}"),
+                        color = GameColors.TextPrimary,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        gameText(
+                            "Skor ${card.myTotal} – ${card.rivalTotal} • Harita %${card.myMapControl}",
+                            "Score ${card.myTotal} – ${card.rivalTotal} • Map ${card.myMapControl}%",
+                        ),
+                        color = GameColors.TextSecondary,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                if (activeMatches > 1) {
+                    TextButton(onClick = onMatches) {
+                        Text(gameText("Tümü ($activeMatches)", "All ($activeMatches)"), color = GameColors.PrimaryBlue, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+            GamePrimaryButton(
+                text = gameText("DEVAM ET", "CONTINUE"),
+                onClick = onContinue,
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Rounded.PlayArrow,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeTournamentCard(event: WeeklyTournamentDto, onOpen: () -> Unit) {
+    val endsIn = runCatching {
+        val hours = java.time.Duration.between(java.time.Instant.now(), java.time.Instant.parse(event.endsAt)).toHours()
+        when {
+            hours <= 0 -> null
+            hours < 24 -> gameText("$hours saat kaldı", "$hours h left")
+            else -> gameText("${hours / 24} gün kaldı", "${hours / 24} days left")
+        }
+    }.getOrNull()
+    Surface(
+        onClick = onOpen,
+        modifier = Modifier.fillMaxWidth(),
+        shape = GameShapes.Large,
+        color = GameColors.PrimarySurface,
+        border = BorderStroke(1.dp, GameColors.RewardAmber.copy(alpha = .4f)),
+    ) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = GameColors.RewardAmber.copy(alpha = .15f)) {
+                Icon(Icons.Rounded.EmojiEvents, null, tint = GameColors.RewardAmber, modifier = Modifier.padding(9.dp).size(22.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(event.name, color = GameColors.TextPrimary, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    listOfNotNull(
+                        if (event.joined && event.myRank > 0) gameText("Sıran #${event.myRank}", "Rank #${event.myRank}") else null,
+                        gameText("${event.playerCount} oyuncu", "${event.playerCount} players"),
+                        endsIn,
+                    ).joinToString(" • "),
+                    color = GameColors.TextSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            Text(
+                if (event.joined) gameText("GÖR", "VIEW") else gameText("KATIL", "JOIN"),
+                color = GameColors.RewardAmber,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Black,
+            )
         }
     }
 }

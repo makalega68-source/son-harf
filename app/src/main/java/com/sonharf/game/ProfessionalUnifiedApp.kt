@@ -15,6 +15,7 @@ import kotlinx.coroutines.delay
 private enum class ProfessionalDestination {
     HOME,
     PLAY,
+    MATCHES,
     LEADERBOARD,
     COMPETE,
     RETENTION,
@@ -48,14 +49,18 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
     // Where a game or the private room returns to: the tab it was opened from.
     var gameReturn by remember { mutableStateOf(ProfessionalDestination.HOME) }
     var siegeAction by remember { mutableStateOf<WordSiegeEntryAction?>(null) }
+    var siegeGameId by remember { mutableStateOf<String?>(null) }
+    var matchesReturn by remember { mutableStateOf(ProfessionalDestination.HOME) }
     var privateRoomReturn by remember { mutableStateOf(ProfessionalDestination.PRO) }
 
     fun openGame(target: ProfessionalDestination, language: String) {
         if (uiLanguageBeforeGame == null) uiLanguageBeforeGame = SonHarfUiState.language
         SonHarfUiState.language = SharedDictionaryService.canonicalLanguage(language)
         siegeAction = null
+        siegeGameId = null
         gameReturn = when (destination) {
             ProfessionalDestination.PLAY,
+            ProfessionalDestination.MATCHES,
             ProfessionalDestination.SOCIAL,
             ProfessionalDestination.LEADERBOARD,
             ProfessionalDestination.SHOP -> destination
@@ -67,6 +72,16 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
     fun openSiege(action: WordSiegeEntryAction) {
         openGame(ProfessionalDestination.SIEGE, siegeLanguage)
         siegeAction = action
+    }
+
+    fun openSiegeMatch(gameId: String) {
+        openGame(ProfessionalDestination.SIEGE, siegeLanguage)
+        siegeGameId = gameId
+    }
+
+    fun openMatches() {
+        matchesReturn = if (destination == ProfessionalDestination.PLAY) ProfessionalDestination.PLAY else ProfessionalDestination.HOME
+        destination = ProfessionalDestination.MATCHES
     }
 
     fun leaveGame(target: ProfessionalDestination = gameReturn) {
@@ -120,6 +135,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
             ProfessionalDestination.PROFILE,
             ProfessionalDestination.RETENTION -> ProfessionalDestination.HOME
             ProfessionalDestination.COMPETE -> ProfessionalDestination.LEADERBOARD
+            ProfessionalDestination.MATCHES -> matchesReturn
             ProfessionalDestination.ACCOUNT -> ProfessionalDestination.SETTINGS
             ProfessionalDestination.SERIES -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
@@ -190,13 +206,23 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                         onPro = { destination = ProfessionalDestination.PRO },
                         onCollection = { destination = ProfessionalDestination.COLLECTION },
                         onRetention = { destination = ProfessionalDestination.RETENTION },
+                        onContinueMatch = { gameId -> openSiegeMatch(gameId) },
+                        onMatches = { openMatches() },
+                        onTournament = { destination = ProfessionalDestination.COMPETE },
+                    )
+
+                    ProfessionalDestination.MATCHES -> MatchCenterScreen(
+                        backend = backend,
+                        onBack = { destination = matchesReturn },
+                        onOpenMatch = { gameId -> openSiegeMatch(gameId) },
+                        onQuickMatch = { openSiege(WordSiegeEntryAction.QUICK_MATCH) },
                     )
 
                     ProfessionalDestination.PLAY -> PlayHubScreen(
                         backend = backend,
                         onQuickMatch = { openSiege(WordSiegeEntryAction.QUICK_MATCH) },
                         onPractice = { openSiege(WordSiegeEntryAction.PRACTICE) },
-                        onMyGames = { openSiege(WordSiegeEntryAction.MY_GAMES) },
+                        onMyGames = { openMatches() },
                         onFriends = { destination = ProfessionalDestination.SOCIAL },
                         onPrivateRoom = {
                             privateRoomReturn = ProfessionalDestination.PLAY
@@ -270,6 +296,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                         onExit = { leaveGame() },
                         onOpenStore = { leaveGame(ProfessionalDestination.SHOP) },
                         initialAction = siegeAction,
+                        initialGameId = siegeGameId,
                     )
 
                     ProfessionalDestination.SERIES -> WordSiegeSeriesScreen(
