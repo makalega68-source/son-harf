@@ -24,3 +24,12 @@ The derivatives preserve the source geometry/highlight language while recoloring
 ## Scope
 
 Theme layer only. No game rules, navigation routes, scoring, multiplayer, billing, authentication, economy, or other business logic is changed by this integration.
+
+## 2026-09-24 repair
+
+The committed `theme_pack_old_button_blue.png`, `_green.png` and `_red.png` were damaged
+(image data that does not inflate; blue had no IEND chunk). Android decodes such files only
+partially, so these buttons could render incomplete. They were regenerated from the intact
+`theme_pack_old_button_dark.png` derivative, keeping its geometry, highlights and alpha and
+recolouring by luminance to the palette (blue 36,93,193 · green 33,150,80 · red 196,66,75).
+`PngAssetIntegrityTest` now checks every committed PNG.
