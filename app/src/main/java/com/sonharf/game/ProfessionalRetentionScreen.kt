@@ -450,9 +450,6 @@ private fun ProfessionalDailyRewardTab(
     val reward = growth?.dailyReward ?: 40
     val streak = meta?.dailyPlayStreak ?: 0
     val bestStreak = meta?.bestDailyPlayStreak ?: streak
-    val level = growth?.level ?: 1
-    val levelProgress = growth?.levelProgress ?: 0
-    val levelTarget = growth?.levelTarget?.coerceAtLeast(1) ?: 500
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -537,24 +534,6 @@ private fun ProfessionalDailyRewardTab(
                     value = bestStreak.toString(),
                     label = gameText("En İyi Seri", "Best Streak"),
                     accent = GameColors.PrestigeGold,
-                )
-            }
-        }
-
-        item {
-            GameSurface(borderColor = GameColors.PrimaryBlue.copy(alpha = .25f)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(gameText("Seviye $level", "Level $level"), color = GameColors.TextPrimary, style = MaterialTheme.typography.titleSmall)
-                    Spacer(Modifier.weight(1f))
-                    Text("${growth?.xp ?: 0} XP", color = GameColors.PrimaryBlue, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-                }
-                Spacer(Modifier.height(9.dp))
-                XPProgress(levelProgress.toFloat() / levelTarget)
-                Spacer(Modifier.height(5.dp))
-                Text(
-                    "$levelProgress / $levelTarget ${gameText("sonraki seviyeye", "to next level")}",
-                    color = GameColors.TextSecondary,
-                    style = MaterialTheme.typography.labelSmall,
                 )
             }
         }

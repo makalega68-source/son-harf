@@ -22,6 +22,7 @@ import kotlinx.coroutines.coroutineScope
 @Composable
 internal fun ProfessionalProfileScreen(
     backend: OnlineGameBackend,
+    onBack: (() -> Unit)? = null,
     onEdit: () -> Unit,
     onProgress: () -> Unit,
     onPro: () -> Unit,
@@ -69,11 +70,6 @@ internal fun ProfessionalProfileScreen(
     val winRate = if (matches <= 0) 0 else wins * 100 / matches
     val rating = p?.rating ?: 1000
     val league = ratingLeagueProgress(rating)
-    val level = g?.level ?: 1
-    val xp = g?.xp ?: 0
-    val levelProgress = g?.levelProgress ?: 0
-    val levelTarget = g?.levelTarget?.coerceAtLeast(1) ?: 500
-    val xpProgress = (levelProgress.toFloat() / levelTarget).coerceIn(0f, 1f)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -84,6 +80,7 @@ internal fun ProfessionalProfileScreen(
             GameTopBar(
                 title = gameText("Profil", "Profile"),
                 subtitle = gameText("Oyuncu kimliğin ve ilerlemen", "Your player identity and progress"),
+                onBack = onBack,
                 trailing = {
                     GameIconButton(
                         icon = Icons.Rounded.Settings,
@@ -104,23 +101,29 @@ internal fun ProfessionalProfileScreen(
                 title = g?.nextTitle,
                 rating = rating,
                 league = league.leagueName,
-                level = level,
+                winRate = winRate,
                 onEdit = onEdit,
                 onPro = onPro,
             )
         }
 
-        item(key = "xp") {
+        // Competitive progress is the league and rating; the game has no level system.
+        item(key = "league_progress") {
             GameSurface {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(gameText("Seviye $level", "Level $level"), color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                        Text(league.leagueName, color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                         Spacer(Modifier.weight(1f))
-                        Text("$xp XP", color = GameColors.PrimaryBlue, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("$rating RP", color = GameColors.RewardAmber, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
-                    XPProgress(xpProgress)
+                    LeagueProgress(league.progress)
                     Text(
-                        "$levelProgress / $levelTarget ${gameText("sonraki seviyeye", "to next level")}",
+                        league.nextAt?.let {
+                            gameText(
+                                "${league.nextLeagueName} için ${league.pointsToNext} RP • hedef $it",
+                                "${league.pointsToNext} RP to ${league.nextLeagueName} • target $it",
+                            )
+                        } ?: gameText("En yüksek ligdesin", "You are in the top league"),
                         color = GameColors.TextSecondary,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -217,7 +220,7 @@ private fun ProfileIdentityCard(
     title: String?,
     rating: Int,
     league: String,
-    level: Int,
+    winRate: Int,
     onEdit: () -> Unit,
     onPro: () -> Unit,
 ) {
@@ -283,7 +286,7 @@ private fun ProfileIdentityCard(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IdentityMiniStat(Modifier.weight(1f), rating.toString(), gameText("Rating", "Rating"))
                     IdentityMiniStat(Modifier.weight(1f), league, gameText("Lig", "League"))
-                    IdentityMiniStat(Modifier.weight(1f), level.toString(), gameText("Seviye", "Level"))
+                    IdentityMiniStat(Modifier.weight(1f), "%$winRate", gameText("Kazanma", "Win rate"))
                 }
             }
         }
