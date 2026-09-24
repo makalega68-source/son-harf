@@ -570,8 +570,14 @@ internal fun WordSiegeMascotCompanion(
     greeting: String? = null,
     /** Something to say right now with a little hop; a new key says it again. */
     announcement: Pair<Int, String>? = null,
+    /** Mascots are purchased characters: without one the companion stays hidden. */
+    requireOwnership: Boolean = true,
+    /** Always show this character (the first-run welcome uses the classic one). */
+    forcedSkin: WordSiegeMascotSkin? = null,
 ) {
     if (anchors.isEmpty()) return
+    val ownedSkins = WordSiegeMascotOwnership.owned
+    if (requireOwnership && ownedSkins.isEmpty()) return
     val context = LocalContext.current
     val bond = remember { WordSiegeMascotBond(context) }
     val mind = remember { WordSiegeMascotMind() }
@@ -619,10 +625,15 @@ internal fun WordSiegeMascotCompanion(
     // Long-pressing the mascot switches between the blue orb and the pink girl; the choice is kept.
     var skinChoice by remember { mutableStateOf(bond.skinChoice) }
     var showPicker by remember { mutableStateOf(false) }
-    val skin = skinChoice ?: if (playerGender?.trim()?.lowercase() in FEMALE_GENDERS) {
+    val preferred = skinChoice ?: if (playerGender?.trim()?.lowercase() in FEMALE_GENDERS) {
         WordSiegeMascotSkin.PINK
     } else {
         WordSiegeMascotSkin.ORB
+    }
+    // Only characters the player owns can appear.
+    val skin = forcedSkin ?: when {
+        !requireOwnership || preferred in ownedSkins -> preferred
+        else -> ownedSkins.minBy { it.ordinal }
     }
 
     val currentUrgency by rememberUpdatedState(urgency)
@@ -811,6 +822,11 @@ internal fun WordSiegeMascotCompanion(
                 delay(300L)
                 perform(WordSiegeMascotAction.HOP)
                 say(greeting, holdExtraMillis = 2_500L)
+                // A little show for new players: a twirl and a sparkle.
+                delay(2_600L)
+                perform(WordSiegeMascotAction.TWIRL)
+                delay(2_200L)
+                perform(WordSiegeMascotAction.SPARKLE)
             } else if (greet && initialOutcome == null) {
                 val (meetings, daysAway) = bond.meet()
                 delay(350L)
@@ -1209,7 +1225,7 @@ internal fun WordSiegeMascotCompanion(
                 hat = hat,
                 skin = skin,
                 // A long press opens the character picker.
-                onLongPress = { if (!busy) showPicker = true },
+                onLongPress = if (forcedSkin == null) ({ if (!busy) showPicker = true }) else null,
                 onTap = { touchedMascot(SystemClock.uptimeMillis()) },
             )
         }
@@ -1227,6 +1243,7 @@ internal fun WordSiegeMascotCompanion(
         if (showPicker) {
             WordSiegeMascotPicker(
                 current = skin,
+                owned = ownedSkins,
                 onPick = { next ->
                     showPicker = false
                     if (next != skin) {
@@ -1251,6 +1268,7 @@ internal fun WordSiegeMascotCompanion(
 @Composable
 internal fun WordSiegeMascotPicker(
     current: WordSiegeMascotSkin,
+    owned: Set<WordSiegeMascotSkin>,
     onPick: (WordSiegeMascotSkin) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -1268,6 +1286,7 @@ internal fun WordSiegeMascotPicker(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { option ->
                             val selected = option == current
+                            val unlocked = option in owned
                             Column(
                                 modifier = Modifier
                                     .weight(1f)
@@ -1278,7 +1297,8 @@ internal fun WordSiegeMascotPicker(
                                         color = if (selected) Color(0xFF8B5CF6) else Color(0xFFE1E4EC),
                                         shape = RoundedCornerShape(16.dp),
                                     )
-                                    .clickable { onPick(option) }
+                                    .clickable(enabled = unlocked) { onPick(option) }
+                                    .graphicsLayer { alpha = if (unlocked) 1f else .45f }
                                     .padding(vertical = 6.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
@@ -1290,10 +1310,10 @@ internal fun WordSiegeMascotPicker(
                                     modifier = Modifier.size(64.dp),
                                     watching = true,
                                     skin = option,
-                                    onTap = { onPick(option) },
+                                    onTap = { if (unlocked) onPick(option) },
                                 )
                                 Text(
-                                    sh(option.titleTr, option.titleEn),
+                                    if (unlocked) sh(option.titleTr, option.titleEn) else sh("🔒 Mağazada", "🔒 In the shop"),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,

@@ -14,8 +14,8 @@ class StoreCatalogTruthV2ContractTest {
         assertTrue(shop.contains("Kelime Tahtı · Tarzını seç"))
         assertTrue(shop.contains("onSection(3)"))
         assertTrue(shop.contains("if (section == 3)"))
-        assertFalse(shop.contains("Maskotlar"))
-        assertFalse(shop.contains("Mascots"))
+        // Mascots are sold as real, runtime-backed Google Play characters, not as a dead catalog tab.
+        assertTrue(shop.contains("MascotStoreSection()"))
         assertFalse(shop.contains("items.filter { it.kind == \"mascot\" }"))
     }
 

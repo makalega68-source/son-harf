@@ -2,6 +2,8 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -47,7 +49,7 @@ fun EconomyShopScreen(
             onBack = onBack,
         )
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp, containerColor = Color.Transparent, divider = {}) {
-            listOf(sh("Öne Çıkan", "Featured"), sh("Sezon", "Season"), sh("Görünümler", "Styles"), "PRO")
+            listOf(sh("Öne Çıkan", "Featured"), sh("Sezon", "Season"), sh("Görünümler", "Styles"), "PRO", sh("Maskotlar", "Mascots"))
                 .forEachIndexed { index, label ->
                     Tab(selected = tab == index, onClick = { tab = index }, text = {
                         Text(label, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = if (tab == index) FontWeight.Bold else FontWeight.Medium)
@@ -55,8 +57,14 @@ fun EconomyShopScreen(
                 }
         }
         Box(Modifier.weight(1f)) {
-            if (tab == 1) SeasonCenterContent()
-            else EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection, onPro)
+            when (tab) {
+                1 -> SeasonCenterContent()
+                // Mascot characters, each a permanent Google Play product.
+                4 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                    MascotStoreSection()
+                }
+                else -> EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection, onPro)
+            }
         }
     }
 }

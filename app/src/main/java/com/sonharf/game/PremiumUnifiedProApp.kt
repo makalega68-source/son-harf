@@ -43,8 +43,11 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var shellProfile by remember { mutableStateOf<ProfileDto?>(null) }
     var shellMascotAnnouncement by remember { mutableStateOf<Pair<Int, String>?>(null) }
     val shellMascotVisited = remember { mutableSetOf<PremiumDestination>() }
+    val shellContext = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
+        // Owned mascots come from verified purchases on the server.
+        WordSiegeMascotOwnership.refresh(shellContext)
         shellProfile = backend.currentUserId()?.let { id -> runCatching { backend.getProfile(id) }.getOrNull() }
     }
     // A short, page-appropriate remark on the first visit of a page in this session.

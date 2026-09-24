@@ -26,8 +26,12 @@ internal enum class WordSiegeMascotSkin(val id: String, val titleTr: String, val
     ASTRONAUT("astronot", "Astronot", "Astronaut"),
     ;
 
+    /** Google Play product and server entitlement key of this character. */
+    val productId: String get() = "mascot_$id"
+
     companion object {
         fun fromId(id: String?): WordSiegeMascotSkin? = entries.firstOrNull { it.id == id }
+        fun fromProductId(productId: String?): WordSiegeMascotSkin? = entries.firstOrNull { it.productId == productId }
     }
 }
 

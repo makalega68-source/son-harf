@@ -109,7 +109,8 @@ private fun WordSiegePracticeContent(
     LaunchedEffect(state.status) {
         showPracticeResult = false
         if (state.status == "finished") {
-            delay(3_600L)
+            // Only an owned mascot has a celebration to show first.
+            if (WordSiegeMascotOwnership.hasAny) delay(3_600L)
             showPracticeResult = true
         }
     }

@@ -45,6 +45,7 @@ fun StableV1App() {
     val context = LocalContext.current
     remember(context) {
         SonHarfCosmetics.restore(context)
+        WordSiegeMascotOwnership.restore(context)
         true
     }
     var languageChosen by remember { mutableStateOf(FirstRunLanguagePreferences.isComplete(context)) }
@@ -128,6 +129,9 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                         greet = false,
                         greeting = "Merhaba! Hoş geldin 👋\nHi! Welcome!",
                         announcement = mascotAnnouncement,
+                        // Everyone meets the classic mascot here; elsewhere it must be purchased.
+                        requireOwnership = false,
+                        forcedSkin = WordSiegeMascotSkin.ORB,
                     )
                 }
                 Text(

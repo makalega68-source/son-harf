@@ -21,6 +21,26 @@ object ProductCatalog {
     const val SCORE_CALCULATOR_FALLBACK_PRICE_TRY = "129 TL"
     const val PRO_LIFETIME_FALLBACK_PRICE_TRY = "479 TL"
 
+    // Mascot characters: permanent one-time products, 680 TL each (price set in Play Console).
+    const val MASCOT_KLASIK = "mascot_klasik"
+    const val MASCOT_PEMBE = "mascot_pembe"
+    const val MASCOT_MAVI_SEYTANCIK = "mascot_mavi_seytancik"
+    const val MASCOT_KIRMIZI_SEYTANCIK = "mascot_kirmizi_seytancik"
+    const val MASCOT_TEKIR = "mascot_tekir"
+    const val MASCOT_ROBOT = "mascot_robot"
+    const val MASCOT_ASTRONOT = "mascot_astronot"
+    const val MASCOT_LIST_PRICE_TRY = "680 TL"
+
+    val mascotProducts = listOf(
+        MASCOT_KLASIK,
+        MASCOT_PEMBE,
+        MASCOT_MAVI_SEYTANCIK,
+        MASCOT_KIRMIZI_SEYTANCIK,
+        MASCOT_TEKIR,
+        MASCOT_ROBOT,
+        MASCOT_ASTRONOT,
+    )
+
     /** Legacy identifiers retained only so old receipts can be recognized safely. Frames are not sold or rendered. */
     @Deprecated("Profile frames were retired from the game")
     const val PROFILE_FRAME_OCEAN = "profile_frame_ocean"
