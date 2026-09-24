@@ -727,7 +727,8 @@ private fun PanSiegeBoard(
             // for the centre and chat buttons.
             WordSiegeMascotCompanion(
                 anchors = WordSiegeBoardMascotPerches,
-                mascotSize = 76.dp,
+                // Small enough on the board corners that it never hides more than a corner cell.
+                mascotSize = 64.dp,
                 moveId = lastMove?.id,
                 lastMoveMine = lastMoveMine,
                 playerTurn = playerTurn,
