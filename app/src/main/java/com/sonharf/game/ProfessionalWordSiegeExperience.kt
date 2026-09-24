@@ -457,14 +457,7 @@ private fun ProfessionalWordSiegeLobby(
                 borderColor = GameColors.TacticalTurquoise.copy(alpha = .45f),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = GameColors.TacticalTurquoise.copy(alpha = .14f)) {
-                        Icon(
-                            Icons.Rounded.GridView,
-                            contentDescription = null,
-                            tint = GameColors.TacticalTurquoise,
-                            modifier = Modifier.padding(11.dp).size(27.dp),
-                        )
-                    }
+                    GameBadgeIcon(Icons.Rounded.GridView, GameColors.TacticalTurquoise, size = 49.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(

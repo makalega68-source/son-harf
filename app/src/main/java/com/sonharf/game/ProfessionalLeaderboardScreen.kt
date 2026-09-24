@@ -91,14 +91,7 @@ internal fun ProfessionalLeaderboardScreen(
                         borderColor = GameColors.RewardAmber.copy(alpha = .45f),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(shape = CircleShape, color = GameColors.RewardAmber.copy(alpha = .14f)) {
-                                Icon(
-                                    Icons.Rounded.EmojiEvents,
-                                    contentDescription = null,
-                                    tint = GameColors.RewardAmber,
-                                    modifier = Modifier.padding(11.dp).size(28.dp),
-                                )
-                            }
+                            GameBadgeIcon(Icons.Rounded.EmojiEvents, GameColors.RewardAmber, size = 50.dp)
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(

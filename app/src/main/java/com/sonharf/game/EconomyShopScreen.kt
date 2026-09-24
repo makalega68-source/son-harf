@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -267,6 +269,7 @@ private fun EconomyCatalogScreen(
                     gameText("Maskotlar", "Mascots"),
                     gameText("Oyunda seninle oynayan canlı karakterler", "Living characters that play along with you"),
                     gameText("Gör", "View"),
+                    artwork = R.drawable.store_product_emoji_vip,
                 ) { onSection(STORE_TAB_MASCOTS) }
             }
             item {
@@ -274,6 +277,7 @@ private fun EconomyCatalogScreen(
                     gameText("Sezon Bileti", "Season Pass"),
                     gameText("Sezonu ve ödül yolunu keşfet", "Explore the season and reward track"),
                     gameText("İncele", "Explore"),
+                    artwork = R.drawable.store_product_season_pass_monthly,
                 ) { onSection(2) }
             }
             bundles.firstOrNull { it.section == "starter" }?.let { bundle ->
@@ -387,14 +391,7 @@ private fun EconomyCatalogScreen(
         item {
             GameSurface(elevated = true, borderColor = GameColors.PlayGreen.copy(alpha = .35f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = GameColors.PlayGreen.copy(alpha = .14f)) {
-                        Icon(
-                            Icons.Rounded.VerifiedUser,
-                            null,
-                            tint = GameColors.PlayGreen,
-                            modifier = Modifier.padding(9.dp).size(24.dp),
-                        )
-                    }
+                    GameBadgeIcon(Icons.Rounded.VerifiedUser, GameColors.PlayGreen, size = 42.dp)
                     Spacer(Modifier.width(10.dp))
                     Column {
                         Text(
@@ -545,7 +542,7 @@ private fun StoreCollectionHeader(balance: Int, ownedCount: Int, total: Int, onC
                 border = BorderStroke(1.dp, GameColors.RewardAmber.copy(alpha = .35f)),
             ) {
                 Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Toll, null, Modifier.size(16.dp), tint = GameColors.RewardAmber)
+                    GameCoinIcon(18.dp)
                     Spacer(Modifier.width(4.dp))
                     Text("$balance SC", color = GameColors.TextPrimary, fontWeight = FontWeight.Black, fontSize = 12.sp)
                 }
@@ -654,16 +651,7 @@ private fun VerifiedStoreProductCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (item.vipOnly) Text("PRO", color = GameColors.PrestigeGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Text(
-                    when {
-                        equipped -> gameText("AKTİF", "ACTIVE")
-                        owned -> gameText("SAHİPSİN", "OWNED")
-                        else -> "${item.diamondPrice} SC"
-                    },
-                    color = if (owned) GameColors.PlayGreen else GameColors.RewardAmber,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                )
+                StorePriceLabel(owned = owned, equipped = equipped, price = item.diamondPrice)
                 Button(
                     onClick = onAction,
                     enabled = !busy && !equipped && !lockedByPro,
@@ -713,16 +701,7 @@ private fun VerifiedStoreProductCard(
                     Text(description, color = GameColors.TextSecondary, fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     if (item.vipOnly) Text("PRO", color = GameColors.PrestigeGold, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            when {
-                                equipped -> gameText("AKTİF", "ACTIVE")
-                                owned -> gameText("SAHİPSİN", "OWNED")
-                                else -> "${item.diamondPrice} SC"
-                            },
-                            color = if (owned) GameColors.PlayGreen else GameColors.RewardAmber,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Black,
-                        )
+                        StorePriceLabel(owned = owned, equipped = equipped, price = item.diamondPrice)
                         Spacer(Modifier.weight(1f))
                         Button(
                             onClick = onAction,
@@ -769,14 +748,11 @@ private fun ProShopCard(active: Boolean, onClick: () -> Unit) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Surface(shape = CircleShape, color = GameColors.PrestigeGold.copy(alpha = .15f)) {
-                        Icon(
-                            Icons.Rounded.WorkspacePremium,
-                            null,
-                            Modifier.padding(10.dp).size(28.dp),
-                            tint = GameColors.PrestigeGold,
-                        )
-                    }
+                    Image(
+                        painterResource(R.drawable.store_product_vip_yearly),
+                        contentDescription = null,
+                        modifier = Modifier.size(56.dp),
+                    )
                     Column {
                         Text("PRO", color = GameColors.PrestigeGold, fontSize = 24.sp, fontWeight = FontWeight.Black)
                         Text(gameText("Reklamsız + profil + analiz", "Ad-free + profile + analysis"), color = GameColors.TextSecondary, fontSize = 9.sp)
@@ -867,5 +843,26 @@ private fun StoreKindFilter(kinds: List<String>, selected: String?, onSelect: (S
                 ),
             )
         }
+    }
+}
+
+/** Price with the Son Coin icon, or the owned/active state. */
+@Composable
+private fun StorePriceLabel(owned: Boolean, equipped: Boolean, price: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (!owned && !equipped) {
+            GameCoinIcon(15.dp)
+            Spacer(Modifier.width(4.dp))
+        }
+        Text(
+            when {
+                equipped -> gameText("AKTİF", "ACTIVE")
+                owned -> gameText("SAHİPSİN", "OWNED")
+                else -> "$price"
+            },
+            color = if (owned) GameColors.PlayGreen else GameColors.RewardAmber,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Black,
+        )
     }
 }

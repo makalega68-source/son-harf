@@ -276,14 +276,7 @@ private fun PlayHubSiegeHero(summary: PlayHubSiegeSummary, onQuickMatch: () -> U
                     )
                 }
                 Spacer(Modifier.width(10.dp))
-                Surface(shape = CircleShape, color = GameColors.TacticalTurquoise.copy(alpha = .16f)) {
-                    Icon(
-                        Icons.Rounded.GridView,
-                        contentDescription = null,
-                        tint = GameColors.TacticalTurquoise,
-                        modifier = Modifier.padding(12.dp).size(30.dp),
-                    )
-                }
+                GameBadgeIcon(Icons.Rounded.GridView, GameColors.TacticalTurquoise, size = 54.dp)
             }
             Spacer(Modifier.height(16.dp))
             GamePrimaryButton(
@@ -375,14 +368,7 @@ private fun PlayHubOption(
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = GameShapes.Small, color = accent.copy(alpha = if (enabled) .15f else .07f)) {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        tint = if (enabled) accent else GameColors.DisabledContent,
-                        modifier = Modifier.padding(8.dp).size(22.dp),
-                    )
-                }
+                GameBadgeIcon(icon, if (enabled) accent else GameColors.DisabledContent, size = 38.dp)
                 Spacer(Modifier.weight(1f))
                 if (badge != null) {
                     Surface(shape = GameShapes.Pill, color = GameColors.PrestigeGold.copy(alpha = .16f)) {

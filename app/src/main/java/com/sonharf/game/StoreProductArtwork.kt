@@ -24,6 +24,22 @@ internal object StoreProductArtwork {
         else -> null
     }
 
+    /** Illustrated artwork for Son Coin cosmetics; items without it keep their vector art. */
+    @DrawableRes
+    fun forCosmetic(itemId: String): Int? = when (itemId) {
+        "theme_black", "theme_dark_arena" -> R.drawable.store_product_theme_black
+        "keyboard_midnight" -> R.drawable.store_product_keyboard_midnight
+        "keyboard_black_gold" -> R.drawable.store_product_keyboard_black_gold
+        "keyboard_premium_white" -> R.drawable.store_product_keyboard_premium_white
+        "name_cyan" -> R.drawable.store_product_name_cyan
+        "name_sapphire" -> R.drawable.store_product_name_sapphire
+        "name_amethyst" -> R.drawable.store_product_name_amethyst
+        "name_aurelia" -> R.drawable.store_product_name_aurelia
+        "victory_crown" -> R.drawable.store_product_victory_crown
+        "emoji_vip" -> R.drawable.store_product_emoji_vip
+        else -> null
+    }
+
     /** Artwork for [productId], or the existing vector [fallback] when no artwork is mapped. */
     @DrawableRes
     fun forProduct(productId: String, @DrawableRes fallback: Int): Int = forProduct(productId) ?: fallback

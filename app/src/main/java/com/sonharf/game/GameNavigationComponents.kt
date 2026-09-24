@@ -37,7 +37,7 @@ internal fun GameBottomNavigation(
         shadowElevation = 8.dp,
     ) {
         Row(
-            Modifier.fillMaxWidth().navigationBarsPadding().height(62.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().navigationBarsPadding().height(66.dp).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             items.forEach { (tab, icon, label) ->
@@ -47,34 +47,29 @@ internal fun GameBottomNavigation(
                     onClick = { onSelect(tab) },
                     modifier = Modifier.weight(1f).padding(horizontal = 2.dp),
                     shape = GameShapes.Medium,
-                    color = if (active && !play) GameColors.PrimaryBlue.copy(alpha = .15f) else Color.Transparent,
+                    color = Color.Transparent,
                 ) {
                     Column(
-                        Modifier.fillMaxWidth().padding(vertical = if (play) 3.dp else 7.dp),
+                        Modifier.fillMaxWidth().padding(vertical = if (play) 1.dp else 4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        if (play) {
-                            // A slightly stronger, green play button; same row height as the others.
-                            Surface(
-                                shape = GameShapes.Pill,
-                                color = if (active) GameColors.PlayGreen else GameColors.PlayGreenDeep,
-                                border = BorderStroke(1.dp, GameColors.PlayGreen.copy(alpha = if (active) 1f else .6f)),
-                                shadowElevation = if (active) 4.dp else 1.dp,
-                            ) {
-                                Icon(
-                                    icon,
-                                    contentDescription = label,
-                                    tint = Color.White,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp).size(23.dp),
-                                )
-                            }
+                        // Game-style badges: the active tab (and Play, always) wears its coloured badge.
+                        val accent = when (tab) {
+                            GameMainTab.HOME -> GameColors.PrimaryBlue
+                            GameMainTab.SOCIAL -> GameColors.Lavender
+                            GameMainTab.PLAY -> GameColors.PlayGreen
+                            GameMainTab.LEAGUE -> GameColors.PrestigeGold
+                            GameMainTab.SHOP -> GameColors.RewardAmber
+                        }
+                        if (active || play) {
+                            GameBadgeIcon(icon, accent, size = if (play) 36.dp else 30.dp, contentDescription = label)
                         } else {
                             Icon(
                                 icon,
                                 contentDescription = label,
-                                tint = if (active) GameColors.PrimaryBlue else GameColors.TextSecondary,
-                                modifier = Modifier.size(23.dp),
+                                tint = GameColors.TextSecondary,
+                                modifier = Modifier.padding(3.dp).size(24.dp),
                             )
                         }
                         Spacer(Modifier.height(2.dp))

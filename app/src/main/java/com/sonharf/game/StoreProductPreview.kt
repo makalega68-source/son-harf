@@ -56,7 +56,7 @@ internal fun StoreProductPreview(
 }
 
 @DrawableRes
-private fun storeArtworkRes(itemId: String): Int? = when (itemId) {
+private fun storeArtworkRes(itemId: String): Int? = StoreProductArtwork.forCosmetic(itemId) ?: when (itemId) {
     "name_cyan" -> R.drawable.store_art_name_cyan
     "name_sapphire" -> R.drawable.store_art_name_sapphire
     "name_amethyst" -> R.drawable.store_art_name_amethyst
@@ -66,6 +66,13 @@ private fun storeArtworkRes(itemId: String): Int? = when (itemId) {
     "keyboard_midnight" -> R.drawable.store_art_keyboard_midnight
     "keyboard_black_gold" -> R.drawable.store_art_keyboard_black_gold
     "keyboard_premium_white" -> R.drawable.store_art_keyboard_premium_white
+    "keyboard_sakura" -> R.drawable.store_art_keyboard_sakura
+    "keyboard_ocean" -> R.drawable.store_art_keyboard_ocean
+    "keyboard_forest" -> R.drawable.store_art_keyboard_forest
+    "keyboard_royal_purple" -> R.drawable.store_art_keyboard_royal_purple
+    "name_emerald" -> R.drawable.store_art_name_emerald
+    "name_ruby" -> R.drawable.store_art_name_ruby
+    "name_sunset" -> R.drawable.store_art_name_sunset
     "theme_black", "theme_dark_arena" -> R.drawable.store_art_theme_black
     "victory_crown" -> R.drawable.store_art_victory_crown
     "emoji_vip" -> R.drawable.store_art_emoji_vip

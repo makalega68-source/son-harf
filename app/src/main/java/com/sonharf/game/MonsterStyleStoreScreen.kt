@@ -172,13 +172,17 @@ internal fun MonsterStyleStoreScreen() {
 internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) {
     "game_theme" -> id in setOf("theme_black", "theme_dark_arena")
     "profile_frame" -> false
-    "name_style" -> id in setOf("name_cyan", "name_sapphire", "name_amethyst", "name_aurelia")
+    "name_style" -> id in setOf("name_cyan", "name_sapphire", "name_amethyst", "name_aurelia", "name_emerald", "name_ruby", "name_sunset")
     "keyboard_theme" -> id in setOf(
         "keyboard_crystal",
         "keyboard_obsidian",
         "keyboard_midnight",
         "keyboard_black_gold",
         "keyboard_premium_white",
+        "keyboard_sakura",
+        "keyboard_ocean",
+        "keyboard_forest",
+        "keyboard_royal_purple",
     )
     "victory_effect" -> id == "victory_crown"
     "emoji_pack" -> id == "emoji_vip"

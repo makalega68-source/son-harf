@@ -539,14 +539,7 @@ private fun ProfessionalRivalHistoryTab() {
         item {
             GameSurface(borderColor = GameColors.PrimaryBlue.copy(alpha = .26f), elevated = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = GameColors.PrimaryBlue.copy(alpha = .14f)) {
-                        Icon(
-                            Icons.Rounded.Replay,
-                            null,
-                            tint = GameColors.PrimaryBlue,
-                            modifier = Modifier.padding(11.dp).size(25.dp),
-                        )
-                    }
+                    GameBadgeIcon(Icons.Rounded.Replay, GameColors.PrimaryBlue, size = 47.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(

@@ -177,7 +177,7 @@ private fun HomePlayerBar(
             Column(Modifier.weight(1f)) {
                 Text(
                     profile?.displayName ?: gameText("Profil", "Profile"),
-                    color = GameColors.TextPrimary,
+                    color = SonHarfCosmetics.nameStyleColor ?: GameColors.TextPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -333,9 +333,7 @@ private fun ModeCard(
         border = BorderStroke(1.dp, GameColors.Border),
     ) {
         Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Surface(shape = GameShapes.Medium, color = accent.copy(alpha = .14f)) {
-                Icon(icon, null, tint = accent, modifier = Modifier.padding(9.dp).size(22.dp))
-            }
+            GameBadgeIcon(icon, accent, size = 40.dp)
             Column {
                 Text(title, color = GameColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(subtitle, color = GameColors.TextSecondary, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -359,9 +357,7 @@ private fun DailyProgressStrip(
         border = BorderStroke(1.dp, GameColors.Border),
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = GameColors.PlayGreen.copy(alpha = .14f)) {
-                Icon(Icons.Rounded.CheckCircle, null, tint = GameColors.PlayGreen, modifier = Modifier.padding(9.dp).size(21.dp))
-            }
+            GameBadgeIcon(Icons.Rounded.CheckCircle, GameColors.PlayGreen, size = 39.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -550,9 +546,7 @@ private fun HomeTournamentCard(event: WeeklyTournamentDto, onOpen: () -> Unit) {
         border = BorderStroke(1.dp, GameColors.RewardAmber.copy(alpha = .4f)),
     ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = GameColors.RewardAmber.copy(alpha = .15f)) {
-                Icon(Icons.Rounded.EmojiEvents, null, tint = GameColors.RewardAmber, modifier = Modifier.padding(9.dp).size(22.dp))
-            }
+            GameBadgeIcon(Icons.Rounded.EmojiEvents, GameColors.RewardAmber, size = 40.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(event.name, color = GameColors.TextPrimary, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)

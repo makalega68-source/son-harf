@@ -197,9 +197,7 @@ internal fun ProfessionalProfileScreen(
                 border = BorderStroke(1.dp, GameColors.Lavender.copy(alpha = .38f)),
             ) {
                 Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = GameShapes.Medium, color = GameColors.Lavender.copy(alpha = .18f)) {
-                        Icon(Icons.Rounded.WorkspacePremium, null, tint = GameColors.PrestigeGold, modifier = Modifier.padding(10.dp).size(24.dp))
-                    }
+                    GameBadgeIcon(Icons.Rounded.WorkspacePremium, GameColors.PrestigeGold, size = 44.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
@@ -267,7 +265,7 @@ private fun ProfileIdentityCard(
                             Text(
                                 profile?.displayName ?: gameText("Oyuncu", "Player"),
                                 modifier = Modifier.weight(1f, fill = false),
-                                color = GameColors.TextPrimary,
+                                color = SonHarfCosmetics.nameStyleColor ?: GameColors.TextPrimary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 22.sp,
                                 maxLines = 1,
@@ -327,9 +325,7 @@ private fun ProfileStatCard(
         border = BorderStroke(1.dp, GameColors.Border),
     ) {
         Row(Modifier.fillMaxSize().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = GameShapes.Medium, color = accent.copy(alpha = .13f)) {
-                Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(19.dp))
-            }
+            GameBadgeIcon(icon, accent, size = 35.dp)
             Spacer(Modifier.width(10.dp))
             Column {
                 Text(value, color = GameColors.TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Bold)
@@ -349,9 +345,7 @@ private fun ProfileActionRow(
 ) {
     Surface(onClick = onClick, color = Color.Transparent) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = GameShapes.Medium, color = accent.copy(alpha = .12f)) {
-                Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(20.dp))
-            }
+            GameBadgeIcon(icon, accent, size = 36.dp)
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)

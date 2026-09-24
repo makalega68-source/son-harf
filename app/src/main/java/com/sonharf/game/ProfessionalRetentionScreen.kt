@@ -514,14 +514,7 @@ private fun ProfessionalDailyRewardTab(
                 borderColor = GameColors.RewardAmber.copy(alpha = .55f),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = GameColors.RewardAmber.copy(alpha = .14f)) {
-                        Icon(
-                            Icons.Rounded.CardGiftcard,
-                            contentDescription = null,
-                            tint = GameColors.RewardAmber,
-                            modifier = Modifier.padding(12.dp).size(29.dp),
-                        )
-                    }
+                    GameBadgeIcon(Icons.Rounded.CardGiftcard, GameColors.RewardAmber, size = 53.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
@@ -717,9 +710,7 @@ private fun RetentionMetric(
         border = BorderStroke(1.dp, GameColors.Border),
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = accent.copy(alpha = .13f)) {
-                Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(20.dp))
-            }
+            GameBadgeIcon(icon, accent, size = 36.dp)
             Spacer(Modifier.width(9.dp))
             Column {
                 Text(value, color = GameColors.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)

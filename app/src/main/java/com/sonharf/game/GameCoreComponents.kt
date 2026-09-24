@@ -157,7 +157,15 @@ internal fun LeagueBadge(text: String) {
 internal fun RatingBadge(rating: Int) = GameStatChip(Icons.Rounded.EmojiEvents, "$rating RP", GameColors.RewardAmber)
 
 @Composable
-internal fun CurrencyChip(amount: Int) = GameStatChip(Icons.Rounded.Toll, amount.toString(), GameColors.TacticalTurquoise)
+internal fun CurrencyChip(amount: Int) {
+    Surface(shape = GameShapes.Pill, color = GameColors.RewardAmber.copy(alpha = .14f)) {
+        Row(Modifier.padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            GameCoinIcon(17.dp)
+            Spacer(Modifier.width(5.dp))
+            Text(amount.toString(), color = GameColors.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+    }
+}
 
 @Composable
 internal fun GameProgress(progress: Float, color: Color, modifier: Modifier = Modifier) {
@@ -193,9 +201,7 @@ internal fun GameEmptyState(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Surface(shape = CircleShape, color = GameColors.SecondarySurface) {
-                Icon(icon, null, tint = GameColors.TextSecondary, modifier = Modifier.padding(11.dp).size(25.dp))
-            }
+            GameBadgeIcon(icon, GameColors.PrimaryBlue, size = 48.dp)
             Text(title, color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
             Text(body, color = GameColors.TextSecondary, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
             if (actionText != null && onAction != null) {

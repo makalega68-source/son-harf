@@ -11,8 +11,8 @@ class ProfessionalResponsiveShellContractTest {
     fun `bottom navigation and segmented tabs stay compact on narrow phones`() {
         val navigation = source("GameNavigationComponents.kt")
 
-        assertTrue(navigation.contains("navigationBarsPadding().height(62.dp)"))
-        assertTrue(navigation.contains("modifier = Modifier.size(23.dp)"))
+        assertTrue(navigation.contains("navigationBarsPadding().height(66.dp)"))
+        assertTrue(navigation.contains("GameBadgeIcon(icon, accent"))
         assertTrue(navigation.contains("fontSize = 10.sp"))
         assertTrue(navigation.contains("if (labels.size <= 3)"))
         assertTrue(navigation.contains("horizontalScroll(rememberScrollState())"))

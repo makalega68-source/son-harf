@@ -81,6 +81,7 @@ internal fun StorePromoCard(
     title: String,
     subtitle: String,
     action: String,
+    @androidx.annotation.DrawableRes artwork: Int? = null,
     onClick: () -> Unit,
 ) {
     GameSurface(borderColor = GameColors.Border) {
@@ -88,6 +89,14 @@ internal fun StorePromoCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (artwork != null) {
+                androidx.compose.foundation.Image(
+                    androidx.compose.ui.res.painterResource(artwork),
+                    contentDescription = null,
+                    modifier = Modifier.size(58.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+            }
             Column(Modifier.weight(1f)) {
                 Text(
                     title,

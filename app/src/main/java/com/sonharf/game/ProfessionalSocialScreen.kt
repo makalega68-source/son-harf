@@ -645,9 +645,7 @@ private fun GameInviteCard(
 private fun ArchRivalCard(rival: ArchRivalDto, onOpen: () -> Unit) {
     Surface(onClick = onOpen, modifier = Modifier.fillMaxWidth(), shape = GameShapes.Large, color = GameColors.RewardAmber.copy(alpha = .10f), border = BorderStroke(1.dp, GameColors.RewardAmber.copy(alpha = .35f))) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = GameColors.RewardAmber.copy(alpha = .14f)) {
-                Icon(Icons.Rounded.Swords, null, tint = GameColors.RewardAmber, modifier = Modifier.padding(10.dp).size(24.dp))
-            }
+            GameBadgeIcon(Icons.Rounded.Swords, GameColors.RewardAmber, size = 44.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(gameText("EZELİ RAKİP", "ARCH RIVAL"), color = GameColors.RewardAmber, fontSize = 9.sp, fontWeight = FontWeight.Bold)
@@ -663,9 +661,7 @@ private fun ArchRivalCard(rival: ArchRivalDto, onOpen: () -> Unit) {
 private fun RivalRow(rival: RivalHistoryDto, busy: Boolean, onOpen: () -> Unit, onRematch: () -> Unit) {
     GameSurface {
         Row(Modifier.clickable(onClick = onOpen).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = if (rival.presenceStatus == "online") GameColors.PlayGreen.copy(alpha = .12f) else GameColors.SecondarySurface) {
-                Icon(Icons.Rounded.Person, null, tint = if (rival.presenceStatus == "online") GameColors.PlayGreen else GameColors.TextSecondary, modifier = Modifier.padding(8.dp).size(20.dp))
-            }
+            GameBadgeIcon(Icons.Rounded.Person, if (rival.presenceStatus == "online") GameColors.PlayGreen else GameColors.TextSecondary, size = 36.dp)
             Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)) {
                 Text(rival.displayName, color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -700,9 +696,7 @@ private fun MatchHistoryRow(match: MatchHistoryDto) {
 private fun ConversationRow(name: String, preview: String, fromMe: Boolean, enabled: Boolean, onOpen: () -> Unit) {
     GameSurface {
         Row(Modifier.clickable(enabled = enabled, onClick = onOpen).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = GameColors.PrimaryBlue.copy(alpha = .14f)) {
-                Icon(Icons.Rounded.ChatBubbleOutline, null, tint = GameColors.PrimaryBlue, modifier = Modifier.padding(9.dp).size(20.dp))
-            }
+            GameBadgeIcon(Icons.Rounded.ChatBubbleOutline, GameColors.PrimaryBlue, size = 38.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(name, color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -723,9 +717,7 @@ private fun ConversationRow(name: String, preview: String, fromMe: Boolean, enab
 private fun SiegeRivalRow(rival: SiegeRivalDto, busy: Boolean, onOpen: () -> Unit, onRematch: () -> Unit) {
     GameSurface {
         Row(Modifier.clickable(onClick = onOpen).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = GameColors.TacticalTurquoise.copy(alpha = .14f)) {
-                Icon(Icons.Rounded.GridView, null, tint = GameColors.TacticalTurquoise, modifier = Modifier.padding(8.dp).size(20.dp))
-            }
+            GameBadgeIcon(Icons.Rounded.GridView, GameColors.TacticalTurquoise, size = 36.dp)
             Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)) {
                 Text(rival.displayName, color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)

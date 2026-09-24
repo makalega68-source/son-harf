@@ -436,9 +436,7 @@ private fun ProfessionalSettingsLink(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val accent = if (danger) GameColors.Danger else GameColors.PrimaryBlue
-            Surface(shape = CircleShape, color = accent.copy(alpha = .12f)) {
-                Icon(icon, null, tint = accent, modifier = Modifier.padding(9.dp).size(21.dp))
-            }
+            GameBadgeIcon(icon, accent, size = 39.dp)
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, color = if (danger) GameColors.Danger else GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
