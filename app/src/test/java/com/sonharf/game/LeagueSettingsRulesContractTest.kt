@@ -42,7 +42,7 @@ class LeagueSettingsRulesContractTest {
         val topics = ruleTopics()
         assertTrue(topics.size >= 11)
         val all = topics.joinToString(" ") { it.body }
-        assertTrue(all.contains("Her küp 2 puandır") || all.contains("2 points"))
+        assertTrue(all.contains("her küp 2 puandır") || all.contains("is worth 2 points"))
         assertTrue(all.contains("Kelime puanı kalıcıdır") || all.contains("Word points are permanent"))
         assertTrue(source("RulesScreen.kt").contains("Kelime puanı + Bölge puanı"))
     }
