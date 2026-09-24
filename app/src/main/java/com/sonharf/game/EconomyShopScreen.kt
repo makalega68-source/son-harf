@@ -57,14 +57,12 @@ fun EconomyShopScreen(
                 }
         }
         Box(Modifier.weight(1f)) {
-            when (tab) {
-                1 -> SeasonCenterContent()
-                // Mascot characters, each a permanent Google Play product.
-                4 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp)) {
-                    MascotStoreSection()
-                }
-                else -> EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection, onPro)
+            if (tab == 1) SeasonCenterContent()
+            // Mascot characters, each a permanent Google Play product.
+            else if (tab == 4) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp)) {
+                MascotStoreSection()
             }
+            else EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection, onPro)
         }
     }
 }
