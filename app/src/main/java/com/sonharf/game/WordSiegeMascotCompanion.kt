@@ -199,6 +199,21 @@ internal class WordSiegeMascotBond(context: Context) {
         }
     }
 
+    /** The look the player picked with a long press, or null to follow the default. */
+    var skinChoice: WordSiegeMascotSkin?
+        get() = when (prefs.getString(KEY_SKIN, "")) {
+            "pink" -> WordSiegeMascotSkin.PINK
+            "orb" -> WordSiegeMascotSkin.ORB
+            else -> null
+        }
+        set(value) {
+            prefs.edit().putString(KEY_SKIN, when (value) {
+                WordSiegeMascotSkin.PINK -> "pink"
+                WordSiegeMascotSkin.ORB -> "orb"
+                null -> ""
+            }).apply()
+        }
+
     private fun today(): Long = System.currentTimeMillis() / 86_400_000L
 
     private companion object {
@@ -212,6 +227,7 @@ internal class WordSiegeMascotBond(context: Context) {
         const val KEY_LONGEST_WORD = "longest_word"
         const val KEY_MOOD = "mood"
         const val KEY_FIRST_DAY = "first_day"
+        const val KEY_SKIN = "skin"
         const val MAX_BOND = 1_000
     }
 }
@@ -377,6 +393,13 @@ internal object WordSiegeMascotLines {
         "Yakaladım! ✨" to "Got it! ✨",
         "Hop! Bir harf daha bizim." to "Whee! Another letter for us.",
     )
+    val skinPink = listOf(
+        "Pembe hâlim nasıl? 💖" to "How do you like me in pink? 💖",
+        "Kurdelemi taktım! 🎀" to "I put on my bow! 🎀",
+    )
+    val skinOrb = listOf(
+        "Klasik hâlime döndüm ✨" to "Back to my classic look ✨",
+    )
     val draw = listOf(
         "Berabere! Ne çekişmeydi!" to "A draw! What a battle!",
         "Kıl payı… rövanşa ne dersin?" to "So close… rematch?",
@@ -527,6 +550,8 @@ internal fun WordSiegeMascotCompanion(
     celebrationScale: Float = 1.7f,
     touches: WordSiegeMascotTouchState? = null,
     visit: WordSiegeMascotVisit? = null,
+    /** The player's profile gender; picks the pink girl look by default for female players. */
+    playerGender: String? = null,
 ) {
     if (anchors.isEmpty()) return
     val context = LocalContext.current
@@ -571,6 +596,14 @@ internal fun WordSiegeMascotCompanion(
         outcome != WordSiegeMascotOutcome.WIN -> WordSiegeMascotHat.NONE
         SonHarfCosmetics.crownVictory -> WordSiegeMascotHat.CROWN
         else -> WordSiegeMascotHat.PARTY
+    }
+
+    // Long-pressing the mascot switches between the blue orb and the pink girl; the choice is kept.
+    var skinChoice by remember { mutableStateOf(bond.skinChoice) }
+    val skin = skinChoice ?: if (playerGender?.trim()?.lowercase() in FEMALE_GENDERS) {
+        WordSiegeMascotSkin.PINK
+    } else {
+        WordSiegeMascotSkin.ORB
     }
 
     val currentUrgency by rememberUpdatedState(urgency)
@@ -885,24 +918,31 @@ internal fun WordSiegeMascotCompanion(
             lastInteractionAt = now
             if (current.word.isNotBlank()) bond.recordWord(current.word)
             fun speakIf(topic: String, cooldown: Long, probability: Float, lines: List<Pair<String, String>>) {
+                // Apart from real emergencies it keeps long quiet stretches between remarks.
+                val urgent = topic == "critical"
+                if (!urgent && !mind.ready("talk:any", 40_000L, now)) return
                 if (mind.ready("talk:$topic", cooldown, now) && mind.chance(probability)) {
                     mind.mark("talk:$topic", now)
+                    mind.mark("talk:any", now)
                     say(mind.line(lines, currentName, number = current.count, word = current.word))
                 }
             }
             when (current.event) {
-                WordSiegeMascotEvent.PRAISE -> speakIf("praise", 18_000L, .35f, WordSiegeMascotLines.praise)
+                WordSiegeMascotEvent.PRAISE -> speakIf("praise", 60_000L, .15f, WordSiegeMascotLines.praise)
                 WordSiegeMascotEvent.BIG_PRAISE -> {
                     delay(700L)
-                    perform(WordSiegeMascotAction.SPARKLE)
-                    speakIf("praise", 10_000L, .75f, WordSiegeMascotLines.bigPraise)
+                    if (mind.ready("act:praise", 30_000L, now)) {
+                        mind.mark("act:praise", now)
+                        perform(WordSiegeMascotAction.SPARKLE)
+                    }
+                    speakIf("praise", 30_000L, .5f, WordSiegeMascotLines.bigPraise)
                 }
                 WordSiegeMascotEvent.RARE_WORD -> {
                     delay(500L)
                     perform(WordSiegeMascotAction.SPARKLE)
                     speakIf("rare", 20_000L, .85f, WordSiegeMascotLines.rareWord)
                 }
-                WordSiegeMascotEvent.COMFORT -> speakIf("comfort", 14_000L, .6f, WordSiegeMascotLines.comfort)
+                WordSiegeMascotEvent.COMFORT -> speakIf("comfort", 45_000L, .4f, WordSiegeMascotLines.comfort)
                 WordSiegeMascotEvent.CRITICAL -> {
                     watching = false
                     speakIf("critical", 25_000L, 1f, WordSiegeMascotLines.critical)
@@ -911,7 +951,7 @@ internal fun WordSiegeMascotCompanion(
                 WordSiegeMascotEvent.RIVAL_STRONG -> {
                     // Let the sad reaction play first, then lift the player's spirits.
                     delay(1_100L)
-                    speakIf("rival", 30_000L, .6f, WordSiegeMascotLines.rivalStrong)
+                    speakIf("rival", 60_000L, .4f, WordSiegeMascotLines.rivalStrong)
                 }
                 WordSiegeMascotEvent.AHEAD -> {
                     if (mind.ready("talk:ahead", 90_000L, now) && mind.chance(.35f)) perform(WordSiegeMascotAction.NOD)
@@ -920,8 +960,11 @@ internal fun WordSiegeMascotCompanion(
                 WordSiegeMascotEvent.STREAK -> {
                     // Each step of a streak is celebrated a little bigger.
                     delay(600L)
-                    perform(if (current.count >= 5) WordSiegeMascotAction.CHEER else WordSiegeMascotAction.HOP)
-                    speakIf("streak", 8_000L, if (current.count >= 5) 1f else .7f, WordSiegeMascotLines.streak)
+                    if (mind.ready("act:streak", 25_000L, now) || current.count >= 5) {
+                        mind.mark("act:streak", now)
+                        perform(if (current.count >= 5) WordSiegeMascotAction.CHEER else WordSiegeMascotAction.HOP)
+                    }
+                    speakIf("streak", 30_000L, if (current.count >= 5) .8f else .4f, WordSiegeMascotLines.streak)
                 }
                 WordSiegeMascotEvent.STREAK_LOST -> {
                     perform(WordSiegeMascotAction.SHRUG)
@@ -981,7 +1024,7 @@ internal fun WordSiegeMascotCompanion(
             val radius = baseSizePx * scale.value / 2f
             val distance = (touch - here).getDistance()
             when {
-                distance <= radius -> touchedMascot(now)
+                distance <= radius -> Unit // Taps and long presses on the mascot are handled by the view.
                 distance < radius * 1.9f -> moveOutOfTheWay(now)
                 !flying -> lookAt(touch)
             }
@@ -1134,8 +1177,14 @@ internal fun WordSiegeMascotCompanion(
                 glanceX = glance.x,
                 glanceY = glance.y,
                 hat = hat,
-                // Fallback for screens without a touch watcher; with one, the press already
-                // started the flight and this is ignored.
+                skin = skin,
+                onLongPress = {
+                    val next = if (skin == WordSiegeMascotSkin.PINK) WordSiegeMascotSkin.ORB else WordSiegeMascotSkin.PINK
+                    skinChoice = next
+                    bond.skinChoice = next
+                    perform(WordSiegeMascotAction.SPARKLE)
+                    say(mind.line(if (next == WordSiegeMascotSkin.PINK) WordSiegeMascotLines.skinPink else WordSiegeMascotLines.skinOrb, currentName))
+                },
                 onTap = { touchedMascot(SystemClock.uptimeMillis()) },
             )
         }
@@ -1153,6 +1202,7 @@ internal fun WordSiegeMascotCompanion(
 }
 
 private val MILESTONES = setOf(10, 25, 50, 100, 250, 500, 1_000)
+private val FEMALE_GENDERS = setOf("kadın", "kadin", "female", "woman", "f")
 
 /** Position (px) of a chased letter: a lazy drift with a gentle wave. */
 private fun chasePosition(chase: WordSiegeMascotChase, t: Float, area: Size): Offset {

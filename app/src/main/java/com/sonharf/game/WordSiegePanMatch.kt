@@ -384,6 +384,7 @@ internal fun WordSiegePanMatch(
                 null
             },
             playerName = mine?.displayName,
+            playerGender = mine?.gender,
             onCell = onBoardCell,
             onChat = onChat,
         )
@@ -503,6 +504,7 @@ private fun PanSiegeBoard(
     mascotSignal: WordSiegeMascotSignal? = null,
     mascotOutcome: WordSiegeMascotOutcome? = null,
     playerName: String? = null,
+    playerGender: String? = null,
     onCell: (Int) -> Unit,
     onChat: () -> Unit,
 ) {
@@ -738,6 +740,7 @@ private fun PanSiegeBoard(
                 signal = mascotSignal,
                 outcome = mascotOutcome,
                 playerName = playerName,
+                playerGender = playerGender,
                 touches = mascotTouches,
                 // After a strong capture it may fly over to admire the new territory.
                 visit = lastMove?.takeIf { lastMoveMine && (it.capturedCells >= 2 || it.opponentCaptured > 0) }?.let { move ->

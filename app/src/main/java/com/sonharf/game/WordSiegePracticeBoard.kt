@@ -82,6 +82,7 @@ internal fun WordSiegePracticeBoard(
     mascotSignal: WordSiegeMascotSignal? = null,
     mascotOutcome: WordSiegeMascotOutcome? = null,
     playerName: String? = null,
+    playerGender: String? = null,
     onViewportModeChange: (WordSiegeBoardViewportMode) -> Unit = {},
     onCell: (Int) -> Unit,
 ) {
@@ -279,6 +280,7 @@ internal fun WordSiegePracticeBoard(
                 signal = mascotSignal,
                 outcome = mascotOutcome,
                 playerName = playerName,
+                playerGender = playerGender,
                 touches = mascotTouches,
                 visit = when {
                     // Fresh territory after the player's own strong move.

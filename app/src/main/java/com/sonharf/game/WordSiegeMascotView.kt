@@ -44,6 +44,9 @@ internal enum class WordSiegeMascotAction {
 /** Costume worn over the orb; purely cosmetic. */
 internal enum class WordSiegeMascotHat { NONE, PARTY, CROWN }
 
+/** Look of the mascot: the original blue orb, or the pink girl with a bow and eyelashes. */
+internal enum class WordSiegeMascotSkin { ORB, PINK }
+
 /** Local event-driven reaction selection; deterministic per move, with no network or model cost. */
 internal object WordSiegeMascotBehavior {
     fun choose(moveId: Long, mine: Boolean, score: Int, captured: Int, stolen: Int): WordSiegeMascotEmotion {
@@ -172,6 +175,34 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             floatArrayOf(0f, .6f, 1f), Shader.TileMode.CLAMP,
         )
     }
+    // Skin: the pink girl recolours the artwork (eye whites stay white) and adds a bow and lashes.
+    private var skin = WordSiegeMascotSkin.ORB
+    private val eyePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val pinkFilter = android.graphics.ColorMatrixColorFilter(PINK_MATRIX)
+    private val orbEdgeShader: Shader? = edgePaint.shader
+    private val pinkEdgeShader = SweepGradient(ORB_CX, ORB_CY, intArrayOf(
+        0xFFFFC1E3.toInt(), 0xFFFF7AC8.toInt(), 0xFFE0409A.toInt(),
+        0xFFC77DFF.toInt(), 0xFFFFC1E3.toInt(),
+    ), floatArrayOf(0f, .25f, .5f, .75f, 1f))
+    private val orbWingShader: Shader? = wingPaint.shader
+    private val pinkWingShader = android.graphics.LinearGradient(
+        0f, 0f, 430f, -160f,
+        intArrayOf(0xE6FFD1EC.toInt(), 0xB3FF6FBF.toInt(), 0x66FFFFFF),
+        floatArrayOf(0f, .6f, 1f), Shader.TileMode.CLAMP,
+    )
+    private val girlLashPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeWidth = 10f
+        color = 0xFF1A0A2E.toInt()
+    }
+    private val bowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val bowLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeJoin = Paint.Join.ROUND
+        strokeWidth = 8f
+        color = 0xFF7A1450.toInt()
+    }
     private val wingLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 7f
@@ -250,6 +281,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private var heartsStartedAt = 0L
     private var sparklesStartedAt = 0L
     private var reactionCell: Int? = null
+    private var moveGlanceUntil = 0L
+    private var lastMoveReactionAt = 0L
     private var externalEmotion: WordSiegeMascotEmotion? = null
     private var lastMood = WordSiegeMascotEmotion.CALM
 
@@ -278,7 +311,13 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val now = SystemClock.uptimeMillis()
         if (requestedEmotion != externalEmotion) {
             // A newly requested mood gets the matching body motion once, like a move reaction.
-            if (requestedEmotion != null && requestedEmotion.hasBodyMotion() && now >= reactionUntil) {
+            // Big moments (win, loss, round) always move; everyday moods only occasionally.
+            val major = requestedEmotion == WordSiegeMascotEmotion.EXCITED || requestedEmotion == WordSiegeMascotEmotion.BOWED ||
+                requestedEmotion == WordSiegeMascotEmotion.TEARY || requestedEmotion == WordSiegeMascotEmotion.JUMP
+            if (requestedEmotion != null && requestedEmotion.hasBodyMotion() && now >= reactionUntil &&
+                (major || now - lastMoveReactionAt > 20_000L)
+            ) {
+                if (!major) lastMoveReactionAt = now
                 startMotion(requestedEmotion, now)
             }
             externalEmotion = requestedEmotion
@@ -289,9 +328,22 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             hasInitialMove = true
         } else if (moveId != null && moveId != lastMoveId) {
             lastMoveId = moveId
-            startReaction(WordSiegeMascotBehavior.choose(moveId, lastMoveMine, moveScore, capturedCells, opponentCaptured), now)
             reactionCell = moveCell
-            if (lastMoveMine) heartsStartedAt = now
+            moveGlanceUntil = now + 1_300L
+            // Mostly it just watches: a full reaction only for strong moves and not too often;
+            // an ordinary move gets, at most now and then, a small change of face.
+            val big = moveScore >= 25 || capturedCells >= 3 || opponentCaptured > 0
+            val sinceLast = now - lastMoveReactionAt
+            if (big && sinceLast > 12_000L) {
+                lastMoveReactionAt = now
+                startReaction(WordSiegeMascotBehavior.choose(moveId, lastMoveMine, moveScore, capturedCells, opponentCaptured), now)
+                if (lastMoveMine) heartsStartedAt = now
+            } else if (!big && sinceLast > 35_000L && random.nextFloat() < .3f) {
+                lastMoveReactionAt = now
+                reaction = if (lastMoveMine) WordSiegeMascotEmotion.HAPPY else WordSiegeMascotEmotion.SURPRISED
+                reactionStartedAt = now
+                reactionUntil = now + 1_000L
+            }
             markActive(now)
         }
         if (pendingCells.size != pendingCount) markActive(now)
@@ -370,6 +422,18 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         if (action == WordSiegeMascotAction.TWIRL || action == WordSiegeMascotAction.SPARKLE ||
             action == WordSiegeMascotAction.CHEER || action == WordSiegeMascotAction.FLIP
         ) sparklesStartedAt = now
+        invalidate()
+    }
+
+    fun setSkin(next: WordSiegeMascotSkin) {
+        if (next == skin) return
+        skin = next
+        val filter = if (next == WordSiegeMascotSkin.PINK) pinkFilter else null
+        paint.colorFilter = filter
+        atopPaint.colorFilter = filter
+        skinPaint.colorFilter = filter
+        edgePaint.shader = if (next == WordSiegeMascotSkin.PINK) pinkEdgeShader else orbEdgeShader
+        wingPaint.shader = if (next == WordSiegeMascotSkin.PINK) pinkWingShader else orbWingShader
         invalidate()
     }
 
@@ -497,7 +561,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val bow = poseValue[P_BOW]
 
         // ---- Gaze: smart saccades toward what matters in the game ------------------------------
-        val focusCell = pendingCell ?: reactionCell?.takeIf { now < reactionUntil }
+        val focusCell = pendingCell ?: reactionCell?.takeIf { now < max(reactionUntil, moveGlanceUntil) }
         var targetX: Float
         var targetY: Float
         val lookAround = actionKind == WordSiegeMascotAction.LOOK_AROUND && now < actionUntil
@@ -697,9 +761,11 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         drawEye(canvas, "eye_left", "iris_left", LEFT_EYE_X, LEFT_IRIS_X, gazeX + tremor, gazeY, water)
         drawLids(canvas, LEFT_EYE_X, EYE_Y, 128f, 128f, lid, slant, -1f, lower)
         canvas.restoreToCount(eyeLayer)
+        if (skin == WordSiegeMascotSkin.PINK) drawGirlLashes(canvas, LEFT_EYE_X, EYE_Y, 128f, 128f, lid, -1f)
         drawEye(canvas, "eye_right", "iris_right", RIGHT_EYE_X, RIGHT_IRIS_X, gazeX + tremor, gazeY, water)
         drawLids(canvas, RIGHT_EYE_X, EYE_Y, 122f, 126f, lid, slant, 1f, lower)
         canvas.restoreToCount(eyeLayer)
+        if (skin == WordSiegeMascotSkin.PINK) drawGirlLashes(canvas, RIGHT_EYE_X, EYE_Y, 122f, 126f, lid, 1f)
 
         val browY = poseValue[P_BROW_Y] - lid * 6f - yawn * 22f - shrug * 26f
         val browTilt = Math.toDegrees(poseValue[P_BROW_TILT].toDouble()).toFloat()
@@ -708,7 +774,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
 
         val cheek = poseValue[P_CHEEK].coerceIn(0f, 1f)
         cheekPaints.forEachIndexed { index, cheekPaint ->
-            cheekPaint.alpha = (18f + cheek * 92f).toInt()
+            val blush = if (skin == WordSiegeMascotSkin.PINK) 40f else 18f
+            cheekPaint.alpha = (blush + cheek * 92f).toInt().coerceIn(0, 255)
             canvas.drawCircle(if (index == 0) LEFT_CHEEK_X else RIGHT_CHEEK_X, CHEEK_Y, 96f, cheekPaint)
         }
         drawLayer(canvas, "cheek_left", 0f, -lower * 10f)
@@ -731,7 +798,11 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.restore()
 
         if (mood == WordSiegeMascotEmotion.STRESSED || urgency > .45f) drawSweat(canvas, now)
-        if (hat != WordSiegeMascotHat.NONE) drawHat(canvas, now)
+        if (hat != WordSiegeMascotHat.NONE) {
+            drawHat(canvas, now)
+        } else if (skin == WordSiegeMascotSkin.PINK) {
+            drawBow(canvas, now)
+        }
         if (sleeping) drawSleepZ(canvas, now)
         drawSparkles(canvas, now)
         drawTwinkles(canvas, now)
@@ -1167,6 +1238,67 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
     }
 
+    /** Three curled lashes on the outer upper corner; they follow the lid and droop when closed. */
+    private fun drawGirlLashes(canvas: Canvas, cx: Float, cy: Float, rx: Float, ry: Float, lid: Float, side: Float) {
+        for (i in 0 until 3) {
+            val angle = (-.18f - i * .3f).toDouble()
+            val baseX = cx + side * rx * kotlin.math.cos(angle).toFloat() * .98f
+            val openY = cy + ry * sin(angle).toFloat() * .98f
+            val baseY = openY + lid * (cy + ry * .55f - openY)
+            // Open: flick outward and up. Closed: hang outward and down.
+            val lift = 1f - 2f * lid.coerceIn(0f, 1f)
+            val length = 44f - i * 5f
+            val dirX = side * (1.05f - i * .25f)
+            val dirY = -(.35f + i * .35f) * lift
+            path.rewind()
+            path.moveTo(baseX, baseY)
+            path.quadTo(
+                baseX + dirX * length * .7f, baseY + dirY * length * .2f - 8f * lift,
+                baseX + dirX * length, baseY + dirY * length,
+            )
+            canvas.drawPath(path, girlLashPaint)
+        }
+    }
+
+    /** A pink ribbon bow on the top-right of the head. */
+    private fun drawBow(canvas: Canvas, now: Long) {
+        canvas.save()
+        canvas.translate(880f, 232f)
+        canvas.rotate(20f + sin(now / 900f) * 3f)
+        for (side in BOW_SIDES) {
+            canvas.save()
+            canvas.scale(side, 1f)
+            // Ribbon tail.
+            path.rewind()
+            path.moveTo(8f, 14f)
+            path.lineTo(46f, 112f)
+            path.lineTo(26f, 100f)
+            path.lineTo(10f, 118f)
+            path.lineTo(-6f, 18f)
+            path.close()
+            bowPaint.color = 0xFFE0409A.toInt()
+            canvas.drawPath(path, bowPaint)
+            canvas.drawPath(path, bowLinePaint)
+            // Loop.
+            path.rewind()
+            path.moveTo(0f, 0f)
+            path.cubicTo(55f, -78f, 150f, -52f, 142f, 8f)
+            path.cubicTo(136f, 66f, 52f, 52f, 0f, 0f)
+            path.close()
+            bowPaint.color = 0xFFFF5FAE.toInt()
+            canvas.drawPath(path, bowPaint)
+            canvas.drawPath(path, bowLinePaint)
+            bowPaint.color = 0x88FFFFFF.toInt()
+            ovalRect.set(62f, -32f, 112f, -10f)
+            canvas.drawOval(ovalRect, bowPaint)
+            canvas.restore()
+        }
+        bowPaint.color = 0xFFFF86C4.toInt()
+        canvas.drawCircle(0f, 4f, 27f, bowPaint)
+        canvas.drawCircle(0f, 4f, 27f, bowLinePaint)
+        canvas.restore()
+    }
+
     private fun drawSleepZ(canvas: Canvas, now: Long) {
         // Three soft "z" letters drift up from the side of the head.
         for (i in 0 until 3) {
@@ -1285,14 +1417,16 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         pivotX: Float = 0f, pivotY: Float = 0f, rotation: Float = 0f,
     ) {
         val bitmap = layers[name] ?: return
+        // Eye whites keep their natural colour in every skin.
+        val layerPaint = if (name.startsWith("eye_")) eyePaint else paint
         if (dx == 0f && dy == 0f && rotation == 0f) {
-            canvas.drawBitmap(bitmap, null, artRect, paint)
+            canvas.drawBitmap(bitmap, null, artRect, layerPaint)
             return
         }
         canvas.save()
         canvas.translate(dx, dy)
         if (rotation != 0f) canvas.rotate(rotation, pivotX, pivotY)
-        canvas.drawBitmap(bitmap, null, artRect, paint)
+        canvas.drawBitmap(bitmap, null, artRect, layerPaint)
         canvas.restore()
     }
 
@@ -1321,6 +1455,15 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         const val MOUTH_Y = 790f
         const val DROWSY_AFTER = 22_000L
         const val SLEEP_AFTER = 50_000L
+        val BOW_SIDES = floatArrayOf(-1f, 1f)
+
+        /** Pink recolour: mostly a warm pink tint, keeping a quarter of the original iridescence. */
+        val PINK_MATRIX = floatArrayOf(
+            .57625f, .641625f, .119625f, 0f, 15f,
+            .12375f, .493375f, .045375f, 0f, 0f,
+            .21375f, .420375f, .328375f, 0f, 18.75f,
+            0f, 0f, 0f, 1f, 0f,
+        )
         const val TEAR_CYCLE = 1_700L
         val SPARKLE_X = floatArrayOf(250f, 1_080f, 330f, 1_010f)
         val SPARKLE_Y = floatArrayOf(330f, 360f, 900f, 880f)
@@ -1389,6 +1532,8 @@ internal fun WordSiegeMascot(
     glanceX: Float = 0f,
     glanceY: Float = 0f,
     hat: WordSiegeMascotHat = WordSiegeMascotHat.NONE,
+    skin: WordSiegeMascotSkin = WordSiegeMascotSkin.ORB,
+    onLongPress: (() -> Unit)? = null,
     onTap: () -> Unit = {},
 ) {
     AndroidView(
@@ -1397,6 +1542,15 @@ internal fun WordSiegeMascot(
         update = {
             it.updateContext(urgency, momentum, idleGazeX, idleGazeY, typingKey)
             it.updateCompanion(actionKey, action, flying, flightDirection, speaking, watching, glanceKey, glanceX, glanceY, hat)
+            it.setSkin(skin)
+            if (onLongPress != null) {
+                it.setOnLongClickListener {
+                    onLongPress()
+                    true
+                }
+            } else {
+                it.setOnLongClickListener(null)
+            }
             it.updateGame(moveId, lastMoveMine, moveScore, capturedCells, opponentCaptured, moveCell, pendingCells, playerTurn, requestedEmotion)
             it.setOnClickListener { view ->
                 (view as WordSiegeMascotView).reactToTap()

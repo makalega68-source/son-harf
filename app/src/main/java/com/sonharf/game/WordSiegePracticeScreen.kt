@@ -541,6 +541,7 @@ private fun WordSiegePracticeContent(
                             null
                         },
                         playerName = playerProfile?.displayName,
+                        playerGender = playerProfile?.gender,
                         onViewportModeChange = { boardViewportMode = it },
                         onCell = { boardIndex ->
                             if (!canPlayerAct) return@WordSiegePracticeBoard

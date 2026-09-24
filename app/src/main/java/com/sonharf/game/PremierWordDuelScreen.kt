@@ -560,6 +560,7 @@ fun PremierWordDuelScreen() {
                     busy = busy,
                     notice = notice,
                     playerName = me?.displayName,
+                    playerGender = me?.gender,
                     onRematch = {
                         if (busy) return@PremierResult
                         scope.launch {
@@ -948,8 +949,8 @@ private fun PremierArena(
     }
     val mascotEmotion = when {
         mascotRoundReaction != null -> mascotRoundReaction
+        // Ordinary correct words are just watched; only a strong word draws a proud look.
         moveFeedback?.accepted == true && latestMoveScore >= 20 -> WordSiegeMascotEmotion.PROUD
-        moveFeedback?.accepted == true -> WordSiegeMascotEmotion.HAPPY
         moveFeedback?.accepted == false -> WordSiegeMascotEmotion.SAD
         myTurn && turnSeconds in 1..5 -> WordSiegeMascotEmotion.STRESSED
         myTurn -> WordSiegeMascotEmotion.FOCUS
@@ -1158,6 +1159,7 @@ private fun PremierArena(
             signal = mascotSignal,
             playerName = me?.displayName,
             touches = mascotTouches,
+            playerGender = me?.gender,
         )
 
         if (myTurn && room.validWordCount > 0) {
@@ -1910,7 +1912,7 @@ private fun PremierChatSheet(
 }
 
 @Composable
-private fun PremierResult(language: String, room: GameRoomDto, meId: String?, busy: Boolean, notice: String, onRematch: () -> Unit, onHome: () -> Unit, playerName: String? = null) {
+private fun PremierResult(language: String, room: GameRoomDto, meId: String?, busy: Boolean, notice: String, onRematch: () -> Unit, onHome: () -> Unit, playerName: String? = null, playerGender: String? = null) {
     val amHost = meId == room.hostId
     val myScore = if (amHost) room.hostScore else room.guestScore
     val rivalScore = if (amHost) room.guestScore else room.hostScore
@@ -1970,6 +1972,7 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
         modifier = Modifier.matchParentSize().statusBarsPadding(),
         outcome = mascotOutcome,
         playerName = playerName,
+        playerGender = playerGender,
         greet = false,
         stageY = .2f,
         celebrationScale = 1.9f,
