@@ -26,8 +26,8 @@ internal fun ProfessionalCollectionScreen(
             .imePadding(),
     ) {
         GameTopBar(
-            title = gameText("Eşyalarım", "My Items"),
-            subtitle = gameText("Koleksiyon ve aktif görünüm", "Collection and active look"),
+            title = gameText("Envanterim", "My Inventory"),
+            subtitle = gameText("Sahip olduğun ve kullandığın ürünler", "Items you own and use"),
             onBack = onBack,
         )
 

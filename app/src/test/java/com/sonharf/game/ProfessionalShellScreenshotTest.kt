@@ -73,6 +73,38 @@ class ProfessionalShellScreenshotTest {
     @Config(qualifiers = "w360dp-h800dp-xxhdpi")
     fun matchCenterEmpty_360x800() = captureMatchCenter("match_center_empty_360x800", MatchCenterTab.ACTIVE, empty = true)
 
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun productDetailBuy_360x800() = captureProductDetail("product_detail_buy_360x800", owned = false, equipped = false, balance = 150)
+
+    @Test
+    @Config(qualifiers = "w390dp-h844dp-xxhdpi")
+    fun productDetailEquip_390x844() = captureProductDetail("product_detail_equip_390x844", owned = true, equipped = false, balance = 900)
+
+    @Test
+    @Config(qualifiers = "w412dp-h915dp-xxhdpi")
+    fun productDetailEquipped_412x915() = captureProductDetail("product_detail_equipped_412x915", owned = true, equipped = true, balance = 900)
+
+    private fun captureProductDetail(name: String, owned: Boolean, equipped: Boolean, balance: Int) {
+        val product = com.sonharf.game.data.ShopItemDto(
+            id = "keyboard_crystal",
+            kind = "keyboard_theme",
+            nameTr = "Kristal Klavye",
+            nameEn = "Crystal Keyboard",
+            descriptionTr = "Buz mavisi harf taşları ve yumuşak parıltı.",
+            descriptionEn = "Ice-blue letter tiles with a soft glow.",
+            diamondPrice = 210,
+        )
+        compose.setContent {
+            GameTheme {
+                Box(Modifier.fillMaxSize().background(GameColors.ElevatedBackground)) {
+                    StoreProductDetailContent(product, owned, equipped, proActive = false, balance = balance, busy = false, onBuy = {}, onEquip = {}, onPro = {})
+                }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/$name.png")
+    }
+
     private fun captureMatchCenter(name: String, tab: MatchCenterTab, empty: Boolean = false) {
         compose.setContent {
             GameTheme {

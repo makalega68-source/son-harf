@@ -2,6 +2,8 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -50,12 +52,20 @@ fun EconomyShopScreen(
             title = gameText("Mağaza", "Shop"),
             subtitle = gameText("Görünüm, konfor ve prestij", "Appearance, comfort and prestige"),
             onBack = onBack,
+            trailing = {
+                // Owned items live in the inventory, separate from the catalog.
+                GameIconButton(
+                    icon = Icons.Rounded.Inventory2,
+                    description = gameText("Envanterim", "My inventory"),
+                    onClick = onCollection,
+                )
+            },
         )
         SegmentedGameTabs(
             labels = listOf(
                 gameText("Öne Çıkan", "Featured"),
-                gameText("Sezon", "Season"),
-                gameText("Görünümler", "Styles"),
+                gameText("Kozmetik", "Cosmetics"),
+                gameText("Koleksiyon", "Collections"),
                 "PRO",
             ),
             selectedIndex = tab,
@@ -64,7 +74,10 @@ fun EconomyShopScreen(
         )
         Spacer(Modifier.height(6.dp))
         Box(Modifier.weight(1f)) {
-            if (tab == 1) SeasonCenterContent()
+            if (tab == 2) StoreCollectionsTab(
+                catalog = { EconomyCatalogScreen(2, { tab = it }, { rewards = true }, onMembershipChanged, onCollection, onPro) },
+                season = { SeasonCenterContent() },
+            )
             else EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection, onPro)
         }
     }
@@ -94,6 +107,8 @@ private fun EconomyCatalogScreen(
     var showCoins by remember { mutableStateOf(false) }
     var selectedBundle by remember { mutableStateOf<StoreBundleDto?>(null) }
     var showVip by remember { mutableStateOf(false) }
+    var selectedProduct by remember { mutableStateOf<ShopItemDto?>(null) }
+    var kindFilter by remember { mutableStateOf<String?>(null) }
 
     suspend fun reload() {
         val b = backend
@@ -128,8 +143,48 @@ private fun EconomyCatalogScreen(
     fun isEquipped(item: ShopItemDto): Boolean = equipped.isEquipped(item)
 
     val filtered = when (section) {
-        2 -> items
+        1 -> items.filter { kindFilter == null || it.kind == kindFilter }
         else -> emptyList()
+    }
+
+    // Purchase and equip are server-side RPCs; the client only reports their result.
+    fun purchase(product: ShopItemDto) {
+        val b = backend ?: return
+        if (busy != null) return
+        scope.launch {
+            busy = product.id
+            val displayName = if (SonHarfUiState.isEnglish) product.nameEn else product.nameTr
+            runCatching { b.purchaseShopItem(product.id) }
+                .onSuccess {
+                    notice = gameText("$displayName satın alındı. Şimdi kullanabilirsin.", "$displayName purchased. You can equip it now.")
+                    reload()
+                }
+                .onFailure {
+                    val raw = it.message.orEmpty()
+                    notice = when {
+                        "insufficient_diamonds" in raw -> gameText("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                        "vip_required" in raw -> gameText("Bu ürün PRO üyelerine özel.", "This item is exclusive to PRO members.")
+                        "already_owned" in raw -> gameText("Bu ürüne zaten sahipsin.", "You already own this item.")
+                        else -> gameText("Satın alma tamamlanamadı.", "Purchase failed.")
+                    }
+                }
+            busy = null
+        }
+    }
+
+    fun equip(product: ShopItemDto) {
+        val b = backend ?: return
+        if (busy != null) return
+        scope.launch {
+            busy = product.id
+            runCatching { b.equipShopItem(product.id) }
+                .onSuccess {
+                    notice = gameText("Görünüm kullanılıyor.", "Style equipped.")
+                    reload()
+                }
+                .onFailure { notice = gameText("Görünüm uygulanamadı.", "Could not equip the style.") }
+            busy = null
+        }
     }
     val bundles = storefront?.bundles.orEmpty().filter { bundle ->
         bundle.items.isNotEmpty() && bundle.items.all { it.isRuntimeReadyStyle() }
@@ -200,7 +255,7 @@ private fun EconomyCatalogScreen(
                     gameText("Sezon Bileti", "Season Pass"),
                     gameText("Sezonu ve ödül yolunu keşfet", "Explore the season and reward track"),
                     gameText("İncele", "Explore"),
-                ) { onSection(1) }
+                ) { onSection(2) }
             }
             bundles.firstOrNull { it.section == "starter" }?.let { bundle ->
                 item { StoreBundleCard(bundle, owned, busy != null || loading) { selectedBundle = bundle } }
@@ -209,8 +264,8 @@ private fun EconomyCatalogScreen(
                 item { VerifiedProductsHero(items, owned) }
                 item {
                     GameSecondaryButton(
-                        text = gameText("Tüm görünümleri aç", "View all styles"),
-                        onClick = { onSection(2) },
+                        text = gameText("Tüm kozmetikleri aç", "View all cosmetics"),
+                        onClick = { onSection(1) },
                         modifier = Modifier.fillMaxWidth(),
                         icon = Icons.Rounded.Palette,
                     )
@@ -243,7 +298,34 @@ private fun EconomyCatalogScreen(
             }
         }
 
-        if (filtered.isEmpty() && !loading && section == 2) {
+        if (section == 1) {
+            val kinds = items.map { it.kind }.distinct()
+            if (kinds.size > 1) item {
+                StoreKindFilter(kinds = kinds, selected = kindFilter, onSelect = { kindFilter = it })
+            }
+        }
+
+        if (section == 2) {
+            // Collections come from the catalog's bundle sections; nothing is hard-coded per season.
+            val groups = bundles.groupBy { it.section }
+            if (groups.isEmpty() && !loading) item {
+                GameEmptyState(
+                    icon = Icons.Rounded.CollectionsBookmark,
+                    title = gameText("Aktif koleksiyon yok", "No active collections"),
+                    body = gameText("Sezon ve etkinlik koleksiyonları yayınlandığında burada görünür.", "Season and event collections appear here when they go live."),
+                )
+            }
+            groups.forEach { (section, group) ->
+                item(key = "collection-$section") { StoreCollectionTitle(section) }
+                group.forEach { bundle ->
+                    item(key = "bundle-${bundle.id}") {
+                        StoreBundleCard(bundle, owned, busy != null || loading) { selectedBundle = bundle }
+                    }
+                }
+            }
+        }
+
+        if (filtered.isEmpty() && !loading && section == 1) {
             item {
                 GameEmptyState(
                     icon = Icons.Rounded.Storefront,
@@ -276,32 +358,7 @@ private fun EconomyCatalogScreen(
                     ) {
                         val b = backend
                         if (b == null || busy != null) return@VerifiedStoreProductCard
-                        scope.launch {
-                            busy = product.id
-                            val displayName = if (SonHarfUiState.isEnglish) product.nameEn else product.nameTr
-                            if (mine) {
-                                onCollection()
-                            } else {
-                                runCatching { b.purchaseShopItem(product.id) }
-                                    .onSuccess {
-                                        notice = gameText(
-                                            "$displayName satın alındı. Profil > Koleksiyonum'dan kullanabilirsin.",
-                                            "$displayName purchased. Equip it from Profile > My Collection.",
-                                        )
-                                        reload()
-                                    }
-                                    .onFailure {
-                                        val raw = it.message.orEmpty()
-                                        notice = when {
-                                            "insufficient_diamonds" in raw -> gameText("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
-                                            "vip_required" in raw -> gameText("Bu ürün PRO üyelerine özel.", "This item is exclusive to PRO members.")
-                                            "already_owned" in raw -> gameText("Bu ürüne zaten sahipsin.", "You already own this item.")
-                                            else -> gameText("Satın alma tamamlanamadı.", "Purchase failed.")
-                                        }
-                                    }
-                            }
-                            busy = null
-                        }
+                        selectedProduct = product
                     }
                 }
                 if (twoColumnProducts && group.size == 1) Spacer(Modifier.weight(1f))
@@ -359,6 +416,24 @@ private fun EconomyCatalogScreen(
     }
 
     if (showVip) VipPurchaseDialog(onVerified = { scope.launch { reload() } }) { showVip = false }
+
+    selectedProduct?.let { product ->
+        StoreProductDetailSheet(
+            item = product,
+            owned = product.id in owned,
+            equipped = isEquipped(product),
+            proActive = profile?.isVip == true,
+            balance = profile?.diamonds ?: 0,
+            busy = busy != null || loading,
+            onBuy = { purchase(product) },
+            onEquip = { equip(product) },
+            onPro = {
+                selectedProduct = null
+                onSection(3)
+            },
+            onDismiss = { selectedProduct = null },
+        )
+    }
 
     if (showCoins) {
         ModalBottomSheet(
@@ -518,7 +593,10 @@ private fun VerifiedStoreProductCard(
     val description = if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr
     val lockedByPro = item.vipOnly && !proActive && !owned
 
+    // The whole card opens the product detail sheet, including PRO-only and equipped items.
     Surface(
+        onClick = onAction,
+        enabled = !busy,
         modifier = modifier,
         color = GameColors.PrimarySurface,
         shape = GameShapes.Large,
@@ -585,8 +663,8 @@ private fun VerifiedStoreProductCard(
                     Spacer(Modifier.width(4.dp))
                     Text(
                         when {
-                            equipped -> gameText("AKTİF", "ACTIVE")
-                            owned -> gameText("KOLEKSİYON", "COLLECTION")
+                            equipped -> gameText("KULLANILIYOR", "EQUIPPED")
+                            owned -> gameText("KULLAN", "EQUIP")
                             lockedByPro -> "PRO"
                             else -> gameText("SATIN AL", "BUY")
                         },
@@ -644,8 +722,8 @@ private fun VerifiedStoreProductCard(
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 when {
-                                    equipped -> gameText("AKTİF", "ACTIVE")
-                                    owned -> gameText("KOLEKSİYON", "COLLECTION")
+                                    equipped -> gameText("KULLANILIYOR", "EQUIPPED")
+                                    owned -> gameText("KULLAN", "EQUIP")
                                     lockedByPro -> "PRO"
                                     else -> gameText("SATIN AL", "BUY")
                                 },
@@ -707,6 +785,67 @@ private fun ProShopCard(active: Boolean, onClick: () -> Unit) {
                 color = GameColors.PlayGreen,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+/** KOLEKSİYON: catalog collections (bundle sections) and the season store. */
+@Composable
+private fun StoreCollectionsTab(catalog: @Composable () -> Unit, season: @Composable () -> Unit) {
+    var sub by remember { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        SegmentedGameTabs(
+            labels = listOf(gameText("Koleksiyonlar", "Collections"), gameText("Sezon", "Season")),
+            selectedIndex = sub,
+            onSelected = { sub = it },
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
+        Box(Modifier.weight(1f)) { if (sub == 1) season() else catalog() }
+    }
+}
+
+@Composable
+private fun StoreCollectionTitle(section: String) {
+    val title = when (section) {
+        "starter" -> gameText("Başlangıç koleksiyonu", "Starter collection")
+        "limited" -> gameText("Sınırlı süreli koleksiyon", "Limited-time collection")
+        "season" -> gameText("Sezon koleksiyonu", "Season collection")
+        "tournament" -> gameText("Turnuva koleksiyonu", "Tournament collection")
+        "league" -> gameText("Lig koleksiyonu", "League collection")
+        else -> section.replace('_', ' ').replaceFirstChar { it.titlecase() }
+    }
+    Text(title, color = GameColors.Lavender, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black)
+}
+
+@Composable
+private fun StoreKindFilter(kinds: List<String>, selected: String?, onSelect: (String?) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        FilterChip(
+            selected = selected == null,
+            onClick = { onSelect(null) },
+            label = { Text(gameText("Tümü", "All")) },
+            colors = FilterChipDefaults.filterChipColors(
+                containerColor = GameColors.PrimarySurface,
+                labelColor = GameColors.TextSecondary,
+                selectedContainerColor = GameColors.Lavender.copy(alpha = .22f),
+                selectedLabelColor = GameColors.TextPrimary,
+            ),
+        )
+        kinds.forEach { kind ->
+            FilterChip(
+                selected = selected == kind,
+                onClick = { onSelect(kind) },
+                label = { Text(storeKindLabel(kind), maxLines = 1) },
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = GameColors.PrimarySurface,
+                    labelColor = GameColors.TextSecondary,
+                    selectedContainerColor = GameColors.Lavender.copy(alpha = .22f),
+                    selectedLabelColor = GameColors.TextPrimary,
+                ),
             )
         }
     }

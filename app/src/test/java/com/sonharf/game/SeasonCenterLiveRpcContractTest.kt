@@ -65,7 +65,9 @@ class SeasonCenterLiveRpcContractTest {
 
         assertTrue(shop.contains("initialTab.coerceIn(0, 3)"))
         assertTrue(shop.contains("gameText(\"Sezon\", \"Season\")"))
-        assertTrue(shop.contains("if (tab == 1) SeasonCenterContent()"))
+        // The season store sits under KOLEKSİYON > Sezon.
+        assertTrue(shop.contains("if (tab == 2) StoreCollectionsTab("))
+        assertTrue(shop.contains("season = { SeasonCenterContent() }"))
         assertTrue(screen.contains("SeasonPassPurchaseCard"))
         assertTrue(screen.contains("heightIn(min = 48.dp)"))
         assertTrue(screen.contains("maç gücü, rating, süre veya rekabet avantajı vermez"))
