@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,7 +23,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
-private enum class ProfessionalSocialTab { FRIENDS, ONLINE, REQUESTS, RIVALS }
+private enum class ProfessionalSocialTab { FRIENDS, INVITES, MESSAGES, RIVALS }
 
 @Composable
 internal fun ProfessionalSocialScreen(
@@ -50,6 +51,10 @@ internal fun ProfessionalSocialScreen(
     var showSearch by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<ProfileDto>>(emptyList()) }
+    var onlineOnly by remember { mutableStateOf(false) }
+    var openProfileId by remember { mutableStateOf<String?>(null) }
+    var messageFriend by remember { mutableStateOf<ProfileDto?>(null) }
+    var conversations by remember { mutableStateOf<List<DirectConversation>>(emptyList()) }
 
     suspend fun reload() = coroutineScope {
         loading = true
@@ -61,6 +66,7 @@ internal fun ProfessionalSocialScreen(
         val rivalTask = async { runCatching { backend.getRivalHistory(30) }.getOrDefault(emptyList()) }
         val historyTask = async { runCatching { backend.getMatchHistory(30) }.getOrDefault(emptyList()) }
         val archTask = async { runCatching { backend.getArchRival() }.getOrNull() }
+        val conversationTask = async { runCatching { backend.getDirectConversations() }.getOrDefault(emptyList()) }
 
         friends = friendTask.await()
         friendships = friendshipTask.await()
@@ -70,6 +76,7 @@ internal fun ProfessionalSocialScreen(
         rivals = rivalTask.await()
         matchHistory = historyTask.await()
         archRival = archTask.await()
+        conversations = conversationTask.await()
 
         val senders = linkedMapOf<String, ProfileDto>()
         (invites.map { it.senderId } + siegeInvites.map { it.senderId }).distinct().forEach { id ->
@@ -156,6 +163,7 @@ internal fun ProfessionalSocialScreen(
             items(results, key = { "search:${it.id}" }) { player ->
                 val relation = friendships.firstOrNull { it.userId == player.id || it.friendId == player.id }
                 SearchPlayerRow(
+                    onOpen = { openProfileId = player.id },
                     player = player,
                     relationStatus = relation?.status,
                     busy = busyKey == player.id,
@@ -177,8 +185,8 @@ internal fun ProfessionalSocialScreen(
             SegmentedGameTabs(
                 labels = listOf(
                     gameText("Arkadaşlar", "Friends"),
-                    gameText("Çevrimiçi", "Online"),
-                    if (incomingCount > 0) gameText("İstekler $incomingCount", "Requests $incomingCount") else gameText("İstekler", "Requests"),
+                    if (incomingCount > 0) gameText("Davetler $incomingCount", "Invites $incomingCount") else gameText("Davetler", "Invites"),
+                    gameText("Mesajlar", "Messages"),
                     gameText("Rakipler", "Rivals"),
                 ),
                 selectedIndex = tab.ordinal,
@@ -187,16 +195,29 @@ internal fun ProfessionalSocialScreen(
         }
 
         when (tab) {
-            ProfessionalSocialTab.FRIENDS,
-            ProfessionalSocialTab.ONLINE -> {
-                val visibleFriends = if (tab == ProfessionalSocialTab.ONLINE) onlineFriends else friends
+            ProfessionalSocialTab.FRIENDS -> {
+                val visibleFriends = if (onlineOnly) onlineFriends else friends
+                if (friends.isNotEmpty()) item(key = "online-filter") {
+                    FilterChip(
+                        selected = onlineOnly,
+                        onClick = { onlineOnly = !onlineOnly },
+                        label = { Text(gameText("Yalnızca çevrimiçi (${onlineFriends.size})", "Online only (${onlineFriends.size})")) },
+                        leadingIcon = { Icon(Icons.Rounded.Circle, null, tint = GameColors.PlayGreen, modifier = Modifier.size(10.dp)) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = GameColors.PrimarySurface,
+                            labelColor = GameColors.TextSecondary,
+                            selectedContainerColor = GameColors.PlayGreen.copy(alpha = .18f),
+                            selectedLabelColor = GameColors.TextPrimary,
+                        ),
+                    )
+                }
                 if (proChecked && !isPro) {
                     item { ProfessionalFriendLock { vipDialog = true } }
                 } else if (visibleFriends.isEmpty() && !loading) {
                     item {
                         GameEmptyState(
-                            icon = if (tab == ProfessionalSocialTab.ONLINE) Icons.Rounded.WifiOff else Icons.Rounded.GroupAdd,
-                            title = if (tab == ProfessionalSocialTab.ONLINE) gameText("Çevrimiçi arkadaş yok", "No friends online") else gameText("Henüz arkadaşın yok", "No friends yet"),
+                            icon = if (onlineOnly) Icons.Rounded.WifiOff else Icons.Rounded.GroupAdd,
+                            title = if (onlineOnly) gameText("Çevrimiçi arkadaş yok", "No friends online") else gameText("Henüz arkadaşın yok", "No friends yet"),
                             body = gameText("Oyuncu Bul ile yeni rakip ve arkadaşlar ekleyebilirsin.", "Use Find Player to add new friends and rivals."),
                             actionText = gameText("OYUNCU BUL", "FIND PLAYER"),
                             onAction = { showSearch = true },
@@ -207,6 +228,7 @@ internal fun ProfessionalSocialScreen(
                         ProfessionalFriendRow(
                             friend = friend,
                             busy = busyKey == friend.id,
+                            onOpen = { openProfileId = friend.id },
                             onInvite = {
                                 if (busyKey != null) return@ProfessionalFriendRow
                                 scope.launch {
@@ -232,7 +254,33 @@ internal fun ProfessionalSocialScreen(
                 }
             }
 
-            ProfessionalSocialTab.REQUESTS -> {
+            ProfessionalSocialTab.MESSAGES -> {
+                if (proChecked && !isPro) {
+                    item { ProfessionalFriendLock { vipDialog = true } }
+                } else if (conversations.isEmpty() && !loading) {
+                    item {
+                        GameEmptyState(
+                            icon = Icons.Rounded.ChatBubbleOutline,
+                            title = gameText("Henüz mesajın yok", "No messages yet"),
+                            body = gameText("Bir arkadaşının profilinden MESAJ ile sohbet başlatabilirsin.", "Start a chat from a friend's profile with MESSAGE."),
+                        )
+                    }
+                }
+                if (!(proChecked && !isPro)) {
+                    items(conversations, key = { "dm:${it.friendId}" }) { conversation ->
+                        val friend = friends.firstOrNull { it.second.id == conversation.friendId }?.second
+                        ConversationRow(
+                            name = friend?.displayName ?: gameText("Oyuncu", "Player"),
+                            preview = conversation.lastBody,
+                            fromMe = conversation.lastFromMe,
+                            enabled = friend != null,
+                            onOpen = { friend?.let { messageFriend = it } },
+                        )
+                    }
+                }
+            }
+
+            ProfessionalSocialTab.INVITES -> {
                 if (requests.isEmpty() && invites.isEmpty() && siegeInvites.isEmpty() && !loading) {
                     item {
                         GameEmptyState(
@@ -330,12 +378,13 @@ internal fun ProfessionalSocialScreen(
             }
 
             ProfessionalSocialTab.RIVALS -> {
-                archRival?.let { rival -> item { ArchRivalCard(rival) } }
+                archRival?.let { rival -> item { ArchRivalCard(rival) { openProfileId = rival.opponentId } } }
                 if (rivals.isNotEmpty()) item { GameSectionHeader(gameText("Rakip Geçmişi", "Rival History")) }
                 items(rivals, key = { "rival:${it.opponentId}" }) { rival ->
                     RivalRow(
                         rival = rival,
                         busy = busyKey == rival.opponentId,
+                        onOpen = { openProfileId = rival.opponentId },
                         onRematch = {
                             if (busyKey != null) return@RivalRow
                             scope.launch {
@@ -386,6 +435,29 @@ internal fun ProfessionalSocialScreen(
             onDismiss = { vipDialog = false },
         )
     }
+
+    openProfileId?.let { id ->
+        val record = rivals.firstOrNull { it.opponentId == id }
+        PlayerProfileSheet(
+            backend = backend,
+            playerId = id,
+            friendships = friendships,
+            headToHead = record?.let { PlayerHeadToHead(it.matches, it.wins, it.losses) },
+            onMessage = { friend ->
+                openProfileId = null
+                messageFriend = friend
+            },
+            onChanged = { scope.launch { reload() } },
+            onDismiss = { openProfileId = null },
+        )
+    }
+
+    messageFriend?.let { friend ->
+        DirectMessageSheet(backend = backend, friend = friend) {
+            messageFriend = null
+            scope.launch { reload() }
+        }
+    }
 }
 
 @Composable
@@ -432,9 +504,9 @@ private fun PlayerSearchCard(query: String, onQuery: (String) -> Unit, busy: Boo
 }
 
 @Composable
-private fun SearchPlayerRow(player: ProfileDto, relationStatus: String?, busy: Boolean, onAdd: () -> Unit) {
+private fun SearchPlayerRow(player: ProfileDto, relationStatus: String?, busy: Boolean, onOpen: () -> Unit = {}, onAdd: () -> Unit) {
     GameSurface {
-        Row(Modifier.padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.clickable(onClick = onOpen).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
             ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = if (player.isVip) GameColors.PrestigeGold else GameColors.PrimaryBlue, visible = player.avatarVisibility != "hidden")
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
@@ -466,9 +538,9 @@ private fun ProfessionalFriendLock(onUpgrade: () -> Unit) {
 }
 
 @Composable
-private fun ProfessionalFriendRow(friend: ProfileDto, busy: Boolean, onInvite: () -> Unit, onRemove: () -> Unit) {
+private fun ProfessionalFriendRow(friend: ProfileDto, busy: Boolean, onOpen: () -> Unit, onInvite: () -> Unit, onRemove: () -> Unit) {
     GameSurface {
-        Row(Modifier.padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.clickable(onClick = onOpen).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
             Box {
                 ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 46.dp, accent = if (friend.isVip) GameColors.PrestigeGold else GameColors.PrimaryBlue, visible = friend.avatarVisibility != "hidden")
                 Box(Modifier.align(Alignment.BottomEnd).size(11.dp).padding(1.dp)) {
@@ -533,8 +605,8 @@ private fun GameInviteCard(
 }
 
 @Composable
-private fun ArchRivalCard(rival: ArchRivalDto) {
-    Surface(modifier = Modifier.fillMaxWidth(), shape = GameShapes.Large, color = GameColors.RewardAmber.copy(alpha = .10f), border = BorderStroke(1.dp, GameColors.RewardAmber.copy(alpha = .35f))) {
+private fun ArchRivalCard(rival: ArchRivalDto, onOpen: () -> Unit) {
+    Surface(onClick = onOpen, modifier = Modifier.fillMaxWidth(), shape = GameShapes.Large, color = GameColors.RewardAmber.copy(alpha = .10f), border = BorderStroke(1.dp, GameColors.RewardAmber.copy(alpha = .35f))) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = CircleShape, color = GameColors.RewardAmber.copy(alpha = .14f)) {
                 Icon(Icons.Rounded.Swords, null, tint = GameColors.RewardAmber, modifier = Modifier.padding(10.dp).size(24.dp))
@@ -543,7 +615,7 @@ private fun ArchRivalCard(rival: ArchRivalDto) {
             Column(Modifier.weight(1f)) {
                 Text(gameText("EZELİ RAKİP", "ARCH RIVAL"), color = GameColors.RewardAmber, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Text(rival.displayName, color = GameColors.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${rival.matches} ${gameText("maç", "matches")} • ${rival.wins}W ${rival.losses}L", color = GameColors.TextSecondary, fontSize = 9.sp)
+                Text(gameText("Aranızda ${rival.matches} maç: ${rival.wins}–${rival.losses}", "${rival.matches} matches between you: ${rival.wins}–${rival.losses}"), color = GameColors.TextSecondary, fontSize = 10.sp)
             }
             Text("${rival.myPoints}:${rival.theirPoints}", color = GameColors.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
@@ -551,9 +623,9 @@ private fun ArchRivalCard(rival: ArchRivalDto) {
 }
 
 @Composable
-private fun RivalRow(rival: RivalHistoryDto, busy: Boolean, onRematch: () -> Unit) {
+private fun RivalRow(rival: RivalHistoryDto, busy: Boolean, onOpen: () -> Unit, onRematch: () -> Unit) {
     GameSurface {
-        Row(Modifier.padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.clickable(onClick = onOpen).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = CircleShape, color = if (rival.presenceStatus == "online") GameColors.PlayGreen.copy(alpha = .12f) else GameColors.SecondarySurface) {
                 Icon(Icons.Rounded.Person, null, tint = if (rival.presenceStatus == "online") GameColors.PlayGreen else GameColors.TextSecondary, modifier = Modifier.padding(8.dp).size(20.dp))
             }
@@ -583,6 +655,29 @@ private fun MatchHistoryRow(match: MatchHistoryDto) {
                 Text("${match.myScore}-${match.theirScore} • ${if (match.ratingDelta >= 0) "+" else ""}${match.ratingDelta} rating", color = GameColors.TextSecondary, fontSize = 8.5.sp)
             }
             if (match.isFriend) Icon(Icons.Rounded.People, null, tint = GameColors.PrimaryBlue, modifier = Modifier.size(17.dp))
+        }
+    }
+}
+
+@Composable
+private fun ConversationRow(name: String, preview: String, fromMe: Boolean, enabled: Boolean, onOpen: () -> Unit) {
+    GameSurface {
+        Row(Modifier.clickable(enabled = enabled, onClick = onOpen).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = GameColors.PrimaryBlue.copy(alpha = .14f)) {
+                Icon(Icons.Rounded.ChatBubbleOutline, null, tint = GameColors.PrimaryBlue, modifier = Modifier.padding(9.dp).size(20.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(name, color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    (if (fromMe) gameText("Sen: ", "You: ") else "") + preview,
+                    color = GameColors.TextSecondary,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Icon(Icons.Rounded.ChevronRight, null, tint = GameColors.TextTertiary)
         }
     }
 }

@@ -85,6 +85,34 @@ class ProfessionalShellScreenshotTest {
     @Config(qualifiers = "w412dp-h915dp-xxhdpi")
     fun productDetailEquipped_412x915() = captureProductDetail("product_detail_equipped_412x915", owned = true, equipped = true, balance = 900)
 
+    @Test
+    @Config(qualifiers = "w360dp-h800dp-xxhdpi")
+    fun playerProfileFriend_360x800() = capturePlayerProfile("player_profile_friend_360x800", PlayerRelation.FRIEND, PlayerHeadToHead(10, 6, 4))
+
+    @Test
+    @Config(qualifiers = "w412dp-h915dp-xxhdpi")
+    fun playerProfileStranger_412x915() = capturePlayerProfile("player_profile_stranger_412x915", PlayerRelation.NONE, null)
+
+    private fun capturePlayerProfile(name: String, relation: PlayerRelation, record: PlayerHeadToHead?) {
+        val player = com.sonharf.game.data.ProfileDto(
+            id = "p1",
+            displayName = "Deniz Aksoy",
+            presenceStatus = "online",
+            isVip = true,
+            wins = 48,
+            losses = 31,
+            rating = 1342,
+        )
+        compose.setContent {
+            GameTheme {
+                Box(Modifier.fillMaxSize().background(GameColors.ElevatedBackground)) {
+                    PlayerProfileContent(player, relation, record, busy = false, notice = null, onAddFriend = {}, onInvite = {}, onMessage = {}, onBlock = {}, onReport = {})
+                }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/$name.png")
+    }
+
     private fun captureProductDetail(name: String, owned: Boolean, equipped: Boolean, balance: Int) {
         val product = com.sonharf.game.data.ShopItemDto(
             id = "keyboard_crystal",
