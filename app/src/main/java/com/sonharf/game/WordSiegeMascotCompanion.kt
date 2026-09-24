@@ -448,6 +448,8 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
         stayCalm: Boolean,
         rivalTurn: Boolean = false,
         playfulness: Float = 1f,
+        /** The character's own habits: extra weight per idle (see [WordSiegeMascotPersonality]). */
+        bias: Map<WordSiegeMascotIdle, Float> = emptyMap(),
     ): WordSiegeMascotIdle {
         val options = if (stayCalm) {
             // The player is thinking or under pressure: do not distract.
@@ -468,7 +470,8 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
                 WordSiegeMascotIdle.CHASE to .22f * playfulness,
             )
         }
-        val weighted = options.map { (idle, weight) ->
+        val weighted = options.map { (idle, baseWeight) ->
+            val weight = baseWeight * (bias[idle] ?: 1f)
             val w = when {
                 !ready("idle:$idle", cooldown(idle), now) -> 0f
                 idle != WordSiegeMascotIdle.WATCH && idle in recentIdle -> weight * .15f
@@ -636,6 +639,9 @@ internal fun WordSiegeMascotCompanion(
         else -> ownedSkins.minBy { it.ordinal }
     }
 
+    // Each character has its own temperament and voice.
+    val personality = WordSiegeMascotPersonality.of(skin)
+    val currentPersonality by rememberUpdatedState(personality)
     val currentUrgency by rememberUpdatedState(urgency)
     val currentPendingCount by rememberUpdatedState(pendingCells.size)
     val currentAnchors by rememberUpdatedState(anchors)
@@ -693,6 +699,10 @@ internal fun WordSiegeMascotCompanion(
                 y.coerceIn(half, max(half, area.height - half)),
             )
         }
+
+        /** The current character's lines for [topic], or the shared ones. */
+        fun lines(topic: WordSiegeMascotTopic, fallback: List<Pair<String, String>>) =
+            currentPersonality.lines(topic, fallback)
 
         fun perform(next: WordSiegeMascotAction) {
             action = next
@@ -792,10 +802,10 @@ internal fun WordSiegeMascotCompanion(
             val poked = tapTimes.size >= 3 && now - tapTimes[tapTimes.size - 3] < 2_500L
             startTrip {
                 when {
-                    poked && mind.chance(.8f) -> say(mind.line(WordSiegeMascotLines.poked, currentName))
+                    poked && mind.chance(.8f) -> say(mind.line(lines(WordSiegeMascotTopic.POKED, WordSiegeMascotLines.poked), currentName))
                     mind.ready("talk:tap", 12_000L, now) && mind.chance(.35f) -> {
                         mind.mark("talk:tap", now)
-                        say(mind.line(WordSiegeMascotLines.tap, currentName))
+                        say(mind.line(lines(WordSiegeMascotTopic.TAP, WordSiegeMascotLines.tap), currentName))
                     }
                 }
                 delay(150L)
@@ -841,17 +851,17 @@ internal fun WordSiegeMascotCompanion(
                         perform(WordSiegeMascotAction.SPARKLE)
                         say(mind.line(WordSiegeMascotLines.anniversary, currentName), holdExtraMillis = 800L)
                     }
-                    meetings <= 1 -> say(mind.line(WordSiegeMascotLines.greetFirst, currentName))
+                    meetings <= 1 -> say(mind.line(lines(WordSiegeMascotTopic.GREET_FIRST, WordSiegeMascotLines.greetFirst), currentName))
                     daysAway >= 3L -> say(mind.line(WordSiegeMascotLines.missed, currentName))
                     mind.chance(.7f) -> {
-                        val lines = when {
+                        val greetLines = when {
                             hour in 5..10 && mind.chance(.6f) -> WordSiegeMascotLines.morning
                             (hour >= 23 || hour < 5) && mind.chance(.7f) -> WordSiegeMascotLines.night
                             bond.level >= 2 -> WordSiegeMascotLines.greetBest
                             bond.level == 1 -> WordSiegeMascotLines.greetFriend
-                            else -> WordSiegeMascotLines.greet
+                            else -> lines(WordSiegeMascotTopic.GREET, WordSiegeMascotLines.greet)
                         }
-                        say(mind.line(lines, currentName))
+                        say(mind.line(greetLines, currentName))
                     }
                 }
             }
@@ -867,7 +877,14 @@ internal fun WordSiegeMascotCompanion(
                     continue
                 }
                 val stayCalm = currentUrgency > .3f || currentPendingCount > 0 || now - lastTypingAt < 3_000L
-                val choice = mind.pickIdle(now, bond.level, stayCalm, rivalTurn = !currentPlayerTurn, playfulness = moodFactor)
+                val choice = mind.pickIdle(
+                    now,
+                    bond.level,
+                    stayCalm,
+                    rivalTurn = !currentPlayerTurn,
+                    playfulness = moodFactor * currentPersonality.playfulness,
+                    bias = currentPersonality.idleBias,
+                )
                 when (choice) {
                     WordSiegeMascotIdle.WATCH -> watching = true
                     WordSiegeMascotIdle.LOOK_AROUND -> {
@@ -885,7 +902,7 @@ internal fun WordSiegeMascotCompanion(
                         perform(WordSiegeMascotAction.TWIRL)
                         if (mind.chance(.3f)) {
                             delay(900L)
-                            say(mind.line(WordSiegeMascotLines.twirl, currentName))
+                            say(mind.line(lines(WordSiegeMascotTopic.TWIRL, WordSiegeMascotLines.twirl), currentName))
                         }
                     }
                     WordSiegeMascotIdle.FLIP -> {
@@ -893,13 +910,13 @@ internal fun WordSiegeMascotCompanion(
                         perform(WordSiegeMascotAction.FLIP)
                         if (mind.chance(.4f)) {
                             delay(700L)
-                            say(mind.line(WordSiegeMascotLines.flip, currentName))
+                            say(mind.line(lines(WordSiegeMascotTopic.FLIP, WordSiegeMascotLines.flip), currentName))
                         }
                     }
                     WordSiegeMascotIdle.CHAT -> {
                         val memory = if (mind.chance(.35f)) memoryLine() else null
-                        val lines = if (bond.level >= 1 && mind.chance(.5f)) WordSiegeMascotLines.chatFriend else WordSiegeMascotLines.chat
-                        say(memory ?: mind.line(lines, currentName))
+                        val chatLines = if (bond.level >= 1 && mind.chance(.4f)) WordSiegeMascotLines.chatFriend else lines(WordSiegeMascotTopic.CHAT, WordSiegeMascotLines.chat)
+                        say(memory ?: mind.line(chatLines, currentName))
                     }
                     WordSiegeMascotIdle.WANDER -> {
                         watching = false
@@ -966,42 +983,44 @@ internal fun WordSiegeMascotCompanion(
             fun speakIf(topic: String, cooldown: Long, probability: Float, lines: List<Pair<String, String>>) {
                 // Apart from real emergencies it keeps long quiet stretches between remarks.
                 val urgent = topic == "critical"
-                if (!urgent && !mind.ready("talk:any", 40_000L, now)) return
-                if (mind.ready("talk:$topic", cooldown, now) && mind.chance(probability)) {
+                val chattiness = currentPersonality.chattiness
+                if (!urgent && !mind.ready("talk:any", (40_000L / chattiness).toLong(), now)) return
+                val chance = if (urgent) probability else (probability * chattiness).coerceAtMost(1f)
+                if (mind.ready("talk:$topic", cooldown, now) && mind.chance(chance)) {
                     mind.mark("talk:$topic", now)
                     mind.mark("talk:any", now)
                     say(mind.line(lines, currentName, number = current.count, word = current.word))
                 }
             }
             when (current.event) {
-                WordSiegeMascotEvent.PRAISE -> speakIf("praise", 60_000L, .15f, WordSiegeMascotLines.praise)
+                WordSiegeMascotEvent.PRAISE -> speakIf("praise", 60_000L, .15f, lines(WordSiegeMascotTopic.PRAISE, WordSiegeMascotLines.praise))
                 WordSiegeMascotEvent.BIG_PRAISE -> {
                     delay(700L)
                     if (mind.ready("act:praise", 30_000L, now)) {
                         mind.mark("act:praise", now)
                         perform(WordSiegeMascotAction.SPARKLE)
                     }
-                    speakIf("praise", 30_000L, .5f, WordSiegeMascotLines.bigPraise)
+                    speakIf("praise", 30_000L, .5f, lines(WordSiegeMascotTopic.BIG_PRAISE, WordSiegeMascotLines.bigPraise))
                 }
                 WordSiegeMascotEvent.RARE_WORD -> {
                     delay(500L)
                     perform(WordSiegeMascotAction.SPARKLE)
-                    speakIf("rare", 20_000L, .85f, WordSiegeMascotLines.rareWord)
+                    speakIf("rare", 20_000L, .85f, lines(WordSiegeMascotTopic.RARE_WORD, WordSiegeMascotLines.rareWord))
                 }
-                WordSiegeMascotEvent.COMFORT -> speakIf("comfort", 45_000L, .4f, WordSiegeMascotLines.comfort)
+                WordSiegeMascotEvent.COMFORT -> speakIf("comfort", 45_000L, .4f, lines(WordSiegeMascotTopic.COMFORT, WordSiegeMascotLines.comfort))
                 WordSiegeMascotEvent.CRITICAL -> {
                     watching = false
-                    speakIf("critical", 25_000L, 1f, WordSiegeMascotLines.critical)
+                    speakIf("critical", 25_000L, 1f, lines(WordSiegeMascotTopic.CRITICAL, WordSiegeMascotLines.critical))
                 }
-                WordSiegeMascotEvent.BEHIND -> speakIf("behind", 70_000L, .55f, WordSiegeMascotLines.behind)
+                WordSiegeMascotEvent.BEHIND -> speakIf("behind", 70_000L, .55f, lines(WordSiegeMascotTopic.BEHIND, WordSiegeMascotLines.behind))
                 WordSiegeMascotEvent.RIVAL_STRONG -> {
                     // Let the sad reaction play first, then lift the player's spirits.
                     delay(1_100L)
-                    speakIf("rival", 60_000L, .4f, WordSiegeMascotLines.rivalStrong)
+                    speakIf("rival", 60_000L, .4f, lines(WordSiegeMascotTopic.RIVAL_STRONG, WordSiegeMascotLines.rivalStrong))
                 }
                 WordSiegeMascotEvent.AHEAD -> {
                     if (mind.ready("talk:ahead", 90_000L, now) && mind.chance(.35f)) perform(WordSiegeMascotAction.NOD)
-                    speakIf("ahead", 90_000L, .35f, WordSiegeMascotLines.ahead)
+                    speakIf("ahead", 90_000L, .35f, lines(WordSiegeMascotTopic.AHEAD, WordSiegeMascotLines.ahead))
                 }
                 WordSiegeMascotEvent.STREAK -> {
                     // Each step of a streak is celebrated a little bigger.
@@ -1010,7 +1029,7 @@ internal fun WordSiegeMascotCompanion(
                         mind.mark("act:streak", now)
                         perform(if (current.count >= 5) WordSiegeMascotAction.CHEER else WordSiegeMascotAction.HOP)
                     }
-                    speakIf("streak", 30_000L, if (current.count >= 5) .8f else .4f, WordSiegeMascotLines.streak)
+                    speakIf("streak", 30_000L, if (current.count >= 5) .8f else .4f, lines(WordSiegeMascotTopic.STREAK, WordSiegeMascotLines.streak))
                 }
                 WordSiegeMascotEvent.STREAK_LOST -> {
                     perform(WordSiegeMascotAction.SHRUG)
@@ -1106,7 +1125,7 @@ internal fun WordSiegeMascotCompanion(
                             val line = if (bond.winStreak >= 2 && mind.chance(.6f)) {
                                 mind.line(WordSiegeMascotLines.memoryStreak, currentName, number = bond.winStreak)
                             } else {
-                                mind.line(WordSiegeMascotLines.win, currentName)
+                                mind.line(lines(WordSiegeMascotTopic.WIN, WordSiegeMascotLines.win), currentName)
                             }
                             say(line, holdExtraMillis = 1_200L)
                             delay(1_700L)
@@ -1128,7 +1147,7 @@ internal fun WordSiegeMascotCompanion(
                             launch { scale.animateTo(1.3f, tween(900)) }
                             flyTo(STAGE, 1_100)
                             delay(700L)
-                            say(mind.line(WordSiegeMascotLines.loss, currentName), holdExtraMillis = 1_500L)
+                            say(mind.line(lines(WordSiegeMascotTopic.LOSS, WordSiegeMascotLines.loss), currentName), holdExtraMillis = 1_500L)
                             delay(3_400L)
                             // After the tears, a brave little smile for the player.
                             stageEmotion = WordSiegeMascotEmotion.CALM
@@ -1139,7 +1158,7 @@ internal fun WordSiegeMascotCompanion(
                             stageEmotion = WordSiegeMascotEmotion.SURPRISED
                             launch { scale.animateTo(1.4f, tween(900)) }
                             flyTo(STAGE, 1_000)
-                            say(mind.line(WordSiegeMascotLines.draw, currentName))
+                            say(mind.line(lines(WordSiegeMascotTopic.DRAW, WordSiegeMascotLines.draw), currentName))
                             delay(1_200L)
                             stageEmotion = WordSiegeMascotEmotion.HAPPY
                             perform(WordSiegeMascotAction.HOP)
@@ -1250,12 +1269,8 @@ internal fun WordSiegeMascotCompanion(
                         skinChoice = next
                         bond.skinChoice = next
                         perform(WordSiegeMascotAction.SPARKLE)
-                        val lines = when (next) {
-                            WordSiegeMascotSkin.PINK -> WordSiegeMascotLines.skinPink
-                            WordSiegeMascotSkin.ORB -> WordSiegeMascotLines.skinOrb
-                            else -> WordSiegeMascotLines.skinNew
-                        }
-                        say(mind.line(lines, currentName))
+                        // The newly chosen character introduces itself in its own voice.
+                        say(mind.line(WordSiegeMascotPersonality.of(next).lines(WordSiegeMascotTopic.HELLO, WordSiegeMascotLines.skinNew), currentName))
                     }
                 },
                 onDismiss = { showPicker = false },
@@ -1307,13 +1322,13 @@ internal fun WordSiegeMascotPicker(
                                     lastMoveMine = false,
                                     pendingCells = emptyList(),
                                     playerTurn = false,
-                                    modifier = Modifier.size(64.dp),
+                                    modifier = Modifier.size(83.dp),
                                     watching = true,
                                     skin = option,
                                     onTap = { if (unlocked) onPick(option) },
                                 )
                                 Text(
-                                    if (unlocked) sh(option.titleTr, option.titleEn) else sh("🔒 Mağazada", "🔒 In the shop"),
+                                    if (unlocked) sh(option.titleTr, option.titleEn) else sh("🔒 ${option.titleTr}", "🔒 ${option.titleEn}"),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,

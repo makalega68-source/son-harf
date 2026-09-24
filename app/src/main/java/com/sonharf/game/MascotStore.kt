@@ -80,13 +80,13 @@ internal object WordSiegeMascotOwnership {
 }
 
 private fun WordSiegeMascotSkin.pitch(): String = when (this) {
-    WordSiegeMascotSkin.ORB -> sh("Işıltılı ilk dostun. Sevinir, üzülür, seninle konuşur.", "Your first glowing friend. Cheers, frets and talks with you.")
-    WordSiegeMascotSkin.PINK -> sh("Kurdeleli, kirpikli, pembe ve çok tatlı.", "Bow, lashes, pink and oh so sweet.")
-    WordSiegeMascotSkin.DEVIL_BLUE -> sh("Buz mavisi boynuzlar, kıvrık kuyruk, sevimli yaramaz.", "Icy horns, curly tail, a lovable rascal.")
-    WordSiegeMascotSkin.DEVIL_RED -> sh("Ateş kırmızısı, minik dişli, hınzır bir şeytancık.", "Fiery red with tiny fangs, a mischievous imp.")
-    WordSiegeMascotSkin.CAT -> sh("Kedi kulakları, pembe patiler, bıyıklı mırmır.", "Cat ears, pink paws, a whiskered purr.")
-    WordSiegeMascotSkin.ROBOT -> sh("Işıklı anteni ve metal elleriyle bip bip!", "Glowing antenna and metal hands, beep beep!")
-    WordSiegeMascotSkin.ASTRONAUT -> sh("Cam kaskıyla seni yıldızlara taşır.", "Takes you to the stars in a glass helmet.")
+    WordSiegeMascotSkin.ORB -> sh("Sıcacık ve sadık bir koç. Her hamlende yanında, seni hiç yalnız bırakmaz.", "A warm, loyal coach. Beside you on every move, never leaves you alone.")
+    WordSiegeMascotSkin.PINK -> sh("Tatlı, duygusal ve sevgi dolu. Kalpler saçar, sevinçten uçar, üzülünce sarılır.", "Sweet, emotional and loving. Showers hearts, flies with joy, hugs when you're sad.")
+    WordSiegeMascotSkin.DEVIL_BLUE -> sh("Buz gibi soğukkanlı. Az konuşur, çok izler; söylediği tek cümle yerini bulur.", "Ice-cold and composed. Says little, watches a lot; every line lands.")
+    WordSiegeMascotSkin.DEVIL_RED -> sh("Ateşli, hırslı, yerinde duramaz. Rakibe laf atar, her kelimende coşar.", "Fiery, fierce and restless. Trash-talks the rival, erupts on every word.")
+    WordSiegeMascotSkin.CAT -> sh("Tembel, cilveli ve biraz kibirli. Uçan harfleri kovalar, kazanınca mırlar.", "Lazy, sassy and a bit proud. Chases flying letters, purrs when you win.")
+    WordSiegeMascotSkin.ROBOT -> sh("Her şeyi hesaplar, istatistikle konuşur. Mutluluk modülü sende aşırı yüklenir.", "Calculates everything, speaks in stats. Its joy module overloads for you.")
+    WordSiegeMascotSkin.ASTRONAUT -> sh("Hayalperest bir kâşif. Sıfır yerçekiminde takla atar, seni yıldızlara taşır.", "A dreamy explorer. Flips in zero gravity and takes you to the stars.")
 }
 
 /** Card background: a soft gradient in the character's own colours. */
@@ -223,14 +223,14 @@ private fun MascotStoreHero() {
                 )
                 Spacer(Modifier.height(10.dp))
                 // A small parade of characters, alive.
-                Row(Modifier.fillMaxWidth().height(96.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    listOf(WordSiegeMascotSkin.PINK, WordSiegeMascotSkin.ORB, WordSiegeMascotSkin.CAT, WordSiegeMascotSkin.DEVIL_RED).forEachIndexed { index, skin ->
+                Row(Modifier.fillMaxWidth().height(125.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                    listOf(WordSiegeMascotSkin.PINK, WordSiegeMascotSkin.ORB, WordSiegeMascotSkin.CAT).forEachIndexed { index, skin ->
                         WordSiegeMascot(
                             moveId = null,
                             lastMoveMine = false,
                             pendingCells = emptyList(),
                             playerTurn = false,
-                            modifier = Modifier.size(if (index == 1) 92.dp else 76.dp).offset(y = if (index % 2 == 0) 6.dp else 0.dp),
+                            modifier = Modifier.size(if (index == 1) 120.dp else 99.dp).offset(y = if (index % 2 == 0) 8.dp else 0.dp),
                             skin = skin,
                         )
                     }
@@ -262,7 +262,7 @@ private fun MascotStoreCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                Modifier.size(122.dp).clip(RoundedCornerShape(20.dp)).background(Color(0x22FFFFFF)),
+                Modifier.size(156.dp).clip(RoundedCornerShape(22.dp)).background(Color(0x22FFFFFF)),
                 contentAlignment = Alignment.Center,
             ) {
                 WordSiegeMascot(
@@ -270,13 +270,14 @@ private fun MascotStoreCard(
                     lastMoveMine = false,
                     pendingCells = emptyList(),
                     playerTurn = false,
-                    modifier = Modifier.size(112.dp),
+                    modifier = Modifier.size(146.dp),
                     skin = skin,
                 )
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh(skin.titleTr, skin.titleEn), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                Text(sh(skin.titleTr, skin.titleEn), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                Text(sh(skin.kindTr, skin.kindEn), color = Color(0xFFFFE08A), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 Spacer(Modifier.height(3.dp))
                 Text(skin.pitch(), color = Color(0xE6FFFFFF), fontSize = 11.sp, lineHeight = 15.sp)
                 Spacer(Modifier.height(4.dp))

@@ -15,15 +15,21 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
-/** The mascot's characters. Every look shares the same animated rig. */
-internal enum class WordSiegeMascotSkin(val id: String, val titleTr: String, val titleEn: String) {
-    ORB("klasik", "Klasik Işıltı", "Classic Glow"),
-    PINK("pembe", "Pembe Kız", "Pink Girl"),
-    DEVIL_BLUE("mavi_seytancik", "Mavi Şeytancık", "Blue Imp"),
-    DEVIL_RED("kirmizi_seytancik", "Kırmızı Şeytancık", "Red Imp"),
-    CAT("tekir", "Tekir Kedi", "Tabby Cat"),
-    ROBOT("robot", "Robot Bip", "Robot Beep"),
-    ASTRONAUT("astronot", "Astronot", "Astronaut"),
+/** The mascot's characters. Every look shares the same animated rig; each has its own temperament. */
+internal enum class WordSiegeMascotSkin(
+    val id: String,
+    val titleTr: String,
+    val titleEn: String,
+    val kindTr: String,
+    val kindEn: String,
+) {
+    ORB("klasik", "Obi", "Obi", "Klasik ışıltı", "Classic glow"),
+    PINK("pembe", "Pinki", "Pinky", "Pembe prenses", "Pink princess"),
+    DEVIL_BLUE("mavi_seytancik", "Buzi", "Frosty", "Buz şeytancık", "Ice imp"),
+    DEVIL_RED("kirmizi_seytancik", "Zıpır", "Blaze", "Ateş şeytancık", "Fire imp"),
+    CAT("tekir", "Mırnav", "Purrnie", "Tekir kedi", "Tabby cat"),
+    ROBOT("robot", "Bipbop", "Bipbop", "Robot", "Robot"),
+    ASTRONAUT("astronot", "Nova", "Nova", "Astronot", "Astronaut"),
     ;
 
     /** Google Play product and server entitlement key of this character. */

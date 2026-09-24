@@ -2,6 +2,8 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -79,7 +82,63 @@ fun StableV1App() {
         return
     }
 
-    PremiumUnifiedProApp(onSignedOut = { authenticated = false })
+    // Players who skipped the language screen (e.g. an update over an older install) still get
+    // the classic mascot's welcome once, on their first entry.
+    var mascotWelcomePending by remember { mutableStateOf(!FirstRunLanguagePreferences.mascotWelcomeSeen(context)) }
+    Box(Modifier.fillMaxSize()) {
+        PremiumUnifiedProApp(onSignedOut = { authenticated = false })
+        if (mascotWelcomePending) {
+            MascotWelcomeOverlay(onDone = {
+                FirstRunLanguagePreferences.markMascotWelcomeSeen(context)
+                mascotWelcomePending = false
+            })
+        }
+    }
+}
+
+/** A one-time greeting from the classic mascot over the home screen; tap anywhere to continue. */
+@Composable
+private fun MascotWelcomeOverlay(onDone: () -> Unit) {
+    val english = SonHarfUiState.language == "en"
+    LaunchedEffect(Unit) {
+        // It says hello, does its little show and then lets the player in by itself.
+        kotlinx.coroutines.delay(9_000L)
+        onDone()
+    }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xCC0B1530))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDone,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.fillMaxWidth().height(320.dp)) {
+                WordSiegeMascotCompanion(
+                    anchors = listOf(Offset(.5f, .6f)),
+                    mascotSize = 169.dp,
+                    moveId = null,
+                    lastMoveMine = false,
+                    playerTurn = false,
+                    modifier = Modifier.matchParentSize(),
+                    greet = false,
+                    greeting = if (english) "Hi! I'm Obi 👋\nWelcome to Word Board!" else "Merhaba! Ben Obi 👋\nKelime Tahtı'na hoş geldin!",
+                    requireOwnership = false,
+                    forcedSkin = WordSiegeMascotSkin.ORB,
+                )
+            }
+            Text(
+                text = if (english) "Tap to start" else "Başlamak için dokun",
+                color = Color.White.copy(alpha = .78f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
 }
 
 /**
@@ -118,16 +177,16 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                 verticalArrangement = Arrangement.Center,
             ) {
                 // The mascot flies in to welcome new players in both languages.
-                Box(Modifier.fillMaxWidth().height(210.dp)) {
+                Box(Modifier.fillMaxWidth().height(262.dp)) {
                     WordSiegeMascotCompanion(
                         anchors = listOf(Offset(.5f, .64f)),
-                        mascotSize = 130.dp,
+                        mascotSize = 169.dp,
                         moveId = null,
                         lastMoveMine = false,
                         playerTurn = false,
                         modifier = Modifier.matchParentSize(),
                         greet = false,
-                        greeting = "Merhaba! Hoş geldin 👋\nHi! Welcome!",
+                        greeting = "Merhaba! Ben Obi 👋\nHi! I'm Obi, welcome!",
                         announcement = mascotAnnouncement,
                         // Everyone meets the classic mascot here; elsewhere it must be purchased.
                         requireOwnership = false,
