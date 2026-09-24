@@ -629,9 +629,9 @@ private fun PanSiegeBoard(
 
     Surface(
         modifier = modifier,
-        color = Color(0xFF0C1420),
+        color = Color(0xFF2F1D13),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(2.dp, Color(0xFF3A5272)),
+        border = BorderStroke(2.dp, Color(0xFFC6A56B)),
         shadowElevation = 14.dp,
     ) {
         Box(
@@ -641,10 +641,10 @@ private fun PanSiegeBoard(
                 .clip(RoundedCornerShape(14.dp))
                 .background(
                     Brush.linearGradient(
-                        listOf(Color(0xFFDCE4EE), Color(0xFFC9D4E3), Color(0xFFE6ECF3), Color(0xFFC2CEDD))
+                        listOf(Color(0xFFE8D8BF), Color(0xFFD8BE98), Color(0xFFF1E6D4), Color(0xFFCFAE7E))
                     )
                 )
-                .border(1.dp, Color(0xFF8FA3BC), RoundedCornerShape(14.dp))
+                .border(1.dp, Color(0xFFB88C55), RoundedCornerShape(14.dp))
                 .clipToBounds()
                 .onGloballyPositioned {
                     viewport = it.size
@@ -847,7 +847,7 @@ private fun PanSiegeBoardCell(
         bonusSurface != null -> bonusSurface
         else -> PanSiegeNeutral
     }
-    val displayBase = if (pending) Color(0xFFD6E6FF) else baseColor
+    val displayBase = if (pending) Color(0xFFF2DFC0) else baseColor
     val border = when {
         pending -> PanSiegeTileBorder
         letter != null && owner == myOwner -> PanSiegeMineBorder
@@ -914,7 +914,7 @@ private fun PanSiegeBoardCell(
                 if (letter != null) {
                     Text(
                         letter,
-                        color = Color(0xFF17202D),
+                        color = Color(0xFF2A1B13),
                         fontSize = if (overview) 24.sp else 22.sp,
                         fontFamily = FontFamily.Serif,
                         fontWeight = FontWeight.Black,
@@ -967,17 +967,17 @@ private fun PanSiegeRackTile(
         modifier = modifier.height(48.dp).combinedClickable(enabled = enabled, onClick = onClick),
         color = when {
             used -> WordSiegeGameUi.SurfaceSoft
-            selected -> Color(0xFFBFD6FF)
-            else -> Color(0xFFE9EEF5)
+            selected -> Color(0xFFEBCB92)
+            else -> Color(0xFFF2DFC0)
         },
         shape = RoundedCornerShape(9.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PanSiegeMineBorder else Color(0xFF5E7390)),
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PanSiegeMineBorder else Color(0xFF8A6841)),
         shadowElevation = if (selected) 7.dp else 4.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 letter.toString(),
-                color = if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else Color(0xFF17202D),
+                color = if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else Color(0xFF2A1B13),
                 fontSize = 22.sp,
                 fontFamily = FontFamily.Serif,
                 fontWeight = FontWeight.Black,

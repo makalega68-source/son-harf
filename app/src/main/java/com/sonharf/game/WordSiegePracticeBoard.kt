@@ -170,9 +170,9 @@ internal fun WordSiegePracticeBoard(
 
     Surface(
         modifier = modifier,
-        color = Color(0xFF0C1420),
+        color = Color(0xFF2F1D13),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(2.dp, Color(0xFF3A5272)),
+        border = BorderStroke(2.dp, Color(0xFFC6A56B)),
         shadowElevation = 12.dp,
     ) {
         Box(
@@ -369,7 +369,7 @@ private fun WordSiegePracticeBoardCell(
         zoneSurface != null -> zoneSurface
         else -> PracticeSiegeEmpty
     }
-    val displayCellColor = if (pending) Color(0xFFD6E6FF) else cellColor
+    val displayCellColor = if (pending) Color(0xFFF2DFC0) else cellColor
     val borderColor = when {
         threatened && owner != 0 -> PracticeSiegeThreat
         pending -> PracticeSiegeTileBorder
@@ -443,7 +443,7 @@ private fun WordSiegePracticeBoardCell(
         if (letter != null) {
             Text(
                 letter,
-                color = Color(0xFF17202D),
+                color = Color(0xFF2A1B13),
                 fontSize = if (overview) 24.sp else 22.sp,
                 fontFamily = FontFamily.Serif,
                 fontWeight = FontWeight.Black,
@@ -508,7 +508,7 @@ internal fun WordSiegePracticeRackTile(
         color = when {
             used -> WordSiegeGameUi.SurfaceSoft
             selected -> Color(0xFFE1ECE4)
-            else -> Color(0xFFE9EEF5)
+            else -> Color(0xFFF2DFC0)
         },
         shape = RoundedCornerShape(9.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PracticeSiegeMineBorder else PracticeSiegeTileBorder.copy(alpha = .7f)),

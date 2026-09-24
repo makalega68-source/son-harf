@@ -2,7 +2,7 @@ package com.sonharf.game
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -14,36 +14,36 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 /**
  * Production design tokens for the professional Kelime Kuşatması UI rebuild.
  *
- * This system intentionally does not inherit the previous yellow/cream theme or the later
- * Monster/neon theme. Gameplay/business logic remains outside this layer.
+ * Uses the light "Kelime Tahtı" palette approved in PR #459 (turquoise, sky blue, lavender).
+ * Gameplay/business logic remains outside this layer.
  */
 internal object GameColors {
-    val AppBackground = Color(0xFF101722)
-    val ElevatedBackground = Color(0xFF151F2D)
-    val PrimarySurface = Color(0xFF1C2939)
-    val SecondarySurface = Color(0xFF243448)
+    val AppBackground = Color(0xFFEAF6F8)
+    val ElevatedBackground = Color(0xFFFFFFFF)
+    val PrimarySurface = Color(0xFFFFFFFF)
+    val SecondarySurface = Color(0xFFE0F3F5)
     val LightSurface = Color(0xFFF5F7FA)
 
-    val PrimaryBlue = Color(0xFF3D8BFF)
-    val DeepBlue = Color(0xFF245DC1)
-    val TacticalTurquoise = Color(0xFF20B6B0)
+    val PrimaryBlue = Color(0xFF14B8B0)
+    val DeepBlue = Color(0xFF0E9A93)
+    val TacticalTurquoise = Color(0xFF22C3C9)
     val PlayGreen = Color(0xFF38C970)
     val PlayGreenDeep = Color(0xFF249C53)
-    val Lavender = Color(0xFF9874E8)
-    val RewardAmber = Color(0xFFF2A73B)
-    val Danger = Color(0xFFE75D65)
-    val PrestigeGold = Color(0xFFE8BC58)
+    val Lavender = Color(0xFF8B6CF0)
+    val RewardAmber = Color(0xFFFF8A2A)
+    val Danger = Color(0xFFE8622C)
+    val PrestigeGold = Color(0xFFC89C39)
 
-    val TextPrimary = Color(0xFFF4F7FB)
-    val TextSecondary = Color(0xFFA8B5C6)
-    val TextTertiary = Color(0xFF728197)
-    val TextDark = Color(0xFF17202D)
-    val Border = Color(0xFF34475E)
-    val Divider = Color(0xFF29394C)
+    val TextPrimary = Color(0xFF0B1B33)
+    val TextSecondary = Color(0xFF3B4B66)
+    val TextTertiary = Color(0xFF5E6D84)
+    val TextDark = Color(0xFF0B1B33)
+    val Border = Color(0xFFC3D6E4)
+    val Divider = Color(0xFFD6E3EE)
 
-    val HeroStart = Color(0xFF173664)
-    val HeroMiddle = Color(0xFF174A66)
-    val HeroEnd = Color(0xFF23526A)
+    val HeroStart = Color(0xFF14B8B0)
+    val HeroMiddle = Color(0xFF3E7BFA)
+    val HeroEnd = Color(0xFF8B6CF0)
 
     // Son Harf uses a quieter, warm arena palette while remaining inside the shared design system.
     val SonHarfBackground = Color(0xFFF3EEE5)
@@ -64,8 +64,8 @@ internal object GameColors {
     val SonHarfRival = Color(0xFFD27869)
     val SonHarfRivalSoft = Color(0xFFF6E2DC)
 
-    val Disabled = Color(0xFF2A3544)
-    val DisabledContent = Color(0xFF728197)
+    val Disabled = Color(0xFFDDE5EE)
+    val DisabledContent = Color(0xFF5E6D84)
 }
 
 internal object GameSpacing {
@@ -112,7 +112,7 @@ internal val GameTypography = Typography(
 
 @Composable
 internal fun GameTheme(content: @Composable () -> Unit) {
-    val scheme = darkColorScheme(
+    val scheme = lightColorScheme(
         primary = GameColors.PrimaryBlue,
         secondary = GameColors.TacticalTurquoise,
         tertiary = GameColors.PlayGreen,

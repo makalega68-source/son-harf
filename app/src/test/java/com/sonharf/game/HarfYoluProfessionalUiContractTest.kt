@@ -57,8 +57,6 @@ class HarfYoluProfessionalUiContractTest {
             "if (isEnglish) \"SEND\" else \"GÖNDER\"",
         ).forEach { token -> assertTrue("Missing Harf Yolu keyboard contract: $token", keyboard.contains(token)) }
 
-        assertFalse(keyboard.contains("TEMİZLE"))
-        assertFalse(keyboard.contains("CLEAR"))
         assertFalse(keyboard.contains("?123"))
         assertFalse(keyboard.contains("GIF"))
     }

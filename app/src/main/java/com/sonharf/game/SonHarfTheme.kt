@@ -3,98 +3,107 @@ package com.sonharf.game
 import androidx.compose.ui.graphics.Color
 
 /**
- * Compatibility palette for older screens that have not yet been moved to the Game* component
- * layer. The production visual authority is GameDesignSystem; these names remain only so legacy
- * call sites can compile without reintroducing the retired neon/yellow Monster theme.
+ * KELİME TAHTI görsel sistemi: açık turkuaz/beyaz zemin, turkuaz-mavi eylemler,
+ * turuncu vurgu, eflatun premium ve koyu lacivert metin. Eski semantik isimler
+ * yalnızca derleme uyumluluğu için alias olarak kalır.
  */
 internal object KelimeKusatmasiPalette {
-    val MonsterBlack: Color get() = GameColors.AppBackground
-    val MonsterSurface: Color get() = GameColors.PrimarySurface
-    val MonsterSurface2: Color get() = GameColors.SecondarySurface
-    val MonsterSurface3: Color get() = GameColors.ElevatedBackground
-    val MonsterLime: Color get() = GameColors.PrimaryBlue
-    val MonsterRed: Color get() = GameColors.Danger
-    val MonsterPink: Color get() = GameColors.Lavender
-    val MonsterOrange: Color get() = GameColors.RewardAmber
-    val MonsterText: Color get() = GameColors.TextPrimary
-    val MonsterMuted: Color get() = GameColors.TextSecondary
-    val MonsterBorder: Color get() = GameColors.Border
+    val MonsterBlack = Color(0xFFEAF6F8)
+    val MonsterSurface = Color(0xFFFFFFFF)
+    val MonsterSurface2 = Color(0xFFE0F3F5)
+    val MonsterSurface3 = Color(0xFFEEEBFC)
+    val MonsterLime = Color(0xFF14B8B0)
+    val MonsterRed = Color(0xFFE8622C)
+    val MonsterPink = Color(0xFF8B6CF0)
+    val MonsterOrange = Color(0xFFFF8A2A)
+    val MonsterText = Color(0xFF0B1B33)
+    val MonsterMuted = Color(0xFF3B4B66)
+    val MonsterBorder = Color(0xFFC3D6E4)
 
-    val RoyalBlue: Color get() = GameColors.PrimaryBlue
-    val DeepBlue: Color get() = GameColors.DeepBlue
-    val Turquoise: Color get() = GameColors.TacticalTurquoise
-    val Orange: Color get() = GameColors.RewardAmber
-    val Sky: Color get() = GameColors.SecondarySurface
-    val OffWhite: Color get() = GameColors.AppBackground
-    val Slate: Color get() = GameColors.TextSecondary
-    val PaleMint: Color get() = GameColors.SecondarySurface
-    val SoftIndigo: Color get() = GameColors.Lavender
-    val SageGreen: Color get() = GameColors.PlayGreen
-    val SoftBlue: Color get() = GameColors.PrimaryBlue
-    val LightBeige: Color get() = GameColors.PrimarySurface
-    val Lavender: Color get() = GameColors.Lavender
-    val SlateBlue: Color get() = GameColors.TextTertiary
-    val WarmAccent: Color get() = GameColors.Danger
+    // Compatibility aliases for screens that still reference the previous palette names.
+    val RoyalBlue: Color get() = MonsterLime
+    val DeepBlue: Color get() = MonsterText
+    val Turquoise: Color get() = MonsterLime
+    val Orange: Color get() = MonsterOrange
+    val Sky: Color get() = MonsterSurface2
+    val OffWhite: Color get() = MonsterBlack
+    val Slate: Color get() = MonsterMuted
+    val PaleMint: Color get() = MonsterSurface2
+    val SoftIndigo: Color get() = MonsterPink
+    val SageGreen: Color get() = MonsterLime
+    val SoftBlue: Color get() = MonsterPink
+    val LightBeige: Color get() = MonsterSurface2
+    val Lavender: Color get() = MonsterPink
+    val SlateBlue: Color get() = MonsterMuted
+    val WarmAccent: Color get() = MonsterOrange
 }
 
 /**
- * Backward-compatible theme facade.
+ * Application-wide KELİME TAHTI visual system.
  *
- * New production screens must use GameTheme/GameColors directly. Any older screen still using
- * SonHarfTheme receives the same professional navy/blue/turquoise/green/lavender system so a
- * legacy call site can no longer leak the retired neon/yellow visual language into the APK.
+ * Light turquoise foundation with dark navy text. Gameplay, navigation, backend, scoring
+ * and authorization are untouched; only visible colors resolve from here.
  */
 internal object SonHarfTheme {
     private val alternateDark: Boolean get() = SonHarfCosmetics.darkArenaTheme
 
-    val IsDark: Boolean get() = true
+    // Light-first UI: every Material shell uses the light color scheme with dark text.
+    val IsDark: Boolean get() = false
 
-    val Background: Color get() = if (alternateDark) Color(0xFF0C121C) else GameColors.AppBackground
-    val Surface: Color get() = if (alternateDark) Color(0xFF162232) else GameColors.PrimarySurface
-    val SurfaceSecondary: Color get() = if (alternateDark) Color(0xFF1E3044) else GameColors.SecondarySurface
-    val SurfaceElevated: Color get() = if (alternateDark) Color(0xFF182536) else GameColors.ElevatedBackground
-    val NavigationSurface: Color get() = if (alternateDark) Color(0xFF0E1621) else GameColors.ElevatedBackground
-    val ModalSurface: Color get() = if (alternateDark) Color(0xFF172435) else GameColors.PrimarySurface
+    // Foundation layers.
+    val Background: Color get() = if (alternateDark) Color(0xFFE2EEF8) else KelimeKusatmasiPalette.MonsterBlack
+    val Surface: Color get() = KelimeKusatmasiPalette.MonsterSurface
+    val SurfaceSecondary: Color get() = if (alternateDark) Color(0xFFDDE9F7) else KelimeKusatmasiPalette.MonsterSurface2
+    val SurfaceElevated: Color get() = KelimeKusatmasiPalette.MonsterSurface3
+    val NavigationSurface: Color get() = Color(0xFFFFFFFF)
+    val ModalSurface: Color get() = Color(0xFFFFFFFF)
 
-    val GameSurface: Color get() = if (alternateDark) Color(0xFF101B28) else GameColors.ElevatedBackground
-    val GameTile: Color get() = GameColors.LightSurface
-    val GameTileBorder: Color get() = if (alternateDark) Color(0xFF43566D) else GameColors.Border
+    // Gameplay layers: calm light field, white readable letter tiles.
+    val GameSurface: Color get() = if (alternateDark) Color(0xFFDCE8F6) else Color(0xFFDDF1F4)
+    val GameTile: Color get() = Color(0xFFFFFFFF)
+    val GameTileBorder: Color get() = Color(0xFF9DB5C8)
 
-    val Primary: Color get() = GameColors.PrimaryBlue
-    val PrimarySoft: Color get() = GameColors.PrimaryBlue.copy(alpha = .14f)
-    val SoftBlue: Color get() = GameColors.PrimaryBlue
-    val Turquoise: Color get() = GameColors.TacticalTurquoise
-    val ActionOrange: Color get() = GameColors.RewardAmber
-    val Lavender: Color get() = GameColors.Lavender
-    val Sand: Color get() = GameColors.RewardAmber
+    // Brand/accent family: turquoise, blue, lilac, orange.
+    val Primary: Color get() = KelimeKusatmasiPalette.MonsterLime
+    val PrimarySoft: Color get() = Color(0xFFD2F2F0)
+    val SoftBlue: Color get() = Color(0xFF3D7BEF)
+    val Turquoise: Color get() = Color(0xFF22C3C9)
+    val ActionOrange: Color get() = KelimeKusatmasiPalette.MonsterOrange
+    val Lavender: Color get() = KelimeKusatmasiPalette.MonsterPink
+    val Sand: Color get() = Color(0xFFFFB463)
 
-    val TextPrimary: Color get() = GameColors.TextPrimary
-    val TextSecondary: Color get() = GameColors.TextSecondary
-    val Border: Color get() = if (alternateDark) Color(0xFF3A4D64) else GameColors.Border
+    // Text and dividers.
+    val TextPrimary: Color get() = KelimeKusatmasiPalette.MonsterText
+    val TextSecondary: Color get() = KelimeKusatmasiPalette.MonsterMuted
+    val Border: Color get() = KelimeKusatmasiPalette.MonsterBorder
 
-    val Success: Color get() = GameColors.PlayGreen
-    val SuccessSoft: Color get() = GameColors.PlayGreen.copy(alpha = .12f)
-    val Error: Color get() = GameColors.Danger
-    val Warning: Color get() = GameColors.RewardAmber
-    val DisabledBackground: Color get() = GameColors.Disabled
-    val DisabledContent: Color get() = GameColors.DisabledContent
+    // Semantic states.
+    val Success: Color get() = Color(0xFF12A89F)
+    val SuccessSoft: Color get() = Color(0xFFD2F2F0)
+    val Error: Color get() = Color(0xFFE8622C)
+    val Warning: Color get() = Color(0xFFFF9F2E)
+    val DisabledBackground: Color get() = Color(0xFFDDE5EE)
+    val DisabledContent: Color get() = Color(0xFF5E6D84)
 
-    val OnPrimary: Color get() = Color.White
-    val OnSecondary: Color get() = Color.White
-    val OnTertiary: Color get() = Color.White
+    val OnPrimary: Color get() = Color(0xFF0B1B33)
+    val OnSecondary: Color get() = Color(0xFF0B1B33)
+    val OnTertiary: Color get() = Color(0xFF0B1B33)
 
-    val HeroStart: Color get() = GameColors.HeroStart
-    val HeroMiddle: Color get() = GameColors.HeroMiddle
-    val HeroEnd: Color get() = GameColors.HeroEnd
+    // Deep navy → blue hero; white text is used only on this dark surface.
+    val HeroStart: Color get() = Color(0xFF0C2250)
+    val HeroMiddle: Color get() = Color(0xFF16398A)
+    val HeroEnd: Color get() = Color(0xFF1D4FB0)
 
-    val Forest: Color get() = GameColors.PlayGreen
-    val ForestDeep: Color get() = GameColors.PlayGreenDeep
+    // Compatibility naming used by existing hero/game cards.
+    val Forest: Color get() = Color(0xFF22C3C9)
+    val ForestDeep: Color get() = Color(0xFF0B1B33)
 
-    val PremiumGold: Color get() = GameColors.PrestigeGold
-    val PremiumGoldLight: Color get() = GameColors.RewardAmber
+    // Premium prestige is lilac; standard actions use turquoise/blue, key actions orange.
+    val PremiumGold: Color get() = Color(0xFF8B6CF0)
+    val PremiumGoldLight: Color get() = Color(0xFFB7A3FF)
 
-    val PrimaryBlue: Color get() = GameColors.PrimaryBlue
-    val PrimaryBlueSoft: Color get() = GameColors.PrimaryBlue.copy(alpha = .14f)
-    val SecondaryAccent: Color get() = GameColors.TacticalTurquoise
-    val Purple: Color get() = GameColors.Lavender
+    val PrimaryBlue: Color get() = Primary
+    val PrimaryBlueSoft: Color get() = PrimarySoft
+    val SecondaryAccent: Color get() = Turquoise
+    val Purple: Color get() = Lavender
 }

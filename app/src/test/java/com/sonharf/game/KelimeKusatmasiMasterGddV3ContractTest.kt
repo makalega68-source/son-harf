@@ -7,35 +7,26 @@ import org.junit.Test
 
 class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
-    fun canonicalPaletteMatchesProfessionalProductionDirection() {
-        val design = File("src/main/java/com/sonharf/game/GameDesignSystem.kt").readText()
-        val compatibilityTheme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
+    fun canonicalPaletteMatchesCurrentPurchasedThemeDirection() {
+        val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF101722", // App background
-            "0xFF151F2D", // Elevated background
-            "0xFF1C2939", // Primary surface
-            "0xFF243448", // Secondary surface
-            "0xFF3D8BFF", // Primary blue
-            "0xFF20B6B0", // Tactical turquoise
-            "0xFF38C970", // Play green
-            "0xFF9874E8", // Lavender
-            "0xFFF2A73B", // Reward amber
-            "0xFFE75D65", // Danger/rival
-            "0xFFF4F7FB", // Primary text
-            "0xFFA8B5C6", // Secondary text
-            "0xFF34475E", // Border
-        ).forEach { token -> assertTrue("Missing professional palette token $token", design.contains(token)) }
+            "0xFFEAF6F8", // Deep emerald black
+            "0xFFFFFFFF", // Emerald surface
+            "0xFFE0F3F5", // Secondary surface
+            "0xFF14B8B0", // Player/action green
+            "0xFFE8622C", // Rival red
+            "0xFF8B6CF0", // Premium gold
+            "0xFF0B1B33", // Primary text
+            "0xFF3B4B66", // Muted text
+            "0xFFC3D6E4", // Border
+        ).forEach { token -> assertTrue("Missing current theme palette token $token", theme.contains(token)) }
 
-        assertTrue(compatibilityTheme.contains("val IsDark: Boolean get() = true"))
-        assertTrue(compatibilityTheme.contains("val ActionOrange: Color get()"))
-        assertTrue(compatibilityTheme.contains("val HeroStart: Color get()"))
-        assertTrue(compatibilityTheme.contains("val HeroMiddle: Color get()"))
-        assertTrue(compatibilityTheme.contains("val HeroEnd: Color get()"))
-        assertTrue(compatibilityTheme.contains("GameColors.AppBackground"))
-        assertTrue(compatibilityTheme.contains("GameColors.PrimaryBlue"))
-        assertFalse(compatibilityTheme.contains("Color(0xFFEFFF19)"))
-        assertFalse(compatibilityTheme.contains("Color(0xFFFF245C)"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
+        assertTrue(theme.contains("val ActionOrange: Color get()"))
+        assertTrue(theme.contains("val HeroStart: Color get()"))
+        assertTrue(theme.contains("val HeroMiddle: Color get()"))
+        assertTrue(theme.contains("val HeroEnd: Color get()"))
     }
 
     @Test
@@ -79,10 +70,12 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
         val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
 
+        // Retired: CLUB destination is intercepted and bounced to HOME, never renders CompetitionHubScreen anymore.
         assertFalse(shell.contains("PremiumDestination.CLUB -> CompetitionHubScreen("))
         assertTrue(shell.contains("PremiumDestination.CLUB -> {"))
         assertTrue(shell.contains("destination = PremiumDestination.HOME"))
 
+        // Club source stays for audit but nothing opens it.
         assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
         assertTrue(club.contains("b.getClubMessages(current.clubId)"))
         assertTrue(club.contains("b.sendClubMessage(current.clubId, outgoing)"))
