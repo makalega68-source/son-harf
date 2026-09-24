@@ -28,7 +28,9 @@ class PlayHubNavigationContractTest {
         val shell = source("ProfessionalUnifiedApp.kt")
         val experience = source("ProfessionalWordSiegeExperience.kt")
 
-        assertTrue(hub.indexOf("KELİME KUŞATMASI") < hub.indexOf("DİĞER OYUN MODLARI"))
+        assertTrue(hub.indexOf("item(key = \"play-hero\")") < hub.indexOf("item(key = \"play-other-title\")"))
+        assertTrue(hub.contains("KELİME KUŞATMASI"))
+        assertTrue(hub.contains("DİĞER OYUN MODLARI"))
         assertTrue(hub.contains("HIZLI EŞLEŞME"))
         assertTrue(hub.contains("Arkadaşla Oyna"))
         assertTrue(hub.contains("Özel Oda"))

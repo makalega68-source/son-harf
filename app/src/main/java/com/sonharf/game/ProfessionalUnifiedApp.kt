@@ -79,6 +79,12 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
         siegeGameId = gameId
     }
 
+    // The private room returns to where it was opened from (PLAY), else to PRO as before.
+    fun closePrivateRoom() {
+        destination = privateRoomReturn
+        privateRoomReturn = ProfessionalDestination.PRO
+    }
+
     fun openMatches() {
         matchesReturn = if (destination == ProfessionalDestination.PLAY) ProfessionalDestination.PLAY else ProfessionalDestination.HOME
         destination = ProfessionalDestination.MATCHES
@@ -127,7 +133,9 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
             ProfessionalDestination.PROFILE_PROGRESS,
             ProfessionalDestination.COLLECTION,
             ProfessionalDestination.PRO -> ProfessionalDestination.PROFILE
-            ProfessionalDestination.PRIVATE_ROOM -> privateRoomReturn
+            ProfessionalDestination.PRIVATE_ROOM -> privateRoomReturn.also {
+                privateRoomReturn = ProfessionalDestination.PRO
+            }
             ProfessionalDestination.SOCIAL,
             ProfessionalDestination.PLAY,
             ProfessionalDestination.SHOP,
@@ -278,16 +286,16 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                     ProfessionalDestination.PRO -> UnifiedProVipScreen(
                         backend = backend,
                         onBack = { destination = ProfessionalDestination.PROFILE },
-                        onPrivateRoom = {
-                            privateRoomReturn = ProfessionalDestination.PRO
-                            destination = ProfessionalDestination.PRIVATE_ROOM
-                        },
+                        onPrivateRoom = { destination = ProfessionalDestination.PRIVATE_ROOM },
                         onSeries = { openGame(ProfessionalDestination.SERIES, siegeLanguage) },
                     )
 
                     ProfessionalDestination.PRIVATE_ROOM -> PrivateRoomCenterScreen(
-                        onBack = { destination = privateRoomReturn },
-                        onRoomReady = { language -> openGame(ProfessionalDestination.LAST_LETTER, language) },
+                        onBack = { closePrivateRoom() },
+                        onRoomReady = { language ->
+                            privateRoomReturn = ProfessionalDestination.PRO
+                            openGame(ProfessionalDestination.LAST_LETTER, language)
+                        },
                     )
 
                     ProfessionalDestination.LAST_LETTER -> OnlineGameScreenV6()
