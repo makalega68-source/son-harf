@@ -197,6 +197,49 @@ fun PremierWordDuelScreen() {
         }
     }
 
+    // One way to send chat, used by the chat sheet and by the quick messages between rounds.
+    fun sendChatMessage(message: String) {
+                val active = room ?: return
+        scope.launch {
+            if (active.isBot) {
+                val myId = backend.currentUserId().orEmpty()
+                botChatSequence -= 1L
+                botChat = botChat + ChatMessageDto(
+                    id = botChatSequence,
+                    roomId = active.id,
+                    senderId = myId,
+                    body = message.trim().take(300),
+                    createdAt = Instant.now().toString(),
+                )
+                notice = ""
+                SonHarfSoundFx.softNotify()
+                delay(650)
+                botChatSequence -= 1L
+                val reply = ChatMessageDto(
+                    id = botChatSequence,
+                    roomId = active.id,
+                    senderId = "bot:${active.id}",
+                    body = premierBotChatReply(language, message),
+                    createdAt = Instant.now().toString(),
+                )
+                botChat = botChat + reply
+                // The answer also pops up above the board, so it is seen without opening the chat.
+                if (!showQuickChat) {
+                    floatingMessage = reply
+                    hasUnreadChat = true
+                }
+            } else {
+                runCatching {
+                    backend.sendChat(active.id, message)
+                    backend.getChat(active.id)
+                }.onSuccess { refreshed ->
+                    chat = refreshed
+                    notice = ""
+                }.onFailure { notice = premierError(language, it.message.orEmpty()) }
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         runCatching {
             val player = ensureMe()
@@ -698,49 +741,6 @@ fun PremierWordDuelScreen() {
             },
             dismissButton = { TextButton(onClick = { showForfeit = false }) { Text(pt(language, "VAZGEÇ", "CANCEL")) } },
         )
-    }
-
-    // One way to send chat, used by the chat sheet and by the quick messages between rounds.
-    fun sendChatMessage(message: String) {
-                val active = room ?: return
-        scope.launch {
-            if (active.isBot) {
-                val myId = backend.currentUserId().orEmpty()
-                botChatSequence -= 1L
-                botChat = botChat + ChatMessageDto(
-                    id = botChatSequence,
-                    roomId = active.id,
-                    senderId = myId,
-                    body = message.trim().take(300),
-                    createdAt = Instant.now().toString(),
-                )
-                notice = ""
-                SonHarfSoundFx.softNotify()
-                delay(650)
-                botChatSequence -= 1L
-                val reply = ChatMessageDto(
-                    id = botChatSequence,
-                    roomId = active.id,
-                    senderId = "bot:${active.id}",
-                    body = premierBotChatReply(language, message),
-                    createdAt = Instant.now().toString(),
-                )
-                botChat = botChat + reply
-                // The answer also pops up above the board, so it is seen without opening the chat.
-                if (!showQuickChat) {
-                    floatingMessage = reply
-                    hasUnreadChat = true
-                }
-            } else {
-                runCatching {
-                    backend.sendChat(active.id, message)
-                    backend.getChat(active.id)
-                }.onSuccess { refreshed ->
-                    chat = refreshed
-                    notice = ""
-                }.onFailure { notice = premierError(language, it.message.orEmpty()) }
-            }
-        }
     }
 
     if (showQuickChat && room != null) {
