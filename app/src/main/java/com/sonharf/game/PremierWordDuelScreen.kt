@@ -41,6 +41,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -55,6 +56,11 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -1300,6 +1306,8 @@ private fun PremierArena(
                 totalSeconds = if (reconnectGraceActive) PREMIER_RECONNECT_SECONDS else PREMIER_TURN_SECONDS,
                 myTurn = myTurn && !preparing,
                 active = live && !preparing,
+                myWords = myRoundWords,
+                rivalWords = rivalRoundWords,
             )
             Spacer(Modifier.height(primaryGap))
             // The board.
@@ -1344,7 +1352,6 @@ private fun PremierArena(
                         modifier = Modifier.fillMaxWidth().height((if (targetSize > mascotSize) targetSize else mascotSize) + 6.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        PremierWordCountBadge(pt(language, "SEN", "YOU"), myRoundWords, PremierBoard.Mine, Modifier.align(Alignment.CenterStart))
                         PremierTargetCard(
                             language = language,
                             required = required,
@@ -1354,7 +1361,6 @@ private fun PremierArena(
                             active = myTurn && !preparing,
                             suddenDeath = room.status == "sudden_death",
                         )
-                        PremierWordCountBadge(pt(language, "RAKİP", "RIVAL"), rivalRoundWords, PremierBoard.Rival, Modifier.align(Alignment.CenterEnd).padding(end = mascotSize))
                         Box(
                             Modifier.align(Alignment.CenterEnd).size(mascotSize).onGloballyPositioned { slot ->
                                 val topLeft = slot.positionInRoot()
@@ -1527,12 +1533,44 @@ private fun PremierRoundPips(language: String, round: Int, myRounds: Int, rivalR
     }
 }
 
+/** A round's word count beside the turn clock: label, n/10 and ten small progress segments. */
 @Composable
-private fun PremierWordCountBadge(label: String, words: Int, color: Color, modifier: Modifier = Modifier) {
-    Column(modifier.padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = Color.White.copy(alpha = .6f), fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-        Text("${words.coerceIn(0, 10)}/10", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
-        Box(Modifier.padding(top = 2.dp).size(width = 28.dp, height = 3.dp).clip(RoundedCornerShape(99.dp)).background(color))
+private fun PremierWordCountChip(label: String, words: Int, color: Color, active: Boolean, modifier: Modifier = Modifier) {
+    val count = words.coerceIn(0, 10)
+    val glow by animateFloatAsState(if (active) 1f else 0f, tween(300), label = "count-glow")
+    Surface(
+        modifier = modifier.width(66.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White,
+        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) color else PremierBoard.CardBorder),
+        shadowElevation = (2f + 4f * glow).dp,
+    ) {
+        Column(
+            Modifier
+                .background(Brush.verticalGradient(listOf(color.copy(alpha = .10f + .08f * glow), Color.White)))
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(label, color = color, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp, maxLines = 1)
+            Text(
+                buildAnnotatedString {
+                    withStyle(SpanStyle(color = PremierBoard.Ink, fontSize = 16.sp)) { append("$count") }
+                    withStyle(SpanStyle(color = PremierBoard.Muted, fontSize = 10.sp)) { append("/10") }
+                },
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+            )
+            Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(1.5.dp)) {
+                repeat(10) { index ->
+                    Box(
+                        Modifier
+                            .size(width = 3.5.dp, height = 4.dp)
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(if (index < count) color else PremierBoard.CardBorder)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -1870,9 +1908,9 @@ private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String, 
     val dots by transition.animateFloat(0f, 3.99f, infiniteRepeatable(tween(1_200)), label = "thinking-dots")
     val label = when {
         !active -> pt(language, "ARENA SENKRONİZE EDİLİYOR", "SYNCING ARENA")
-        myTurn -> pt(language, "⚡ HAMLE SENDE • SALDIR", "⚡ YOUR MOVE • STRIKE")
+        myTurn -> pt(language, "HAMLE SIRASI SENDE", "YOUR TURN")
         botThinking -> pt(language, "$rivalName düşünüyor", "$rivalName is thinking") + ".".repeat(dots.toInt())
-        else -> pt(language, "◉ RAKİP HAMLESİ • HAZIR OL", "◉ RIVAL MOVE • STAY READY")
+        else -> pt(language, "HAMLE SIRASI RAKİPTE", "RIVAL'S TURN")
     }
     Surface(
         shape = RoundedCornerShape(99.dp),
@@ -1932,6 +1970,8 @@ private fun PremierPressureStrip(
     totalSeconds: Int = PREMIER_TURN_SECONDS,
     myTurn: Boolean = true,
     active: Boolean = true,
+    myWords: Int = 0,
+    rivalWords: Int = 0,
 ) {
     val danger = active && myTurn && seconds in 1..5
     val progress by animateFloatAsState(
@@ -1948,40 +1988,62 @@ private fun PremierPressureStrip(
     }
     val transition = rememberInfiniteTransition(label = "bar-pulse")
     val flash by transition.animateFloat(.55f, 1f, infiniteRepeatable(tween(420), RepeatMode.Reverse), label = "bar-flash")
-    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.fillMaxWidth().height(22.dp), contentAlignment = Alignment.Center) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(10.dp)
-                    .drawBehind {
-                        val r = size.height / 2f
-                        drawRoundRect(Color(0xFFDCE8EE), cornerRadius = CornerRadius(r, r))
-                        // Drains symmetrically toward the middle.
-                        val w = size.width * progress
-                        drawRoundRect(
-                            barColor.copy(alpha = if (danger) flash else 1f),
-                            topLeft = Offset((size.width - w) / 2f, 0f),
-                            size = Size(w, size.height),
-                            cornerRadius = CornerRadius(r, r),
-                        )
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        PremierWordCountChip(pt(language, "SEN", "YOU"), myWords, PremierBoard.Mine, active = active && myTurn)
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.fillMaxWidth().height(28.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .drawBehind {
+                            val r = size.height / 2f
+                            drawRoundRect(Color(0xFFDCE8EE), cornerRadius = CornerRadius(r, r))
+                            // Drains symmetrically toward the middle.
+                            val w = size.width * progress
+                            drawRoundRect(
+                                barColor.copy(alpha = if (danger) flash else 1f),
+                                topLeft = Offset((size.width - w) / 2f, 0f),
+                                size = Size(w, size.height),
+                                cornerRadius = CornerRadius(r, r),
+                            )
+                        }
+                )
+                if (active) {
+                    Surface(shape = CircleShape, color = Color.White, border = BorderStroke(2.dp, barColor), shadowElevation = 2.dp) {
+                        // A fixed square with the digits centred on both axes (no font padding).
+                        Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                "${seconds.coerceAtLeast(0)}",
+                                color = if (danger) PremierBoard.Danger else PremierBoard.Ink,
+                                textAlign = TextAlign.Center,
+                                style = TextStyle(
+                                    fontSize = 13.sp,
+                                    lineHeight = 13.sp,
+                                    fontWeight = FontWeight.Black,
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+                                ),
+                            )
+                        }
                     }
-            )
-            if (active) {
-                Surface(shape = RoundedCornerShape(99.dp), color = Color.White, border = BorderStroke(2.dp, barColor), shadowElevation = 2.dp) {
-                    Text(
-                        "${seconds.coerceAtLeast(0)}",
-                        Modifier.padding(horizontal = 10.dp, vertical = 1.dp),
-                        color = if (danger) PremierBoard.Danger else PremierBoard.Ink,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Black,
-                    )
                 }
             }
+            // The line is always reserved so the board does not jump when it appears.
+            Text(
+                pt(language, "KRİTİK 5 SANİYE", "CRITICAL 5 SECONDS"),
+                color = PremierBoard.Danger.copy(alpha = if (danger) flash else 0f),
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp,
+                maxLines = 1,
+            )
         }
-        if (danger) {
-            Text(pt(language, "KRİTİK 5 SANİYE", "CRITICAL 5 SECONDS"), color = PremierBoard.Danger, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-        }
+        PremierWordCountChip(pt(language, "RAKİP", "RIVAL"), rivalWords, PremierBoard.Rival, active = active && !myTurn)
     }
 }
 
@@ -2279,22 +2341,81 @@ private fun PremierKeyboard(language: String, value: String, enabled: Boolean, k
         shadowElevation = 14.dp,
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            val widest = rows.first().size
             rows.forEachIndexed { index, row ->
-                Row(Modifier.fillMaxWidth().padding(horizontal = if (index == 1) 7.dp else if (index == 2) 16.dp else 0.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                val last = index == rows.lastIndex
+                Row(Modifier.fillMaxWidth().padding(horizontal = if (index == 1) 7.dp else 0.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    // Like the Android keyboard: letters keep row-one width, backspace sits on the right.
+                    if (last) Spacer(Modifier.weight((widest - row.size - 1.6f).coerceAtLeast(.1f)))
                     row.forEach { key ->
                         PremierKey(key, enabled && value.length < 30, Modifier.weight(1f), keyHeight = keyHeight) {
                             SonHarfSoundFx.typingClick()
                             onInput((value + key).take(30))
                         }
                     }
+                    if (last) {
+                        PremierBackspaceKey(
+                            enabled = enabled && value.isNotEmpty(),
+                            modifier = Modifier.weight(1.6f),
+                            keyHeight = keyHeight,
+                            onDelete = { onInput(it) },
+                            value = value,
+                        )
+                    }
                 }
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                PremierKey("⌫", enabled && value.isNotEmpty(), Modifier.weight(1f), keyHeight = keyHeight, alt = true) { onInput(value.dropLast(1)); SonHarfSoundFx.tap() }
-                PremierKey(pt(language, "TEMİZLE", "CLEAR"), enabled && value.isNotEmpty(), Modifier.weight(1.45f), keyHeight = keyHeight, alt = true) { onInput(""); SonHarfSoundFx.tap() }
-                PremierKey(pt(language, "GÖNDER  ➤", "SEND  ➤"), enabled && value.length >= 2, Modifier.weight(2.2f), keyHeight = keyHeight, action = true) { onSubmit(); SonHarfSoundFx.tap() }
+                PremierKey(pt(language, "TEMİZLE", "CLEAR"), enabled && value.isNotEmpty(), Modifier.weight(1.3f), keyHeight = keyHeight, alt = true) { onInput(""); SonHarfSoundFx.tap() }
+                PremierKey(pt(language, "GÖNDER  ➤", "SEND  ➤"), enabled && value.length >= 2, Modifier.weight(2.7f), keyHeight = keyHeight, action = true) { onSubmit(); SonHarfSoundFx.tap() }
             }
         }
+    }
+}
+
+/** Android-style backspace: tap deletes one letter, holding it keeps deleting. */
+@Composable
+private fun PremierBackspaceKey(enabled: Boolean, modifier: Modifier, keyHeight: Dp, value: String, onDelete: (String) -> Unit) {
+    val palette = SonHarfCosmetics.keyboardPalette
+    val current by rememberUpdatedState(value)
+    val deleteNow by rememberUpdatedState(onDelete)
+    val isEnabled by rememberUpdatedState(enabled)
+    val scope = rememberCoroutineScope()
+    var pressed by remember { mutableStateOf(false) }
+    Box(
+        modifier
+            .height(keyHeight)
+            .graphicsLayer { scaleX = if (pressed) .94f else 1f; scaleY = if (pressed) .94f else 1f }
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (enabled) palette.keyAlt else palette.keyAlt.copy(alpha = .55f))
+            .border(BorderStroke(1.dp, palette.secondaryBorder.copy(alpha = .55f)), RoundedCornerShape(6.dp))
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        if (!isEnabled) return@detectTapGestures
+                        pressed = true
+                        deleteNow(current.dropLast(1))
+                        SonHarfSoundFx.tap()
+                        val repeat = scope.launch {
+                            delay(420)
+                            while (isEnabled && current.isNotEmpty()) {
+                                deleteNow(current.dropLast(1))
+                                delay(70)
+                            }
+                        }
+                        tryAwaitRelease()
+                        repeat.cancel()
+                        pressed = false
+                    },
+                )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            Icons.AutoMirrored.Rounded.Backspace,
+            contentDescription = "Sil",
+            tint = if (enabled) palette.text else palette.text.copy(alpha = .42f),
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 
