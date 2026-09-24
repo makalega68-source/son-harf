@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -100,6 +101,12 @@ private fun CompactAuthGate(onAuthenticated: () -> Unit) {
 @Composable
 private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
     var selected by remember { mutableStateOf<String?>(null) }
+    var mascotAnnouncement by remember { mutableStateOf<Pair<Int, String>?>(null) }
+    fun choose(language: String) {
+        selected = language
+        val text = if (language == "en") "Great choice! Let's play ✨" else "Harika seçim! Hadi oynayalım ✨"
+        mascotAnnouncement = (mascotAnnouncement?.first ?: 0) + 1 to text
+    }
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
         Box(Modifier.fillMaxSize()) {
@@ -109,6 +116,20 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
+                // The mascot flies in to welcome new players in both languages.
+                Box(Modifier.fillMaxWidth().height(210.dp)) {
+                    WordSiegeMascotCompanion(
+                        anchors = listOf(Offset(.5f, .64f)),
+                        mascotSize = 130.dp,
+                        moveId = null,
+                        lastMoveMine = false,
+                        playerTurn = false,
+                        modifier = Modifier.matchParentSize(),
+                        greet = false,
+                        greeting = "Merhaba! Hoş geldin 👋\nHi! Welcome!",
+                        announcement = mascotAnnouncement,
+                    )
+                }
                 Text(
                     text = "KELİME TAHTI",
                     color = MainUi.Text,
@@ -137,7 +158,7 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     FilterChip(
                         selected = selected == "tr",
-                        onClick = { selected = "tr" },
+                        onClick = { choose("tr") },
                         label = { Text("TÜRKÇE", fontWeight = FontWeight.Black) },
                         modifier = Modifier.weight(1f).height(52.dp),
                         colors = FilterChipDefaults.filterChipColors(
@@ -153,7 +174,7 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                     )
                     FilterChip(
                         selected = selected == "en",
-                        onClick = { selected = "en" },
+                        onClick = { choose("en") },
                         label = { Text("ENGLISH", fontWeight = FontWeight.Black) },
                         modifier = Modifier.weight(1f).height(52.dp),
                         colors = FilterChipDefaults.filterChipColors(

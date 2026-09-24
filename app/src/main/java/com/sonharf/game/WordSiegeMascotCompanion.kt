@@ -7,7 +7,19 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -25,6 +37,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -199,19 +212,16 @@ internal class WordSiegeMascotBond(context: Context) {
         }
     }
 
-    /** The look the player picked with a long press, or null to follow the default. */
+    /** The character the player picked with a long press, or null to follow the default. */
     var skinChoice: WordSiegeMascotSkin?
-        get() = when (prefs.getString(KEY_SKIN, "")) {
+        get() = when (val stored = prefs.getString(KEY_SKIN, "")) {
+            // Earlier builds stored only these two looks.
             "pink" -> WordSiegeMascotSkin.PINK
             "orb" -> WordSiegeMascotSkin.ORB
-            else -> null
+            else -> WordSiegeMascotSkin.fromId(stored)
         }
         set(value) {
-            prefs.edit().putString(KEY_SKIN, when (value) {
-                WordSiegeMascotSkin.PINK -> "pink"
-                WordSiegeMascotSkin.ORB -> "orb"
-                null -> ""
-            }).apply()
+            prefs.edit().putString(KEY_SKIN, value?.id.orEmpty()).apply()
         }
 
     private fun today(): Long = System.currentTimeMillis() / 86_400_000L
@@ -400,6 +410,10 @@ internal object WordSiegeMascotLines {
     val skinOrb = listOf(
         "Klasik hâlime döndüm ✨" to "Back to my classic look ✨",
     )
+    val skinNew = listOf(
+        "Yeni hâlim nasıl? ✨" to "How do I look now? ✨",
+        "Tadaa! Yeni ben! 💫" to "Ta-da! The new me! 💫",
+    )
     val draw = listOf(
         "Berabere! Ne çekişmeydi!" to "A draw! What a battle!",
         "Kıl payı… rövanşa ne dersin?" to "So close… rematch?",
@@ -552,6 +566,10 @@ internal fun WordSiegeMascotCompanion(
     visit: WordSiegeMascotVisit? = null,
     /** The player's profile gender; picks the pink girl look by default for female players. */
     playerGender: String? = null,
+    /** A fixed greeting instead of the usual one (e.g. the bilingual first-run welcome). */
+    greeting: String? = null,
+    /** Something to say right now with a little hop; a new key says it again. */
+    announcement: Pair<Int, String>? = null,
 ) {
     if (anchors.isEmpty()) return
     val context = LocalContext.current
@@ -600,6 +618,7 @@ internal fun WordSiegeMascotCompanion(
 
     // Long-pressing the mascot switches between the blue orb and the pink girl; the choice is kept.
     var skinChoice by remember { mutableStateOf(bond.skinChoice) }
+    var showPicker by remember { mutableStateOf(false) }
     val skin = skinChoice ?: if (playerGender?.trim()?.lowercase() in FEMALE_GENDERS) {
         WordSiegeMascotSkin.PINK
     } else {
@@ -788,7 +807,11 @@ internal fun WordSiegeMascotCompanion(
         LaunchedEffect(Unit) {
             delay(250L)
             if (initialOutcome == null) startTrip { flyTo(0, 1_000) }.join()
-            if (greet && initialOutcome == null) {
+            if (greeting != null && initialOutcome == null) {
+                delay(300L)
+                perform(WordSiegeMascotAction.HOP)
+                say(greeting, holdExtraMillis = 2_500L)
+            } else if (greet && initialOutcome == null) {
                 val (meetings, daysAway) = bond.meet()
                 delay(350L)
                 val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
@@ -908,6 +931,13 @@ internal fun WordSiegeMascotCompanion(
                     watching = true
                 }
             }
+        }
+
+        LaunchedEffect(announcement?.first) {
+            val text = announcement?.second ?: return@LaunchedEffect
+            lastInteractionAt = SystemClock.uptimeMillis()
+            perform(WordSiegeMascotAction.HOP)
+            say(text, holdExtraMillis = 800L)
         }
 
         // Game moments: support, praise and comfort, chosen with restraint.
@@ -1178,13 +1208,8 @@ internal fun WordSiegeMascotCompanion(
                 glanceY = glance.y,
                 hat = hat,
                 skin = skin,
-                onLongPress = {
-                    val next = if (skin == WordSiegeMascotSkin.PINK) WordSiegeMascotSkin.ORB else WordSiegeMascotSkin.PINK
-                    skinChoice = next
-                    bond.skinChoice = next
-                    perform(WordSiegeMascotAction.SPARKLE)
-                    say(mind.line(if (next == WordSiegeMascotSkin.PINK) WordSiegeMascotLines.skinPink else WordSiegeMascotLines.skinOrb, currentName))
-                },
+                // A long press opens the character picker.
+                onLongPress = { if (!busy) showPicker = true },
                 onTap = { touchedMascot(SystemClock.uptimeMillis()) },
             )
         }
@@ -1198,7 +1223,91 @@ internal fun WordSiegeMascotCompanion(
                 areaWidth = areaWidth,
             )
         }
+
+        if (showPicker) {
+            WordSiegeMascotPicker(
+                current = skin,
+                onPick = { next ->
+                    showPicker = false
+                    if (next != skin) {
+                        skinChoice = next
+                        bond.skinChoice = next
+                        perform(WordSiegeMascotAction.SPARKLE)
+                        val lines = when (next) {
+                            WordSiegeMascotSkin.PINK -> WordSiegeMascotLines.skinPink
+                            WordSiegeMascotSkin.ORB -> WordSiegeMascotLines.skinOrb
+                            else -> WordSiegeMascotLines.skinNew
+                        }
+                        say(mind.line(lines, currentName))
+                    }
+                },
+                onDismiss = { showPicker = false },
+            )
+        }
     }
+}
+
+/** Character picker: every look is shown alive, so the player sees exactly what they get. */
+@Composable
+internal fun WordSiegeMascotPicker(
+    current: WordSiegeMascotSkin,
+    onPick: (WordSiegeMascotSkin) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(sh("KAPAT", "CLOSE"), fontWeight = FontWeight.Black) }
+        },
+        title = {
+            Text(sh("Maskotunu seç", "Choose your mascot"), fontWeight = FontWeight.Black, fontSize = 18.sp)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                WordSiegeMascotSkin.entries.chunked(3).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { option ->
+                            val selected = option == current
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(if (selected) Color(0xFFEDE4FF) else Color(0xFFF6F7FB))
+                                    .border(
+                                        width = if (selected) 2.dp else 1.dp,
+                                        color = if (selected) Color(0xFF8B5CF6) else Color(0xFFE1E4EC),
+                                        shape = RoundedCornerShape(16.dp),
+                                    )
+                                    .clickable { onPick(option) }
+                                    .padding(vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                WordSiegeMascot(
+                                    moveId = null,
+                                    lastMoveMine = false,
+                                    pendingCells = emptyList(),
+                                    playerTurn = false,
+                                    modifier = Modifier.size(64.dp),
+                                    watching = true,
+                                    skin = option,
+                                    onTap = { onPick(option) },
+                                )
+                                Text(
+                                    sh(option.titleTr, option.titleEn),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    color = Color(0xFF1B2140),
+                                )
+                            }
+                        }
+                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
+        },
+    )
 }
 
 private val MILESTONES = setOf(10, 25, 50, 100, 250, 500, 1_000)

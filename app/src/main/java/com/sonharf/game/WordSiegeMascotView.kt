@@ -44,8 +44,6 @@ internal enum class WordSiegeMascotAction {
 /** Costume worn over the orb; purely cosmetic. */
 internal enum class WordSiegeMascotHat { NONE, PARTY, CROWN }
 
-/** Look of the mascot: the original blue orb, or the pink girl with a bow and eyelashes. */
-internal enum class WordSiegeMascotSkin { ORB, PINK }
 
 /** Local event-driven reaction selection; deterministic per move, with no network or model cost. */
 internal object WordSiegeMascotBehavior {
@@ -83,6 +81,18 @@ private object WordSiegeMascotArt {
     )
 
     @Volatile private var cache: Map<String, Bitmap>? = null
+    private val skinCache = HashMap<WordSiegeMascotSkin, Map<String, Bitmap>>()
+
+    /** Layers recoloured for [skin]; eye whites always keep the original art. Baked once per skin. */
+    fun layers(context: Context, skin: WordSiegeMascotSkin): Map<String, Bitmap> {
+        val base = layers(context)
+        val palette = WordSiegeMascotPalette.forSkin(skin) ?: return base
+        return synchronized(skinCache) {
+            skinCache.getOrPut(skin) {
+                base.mapValues { (name, bitmap) -> if (name.startsWith("eye_")) bitmap else palette.recolor(bitmap) }
+            }
+        }
+    }
 
     fun layers(context: Context): Map<String, Bitmap> = cache ?: synchronized(this) {
         cache ?: names.associateWith { name ->
@@ -106,7 +116,7 @@ private object WordSiegeMascotArt {
  * body motion anchored at the orb's base.
  */
 internal class WordSiegeMascotView(context: Context) : View(context) {
-    private val layers: Map<String, Bitmap> = WordSiegeMascotArt.layers(context)
+    private var layers: Map<String, Bitmap> = WordSiegeMascotArt.layers(context)
     private val artScale = ART / (layers.getValue("orb_face_base").width.toFloat())
     private val artRect = RectF(0f, 0f, ART, ART)
 
@@ -115,7 +125,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
     }
     // Eyelids are painted with the orb's own face texture so they read as the same surface.
-    private val skinShader = BitmapShader(layers.getValue("orb_face_base"), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+    private var skinShader = BitmapShader(layers.getValue("orb_face_base"), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
     private val skinPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
         shader = skinShader
         xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
@@ -175,33 +185,15 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             floatArrayOf(0f, .6f, 1f), Shader.TileMode.CLAMP,
         )
     }
-    // Skin: the pink girl recolours the artwork (eye whites stay white) and adds a bow and lashes.
+    // Skin: recoloured artwork plus the character's vector accessories.
     private var skin = WordSiegeMascotSkin.ORB
+    private var decor = WordSiegeMascotDecor.of(WordSiegeMascotSkin.ORB)
     private val eyePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-    private val pinkFilter = android.graphics.ColorMatrixColorFilter(PINK_MATRIX)
-    private val orbEdgeShader: Shader? = edgePaint.shader
-    private val pinkEdgeShader = SweepGradient(ORB_CX, ORB_CY, intArrayOf(
-        0xFFFFC1E3.toInt(), 0xFFFF7AC8.toInt(), 0xFFE0409A.toInt(),
-        0xFFC77DFF.toInt(), 0xFFFFC1E3.toInt(),
-    ), floatArrayOf(0f, .25f, .5f, .75f, 1f))
-    private val orbWingShader: Shader? = wingPaint.shader
-    private val pinkWingShader = android.graphics.LinearGradient(
-        0f, 0f, 430f, -160f,
-        intArrayOf(0xE6FFD1EC.toInt(), 0xB3FF6FBF.toInt(), 0x66FFFFFF),
-        floatArrayOf(0f, .6f, 1f), Shader.TileMode.CLAMP,
-    )
     private val girlLashPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
         strokeWidth = 10f
         color = 0xFF1A0A2E.toInt()
-    }
-    private val bowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val bowLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeJoin = Paint.Join.ROUND
-        strokeWidth = 8f
-        color = 0xFF7A1450.toInt()
     }
     private val wingLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -433,12 +425,12 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     fun setSkin(next: WordSiegeMascotSkin) {
         if (next == skin) return
         skin = next
-        val filter = if (next == WordSiegeMascotSkin.PINK) pinkFilter else null
-        paint.colorFilter = filter
-        atopPaint.colorFilter = filter
-        skinPaint.colorFilter = filter
-        edgePaint.shader = if (next == WordSiegeMascotSkin.PINK) pinkEdgeShader else orbEdgeShader
-        wingPaint.shader = if (next == WordSiegeMascotSkin.PINK) pinkWingShader else orbWingShader
+        layers = WordSiegeMascotArt.layers(context, next)
+        skinShader = BitmapShader(layers.getValue("orb_face_base"), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        skinPaint.shader = skinShader
+        decor = WordSiegeMascotDecor.of(next)
+        edgePaint.shader = decor.ringShader()
+        wingPaint.shader = decor.wingShader()
         invalidate()
     }
 
@@ -739,6 +731,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         if (spin != 0f) canvas.rotate(spin, ORB_CX, ORB_CY)
 
         if (wing > .01f) drawWings(canvas, now)
+        decor.drawBehind(canvas)
         drawLayer(canvas, "orb_face_base")
         val sparkling = actionKind == WordSiegeMascotAction.SPARKLE && now < actionUntil
         val glow = if (mood == WordSiegeMascotEmotion.PROUD || mood == WordSiegeMascotEmotion.EXCITED || sparkling) 45f else 0f
@@ -808,15 +801,13 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             max(mouthOpen, yawn),
             mouthWidth + (.62f - mouthWidth) * yawn,
         )
+        decor.drawFace(canvas, mouthTopY(poseValue[P_SMILE], max(mouthOpen, yawn)), max(mouthOpen, yawn))
         if (mood == WordSiegeMascotEmotion.TEARY) drawTears(canvas, now)
         canvas.restore()
 
         if (mood == WordSiegeMascotEmotion.STRESSED || urgency > .45f) drawSweat(canvas, now)
-        if (hat != WordSiegeMascotHat.NONE) {
-            drawHat(canvas, now)
-        } else if (skin == WordSiegeMascotSkin.PINK) {
-            drawBow(canvas, now)
-        }
+        if (hat != WordSiegeMascotHat.NONE) drawHat(canvas, now) else decor.drawTuft(canvas, now)
+        decor.drawFront(canvas)
         if (sleeping) drawSleepZ(canvas, now)
         drawSparkles(canvas, now)
         drawTwinkles(canvas, now)
@@ -1128,6 +1119,13 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
     }
 
+    /** Where the upper lip sits at the centre, for details that hang from it (fangs). */
+    private fun mouthTopY(smile: Float, open: Float): Float {
+        val corner = MOUTH_Y - smile * 30f
+        val top = MOUTH_Y - smile * 8f - open * 26f + max(0f, -smile) * -18f
+        return .25f * corner + .75f * top
+    }
+
     /**
      * Vector mouth matched to the artwork's colours. [smile] runs from -1 (frown) to 1 (grin),
      * [open] from a closed line to a wide open "D", [widthScale] stretches the corners.
@@ -1272,45 +1270,6 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             )
             canvas.drawPath(path, girlLashPaint)
         }
-    }
-
-    /** A pink ribbon bow on the top-right of the head. */
-    private fun drawBow(canvas: Canvas, now: Long) {
-        canvas.save()
-        canvas.translate(880f, 232f)
-        canvas.rotate(20f + sin(now / 900f) * 3f)
-        for (side in BOW_SIDES) {
-            canvas.save()
-            canvas.scale(side, 1f)
-            // Ribbon tail.
-            path.rewind()
-            path.moveTo(8f, 14f)
-            path.lineTo(46f, 112f)
-            path.lineTo(26f, 100f)
-            path.lineTo(10f, 118f)
-            path.lineTo(-6f, 18f)
-            path.close()
-            bowPaint.color = 0xFFE0409A.toInt()
-            canvas.drawPath(path, bowPaint)
-            canvas.drawPath(path, bowLinePaint)
-            // Loop.
-            path.rewind()
-            path.moveTo(0f, 0f)
-            path.cubicTo(55f, -78f, 150f, -52f, 142f, 8f)
-            path.cubicTo(136f, 66f, 52f, 52f, 0f, 0f)
-            path.close()
-            bowPaint.color = 0xFFFF5FAE.toInt()
-            canvas.drawPath(path, bowPaint)
-            canvas.drawPath(path, bowLinePaint)
-            bowPaint.color = 0x88FFFFFF.toInt()
-            ovalRect.set(62f, -32f, 112f, -10f)
-            canvas.drawOval(ovalRect, bowPaint)
-            canvas.restore()
-        }
-        bowPaint.color = 0xFFFF86C4.toInt()
-        canvas.drawCircle(0f, 4f, 27f, bowPaint)
-        canvas.drawCircle(0f, 4f, 27f, bowLinePaint)
-        canvas.restore()
     }
 
     private fun drawSleepZ(canvas: Canvas, now: Long) {
@@ -1469,15 +1428,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         const val MOUTH_Y = 790f
         const val DROWSY_AFTER = 22_000L
         const val SLEEP_AFTER = 50_000L
-        val BOW_SIDES = floatArrayOf(-1f, 1f)
 
-        /** Pink recolour: mostly a warm pink tint, keeping a quarter of the original iridescence. */
-        val PINK_MATRIX = floatArrayOf(
-            .57625f, .641625f, .119625f, 0f, 15f,
-            .12375f, .493375f, .045375f, 0f, 0f,
-            .21375f, .420375f, .328375f, 0f, 18.75f,
-            0f, 0f, 0f, 1f, 0f,
-        )
         const val TEAR_CYCLE = 1_700L
         val SPARKLE_X = floatArrayOf(250f, 1_080f, 330f, 1_010f)
         val SPARKLE_Y = floatArrayOf(330f, 360f, 900f, 880f)
