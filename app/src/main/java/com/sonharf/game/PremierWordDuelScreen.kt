@@ -70,6 +70,8 @@ private enum class PremierStage { Loading, Lobby, Searching, Vs, Playing, Finish
 private data class PremierMoveFeedback(val accepted: Boolean, val message: String)
 private const val PREMIER_TURN_SECONDS = 15
 private const val PREMIER_RECONNECT_SECONDS = 60
+/** Breather before every new round; the server adds it to the round's first turn. */
+private const val PREMIER_ROUND_PREP_SECONDS = 20
 
 /** Yetişkin, yüksek okunabilirlikli Son Harf oyun paleti. */
 private object PremierUi {
@@ -162,6 +164,8 @@ fun PremierWordDuelScreen() {
     var moveFeedback by remember { mutableStateOf<PremierMoveFeedback?>(null) }
     var turnSeconds by remember { mutableIntStateOf(PREMIER_TURN_SECONDS) }
     var botThinking by remember { mutableStateOf(false) }
+    var prepSeconds by remember { mutableIntStateOf(0) }
+    var botPrepSeconds by remember { mutableIntStateOf(0) }
 
     suspend fun ensureMe(): ProfileDto {
         if (backend.currentUserId() == null) backend.ensurePlayer(pt(language, "Oyuncu", "Player"))
@@ -275,6 +279,17 @@ fun PremierWordDuelScreen() {
         val botPlayable = active.status in setOf("playing", "final", "sudden_death")
         if (!active.isBot || !active.botTurn || !botPlayable) return@LaunchedEffect
 
+        // A new round that the bot opens starts with the same preparation break as any other.
+        if (active.lastEvent == "round_started" || active.lastEvent == "sudden_death_started") {
+            try {
+                for (second in PREMIER_ROUND_PREP_SECONDS downTo 1) {
+                    botPrepSeconds = second
+                    delay(1_000)
+                }
+            } finally {
+                botPrepSeconds = 0
+            }
+        }
         // The client asks the server bot to move (server play stays authoritative). It first
         // "thinks" for a human-like moment; no player clock runs during the bot's turn.
         botThinking = true
@@ -316,6 +331,7 @@ fun PremierWordDuelScreen() {
         room?.reconnectDeadline,
     ) {
         val active = room ?: return@LaunchedEffect
+        prepSeconds = 0
         if (active.status !in setOf("playing", "final", "sudden_death") || active.botTurn) {
             turnSeconds = PREMIER_TURN_SECONDS
             return@LaunchedEffect
@@ -396,6 +412,10 @@ fun PremierWordDuelScreen() {
 
         while (true) {
             val elapsedMs = SystemClock.elapsedRealtime() - countdownAnchor
+            // A new round begins with preparation time on top of the 15-second turn: show it
+            // separately so the turn clock itself always counts down from 15.
+            val prepMs = initialRemainingMs - elapsedMs - PREMIER_TURN_SECONDS * 1000L
+            prepSeconds = if (prepMs > 0L) ((prepMs + 999L) / 1000L).toInt() else 0
             val remaining = premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs)
             if (remaining > 0) {
                 turnSeconds = remaining
@@ -532,6 +552,7 @@ fun PremierWordDuelScreen() {
                         floatingMessage = floatingMessage,
                         moveFeedback = moveFeedback,
                         botThinking = botThinking,
+                        prepSeconds = maxOf(prepSeconds, botPrepSeconds),
                         onInput = { input = it },
                         onForfeit = { showForfeit = true },
                         onQuickChat = {
@@ -930,27 +951,23 @@ private fun PremierStatPill(text: String, accent: Color) {
     }
 }
 
-/** Premium scoreboard palette: a night-stadium header over the bright sky arena. */
-private object PremierArenaPro {
-    val Night = Color(0xFF0A1330)
-    val Indigo = Color(0xFF1B2A6B)
-    val Violet = Color(0xFF4A2C8F)
-    val Gold = Color(0xFFFFC857)
-    val GoldDeep = Color(0xFFE89B2D)
-    val Teal = Color(0xFF2FD3C4)
-    val Coral = Color(0xFFFF6B6B)
-    val Glass = Color(0x1FFFFFFF)
-    val GlassBorder = Color(0x33FFFFFF)
-    val TextSoft = Color(0xCCFFFFFF)
+/** Calm duel palette: soft neutrals, one gentle colour per player, red only for the last seconds. */
+private object PremierCalm {
+    val Card = Color(0xFFFFFFFF)
+    val CardBorder = Color(0xFFD9E6EC)
+    val Ink = Color(0xFF1F3A4D)
+    val Muted = Color(0xFF6E8795)
+    val Mine = Color(0xFF3D9AA8)
+    val MineSoft = Color(0xFFE4F3F5)
+    val Rival = Color(0xFFC98A7F)
+    val RivalSoft = Color(0xFFF7ECEA)
+    val Amber = Color(0xFFD5A247)
+    val Danger = Color(0xFFD4665B)
+    val Track = Color(0xFFE3ECF0)
 }
 
-/** Turn length the server uses for this round (15 / 13 / 11 s; sudden death plays like round 3). */
-internal fun premierTurnTotalSeconds(roundNo: Int, status: String): Int = when {
-    status == "sudden_death" -> 11
-    roundNo <= 1 -> 15
-    roundNo == 2 -> 13
-    else -> 11
-}
+/** Every turn is 15 seconds; a new round's first turn adds the preparation break on the server. */
+internal fun premierTurnTotalSeconds(roundNo: Int, status: String): Int = PREMIER_TURN_SECONDS
 
 /**
  * Checks a word locally before it is sent. A rejected word costs the turn, a point and the streak
@@ -983,6 +1000,7 @@ private fun PremierArena(
     floatingMessage: ChatMessageDto?,
     moveFeedback: PremierMoveFeedback?,
     botThinking: Boolean,
+    prepSeconds: Int,
     onInput: (String) -> Unit,
     onForfeit: () -> Unit,
     onQuickChat: () -> Unit,
@@ -994,8 +1012,6 @@ private fun PremierArena(
     val rivalScore = if (amHost) room.guestScore else room.hostScore
     val myRoundScore = if (amHost) room.hostRoundScore else room.guestRoundScore
     val rivalRoundScore = if (amHost) room.guestRoundScore else room.hostRoundScore
-    val myRoundWords = if (amHost) room.hostRoundWords else room.guestRoundWords
-    val rivalRoundWords = if (amHost) room.guestRoundWords else room.hostRoundWords
     val myRounds = if (amHost) room.hostRounds else room.guestRounds
     val rivalRounds = if (amHost) room.guestRounds else room.hostRounds
     val myStreak = if (amHost) room.hostStreak else room.guestStreak
@@ -1007,9 +1023,9 @@ private fun PremierArena(
     val reconnectingMe = reconnectGraceActive && room.disconnectedPlayerId == meId
     val myTurn = room.currentPlayerId == meId && !room.botTurn && !reconnectingMe &&
         room.status in setOf("playing", "final", "sudden_death")
+    val preparing = prepSeconds > 0
     val rivalName = if (room.isBot) room.botName ?: pt(language, "KelimeBot", "WordBot") else opponent?.displayName ?: pt(language, "Rakip", "Rival")
     val required = premierRequiredToken(room, words)
-    val turnTotal = premierTurnTotalSeconds(room.roundNo, room.status)
     val latestMove = words.lastOrNull()
     val latestPlayedWord = latestMove?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
     val latestMoveMine = latestMove != null && latestMove.playerId == meId
@@ -1040,7 +1056,7 @@ private fun PremierArena(
         else -> rivalGain?.second?.coerceAtLeast(0) ?: 3
     }
 
-    // Sound design: your turn, the rival's word, the last seconds, streaks.
+    // Sound: your turn, the rival's word, the last seconds.
     val initialMoveId = remember(room.id) { latestMove?.id }
     LaunchedEffect(latestMove?.id) {
         val move = latestMove ?: return@LaunchedEffect
@@ -1051,8 +1067,8 @@ private fun PremierArena(
         if (myTurn && !wasMyTurn) SonHarfSoundFx.turnStart()
         wasMyTurn = myTurn
     }
-    LaunchedEffect(turnSeconds, myTurn) {
-        if (myTurn && !reconnectGraceActive && turnSeconds in 1..5) SonHarfSoundFx.clockTick()
+    LaunchedEffect(turnSeconds, myTurn, preparing) {
+        if (myTurn && !preparing && !reconnectGraceActive && turnSeconds in 1..5) SonHarfSoundFx.clockTick()
     }
 
     // A rival's slip (a bot that could not find a word, or a rejected human word).
@@ -1067,7 +1083,7 @@ private fun PremierArena(
     LaunchedEffect(slipSignature) {
         if (slipSignature == null || slipSignature == initialSlip) return@LaunchedEffect
         rivalSlip = if (room.lastEvent == "bot_missed") {
-            pt(language, "$rivalName takıldı! Kelime bulamadı • -1", "$rivalName got stuck! No word found • -1")
+            pt(language, "$rivalName kelime bulamadı • -1", "$rivalName found no word • -1")
         } else {
             pt(language, "Rakip hata yaptı • -1", "Rival slipped • -1")
         }
@@ -1075,9 +1091,9 @@ private fun PremierArena(
         rivalSlip = null
     }
 
-    // Round results get a longer reaction than single words: a celebration or a bowed head.
+    // Round results: a celebration or a bowed head, and the result shown during the break.
     var mascotRoundReaction by remember(room.id) { mutableStateOf<WordSiegeMascotEmotion?>(null) }
-    var roundBanner by remember(room.id) { mutableStateOf<Pair<Boolean, Int>?>(null) }
+    var lastRoundWon by remember(room.id) { mutableStateOf<Boolean?>(null) }
     var seenMyRounds by remember(room.id) { mutableIntStateOf(myRounds) }
     var seenRivalRounds by remember(room.id) { mutableIntStateOf(rivalRounds) }
     LaunchedEffect(room.id, myRounds, rivalRounds) {
@@ -1091,11 +1107,10 @@ private fun PremierArena(
         seenRivalRounds = rivalRounds
         mascotRoundReaction = reaction
         if (reaction != null) {
+            lastRoundWon = wonRound
             if (wonRound) SonHarfSoundFx.roundWon() else SonHarfSoundFx.roundLost()
-            roundBanner = wonRound to (myRounds + rivalRounds)
             delay(2_600)
             mascotRoundReaction = null
-            roundBanner = null
         }
     }
     val mascotEmotion = when {
@@ -1103,11 +1118,11 @@ private fun PremierArena(
         // Ordinary correct words are just watched; only a strong word draws a proud look.
         moveFeedback?.accepted == true && latestMoveScore >= 6 -> WordSiegeMascotEmotion.PROUD
         moveFeedback?.accepted == false -> WordSiegeMascotEmotion.SAD
-        myTurn && turnSeconds in 1..5 -> WordSiegeMascotEmotion.STRESSED
+        myTurn && !preparing && turnSeconds in 1..5 -> WordSiegeMascotEmotion.STRESSED
         myTurn -> WordSiegeMascotEmotion.FOCUS
         else -> WordSiegeMascotEmotion.CALM
     }
-    val mascotUrgency = if (myTurn && turnSeconds in 1..5) (6 - turnSeconds) / 5f else 0f
+    val mascotUrgency = if (myTurn && !preparing && turnSeconds in 1..5) (6 - turnSeconds) / 5f else 0f
     val mascotMomentum = (myScore - rivalScore) / maxOf(30, myScore + rivalScore).toFloat()
     // Streaks are detected from changes, so a new streak step or a broken streak is one signal.
     var mascotStreakSignal by remember(room.id) { mutableStateOf<WordSiegeMascotSignal?>(null) }
@@ -1142,7 +1157,7 @@ private fun PremierArena(
             word = premierUpper(latestWordText, language),
         )
         moveFeedback?.accepted == false -> WordSiegeMascotSignal("no:${room.id}:${words.size}:${moveFeedback.message}", WordSiegeMascotEvent.COMFORT)
-        myTurn && turnSeconds in 1..5 -> WordSiegeMascotSignal("time:${room.id}:${room.roundNo}:${words.size}", WordSiegeMascotEvent.CRITICAL)
+        myTurn && !preparing && turnSeconds in 1..5 -> WordSiegeMascotSignal("time:${room.id}:${room.roundNo}:${words.size}", WordSiegeMascotEvent.CRITICAL)
         latestMove != null && !latestMoveMine && latestMoveScore >= 6 ->
             WordSiegeMascotSignal("rival:${latestMove.id}", WordSiegeMascotEvent.RIVAL_STRONG)
         rivalScore - myScore >= 25 -> WordSiegeMascotSignal("behind:${room.id}:${room.roundNo}", WordSiegeMascotEvent.BEHIND)
@@ -1160,12 +1175,11 @@ private fun PremierArena(
             round = room.roundNo,
         )
     }
-    // The mascot's home perch is the slot beside the target card; it can fly across the arena.
+    // The mascot's home perch is the slot beside the target; it can fly across the arena.
     var arenaOrigin by remember { mutableStateOf(Offset.Zero) }
     var arenaSize by remember { mutableStateOf(IntSize.Zero) }
     var mascotSlotCenter by remember { mutableStateOf<Offset?>(null) }
     val mascotTouches = remember { WordSiegeMascotTouchState() }
-    val danger = myTurn && !reconnectGraceActive && turnSeconds in 1..5
 
     BoxWithConstraints(
         Modifier
@@ -1182,7 +1196,7 @@ private fun PremierArena(
         val targetSize = if (veryCompact) 74.dp else if (compact) 86.dp else if (tall) 112.dp else 100.dp
         val mascotSize = if (veryCompact) 64.dp else if (compact) 72.dp else if (tall) 94.dp else 84.dp
         val keyHeight = if (veryCompact) 36.dp else if (compact) 39.dp else if (tall) 48.dp else 44.dp
-        val primaryGap = if (veryCompact) 2.dp else if (compact) 4.dp else 7.dp
+        val primaryGap = if (veryCompact) 4.dp else if (compact) 6.dp else 10.dp
 
         Column(
             Modifier
@@ -1192,6 +1206,7 @@ private fun PremierArena(
                         listOf(PremierArenaSky.BackgroundTop, PremierArenaSky.BackgroundMid, PremierArenaSky.BackgroundBottom)
                     )
                 )
+                .statusBarsPadding()
         ) {
             PremierArenaHeader(
                 language = language,
@@ -1199,34 +1214,31 @@ private fun PremierArena(
                 me = me,
                 opponent = opponent,
                 rivalName = rivalName,
-                myScore = myScore,
-                rivalScore = rivalScore,
                 myRoundScore = myRoundScore,
                 rivalRoundScore = rivalRoundScore,
                 myRounds = myRounds,
                 rivalRounds = rivalRounds,
                 myStreak = myStreak,
                 rivalStreak = rivalStreak,
-                myTurn = myTurn,
-                rivalTurn = !myTurn && room.status in setOf("playing", "final", "sudden_death"),
-                myGain = myGain,
-                rivalGain = rivalGain,
-                compact = compact,
+                myTurn = myTurn && !preparing,
+                rivalTurn = !myTurn && !preparing && room.status in setOf("playing", "final", "sudden_death"),
             )
-            Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Spacer(Modifier.height(primaryGap))
                 if (reconnectGraceActive) {
                     PremierReconnectBanner(language, reconnectingMe, turnSeconds)
                 } else {
-                    PremierTurnBadge(language, myTurn, room.status, botThinking, rivalName)
+                    PremierTurnBadge(language, myTurn && !preparing, room.status, botThinking && !preparing, rivalName)
                 }
-                Spacer(Modifier.height(if (veryCompact) 3.dp else 6.dp))
-                PremierPressureStrip(language, myRoundScore, rivalRoundScore, myStreak, rivalStreak, if (myTurn) turnSeconds else 0)
                 Spacer(Modifier.height(primaryGap))
+                // The one place to look: the letter to play and the clock around it.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height((if (targetSize > mascotSize) targetSize else mascotSize) + 14.dp),
+                        .height((if (targetSize > mascotSize) targetSize else mascotSize) + 16.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     PremierTargetCard(
@@ -1235,9 +1247,9 @@ private fun PremierArena(
                         gameMode = room.gameMode,
                         round = room.roundNo,
                         size = targetSize,
-                        seconds = if (myTurn || reconnectGraceActive) turnSeconds else turnTotal,
-                        totalSeconds = if (reconnectGraceActive) PREMIER_RECONNECT_SECONDS else turnTotal,
-                        active = myTurn,
+                        seconds = if (reconnectGraceActive || (myTurn && !preparing)) turnSeconds else PREMIER_TURN_SECONDS,
+                        totalSeconds = if (reconnectGraceActive) PREMIER_RECONNECT_SECONDS else PREMIER_TURN_SECONDS,
+                        active = myTurn && !preparing,
                         suddenDeath = room.status == "sudden_death",
                     )
                     Box(
@@ -1248,63 +1260,69 @@ private fun PremierArena(
                     )
                 }
                 Spacer(Modifier.height(primaryGap))
-                PremierRoundProgress(language, myRoundWords, rivalRoundWords, compact = veryCompact)
-                Spacer(Modifier.height(primaryGap))
-                PremierLastWordCard(
-                    language = language,
-                    word = latestPlayedWord,
-                    mine = latestMoveMine,
-                    gain = if (latestMoveMine) myGain else rivalGain,
-                    linkLetters = if (latestPlayedWord.isBlank()) 0 else required.length,
-                    veryCompact = veryCompact,
-                )
+                // One line: feedback for a moment, otherwise the last word with its linking letter.
+                val feedback = moveFeedback
+                val slip = rivalSlip
+                Box(Modifier.fillMaxWidth().height(if (veryCompact) 26.dp else 30.dp), contentAlignment = Alignment.Center) {
+                    when {
+                        feedback != null -> Text(
+                            feedback.message,
+                            color = if (feedback.accepted) PremierCalm.Mine else PremierCalm.Danger,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        slip != null -> Text(slip, color = PremierCalm.Rival, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                        else -> PremierLastWordCard(
+                            language = language,
+                            word = latestPlayedWord,
+                            mine = latestMoveMine,
+                            linkLetters = if (latestPlayedWord.isBlank()) 0 else required.length,
+                            veryCompact = veryCompact,
+                        )
+                    }
+                }
+                if (!compact) {
+                    Spacer(Modifier.height(primaryGap))
+                    PremierPressureStrip(language, myRoundScore, rivalRoundScore, myStreak, rivalStreak, if (myTurn && !preparing) turnSeconds else 0)
+                }
                 if (!veryCompact) {
                     Spacer(Modifier.height(primaryGap))
                     PremierWordTrail(words, language, isPro, meId)
                 }
                 Spacer(Modifier.weight(1f).heightIn(min = 2.dp))
                 if (notice.isNotBlank()) {
-                    Text(notice, color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 4.dp))
+                    Text(notice, color = PremierCalm.Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 4.dp))
                 }
             }
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Button(
+                TextButton(
                     onClick = onForfeit,
-                    modifier = Modifier.weight(1f).height(if (veryCompact) 34.dp else 38.dp),
+                    modifier = Modifier.weight(1f).height(if (veryCompact) 32.dp else 36.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PremierArenaSky.RedSoft,
-                        contentColor = PremierArenaSky.Red,
-                    ),
-                    border = BorderStroke(1.dp, PremierArenaSky.Red.copy(alpha = .35f)),
                 ) {
-                    Icon(Icons.Rounded.Flag, null, modifier = Modifier.size(15.dp))
+                    Icon(Icons.Rounded.Flag, null, tint = PremierCalm.Muted, modifier = Modifier.size(15.dp))
                     Spacer(Modifier.width(5.dp))
-                    Text(pt(language, "PES ET", "SURRENDER"), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(pt(language, "PES ET", "SURRENDER"), color = PremierCalm.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black)
                 }
                 Box(Modifier.weight(1f)) {
-                    Button(
+                    TextButton(
                         onClick = onQuickChat,
-                        modifier = Modifier.fillMaxWidth().height(if (veryCompact) 34.dp else 38.dp),
+                        modifier = Modifier.fillMaxWidth().height(if (veryCompact) 32.dp else 36.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PremierArenaSky.Ocean,
-                            contentColor = Color.White,
-                        ),
                     ) {
-                        Icon(Icons.Rounded.ChatBubbleOutline, null, modifier = Modifier.size(15.dp))
+                        Icon(Icons.Rounded.ChatBubbleOutline, null, tint = PremierCalm.Mine, modifier = Modifier.size(15.dp))
                         Spacer(Modifier.width(5.dp))
-                        Text(pt(language, "SOHBET", "CHAT"), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                        Text(pt(language, "SOHBET", "CHAT"), color = PremierCalm.Mine, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     }
                     if (unreadChat) {
                         Box(
                             Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp)
-                                .size(9.dp).clip(CircleShape).background(PremierArenaSky.Red)
+                                .size(9.dp).clip(CircleShape).background(PremierCalm.Danger)
                         )
                     }
                 }
@@ -1314,16 +1332,13 @@ private fun PremierArena(
                 language,
                 input,
                 required,
-                myTurn,
+                myTurn && !preparing,
                 busy,
                 usedWords = words,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             )
-            PremierKeyboard(language, input, enabled = myTurn && !busy, keyHeight = keyHeight, onInput = onInput, onSubmit = onSubmit)
+            PremierKeyboard(language, input, enabled = myTurn && !busy && !preparing, keyHeight = keyHeight, onInput = onInput, onSubmit = onSubmit)
         }
-
-        // The last seconds: the screen edges pulse red.
-        if (danger) PremierDangerVignette(Modifier.matchParentSize())
 
         val slotCenter = mascotSlotCenter
         val mascotAnchors = if (slotCenter == null || arenaSize.width == 0 || arenaSize.height == 0) {
@@ -1369,45 +1384,29 @@ private fun PremierArena(
             )
         }
 
-        AnimatedVisibility(visible = floatingMessage != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 132.dp, start = 22.dp, end = 22.dp)) {
-            Surface(shape = RoundedCornerShape(16.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Sky.copy(alpha = .45f)), shadowElevation = 9.dp) {
-                Text(floatingMessage?.body.orEmpty(), Modifier.padding(horizontal = 16.dp, vertical = 10.dp), color = PremierUi.OceanDeep, fontWeight = FontWeight.Black, fontSize = 13.sp)
+        AnimatedVisibility(visible = floatingMessage != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 96.dp, start = 22.dp, end = 22.dp)) {
+            Surface(shape = RoundedCornerShape(16.dp), color = PremierCalm.Card, border = BorderStroke(1.dp, PremierCalm.CardBorder), shadowElevation = 6.dp) {
+                Text(floatingMessage?.body.orEmpty(), Modifier.padding(horizontal = 16.dp, vertical = 10.dp), color = PremierCalm.Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
         }
 
+        // Between rounds: a calm breather with a countdown before the next round begins.
         AnimatedVisibility(
-            visible = moveFeedback != null || rivalSlip != null,
-            enter = fadeIn() + scaleIn(initialScale = .8f),
+            visible = preparing,
+            enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.Center).padding(horizontal = 26.dp),
+            modifier = Modifier.matchParentSize(),
         ) {
-            val feedback = moveFeedback
-            val accepted = feedback?.accepted ?: true
-            val message = feedback?.message ?: rivalSlip.orEmpty()
-            val accent = if (accepted) PremierUi.Green else PremierUi.Red
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = if (accepted) PremierUi.GreenSoft else PremierUi.RedSoft,
-                border = BorderStroke(2.dp, accent),
-                shadowElevation = 12.dp,
-            ) {
-                Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(if (accepted) Icons.Rounded.CheckCircle else Icons.Rounded.Close, null, tint = accent, modifier = Modifier.size(24.dp))
-                    Spacer(Modifier.width(9.dp))
-                    Text(message, color = accent, fontSize = 13.sp, fontWeight = FontWeight.Black)
-                }
-            }
-        }
-
-        // A round was decided: a short banner over the arena.
-        AnimatedVisibility(
-            visible = roundBanner != null,
-            enter = fadeIn() + scaleIn(initialScale = .6f),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.Center),
-        ) {
-            val banner = roundBanner
-            if (banner != null) PremierRoundBanner(language, won = banner.first, roundsPlayed = banner.second)
+            PremierRoundPrep(
+                language = language,
+                round = room.roundNo,
+                suddenDeath = room.status == "sudden_death",
+                seconds = prepSeconds,
+                lastRoundWon = lastRoundWon,
+                myRounds = myRounds,
+                rivalRounds = rivalRounds,
+                youStart = room.currentPlayerId == meId,
+            )
         }
     }
 }
@@ -1450,51 +1449,61 @@ private fun premierBotThinkMillis(room: GameRoomDto, words: List<GameWordDto>): 
     return base + kotlin.random.Random.nextLong(0L, 1_600L)
 }
 
+/** The break between rounds: last round's result, the score and a big countdown. */
 @Composable
-private fun PremierDangerVignette(modifier: Modifier) {
-    val transition = rememberInfiniteTransition(label = "danger")
-    val pulse by transition.animateFloat(.25f, .75f, infiniteRepeatable(tween(480), RepeatMode.Reverse), label = "danger-pulse")
-    Box(
-        modifier.drawBehind {
-            val edge = size.minDimension * .22f
-            val red = PremierArenaPro.Coral.copy(alpha = .38f * pulse)
-            drawRect(Brush.verticalGradient(listOf(red, Color.Transparent), startY = 0f, endY = edge))
-            drawRect(Brush.verticalGradient(listOf(Color.Transparent, red), startY = size.height - edge, endY = size.height))
-            drawRect(Brush.horizontalGradient(listOf(red, Color.Transparent), startX = 0f, endX = edge))
-            drawRect(Brush.horizontalGradient(listOf(Color.Transparent, red), startX = size.width - edge, endX = size.width))
-        }
-    )
-}
-
-@Composable
-private fun PremierRoundBanner(language: String, won: Boolean, roundsPlayed: Int) {
-    val accent = if (won) PremierArenaPro.Gold else PremierArenaPro.Coral
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = Color.Transparent,
-        shadowElevation = 18.dp,
-    ) {
-        Column(
-            Modifier
-                .background(Brush.linearGradient(listOf(PremierArenaPro.Night, PremierArenaPro.Violet)))
-                .border(2.dp, accent, RoundedCornerShape(24.dp))
-                .padding(horizontal = 30.dp, vertical = 18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+private fun PremierRoundPrep(
+    language: String,
+    round: Int,
+    suddenDeath: Boolean,
+    seconds: Int,
+    lastRoundWon: Boolean?,
+    myRounds: Int,
+    rivalRounds: Int,
+    youStart: Boolean,
+) {
+    Box(Modifier.fillMaxSize().background(Color(0xE6F4F9FB)), contentAlignment = Alignment.Center) {
+        Surface(
+            shape = RoundedCornerShape(26.dp),
+            color = PremierCalm.Card,
+            border = BorderStroke(1.dp, PremierCalm.CardBorder),
+            shadowElevation = 10.dp,
+            modifier = Modifier.padding(horizontal = 28.dp),
         ) {
-            Text(
-                pt(language, "RAUND $roundsPlayed", "ROUND $roundsPlayed"),
-                color = PremierArenaPro.TextSoft,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 2.sp,
-            )
-            Text(
-                if (won) pt(language, "SENİN! 🏆", "YOURS! 🏆") else pt(language, "RAKİBİN", "RIVAL'S"),
-                color = accent,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.5.sp,
-            )
+            Column(Modifier.padding(horizontal = 26.dp, vertical = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                if (lastRoundWon != null) {
+                    Text(
+                        if (lastRoundWon) pt(language, "Raundu kazandın 🏆", "You won the round 🏆") else pt(language, "Raund rakibin", "Rival took the round"),
+                        color = if (lastRoundWon) PremierCalm.Mine else PremierCalm.Rival,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                }
+                Text("$myRounds : $rivalRounds", color = PremierCalm.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    if (suddenDeath) pt(language, "ANİ ÖLÜM", "SUDDEN DEATH") else pt(language, "RAUND $round", "ROUND $round"),
+                    color = PremierCalm.Muted,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp,
+                )
+                Text(pt(language, "Hazırlan", "Get ready"), color = PremierCalm.Ink, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text(
+                    "$seconds",
+                    color = PremierCalm.Mine,
+                    fontSize = 56.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    if (youStart) pt(language, "Yeni raundu sen başlatıyorsun", "You open the new round")
+                    else pt(language, "Yeni raundu rakibin başlatıyor", "Your rival opens the new round"),
+                    color = PremierCalm.Muted,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
@@ -1506,8 +1515,6 @@ private fun PremierArenaHeader(
     me: ProfileDto?,
     opponent: ProfileDto?,
     rivalName: String,
-    myScore: Int,
-    rivalScore: Int,
     myRoundScore: Int,
     rivalRoundScore: Int,
     myRounds: Int,
@@ -1516,105 +1523,51 @@ private fun PremierArenaHeader(
     rivalStreak: Int,
     myTurn: Boolean,
     rivalTurn: Boolean,
-    myGain: Pair<Int, Int>?,
-    rivalGain: Pair<Int, Int>?,
-    compact: Boolean,
 ) {
-    val myRating = me?.rating ?: 1000
-    val rivalRating = if (room.isBot) myRating else opponent?.rating ?: 1000
-    val cardHeight = if (compact) 104.dp else 116.dp
-    val suddenDeath = room.status == "sudden_death"
-
-    Surface(
-        shape = RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp),
-        color = Color.Transparent,
-        shadowElevation = 10.dp,
+    val cardHeight = 60.dp
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .background(Brush.linearGradient(listOf(PremierArenaPro.Night, PremierArenaPro.Indigo, PremierArenaPro.Violet)))
-                .statusBarsPadding()
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-        ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PremierSymmetricPlayerCard(
-                    language = language,
-                    name = me?.displayName ?: pt(language, "Sen", "You"),
-                    avatar = me?.avatarPath,
-                    gender = me?.gender,
-                    visible = me?.avatarVisibility != "hidden",
-                    rating = myRating,
-                    score = myRoundScore,
-                    total = myScore,
-                    streak = myStreak,
-                    rounds = myRounds,
-                    active = myTurn,
-                    gain = myGain,
-                    accent = PremierArenaPro.Teal,
-                    modifier = Modifier.weight(1f).height(cardHeight),
-                    nameColor = SonHarfCosmetics.playerNameColor,
-                )
-                Column(
-                    Modifier.width(74.dp).height(cardHeight),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(99.dp),
-                        color = if (suddenDeath) PremierArenaPro.Coral else PremierArenaPro.Glass,
-                        border = BorderStroke(1.dp, PremierArenaPro.GlassBorder),
-                    ) {
-                        Text(
-                            if (suddenDeath) pt(language, "ANİ ÖLÜM", "SUDDEN DEATH")
-                            else pt(language, "RAUND ${room.roundNo}/3", "ROUND ${room.roundNo}/3"),
-                            Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            color = Color.White,
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Black,
-                            maxLines = 1,
-                        )
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "$myRounds : $rivalRounds",
-                        color = PremierArenaPro.Gold,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                    Text("VS", color = PremierArenaPro.TextSoft, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        pt(language, "2 raund\nkazanır", "First to\n2 rounds"),
-                        color = PremierArenaPro.TextSoft.copy(alpha = .6f),
-                        fontSize = 7.sp,
-                        lineHeight = 8.sp,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-                PremierSymmetricPlayerCard(
-                    language = language,
-                    name = rivalName,
-                    avatar = opponent?.avatarPath,
-                    gender = opponent?.gender,
-                    visible = opponent?.avatarVisibility != "hidden",
-                    rating = rivalRating,
-                    score = rivalRoundScore,
-                    total = rivalScore,
-                    streak = rivalStreak,
-                    rounds = rivalRounds,
-                    active = rivalTurn,
-                    gain = rivalGain,
-                    accent = PremierArenaPro.Coral,
-                    modifier = Modifier.weight(1f).height(cardHeight),
-                    bot = room.isBot,
-                )
-            }
+        PremierSymmetricPlayerCard(
+            language = language,
+            name = me?.displayName ?: pt(language, "Sen", "You"),
+            avatar = me?.avatarPath,
+            gender = me?.gender,
+            visible = me?.avatarVisibility != "hidden",
+            score = myRoundScore,
+            streak = myStreak,
+            active = myTurn,
+            accent = PremierCalm.Mine,
+            soft = PremierCalm.MineSoft,
+            modifier = Modifier.weight(1f).height(cardHeight),
+            nameColor = SonHarfCosmetics.playerNameColor,
+        )
+        Column(Modifier.width(58.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                if (room.status == "sudden_death") pt(language, "ANİ ÖLÜM", "SUDDEN") else pt(language, "RAUND ${room.roundNo}/3", "ROUND ${room.roundNo}/3"),
+                color = if (room.status == "sudden_death") PremierCalm.Danger else PremierCalm.Muted,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+            )
+            Text("$myRounds : $rivalRounds", color = PremierCalm.Ink, fontSize = 20.sp, fontWeight = FontWeight.Black)
         }
+        PremierSymmetricPlayerCard(
+            language = language,
+            name = rivalName,
+            avatar = opponent?.avatarPath,
+            gender = opponent?.gender,
+            visible = opponent?.avatarVisibility != "hidden",
+            score = rivalRoundScore,
+            streak = rivalStreak,
+            active = rivalTurn,
+            accent = PremierCalm.Rival,
+            soft = PremierCalm.RivalSoft,
+            modifier = Modifier.weight(1f).height(cardHeight),
+            bot = room.isBot,
+        )
     }
 }
 
@@ -1625,118 +1578,49 @@ private fun PremierSymmetricPlayerCard(
     avatar: String?,
     gender: String?,
     visible: Boolean,
-    rating: Int,
     score: Int,
-    total: Int,
     streak: Int,
-    rounds: Int,
     active: Boolean,
-    gain: Pair<Int, Int>?,
     accent: Color,
+    soft: Color,
     modifier: Modifier,
     bot: Boolean = false,
     nameColor: Color = PremierArenaSky.Ink,
 ) {
-    val transition = rememberInfiniteTransition(label = "card-glow")
-    val glow by transition.animateFloat(.35f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "card-glow-value")
-    val shownScore by animateIntAsState(score, tween(500), label = "score-count")
-    // The score pops "+N" whenever it changes.
-    val pop = remember { Animatable(1f) }
-    LaunchedEffect(gain?.first) {
-        if (gain != null) {
-            pop.snapTo(0f)
-            pop.animateTo(1f, tween(1_100))
-        }
-    }
-    Box(modifier) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            shape = RoundedCornerShape(18.dp),
-            color = PremierArenaPro.Glass,
-            border = BorderStroke(if (active) 2.dp else 1.dp, if (active) accent.copy(alpha = glow) else PremierArenaPro.GlassBorder),
-            shadowElevation = if (active) 8.dp else 0.dp,
-        ) {
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(accent.copy(alpha = if (active) .30f else .12f), Color.Transparent)))
-                    .padding(7.dp),
-                verticalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (bot) {
-                        PremierBotAvatar(size = 40.dp, accent = accent)
-                    } else {
-                        ProfilePhotoAvatarRectWithGender(
-                            avatarPath = if (visible) avatar else null,
-                            gender = gender,
-                            name = name,
-                            width = 40.dp,
-                            height = 40.dp,
-                            accent = accent,
-                        )
-                    }
-                    Spacer(Modifier.width(6.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            name,
-                            color = if (nameColor == PremierUi.Ink || nameColor == PremierArenaSky.Ink) Color.White else nameColor,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Black,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Text("🏆 $rating", color = PremierArenaPro.TextSoft, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(top = 2.dp)) {
-                            repeat(2) { i ->
-                                Box(
-                                    Modifier.size(7.dp).clip(CircleShape)
-                                        .background(if (i < rounds) PremierArenaPro.Gold else PremierArenaPro.GlassBorder)
-                                )
-                            }
-                        }
-                    }
-                }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                    Column(Modifier.weight(1f)) {
-                        Text(pt(language, "Raund Puanı", "Round Score"), color = PremierArenaPro.TextSoft, fontSize = 7.sp, maxLines = 1)
-                        if (streak >= 2) {
-                            Surface(shape = RoundedCornerShape(99.dp), color = PremierArenaPro.GoldDeep.copy(alpha = .25f)) {
-                                Text("🔥 $streak", Modifier.padding(horizontal = 5.dp, vertical = 1.dp), color = PremierArenaPro.Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                            }
-                        } else {
-                            Text(pt(language, "Toplam $total", "Total $total"), color = PremierArenaPro.TextSoft.copy(alpha = .7f), fontSize = 7.sp, maxLines = 1)
-                        }
-                    }
-                    Text(
-                        shownScore.toString(),
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        modifier = Modifier.graphicsLayer {
-                            val bump = if (pop.value < 1f) 1f + .25f * kotlin.math.sin(pop.value * Math.PI.toFloat()) else 1f
-                            scaleX = bump
-                            scaleY = bump
-                        },
-                    )
-                }
+    val shownScore by animateIntAsState(score, tween(400), label = "score-count")
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = if (active) soft else PremierCalm.Card,
+        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) accent else PremierCalm.CardBorder),
+    ) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (bot) {
+                PremierBotAvatar(size = 34.dp, accent = accent)
+            } else {
+                ProfilePhotoAvatarRectWithGender(
+                    avatarPath = if (visible) avatar else null,
+                    gender = gender,
+                    name = name,
+                    width = 34.dp,
+                    height = 34.dp,
+                    accent = accent,
+                )
             }
-        }
-        if (gain != null && pop.value < 1f) {
-            val positive = gain.second > 0
-            Text(
-                if (positive) "+${gain.second}" else gain.second.toString(),
-                color = if (positive) PremierArenaPro.Gold else PremierArenaPro.Coral,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(end = 8.dp)
-                    .graphicsLayer {
-                        translationY = -pop.value * 38f
-                        alpha = ((1f - pop.value) * 1.4f).coerceIn(0f, 1f)
-                    },
-            )
+            Spacer(Modifier.width(6.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    name,
+                    color = if (nameColor == PremierUi.Ink || nameColor == PremierArenaSky.Ink) PremierCalm.Ink else nameColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (streak >= 2) Text("🔥 $streak", color = PremierCalm.Amber, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                else Text(pt(language, "Raund Puanı", "Round Score"), color = PremierCalm.Muted, fontSize = 8.sp, maxLines = 1)
+            }
+            Text(shownScore.toString(), color = PremierCalm.Ink, fontSize = 20.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -1805,39 +1689,21 @@ private fun PremierBotAvatar(size: Dp, accent: Color) {
 @Composable
 private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String, botThinking: Boolean = false, rivalName: String = "") {
     val active = status in setOf("playing", "final", "sudden_death")
-    val accent = if (myTurn) PremierArenaSky.Ocean else PremierArenaSky.Rival
-    val transition = rememberInfiniteTransition(label = "turn-badge")
-    val pulse by transition.animateFloat(.55f, 1f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "turn-pulse")
-    val dots by transition.animateFloat(0f, 3.99f, infiniteRepeatable(tween(1_200)), label = "thinking-dots")
+    val accent = if (myTurn) PremierCalm.Mine else PremierCalm.Rival
     val label = when {
         !active -> pt(language, "ARENA SENKRONİZE EDİLİYOR", "SYNCING ARENA")
         myTurn -> pt(language, "⚡ HAMLE SENDE • SALDIR", "⚡ YOUR MOVE • STRIKE")
-        botThinking -> pt(language, "🧠 $rivalName DÜŞÜNÜYOR", "🧠 $rivalName IS THINKING") + ".".repeat(dots.toInt())
+        botThinking -> pt(language, "$rivalName düşünüyor…", "$rivalName is thinking…")
         else -> pt(language, "◉ RAKİP HAMLESİ • HAZIR OL", "◉ RIVAL MOVE • STAY READY")
     }
-    Surface(
-        shape = RoundedCornerShape(99.dp),
-        color = Color.Transparent,
-        border = BorderStroke(if (myTurn) 2.dp else 1.dp, accent.copy(alpha = if (myTurn) pulse else .5f)),
-        shadowElevation = if (myTurn) 6.dp else 0.dp,
-    ) {
-        Box(
-            Modifier.background(
-                if (myTurn) Brush.horizontalGradient(listOf(PremierArenaSky.Ocean, PremierArenaSky.OceanDeep))
-                else Brush.horizontalGradient(listOf(PremierArenaSky.RivalSoft, PremierArenaSky.Surface))
-            )
-        ) {
-            Text(
-                label,
-                Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                color = if (myTurn) Color.White else accent,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = .8.sp,
-                maxLines = 1,
-            )
-        }
-    }
+    Text(
+        label,
+        color = accent,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Black,
+        letterSpacing = .6.sp,
+        maxLines = 1,
+    )
 }
 
 @Composable
@@ -1870,7 +1736,7 @@ private fun PremierReconnectBanner(language: String, reconnectingMe: Boolean, se
     }
 }
 
-/** Tug of war on the current round score: the knob slides toward whoever is winning the round. */
+/** A single quiet status line: who leads the round, and the streaks. */
 @Composable
 private fun PremierPressureStrip(
     language: String,
@@ -1882,57 +1748,21 @@ private fun PremierPressureStrip(
 ) {
     val lead = myScore - rivalScore
     val danger = seconds in 1..5
-    val accent = when {
-        danger -> PremierArenaSky.Red
-        lead > 0 -> PremierArenaSky.Ocean
-        lead < 0 -> PremierArenaSky.Rival
-        else -> PremierArenaSky.Gold
-    }
-    val share = if (myScore + rivalScore <= 0) .5f else (myScore.coerceAtLeast(0).toFloat() / (myScore.coerceAtLeast(0) + rivalScore.coerceAtLeast(0)).coerceAtLeast(1))
-    val knob by animateFloatAsState(share.coerceIn(.06f, .94f), tween(650), label = "tug")
-    Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                when {
-                    danger -> pt(language, "KRİTİK 5 SANİYE", "CRITICAL 5 SECONDS")
-                    lead > 0 -> pt(language, "BASKI SENDE +$lead", "YOUR PRESSURE +$lead")
-                    lead < 0 -> pt(language, "GERİ DÖNÜŞ FIRSATI ${-lead}", "COMEBACK WINDOW ${-lead}")
-                    else -> pt(language, "DENGE NOKTASI", "DEAD EVEN")
-                },
-                color = accent,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = .5.sp,
-            )
-            Text(
-                pt(language, "SERİ $myStreak : $rivalStreak", "STREAK $myStreak : $rivalStreak"),
-                color = PremierArenaSky.Muted,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(12.dp)
-                .drawBehind {
-                    val r = size.height / 2f
-                    val split = size.width * knob
-                    drawRoundRect(PremierArenaSky.Rival.copy(alpha = .85f), cornerRadius = CornerRadius(r, r))
-                    drawRoundRect(
-                        Brush.horizontalGradient(listOf(PremierArenaSky.OceanDeep, PremierArenaSky.Ocean)),
-                        size = Size(split, size.height),
-                        cornerRadius = CornerRadius(r, r),
-                    )
-                    drawCircle(Color.White, radius = r * 1.15f, center = Offset(split, r))
-                    drawCircle(accent, radius = r * .7f, center = Offset(split, r))
-                }
-        )
-    }
+    Text(
+        when {
+            danger -> pt(language, "KRİTİK 5 SANİYE", "CRITICAL 5 SECONDS")
+            lead > 0 -> pt(language, "Raundda öndesin +$lead", "You lead the round +$lead")
+            lead < 0 -> pt(language, "Raundda ${-lead} puan gerideysin", "${-lead} behind this round")
+            else -> pt(language, "Raund dengede", "Round is level")
+        } + if (myStreak >= 2 || rivalStreak >= 2) pt(language, "  •  Seri $myStreak : $rivalStreak", "  •  Streak $myStreak : $rivalStreak") else "",
+        color = if (danger) PremierCalm.Danger else PremierCalm.Muted,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+    )
 }
 
-/** The centrepiece: the letter to play inside a glowing orb, circled by the turn clock. */
+/** The letter to play on a plain white disc, circled by the turn clock; the seconds sit below it. */
 @Composable
 private fun PremierTargetCard(
     language: String,
@@ -1945,161 +1775,86 @@ private fun PremierTargetCard(
     active: Boolean = true,
     suddenDeath: Boolean = false,
 ) {
-    val transition = rememberInfiniteTransition(label = "target-reactor")
-    val glow by transition.animateFloat(.72f, 1f, infiniteRepeatable(tween(620), RepeatMode.Reverse), label = "reactor-glow")
     val danger = active && seconds in 1..5
-    val heartbeat by transition.animateFloat(1f, 1.06f, infiniteRepeatable(tween(260), RepeatMode.Reverse), label = "heartbeat")
     val progress by animateFloatAsState(
         (seconds.coerceIn(0, totalSeconds).toFloat() / totalSeconds.coerceAtLeast(1)).coerceIn(0f, 1f),
-        tween(260),
+        tween(300),
         label = "clock",
     )
     val ringColor = when {
-        !active -> PremierArenaSky.Border
-        seconds <= 3 -> PremierArenaPro.Coral
-        seconds <= 6 -> PremierArenaPro.Gold
-        else -> PremierArenaPro.Teal
+        !active -> PremierCalm.Track
+        seconds <= 5 -> PremierCalm.Danger
+        seconds <= 8 -> PremierCalm.Amber
+        else -> PremierCalm.Mine
     }
-    val targetBadge = when {
-        suddenDeath -> pt(language, "ANİ ÖLÜM", "SUDDEN")
-        required == "★" -> pt(language, "SERBEST", "FREE")
-        gameMode == "expert" -> "x${round.coerceIn(1, 3)}"
-        else -> pt(language, "${totalSeconds} SN", "${totalSeconds}S")
-    }
-    val ringSize = size + 14.dp
-    Box(
-        Modifier
-            .size(ringSize)
-            .graphicsLayer {
-                val s = if (danger) heartbeat else 1f
-                scaleX = s
-                scaleY = s
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        // Turn clock ring.
-        Box(
-            Modifier.matchParentSize().drawBehind {
-                val stroke = 5.dp.toPx()
-                val inset = stroke / 2f
-                drawArc(
-                    color = PremierArenaSky.Border.copy(alpha = .55f),
-                    startAngle = 0f,
-                    sweepAngle = 360f,
-                    useCenter = false,
-                    topLeft = Offset(inset, inset),
-                    size = Size(this.size.width - stroke, this.size.height - stroke),
-                    style = Stroke(width = stroke),
-                )
-                if (active) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(size + 12.dp), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.matchParentSize().drawBehind {
+                    val stroke = 6.dp.toPx()
+                    val inset = stroke / 2f
                     drawArc(
-                        color = ringColor,
-                        startAngle = -90f,
-                        sweepAngle = 360f * progress,
+                        color = PremierCalm.Track,
+                        startAngle = 0f,
+                        sweepAngle = 360f,
                         useCenter = false,
                         topLeft = Offset(inset, inset),
                         size = Size(this.size.width - stroke, this.size.height - stroke),
-                        style = Stroke(width = stroke, cap = StrokeCap.Round),
+                        style = Stroke(width = stroke),
                     )
-                }
-            }
-        )
-        Box(
-            Modifier
-                .size(size)
-                .shadow(22.dp, CircleShape)
-                .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        listOf(
-                            (if (danger) PremierArenaPro.Coral else PremierUi.Ocean).copy(alpha = .35f * glow),
-                            Color(0xFF17487C),
-                            Color(0xFF08111F),
+                    if (active) {
+                        drawArc(
+                            color = ringColor,
+                            startAngle = -90f,
+                            sweepAngle = 360f * progress,
+                            useCenter = false,
+                            topLeft = Offset(inset, inset),
+                            size = Size(this.size.width - stroke, this.size.height - stroke),
+                            style = Stroke(width = stroke, cap = StrokeCap.Round),
                         )
-                    )
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                Modifier
-                    .fillMaxSize(.88f)
-                    .clip(CircleShape)
-                    .background(Color(0xFF07111F).copy(alpha = .74f))
-                    .padding(3.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                        .background(Brush.radialGradient(listOf(Color(0xFF2A62B8), Color(0xFF0B2342), Color(0xFF050B14)))),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            required,
-                            color = Color.White,
-                            fontSize = (size.value * if (required.length > 1) .28f else .41f).sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.2.sp,
-                        )
-                        Text(
-                            if (required == "★") pt(language, "SERBEST VURUŞ", "FREE STRIKE") else pt(language, "HEDEF HARF", "TARGET LETTER"),
-                            color = PremierUi.Ocean,
-                            fontSize = 7.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.2.sp,
-                        )
-                        if (active) {
-                            Text(
-                                "${seconds.coerceAtLeast(0)}",
-                                color = if (danger) PremierArenaPro.Coral else PremierArenaPro.Gold,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                        }
                     }
                 }
+            )
+            Surface(
+                modifier = Modifier.size(size),
+                shape = CircleShape,
+                color = PremierCalm.Card,
+                shadowElevation = 3.dp,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Text(
+                        required,
+                        color = PremierCalm.Ink,
+                        fontSize = (size.value * if (required.length > 1) .28f else .41f).sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp,
+                    )
+                    Text(
+                        when {
+                            suddenDeath -> pt(language, "ANİ ÖLÜM", "SUDDEN DEATH")
+                            required == "★" -> pt(language, "SERBEST", "FREE")
+                            gameMode == "expert" -> "x${round.coerceIn(1, 3)}"
+                            else -> pt(language, "HEDEF HARF", "TARGET LETTER")
+                        },
+                        color = if (suddenDeath) PremierCalm.Danger else PremierCalm.Muted,
+                        fontSize = 7.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp,
+                    )
+                }
             }
         }
-        Surface(
-            modifier = Modifier.align(Alignment.TopEnd),
-            shape = RoundedCornerShape(7.dp),
-            color = if (suddenDeath) PremierArenaPro.Coral else PremierUi.Gold,
-        ) {
-            Text(targetBadge, Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = Color(0xFF171006), fontSize = 8.sp, fontWeight = FontWeight.Black)
-        }
-    }
-}
-
-/** Ten pips per side: how many of this round's words each player has played. */
-@Composable
-private fun PremierRoundProgress(language: String, myWords: Int, rivalWords: Int, compact: Boolean) {
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            repeat(10) { i ->
-                Box(
-                    Modifier.weight(1f).height(if (compact) 5.dp else 6.dp).clip(RoundedCornerShape(99.dp))
-                        .background(if (i < myWords) PremierArenaSky.Ocean else PremierArenaSky.Border.copy(alpha = .5f))
+        if (active) {
+            Spacer(Modifier.width(14.dp))
+            // The clock, big and in one place.
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "$seconds",
+                    color = if (danger) PremierCalm.Danger else PremierCalm.Ink,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Black,
                 )
-            }
-        }
-        Text(
-            pt(language, "KELİME ${myWords.coerceIn(0, 10)}-${rivalWords.coerceIn(0, 10)} / 10", "WORDS ${myWords.coerceIn(0, 10)}-${rivalWords.coerceIn(0, 10)} / 10"),
-            color = PremierArenaSky.Muted,
-            fontSize = 8.sp,
-            fontWeight = FontWeight.Black,
-        )
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            repeat(10) { i ->
-                Box(
-                    Modifier.weight(1f).height(if (compact) 5.dp else 6.dp).clip(RoundedCornerShape(99.dp))
-                        .background(if (9 - i < rivalWords) PremierArenaSky.Rival else PremierArenaSky.Border.copy(alpha = .5f))
-                )
+                Text(pt(language, "saniye", "seconds"), color = PremierCalm.Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -2111,63 +1866,39 @@ private fun PremierLastWordCard(
     language: String,
     word: String,
     mine: Boolean,
-    gain: Pair<Int, Int>?,
     linkLetters: Int,
     veryCompact: Boolean,
 ) {
-    val accent = if (mine) PremierArenaSky.OceanDeep else PremierArenaSky.Rival
+    val accent = if (mine) PremierCalm.Mine else PremierCalm.Rival
     AnimatedContent(
         targetState = word,
-        transitionSpec = {
-            (slideInVertically { it / 2 } + fadeIn() + scaleIn(initialScale = .85f)) togetherWith fadeOut()
-        },
+        transitionSpec = { (slideInVertically { it / 2 } + fadeIn()) togetherWith fadeOut() },
         label = "last-word",
     ) { shown ->
         val latestPlayedWord = shown
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (latestPlayedWord.isNotBlank()) {
-                Surface(shape = RoundedCornerShape(6.dp), color = accent.copy(alpha = .12f)) {
-                    Text(
-                        if (mine) pt(language, "SEN", "YOU") else pt(language, "RAKİP", "RIVAL"),
-                        Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        color = accent,
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(
-                buildAnnotatedString {
-                    val text = latestPlayedWord.ifBlank { pt(language, "İLK KELİME SERBEST", "FREE OPENING WORD") }
-                    val link = if (latestPlayedWord.isBlank()) 0 else linkLetters.coerceIn(0, text.length)
-                    append(text.dropLast(link))
-                    withStyle(SpanStyle(color = PremierArenaSky.Gold)) { append(text.takeLast(link)) }
-                },
-                color = accent,
-                fontSize = if (veryCompact) 14.sp else 16.sp,
-                fontWeight = FontWeight.Black,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                letterSpacing = 1.sp,
-            )
-            if (latestPlayedWord.isNotBlank() && gain != null && gain.second > 0) {
-                Spacer(Modifier.width(8.dp))
-                Text("+${gain.second}", color = PremierArenaSky.Gold, fontSize = 12.sp, fontWeight = FontWeight.Black)
-            }
-        }
+        Text(
+            buildAnnotatedString {
+                val text = latestPlayedWord.ifBlank { pt(language, "İLK KELİME SERBEST", "FREE OPENING WORD") }
+                val link = if (latestPlayedWord.isBlank()) 0 else linkLetters.coerceIn(0, text.length)
+                append(text.dropLast(link))
+                withStyle(SpanStyle(color = PremierCalm.Amber)) { append(text.takeLast(link)) }
+            },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            color = if (latestPlayedWord.isBlank()) PremierCalm.Muted else accent,
+            fontSize = if (veryCompact) 14.sp else 16.sp,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            letterSpacing = 1.sp,
+        )
     }
 }
 
 @Composable
 private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: Boolean = false, meId: String? = null) {
     if (words.isEmpty()) {
-        Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierArenaSky.Muted, fontSize = 10.sp)
+        Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierCalm.Muted, fontSize = 10.sp)
         return
     }
     // Pro users see the full played-word history so they can avoid repeats;
@@ -2175,19 +1906,13 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
     val ordered = if (isPro) words.reversed() else words.takeLast(12).reversed()
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (isPro) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Rounded.WorkspacePremium, null, tint = PremierUi.Gold, modifier = Modifier.size(11.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    pt(language, "PRO • Tüm oynanan kelimeler (${words.size})", "PRO • All played words (${words.size})"),
-                    color = PremierArenaSky.Gold,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Black,
-                )
-            }
+            Text(
+                pt(language, "PRO • Tüm oynanan kelimeler (${words.size})", "PRO • All played words (${words.size})"),
+                color = PremierCalm.Muted,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 10.dp),
+            )
         }
         LazyRow(
             Modifier.fillMaxWidth(),
@@ -2196,22 +1921,16 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
         ) {
             items(ordered, key = { it.id }) { entry ->
                 val mine = entry.playerId != null && entry.playerId == meId
-                val accent = if (mine) PremierArenaSky.Ocean else PremierArenaSky.Rival
-                val text = premierUpper(entry.normalizedWord.ifBlank { entry.word }, language)
                 Surface(
-                    shape = RoundedCornerShape(11.dp),
-                    color = if (mine) PremierArenaSky.SurfaceBlue else PremierArenaSky.RivalSoft,
-                    border = BorderStroke(1.dp, accent.copy(alpha = .45f)),
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (mine) PremierCalm.MineSoft else PremierCalm.RivalSoft,
                 ) {
                     Text(
-                        buildAnnotatedString {
-                            append(text.dropLast(1))
-                            withStyle(SpanStyle(color = PremierArenaSky.Gold)) { append(text.takeLast(1)) }
-                        },
-                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        color = PremierArenaSky.Ink,
+                        premierUpper(entry.normalizedWord.ifBlank { entry.word }, language),
+                        Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        color = PremierCalm.Ink.copy(alpha = .75f),
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
@@ -2219,7 +1938,7 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
     }
 }
 
-/** Your word as letter tiles; the required opening letters glow gold, a mistake shows in red. */
+/** Your word as letter tiles; the required opening letters are marked, a mistake shows in red. */
 @Composable
 private fun PremierInputBar(
     language: String,
@@ -2230,7 +1949,6 @@ private fun PremierInputBar(
     usedWords: List<GameWordDto> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
-    val requiredLetterBadge = myTurn && input.isBlank() && required.isNotBlank() && required != "★"
     val problem = if (myTurn && input.length >= 2) {
         premierLocalRejection(input, required, usedWords.map { it.normalizedWord.ifBlank { it.word } }, language)
     } else if (myTurn && input.isNotEmpty() && required != "★" && !premierUpper(input, language).startsWith(required.take(input.length))) {
@@ -2239,57 +1957,32 @@ private fun PremierInputBar(
         null
     }
     val accent = when {
-        problem != null -> PremierArenaSky.Red
-        myTurn -> PremierArenaSky.Ocean
-        else -> PremierArenaSky.Border
+        problem != null -> PremierCalm.Danger
+        myTurn -> PremierCalm.Mine
+        else -> PremierCalm.CardBorder
     }
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = PremierArenaSky.Surface,
+        color = PremierCalm.Card,
         border = BorderStroke(if (myTurn) 2.dp else 1.dp, accent),
-        shadowElevation = if (myTurn) 5.dp else 1.dp,
     ) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Bolt, null, tint = if (myTurn) PremierArenaSky.Ocean else PremierArenaSky.Muted, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                if (requiredLetterBadge) {
-                    Surface(shape = RoundedCornerShape(7.dp), color = PremierArenaSky.GoldSoft, border = BorderStroke(1.dp, PremierArenaSky.Gold)) {
-                        Text(required.uppercase(), Modifier.padding(horizontal = 8.dp, vertical = 3.dp), color = PremierArenaSky.Gold, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    }
-                    Spacer(Modifier.width(8.dp))
-                }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(30.dp)) {
                 if (input.isNotBlank() && !busy) {
-                    // Typed letters as tiles; the opening letters that must match glow gold.
                     val shown = premierUpper(input, language)
                     val prefix = if (required == "★") 0 else required.length
                     LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         items(shown.length) { i ->
-                            val gold = i < prefix
+                            val lead = i < prefix
                             Box(
                                 Modifier
                                     .size(width = 22.dp, height = 28.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(
-                                        when {
-                                            problem == "wrong_start_letter" && i < prefix -> PremierArenaSky.RedSoft
-                                            gold -> PremierArenaSky.GoldSoft
-                                            else -> PremierArenaSky.SurfaceBlue
-                                        }
-                                    )
-                                    .border(
-                                        1.dp,
-                                        when {
-                                            problem == "wrong_start_letter" && i < prefix -> PremierArenaSky.Red
-                                            gold -> PremierArenaSky.Gold
-                                            else -> PremierArenaSky.Border
-                                        },
-                                        RoundedCornerShape(6.dp),
-                                    ),
+                                    .background(if (lead) PremierCalm.MineSoft else Color(0xFFF3F6F8)),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(shown[i].toString(), color = PremierArenaSky.Ink, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                                Text(shown[i].toString(), color = PremierCalm.Ink, fontSize = 15.sp, fontWeight = FontWeight.Black)
                             }
                         }
                     }
@@ -2297,27 +1990,26 @@ private fun PremierInputBar(
                     Text(
                         when {
                             busy -> pt(language, "DOĞRULANIYOR…", "VERIFYING…")
-                            !myTurn -> pt(language, "RAKİBİN HAMLESİNİ BEKLE…", "WAIT FOR YOUR RIVAL…")
+                            !myTurn -> pt(language, "Rakibin hamlesini bekle…", "Wait for your rival…")
                             required == "★" -> pt(language, "KELİMENİ YAZ…", "TYPE YOUR WORD…")
                             else -> pt(language, "$required İLE BAŞLAYAN KELİMEYİ YAZ…", "TYPE A WORD STARTING WITH $required…")
                         },
-                        color = PremierArenaSky.Muted,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Black,
+                        color = PremierCalm.Muted,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        letterSpacing = .2.sp,
                     )
                 }
             }
             if (problem != null) {
                 Text(
                     validationMessage(language, problem),
-                    color = PremierArenaSky.Red,
+                    color = PremierCalm.Danger,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 26.dp, top = 3.dp),
+                    modifier = Modifier.padding(top = 3.dp),
                 )
             }
         }
