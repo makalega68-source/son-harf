@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,13 +49,41 @@ fun EconomyShopScreen(
             subtitle = sh("Kelime Tahtı · Tarzını seç", "Kelime Tahtı · Make it yours"),
             onBack = onBack,
         )
-        ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp, containerColor = Color.Transparent, divider = {}) {
-            listOf(sh("Öne Çıkan", "Featured"), sh("Sezon", "Season"), sh("Görünümler", "Styles"), "PRO", sh("Maskotlar", "Mascots"))
-                .forEachIndexed { index, label ->
-                    Tab(selected = tab == index, onClick = { tab = index }, text = {
-                        Text(label, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = if (tab == index) FontWeight.Bold else FontWeight.Medium)
-                    })
+        // One clear row of big category buttons, most wanted first.
+        val categories = listOf(
+            0 to ("⭐" to sh("Öne Çıkan", "Featured")),
+            4 to ("🐾" to sh("Maskotlar", "Mascots")),
+            2 to ("🎨" to sh("Görünümler", "Styles")),
+            3 to ("💎" to "PRO"),
+            1 to ("🎟️" to sh("Sezon", "Season")),
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(categories.size) { position ->
+                val (index, content) = categories[position]
+                val (emoji, label) = content
+                val selected = tab == index
+                Surface(
+                    onClick = { tab = index },
+                    shape = RoundedCornerShape(16.dp),
+                    color = if (selected) SonHarfTheme.Primary else SonHarfTheme.Surface,
+                    border = BorderStroke(1.dp, if (selected) SonHarfTheme.Primary else SonHarfTheme.Border),
+                    shadowElevation = if (selected) 4.dp else 0.dp,
+                ) {
+                    Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(emoji, fontSize = 16.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            label,
+                            color = if (selected) Color.White else SonHarfText,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
                 }
+            }
         }
         Box(Modifier.weight(1f)) {
             if (tab == 1) SeasonCenterContent()
@@ -123,8 +152,9 @@ private fun EconomyCatalogScreen(
 
     fun isEquipped(item: ShopItemDto): Boolean = equipped.isEquipped(item)
 
+    var kindFilter by remember { mutableStateOf<String?>(null) }
     val filtered = when (section) {
-        2 -> items
+        2 -> items.filter { kindFilter == null || it.kind == kindFilter }
         else -> emptyList()
     }
     val bundles = storefront?.bundles.orEmpty().filter { b -> b.items.isNotEmpty() && b.items.all { it.isRuntimeReadyStyle() } }
@@ -145,15 +175,15 @@ private fun EconomyCatalogScreen(
 
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfTheme.Primary) }
 
-        item {
-            Row {
-                Spacer(Modifier.weight(1f))
-                TextButton(enabled = busy == null && !loading, onClick = {
-                    scope.launch { loading = true; notice = null; reload(); loading = false }
-                }) { Text(sh("Yenile", "Refresh"), fontSize = 12.sp) }
-            }
-        }
         if (section == 0) {
+            item {
+                StoreQuickCategories(
+                    onMascots = { onSection(4) },
+                    onStyles = { onSection(2) },
+                    onPro = { onSection(3) },
+                    onCoins = { showCoins = true },
+                )
+            }
             item {
                 StoreDailyRewardCard(storefront, busy != null || loading) {
                     val b = backend
@@ -190,6 +220,32 @@ private fun EconomyCatalogScreen(
             if (proActive) item {
                 TextButton(onClick = onPro, modifier = Modifier.fillMaxWidth()) {
                     Text(sh("PRO ARAÇLARINI AÇ", "OPEN PRO TOOLS"), fontWeight = FontWeight.Black)
+                }
+            }
+        }
+        if (section == 2 && items.isNotEmpty()) {
+            item {
+                // Filter by kind so a style is found in one tap.
+                val kinds = items.map { it.kind }.distinct()
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(kinds.size + 1) { position ->
+                        val kind = if (position == 0) null else kinds[position - 1]
+                        val selected = kindFilter == kind
+                        Surface(
+                            onClick = { kindFilter = kind },
+                            shape = RoundedCornerShape(99.dp),
+                            color = if (selected) SonHarfTheme.PrimarySoft else SonHarfTheme.Surface,
+                            border = BorderStroke(1.dp, if (selected) SonHarfTheme.Primary else SonHarfTheme.Border),
+                        ) {
+                            Text(
+                                storeKindLabel(kind),
+                                Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                color = if (selected) SonHarfTheme.Primary else SonHarfText,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -460,6 +516,50 @@ private fun ProShopCard(active: Boolean, onClick: () -> Unit) {
             }
             Text(sh("Özel oda • PRO profil rozeti • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar", "Private rooms • PRO profile badge • advanced stats • ad-free experience • social benefits"), color = SonHarfText, fontSize = 10.sp)
             Text(sh("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez.", "PRO provides no score, word-hint, or rating advantage in ranked matches."), color = SonHarfTheme.Success, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+private fun storeKindLabel(kind: String?): String = when (kind) {
+    null -> sh("Tümü", "All")
+    "game_theme" -> sh("Oyun teması", "Game theme")
+    "keyboard_theme" -> sh("Klavye", "Keyboard")
+    "name_style" -> sh("İsim stili", "Name style")
+    "profile_frame" -> sh("Çerçeve", "Frame")
+    "victory_effect", "vfx" -> sh("Efekt", "Effect")
+    else -> kind.replace('_', ' ').replaceFirstChar { it.uppercase() }
+}
+
+/** Four big shortcuts so every part of the shop is one tap away. */
+@Composable
+private fun StoreQuickCategories(onMascots: () -> Unit, onStyles: () -> Unit, onPro: () -> Unit, onCoins: () -> Unit) {
+    val tiles = listOf(
+        Triple("🐾", sh("Maskotlar", "Mascots"), sh("Canlı oyun arkadaşı", "A living game buddy")) to onMascots,
+        Triple("🎨", sh("Görünümler", "Styles"), sh("Tema, klavye, isim", "Theme, keyboard, name")) to onStyles,
+        Triple("💎", "PRO", sh("Reklamsız + ayrıcalıklar", "Ad-free + perks")) to onPro,
+        Triple("🪙", sh("Son Coin al", "Get Son Coin"), sh("Paketleri gör", "See packs")) to onCoins,
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        tiles.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { (content, action) ->
+                    val (emoji, title, subtitle) = content
+                    Surface(
+                        onClick = action,
+                        modifier = Modifier.weight(1f).height(86.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        color = SonHarfTheme.Surface,
+                        border = BorderStroke(1.dp, SonHarfTheme.Border),
+                        shadowElevation = 2.dp,
+                    ) {
+                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.Center) {
+                            Text(emoji, fontSize = 24.sp)
+                            Text(title, color = SonHarfText, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                            Text(subtitle, color = SonHarfMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
         }
     }
 }

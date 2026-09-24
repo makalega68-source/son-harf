@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.TrackChanges
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -363,6 +364,8 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
     var hintUsed by remember { mutableStateOf(false) }
     var hintedIndex by remember { mutableStateOf<Int?>(null) }
     var successVfxNonce by remember { mutableIntStateOf(0) }
+    var showRules by remember { mutableStateOf(false) }
+    var stats by remember { mutableStateOf(LetterLadderStats.read(context)) }
 
     LaunchedEffect(language, puzzleNonce) {
         loading = true
@@ -464,6 +467,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
         val solved = path.size == LetterLadderEngine.MOVE_COUNT + 1 && normalized == currentPuzzle.target
         if (solved) {
             completed = true
+            stats = LetterLadderStats.recordSolve(context)
             message = sh("Hedefe ulaştın! Dört değişim tamamlandı.", "Target reached! All four changes are complete.")
             SonHarfSoundFx.victory()
         } else {
@@ -507,6 +511,9 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
             }
 
             val currentPuzzle = puzzle!!
+            val currentWord = path.lastOrNull().orEmpty()
+            // The final move produces the target itself: its letters are typed on the target row.
+            val finalMove = !completed && path.size == LetterLadderEngine.MOVE_COUNT
             Column(
                 Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -518,7 +525,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                     Spacer(Modifier.width(2.dp))
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
                         Text(
-                            sh("KELİME YOLU", "WORD PATH"),
+                            sh("HARF YOLU", "LETTER PATH"),
                             color = LetterLadderUi.Text,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Black,
@@ -532,60 +539,94 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                             maxLines = 1,
                         )
                     }
-                    Surface(shape = RoundedCornerShape(99.dp), color = LetterLadderUi.Gold.copy(alpha = .16f)) {
-                        Text(
-                            "${usedPositions.size}/${LetterLadderEngine.MOVE_COUNT}",
-                            Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                            color = LetterLadderUi.Gold,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Black,
-                        )
-                    }
+                    LadderStatChip("🏆 ${stats.solved}", LetterLadderUi.Accent)
+                    Spacer(Modifier.width(4.dp))
+                    LadderStatChip("🔥 ${stats.streak}", LetterLadderUi.Purple)
+                    Spacer(Modifier.width(4.dp))
+                    LadderStatChip("${usedPositions.size}/${LetterLadderEngine.MOVE_COUNT}", LetterLadderUi.Gold)
                 }
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    shape = RoundedCornerShape(18.dp),
-                    color = LetterLadderUi.SurfaceRaised.copy(alpha = .94f),
-                    border = BorderStroke(1.dp, LetterLadderUi.Border),
-                ) {
-                    Column(
-                        Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 7.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                Box(Modifier.fillMaxWidth().weight(1f)) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        shape = RoundedCornerShape(20.dp),
+                        color = LetterLadderUi.Surface.copy(alpha = .92f),
+                        border = BorderStroke(1.dp, LetterLadderUi.Border),
+                        shadowElevation = 4.dp,
                     ) {
-                        Text(sh("BAŞLANGIÇ", "START"), color = LetterLadderUi.AccentStrong, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.height(3.dp))
-                        LadderWordTiles(
-                            word = currentPuzzle.start.uppercase(locale),
-                            locked = emptySet(),
-                            accent = LetterLadderUi.Accent,
-                            hintedIndex = hintedIndex.takeIf { path.size == 1 },
-                            modifier = Modifier.fillMaxWidth().weight(1f),
-                        )
-                        Spacer(Modifier.height(3.dp))
-
-                        for (move in 1 until LetterLadderEngine.MOVE_COUNT) {
-                            val committedWord = path.getOrNull(move)?.uppercase(locale)
-                            val isCurrentWord = committedWord != null && move == path.lastIndex
-                            val isActiveEntry = committedWord == null && move == path.size
-                            LadderMoveRow(
-                                word = committedWord,
-                                activeInput = input.uppercase(locale).takeIf { isActiveEntry },
-                                usedPositions = usedPositions,
-                                hintedIndex = hintedIndex.takeIf { isCurrentWord || isActiveEntry },
+                        Column(
+                            Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            LadderPathRow(
+                                marker = "▶",
+                                label = sh("BAŞLANGIÇ", "START"),
+                                markerColor = LetterLadderUi.AccentStrong,
+                                reached = true,
                                 modifier = Modifier.fillMaxWidth().weight(1f),
-                            )
-                            if (move < LetterLadderEngine.MOVE_COUNT - 1) Spacer(Modifier.height(3.dp))
-                        }
+                            ) {
+                                LadderWordTiles(
+                                    word = currentPuzzle.start.uppercase(locale),
+                                    locked = emptySet(),
+                                    accent = LetterLadderUi.Accent,
+                                    hintedIndex = hintedIndex.takeIf { path.size == 1 },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
 
-                        Spacer(Modifier.height(3.dp))
-                        Text(sh("HEDEF", "TARGET"), color = LetterLadderUi.Purple, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.height(3.dp))
-                        LadderWordTiles(
-                            word = currentPuzzle.target.uppercase(locale),
-                            locked = (0 until 5).toSet(),
-                            accent = LetterLadderUi.Purple,
-                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            for (move in 1 until LetterLadderEngine.MOVE_COUNT) {
+                                val committedWord = path.getOrNull(move)?.uppercase(locale)
+                                val isCurrentWord = committedWord != null && move == path.lastIndex
+                                val isActiveEntry = committedWord == null && move == path.size
+                                val changed = path.getOrNull(move)?.let { LetterLadderEngine.changedIndex(path[move - 1], it) }
+                                LadderPathRow(
+                                    marker = if (committedWord != null) "✓" else "$move",
+                                    label = null,
+                                    markerColor = when {
+                                        committedWord != null -> LetterLadderUi.Green
+                                        isActiveEntry -> LetterLadderUi.Accent
+                                        else -> LetterLadderUi.Muted.copy(alpha = .5f)
+                                    },
+                                    reached = committedWord != null,
+                                    active = isActiveEntry,
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                ) {
+                                    LadderMoveRow(
+                                        word = committedWord,
+                                        activeInput = input.uppercase(locale).takeIf { isActiveEntry },
+                                        usedPositions = usedPositions,
+                                        hintedIndex = hintedIndex.takeIf { isCurrentWord || isActiveEntry },
+                                        changedIndex = changed,
+                                        active = isActiveEntry,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
+                            }
+
+                            LadderPathRow(
+                                marker = "★",
+                                label = sh("HEDEF", "TARGET"),
+                                markerColor = LetterLadderUi.Purple,
+                                reached = completed,
+                                active = finalMove,
+                                modifier = Modifier.fillMaxWidth().weight(1f),
+                            ) {
+                                LadderTargetTiles(
+                                    target = currentPuzzle.target.uppercase(locale),
+                                    current = currentWord.uppercase(locale),
+                                    typed = if (finalMove) input.uppercase(locale) else "",
+                                    hintedIndex = hintedIndex.takeIf { finalMove },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        }
+                    }
+                    if (completed) {
+                        LadderCompletionCard(
+                            words = path.map { it.uppercase(locale) },
+                            hintUsed = hintUsed,
+                            stats = stats,
+                            modifier = Modifier.align(Alignment.Center).padding(horizontal = 18.dp),
                         )
                     }
                 }
@@ -646,18 +687,14 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                 if (!completed) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
-                            enabled = false,
-                            onClick = {},
+                            onClick = { showRules = true },
                             modifier = Modifier.weight(1f).height(40.dp).sonHarfPressScale(pressedScale = 0.94f),
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                             shape = RoundedCornerShape(13.dp),
                             border = BorderStroke(1.dp, LetterLadderUi.Accent.copy(alpha = .72f)),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = LetterLadderUi.AccentStrong,
-                                disabledContentColor = LetterLadderUi.Muted.copy(alpha = .34f),
-                            ),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = LetterLadderUi.AccentStrong),
                         ) {
-                            Text(sh("YENİ OYUN", "NEW GAME"), fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
+                            Text(sh("NASIL OYNANIR?", "HOW TO PLAY?"), fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
                         }
 
                         OutlinedButton(
@@ -704,14 +741,14 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                 } else {
                     Button(
                         onClick = { puzzleNonce++ },
-                        modifier = Modifier.fillMaxWidth().height(46.dp).sonHarfPressScale(pressedScale = 0.94f),
-                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth().height(50.dp).sonHarfPressScale(pressedScale = 0.94f),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = LetterLadderUi.Purple,
+                            containerColor = LetterLadderUi.Accent,
                             contentColor = LetterLadderUi.AccentText,
                         ),
                     ) {
-                        Text(sh("YENİ OYUN", "NEW GAME"), fontWeight = FontWeight.Black)
+                        Text(sh("YENİ OYUN", "NEW GAME"), fontWeight = FontWeight.Black, fontSize = 16.sp)
                         Spacer(Modifier.width(6.dp))
                         Icon(Icons.Rounded.ChevronRight, null)
                     }
@@ -744,6 +781,175 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
             )
         }
     }
+
+    if (showRules) {
+        AlertDialog(
+            onDismissRequest = { showRules = false },
+            confirmButton = { TextButton(onClick = { showRules = false }) { Text(sh("ANLADIM", "GOT IT"), fontWeight = FontWeight.Black) } },
+            title = { Text(sh("Harf Yolu nasıl oynanır?", "How to play Letter Path"), fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(sh("1. Her hamlede kelimenin yalnızca 1 harfini değiştir.", "1. Change exactly one letter on each move."))
+                    Text(sh("2. Yeni harf, hedef kelimenin aynı kutusundaki harf olmalı.", "2. The new letter must be the target's letter in that position."))
+                    Text(sh("3. Değişen kutu kilitlenir; her hamle yeni bir kutu açar.", "3. A changed tile locks; each move opens a new one."))
+                    Text(sh("4. Her ara adım gerçek bir kelime olmalı. 4 hamlede hedefe ulaş!", "4. Every step must be a real word. Reach the target in 4 moves!"))
+                }
+            },
+        )
+    }
+}
+
+/** A ladder row: a step marker on a vertical rail, then the word tiles. */
+@Composable
+private fun LadderPathRow(
+    marker: String,
+    label: String?,
+    markerColor: Color,
+    reached: Boolean,
+    modifier: Modifier = Modifier,
+    active: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.width(38.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(
+                modifier = Modifier.size(if (active) 26.dp else 22.dp),
+                shape = CircleShape,
+                color = if (reached || active) markerColor else LetterLadderUi.SurfaceSoft,
+                border = BorderStroke(if (active) 2.dp else 1.dp, markerColor),
+                shadowElevation = if (active) 4.dp else 0.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(marker, color = if (reached || active) Color.White else markerColor, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            if (label != null) {
+                Text(label, color = markerColor, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            }
+        }
+        Spacer(Modifier.width(4.dp))
+        Box(Modifier.weight(1f).fillMaxHeight().padding(vertical = 1.dp)) { content() }
+    }
+}
+
+@Composable
+private fun LadderStatChip(text: String, color: Color) {
+    Surface(shape = RoundedCornerShape(99.dp), color = color.copy(alpha = .14f)) {
+        Text(text, Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = color, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
+    }
+}
+
+/** The target row: letters already reached glow green; on the final move the typed letters appear here. */
+@Composable
+private fun LadderTargetTiles(
+    target: String,
+    current: String,
+    typed: String,
+    hintedIndex: Int?,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        repeat(LetterLadderEngine.WORD_LENGTH) { index ->
+            val reached = current.getOrNull(index) == target.getOrNull(index)
+            val typedChar = typed.getOrNull(index)
+            val hinted = index == hintedIndex
+            Surface(
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                shape = RoundedCornerShape(9.dp),
+                color = when {
+                    hinted -> LetterLadderUi.Gold.copy(alpha = .20f)
+                    typedChar != null -> LetterLadderUi.Accent.copy(alpha = .12f)
+                    reached -> LetterLadderUi.Green.copy(alpha = .16f)
+                    else -> LetterLadderUi.Purple.copy(alpha = .10f)
+                },
+                border = BorderStroke(
+                    if (hinted || typedChar != null) 2.dp else 1.dp,
+                    when {
+                        hinted -> LetterLadderUi.Gold
+                        typedChar != null -> LetterLadderUi.Accent
+                        reached -> LetterLadderUi.Green.copy(alpha = .6f)
+                        else -> LetterLadderUi.Purple.copy(alpha = .45f)
+                    },
+                ),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        (typedChar ?: target.getOrNull(index) ?: ' ').toString(),
+                        color = when {
+                            typedChar != null -> LetterLadderUi.Text
+                            reached -> LetterLadderUi.Text
+                            else -> LetterLadderUi.Purple
+                        }.copy(alpha = if (typed.isNotEmpty() && typedChar == null) .35f else 1f),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    if (reached && typedChar == null) {
+                        Text("✓", color = LetterLadderUi.Green, fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LadderCompletionCard(words: List<String>, hintUsed: Boolean, stats: LetterLadderStats.Snapshot, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(22.dp),
+        color = LetterLadderUi.Surface,
+        border = BorderStroke(2.dp, LetterLadderUi.Accent),
+        shadowElevation = 14.dp,
+    ) {
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("🎉", fontSize = 34.sp)
+            Text(sh("YOL TAMAMLANDI!", "PATH COMPLETE!"), color = LetterLadderUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Text(
+                if (hintUsed) sh("İpucuyla çözdün", "Solved with a hint") else sh("İpucusuz, kusursuz! ⭐", "No hints, flawless! ⭐"),
+                color = if (hintUsed) LetterLadderUi.Muted else LetterLadderUi.AccentStrong,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(words.joinToString("  →  "), color = LetterLadderUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LadderStatChip(sh("🏆 ${stats.solved} çözüm", "🏆 ${stats.solved} solved"), LetterLadderUi.Accent)
+                LadderStatChip(sh("🔥 ${stats.streak} gün seri", "🔥 ${stats.streak}-day streak"), LetterLadderUi.Purple)
+            }
+        }
+    }
+}
+
+/** Solved puzzles and the daily streak, kept on the device. */
+internal object LetterLadderStats {
+    private const val PREFS = "son_harf_letter_ladder_stats_v1"
+
+    data class Snapshot(val solved: Int, val streak: Int, val best: Int)
+
+    fun read(context: android.content.Context): Snapshot {
+        val prefs = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+        val today = System.currentTimeMillis() / 86_400_000L
+        val last = prefs.getLong("last_day", -10L)
+        // A streak survives only if a puzzle was solved today or yesterday.
+        val streak = if (today - last <= 1L) prefs.getInt("streak", 0) else 0
+        return Snapshot(prefs.getInt("solved", 0), streak, prefs.getInt("best", 0))
+    }
+
+    fun recordSolve(context: android.content.Context): Snapshot {
+        val prefs = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+        val today = System.currentTimeMillis() / 86_400_000L
+        val last = prefs.getLong("last_day", -10L)
+        val streak = when (today - last) {
+            0L -> prefs.getInt("streak", 1).coerceAtLeast(1)
+            1L -> prefs.getInt("streak", 0) + 1
+            else -> 1
+        }
+        val solved = prefs.getInt("solved", 0) + 1
+        val best = maxOf(prefs.getInt("best", 0), streak)
+        prefs.edit().putInt("solved", solved).putInt("streak", streak).putInt("best", best).putLong("last_day", today).apply()
+        return Snapshot(solved, streak, best)
+    }
 }
 
 @Composable
@@ -752,6 +958,8 @@ private fun LadderMoveRow(
     activeInput: String? = null,
     usedPositions: Set<Int>,
     hintedIndex: Int? = null,
+    changedIndex: Int? = null,
+    active: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val display = word ?: activeInput?.padEnd(LetterLadderEngine.WORD_LENGTH, ' ') ?: "     "
@@ -760,6 +968,8 @@ private fun LadderMoveRow(
         locked = usedPositions,
         accent = if (word != null) LetterLadderUi.Green else LetterLadderUi.Accent,
         hintedIndex = hintedIndex,
+        changedIndex = changedIndex,
+        active = active,
         modifier = modifier,
     )
 }
@@ -770,30 +980,38 @@ private fun LadderWordTiles(
     locked: Set<Int>,
     accent: Color,
     hintedIndex: Int? = null,
+    changedIndex: Int? = null,
+    active: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         repeat(5) { index ->
             val char = word.getOrNull(index)?.takeUnless { it == ' ' }?.toString().orEmpty()
             val hinted = index == hintedIndex
+            val changed = index == changedIndex
             Surface(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(9.dp),
                 color = when {
                     hinted -> LetterLadderUi.Gold.copy(alpha = .20f)
+                    changed -> LetterLadderUi.Gold.copy(alpha = .16f)
                     index in locked -> LetterLadderUi.Green.copy(alpha = .13f)
                     char.isNotEmpty() -> accent.copy(alpha = .09f)
+                    active -> LetterLadderUi.Surface
                     else -> LetterLadderUi.SurfaceSoft
                 },
                 border = BorderStroke(
-                    if (hinted) 2.dp else 1.dp,
+                    if (hinted || changed || active) 2.dp else 1.dp,
                     when {
                         hinted -> LetterLadderUi.Gold
+                        changed -> LetterLadderUi.Gold.copy(alpha = .8f)
+                        active -> LetterLadderUi.Accent.copy(alpha = .75f)
                         index in locked -> LetterLadderUi.Green.copy(alpha = .55f)
                         char.isNotEmpty() -> accent.copy(alpha = .40f)
                         else -> LetterLadderUi.Border
                     },
                 ),
+                shadowElevation = if (active) 2.dp else 0.dp,
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
