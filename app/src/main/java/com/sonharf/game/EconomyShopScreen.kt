@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
 
+/** Tab index of the mascot shelf; indices 0–3 keep their historical meaning. */
+private const val STORE_TAB_MASCOTS = 4
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EconomyShopScreen(
@@ -62,20 +65,28 @@ fun EconomyShopScreen(
                 )
             },
         )
+        // Four clear tabs; collections and the season are opened from the Featured tab.
+        val tabOrder = listOf(0, STORE_TAB_MASCOTS, 1, 3)
         SegmentedGameTabs(
             labels = listOf(
                 gameText("Öne Çıkan", "Featured"),
+                gameText("Maskotlar", "Mascots"),
                 gameText("Kozmetik", "Cosmetics"),
-                gameText("Koleksiyon", "Collections"),
                 "PRO",
             ),
-            selectedIndex = tab,
-            onSelected = { tab = it },
+            selectedIndex = tabOrder.indexOf(tab).coerceAtLeast(0),
+            onSelected = { tab = tabOrder[it] },
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         Spacer(Modifier.height(6.dp))
         Box(Modifier.weight(1f)) {
-            if (tab == 2) StoreCollectionsTab(
+            if (tab == STORE_TAB_MASCOTS) Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                // Mascot characters are permanent Google Play products; ownership comes from the server.
+                MascotStoreSection()
+            }
+            else if (tab == 2) StoreCollectionsTab(
                 catalog = { EconomyCatalogScreen(2, { tab = it }, { rewards = true }, onMembershipChanged, onCollection, onPro) },
                 season = { SeasonCenterContent() },
             )
@@ -251,6 +262,13 @@ private fun EconomyCatalogScreen(
                 }
             }
             item { ProShopCard(profile?.isVip == true) { onSection(3) } }
+            item {
+                StorePromoCard(
+                    gameText("Maskotlar", "Mascots"),
+                    gameText("Oyunda seninle oynayan canlı karakterler", "Living characters that play along with you"),
+                    gameText("Gör", "View"),
+                ) { onSection(STORE_TAB_MASCOTS) }
+            }
             item {
                 StorePromoCard(
                     gameText("Sezon Bileti", "Season Pass"),
@@ -797,21 +815,12 @@ private fun StoreCollectionsTab(catalog: @Composable () -> Unit, season: @Compos
     var sub by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
         SegmentedGameTabs(
-            labels = listOf(gameText("Koleksiyonlar", "Collections"), gameText("Maskotlar", "Mascots"), gameText("Sezon", "Season")),
+            labels = listOf(gameText("Koleksiyonlar", "Collections"), gameText("Sezon", "Season")),
             selectedIndex = sub,
             onSelected = { sub = it },
             modifier = Modifier.padding(horizontal = 12.dp),
         )
-        Box(Modifier.weight(1f)) {
-            when (sub) {
-                // Mascot characters are permanent Google Play products; ownership comes from the server.
-                1 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp)) {
-                    MascotStoreSection()
-                }
-                2 -> season()
-                else -> catalog()
-            }
-        }
+        Box(Modifier.weight(1f)) { if (sub == 1) season() else catalog() }
     }
 }
 

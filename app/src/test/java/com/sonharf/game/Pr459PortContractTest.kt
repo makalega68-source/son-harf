@@ -8,18 +8,12 @@ import org.junit.Test
 /** Guards how the PR #459 work lives in the navy professional shell. */
 class Pr459PortContractTest {
     @Test
-    fun inGameMascotAppearsOnlyForKeyMoments() {
-        val companion = source("WordSiegeMascotCompanion.kt")
-        assertTrue(companion.contains("internal fun rememberWordSiegeMascotMoment("))
-        assertTrue(companion.contains("WordSiegeMascotEvent.BIG_PRAISE"))
-
+    fun inGameMascotIsBackInEveryGame() {
         listOf("PremierWordDuelScreen.kt", "WordSiegePanMatch.kt", "WordSiegePracticeBoard.kt").forEach { name ->
             val screen = source(name)
-            assertTrue("$name must gate the mascot", screen.contains("rememberWordSiegeMascotMoment("))
-            assertTrue("$name must gate the mascot", screen.contains("if (mascotMoment) WordSiegeMascotCompanion("))
+            assertTrue("$name must show the mascot", screen.contains("WordSiegeMascotCompanion("))
+            assertFalse("$name must not hide the mascot", screen.contains("if (mascotMoment)"))
         }
-        // The professional shell has no page-level companion.
-        assertFalse(source("ProfessionalUnifiedApp.kt").contains("WordSiegeMascotCompanion("))
     }
 
     @Test

@@ -84,6 +84,8 @@ internal fun WordSiegeScoreCard(
     scoreArrivalTick: Int = 0,
     scoreLossTick: Int = 0,
     onScoreCenterChanged: (Offset) -> Unit = {},
+    isPro: Boolean = false,
+    frameId: String? = null,
 ) {
     val scoreScale = remember { Animatable(1f) }
     val scoreGlow = remember { Animatable(0f) }
@@ -132,6 +134,7 @@ internal fun WordSiegeScoreCard(
                     ProfilePhotoAvatarWithGender(
                         avatarPath = avatarPath, gender = gender, name = name,
                         size = 52.dp, accent = accent, visible = avatarVisible,
+                        frameId = frameId, isPro = isPro,
                     )
                     if (leading) {
                         Box(Modifier.align(Alignment.TopCenter).offset(y = (-7).dp)) {

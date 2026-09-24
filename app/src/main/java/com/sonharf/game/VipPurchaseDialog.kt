@@ -223,14 +223,14 @@ fun VipPurchaseDialog(
                     ProPlan(
                         title = sh("AYLIK", "MONTHLY"),
                         price = monthlyPrice,
-                        imageRes = R.drawable.premium_vip_monthly,
+                        imageRes = StoreProductArtwork.forProduct(ProductCatalog.VIP_MONTHLY, R.drawable.premium_vip_monthly),
                         selected = !yearly,
                         modifier = Modifier.weight(1f),
                     ) { yearly = false }
                     ProPlan(
                         title = sh("YILLIK", "YEARLY"),
                         price = yearlyPrice,
-                        imageRes = R.drawable.premium_vip_yearly,
+                        imageRes = StoreProductArtwork.forProduct(ProductCatalog.VIP_YEARLY, R.drawable.premium_vip_yearly),
                         selected = yearly,
                         modifier = Modifier.weight(1f),
                     ) { yearly = true }

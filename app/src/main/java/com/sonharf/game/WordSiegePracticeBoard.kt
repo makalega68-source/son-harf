@@ -265,14 +265,7 @@ internal fun WordSiegePracticeBoard(
                     anchorOriginInWindow = viewportOriginInWindow,
                 )
             }
-            // Shown only for the opening, a big siege, a strong word or streak, and the result.
-            val mascotMoment = rememberWordSiegeMascotMoment(
-                matchKey = Unit,
-                momentKey = moveEventKey?.takeIf { lastMoveMine && (capturedCells >= 2 || opponentCaptured > 0) }?.let { "cap:$it" }
-                    ?: mascotSignal?.takeIf { it.event in WordSiegeMascotMomentEvents }?.key,
-                finished = mascotOutcome != null,
-            )
-            if (mascotMoment) WordSiegeMascotCompanion(
+            WordSiegeMascotCompanion(
                 anchors = WordSiegeBoardMascotPerches,
                 mascotSize = 76.dp,
                 moveId = moveEventKey?.toLong(),

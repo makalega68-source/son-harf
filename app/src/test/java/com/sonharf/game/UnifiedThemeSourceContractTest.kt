@@ -43,11 +43,11 @@ class UnifiedThemeSourceContractTest {
         assertTrue(design.contains("val SonHarfGreen = Color(0xFF789B73)"))
         assertTrue(design.contains("val SonHarfRival = Color(0xFFD27869)"))
 
-        // Son Harf keeps the PR #459 board and light sky arena; the mascot is moment-only.
+        // Son Harf keeps the PR #459 board and light sky arena; the in-game mascot is back on the arena.
         assertTrue(premier.contains("private object PremierArenaSky"))
         assertTrue(premier.contains("Color(0xFFEAF8FF)"))
         assertTrue(premier.contains("PremierKeyboard(language, input"))
-        assertTrue(premier.contains("rememberWordSiegeMascotMoment("))
+        assertTrue(premier.contains("WordSiegeMascotCompanion("))
         assertFalse(premier.contains("val Background = Color(0xFFF3EEE5)"))
         assertFalse(premier.contains("MageCatCompanion("))
     }

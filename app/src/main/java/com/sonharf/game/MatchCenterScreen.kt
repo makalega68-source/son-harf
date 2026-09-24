@@ -284,7 +284,7 @@ private fun MatchRivalHeader(card: SiegeMatchCard, trailing: @Composable () -> U
             gender = null,
             name = card.rivalName,
             size = 42.dp,
-            frameId = null,
+            frameId = rememberPlayerFrameId(card.rivalId),
             accent = GameColors.PrimaryBlue,
             showGenderBadge = false,
         )

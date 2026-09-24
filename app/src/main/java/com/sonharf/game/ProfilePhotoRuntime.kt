@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -191,6 +192,8 @@ internal fun ProfilePhotoAvatar(
     size: Dp,
     visible: Boolean = true,
     accent: Color = SonHarfCyan,
+    frameId: String? = null,
+    isPro: Boolean = false,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     var gender by remember(avatarPath) { mutableStateOf<String?>(null) }
@@ -200,10 +203,7 @@ internal fun ProfilePhotoAvatar(
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
-        Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
-            contentAlignment = Alignment.Center,
-        ) {
+        FramedPortrait(size, PlayerFrameResolver.resolve(frameId, isPro)) {
             if (bitmap != null) {
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
             } else {
@@ -225,6 +225,8 @@ internal fun ProfilePhotoAvatarWithGender(
     accent: Color = SonHarfCyan,
     visible: Boolean = true,
     showGenderBadge: Boolean = true,
+    frameId: String? = null,
+    isPro: Boolean = false,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(avatarPath, visible) {
@@ -232,10 +234,7 @@ internal fun ProfilePhotoAvatarWithGender(
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
-        Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
-            contentAlignment = Alignment.Center,
-        ) {
+        FramedPortrait(size, PlayerFrameResolver.resolve(frameId, isPro)) {
             if (bitmap != null) {
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
             } else {
@@ -259,6 +258,8 @@ internal fun ProfilePhotoAvatarRectWithGender(
     height: Dp,
     accent: Color = SonHarfCyan,
     showGenderBadge: Boolean = true,
+    frameId: String? = null,
+    isPro: Boolean = false,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(avatarPath) {
@@ -272,18 +273,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
         Modifier.size(width, height + 4.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            Modifier
-                .size(diameter)
-                .clip(CircleShape)
-                .background(
-                    Brush.sweepGradient(
-                        listOf(Color.White, accent.copy(alpha = .86f), Color(0xFF57C7F3), Color.White)
-                    )
-                )
-                .padding(3.dp),
-            contentAlignment = Alignment.Center,
-        ) {
+        FramedPortrait(diameter, PlayerFrameResolver.resolve(frameId, isPro)) {
             if (bitmap != null) {
                 Image(
                     bitmap.asImageBitmap(),
@@ -300,5 +290,20 @@ internal fun ProfilePhotoAvatarRectWithGender(
                 FramelessGenderSymbol(gender, diameter)
             }
         }
+    }
+}
+
+/**
+ * Player photo inside its profile frame. The frame art sits over the photo edge (its hole is
+ * about 68% of the artwork), so the photo is drawn a little smaller than [size] and the frame
+ * slightly larger; the whole avatar still fits the slot the caller reserved.
+ */
+@Composable
+private fun FramedPortrait(size: Dp, frameId: String, photo: @Composable () -> Unit) {
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(size * 0.74f).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+            photo()
+        }
+        PlayerFrameArtwork(frameId, Modifier.requiredSize(size * 1.06f))
     }
 }

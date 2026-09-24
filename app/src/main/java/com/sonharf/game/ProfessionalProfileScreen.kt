@@ -107,6 +107,15 @@ internal fun ProfessionalProfileScreen(
             )
         }
 
+        item(key = "cosmetics") {
+            ProfileCosmeticsCard(
+                frameId = PlayerFrameResolver.resolve(SonHarfCosmetics.profileFrameId, p?.isVip == true),
+                ownedMascots = WordSiegeMascotOwnership.owned.size,
+                totalMascots = WordSiegeMascotSkin.entries.size,
+                onOpen = onCollection,
+            )
+        }
+
         // Competitive progress is the league and rating; the game has no level system.
         item(key = "league_progress") {
             GameSurface {
@@ -349,6 +358,60 @@ private fun ProfileActionRow(
                 Text(subtitle, color = GameColors.TextSecondary, fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Icon(Icons.Rounded.ChevronRight, null, tint = GameColors.TextSecondary, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+/** "My cosmetics" at a glance: the frame the player wears, their mascots and styles. */
+@Composable
+private fun ProfileCosmeticsCard(frameId: String, ownedMascots: Int, totalMascots: Int, onOpen: () -> Unit) {
+    GameSurface {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    gameText("Kozmetiklerim", "My cosmetics"),
+                    modifier = Modifier.weight(1f),
+                    color = GameColors.TextPrimary,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 15.sp,
+                )
+                TextButton(onClick = onOpen) { Text(gameText("Tümü", "All"), fontWeight = FontWeight.Bold) }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ProfileCosmeticTile(Modifier.weight(1f), gameText("Çerçeve", "Frame"), gameText("Değiştir", "Change"), onOpen) {
+                    PlayerFrameArtwork(frameId, Modifier.fillMaxSize())
+                }
+                ProfileCosmeticTile(Modifier.weight(1f), gameText("Maskot", "Mascot"), "$ownedMascots/$totalMascots", onOpen) {
+                    Icon(Icons.Rounded.Pets, null, tint = GameColors.Lavender, modifier = Modifier.fillMaxSize().padding(8.dp))
+                }
+                ProfileCosmeticTile(Modifier.weight(1f), gameText("Stil", "Style"), gameText("Klavye, tema", "Keyboard, theme"), onOpen) {
+                    Icon(Icons.Rounded.Palette, null, tint = GameColors.TacticalTurquoise, modifier = Modifier.fillMaxSize().padding(8.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileCosmeticTile(
+    modifier: Modifier,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    preview: @Composable () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = GameShapes.Medium,
+        color = GameColors.SecondarySurface,
+        border = BorderStroke(1.dp, GameColors.Border),
+    ) {
+        Column(Modifier.padding(vertical = 10.dp, horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) { preview() }
+            Spacer(Modifier.height(4.dp))
+            Text(title, color = GameColors.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+            Text(subtitle, color = GameColors.TextSecondary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

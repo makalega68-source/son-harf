@@ -55,7 +55,7 @@ class StoreCatalogTruthV2ContractTest {
         assertFalse(pro.contains("SON HARF PRO"))
 
         // Profile-frame sale/equip surface is explicitly retired, so PRO copy must not sell it.
-        assertTrue(frames.contains("PROFILE_FRAMES_RETIRED = true"))
+        assertTrue(frames.contains("PROFILE_FRAMES_RETIRED = false"))
         assertFalse(card.contains("PRO çerçevesini"))
         assertFalse(card.contains("the PRO frame"))
         assertFalse(dialog.contains("PRO STYLE"))

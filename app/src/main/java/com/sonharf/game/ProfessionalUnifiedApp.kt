@@ -97,7 +97,11 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
         destination = target
     }
 
+    val shellContext = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {
+        // Owned mascots come from verified purchases on the server; without this the in-game
+        // mascot never appears for a player who owns one.
+        WordSiegeMascotOwnership.refresh(shellContext)
         backend.currentUserId()?.let { id ->
             runCatching { backend.getEquippedCosmetics() }.getOrNull()?.let(SonHarfCosmetics::apply)
             isPro = runCatching { backend.getProfile(id).isVip }.getOrDefault(false)

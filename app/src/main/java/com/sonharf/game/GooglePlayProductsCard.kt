@@ -289,7 +289,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         CoinProductRow(
             amount = 500,
             subtitle = sh("Mini paket", "Mini pack"),
-            imageRes = R.drawable.premium_coin_500,
+            imageRes = StoreProductArtwork.forProduct(ProductCatalog.COINS_500, R.drawable.premium_coin_500),
             product = products[ProductCatalog.COINS_500],
             busy = busy != null,
         ) { buy(ProductCatalog.COINS_500) }
@@ -299,7 +299,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         CoinProductRow(
             amount = 1500,
             subtitle = sh("Standart paket", "Standard pack"),
-            imageRes = R.drawable.premium_coin_1500,
+            imageRes = StoreProductArtwork.forProduct(ProductCatalog.COINS_1500, R.drawable.premium_coin_1500),
             product = products[ProductCatalog.COINS_1500],
             busy = busy != null,
         ) { buy(ProductCatalog.COINS_1500) }
@@ -309,7 +309,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         CoinProductRow(
             amount = 3500,
             subtitle = sh("Popüler paket", "Popular pack"),
-            imageRes = R.drawable.premium_coin_3500,
+            imageRes = StoreProductArtwork.forProduct(ProductCatalog.COINS_3500, R.drawable.premium_coin_3500),
             product = products[ProductCatalog.COINS_3500],
             busy = busy != null,
         ) { buy(ProductCatalog.COINS_3500) }
@@ -319,7 +319,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         CoinProductRow(
             amount = 8000,
             subtitle = sh("Mega paket", "Mega pack"),
-            imageRes = R.drawable.premium_coin_8000,
+            imageRes = StoreProductArtwork.forProduct(ProductCatalog.COINS_8000, R.drawable.premium_coin_8000),
             product = products[ProductCatalog.COINS_8000],
             busy = busy != null,
         ) { buy(ProductCatalog.COINS_8000) }

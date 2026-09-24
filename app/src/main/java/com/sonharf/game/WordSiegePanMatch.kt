@@ -723,17 +723,9 @@ private fun PanSiegeBoard(
                 )
             }
 
-            // The mascot only appears for the opening, a big siege, a strong word or streak,
-            // and the result; it is not a permanent companion on the board.
-            val mascotMoment = rememberWordSiegeMascotMoment(
-                matchKey = Unit,
-                momentKey = lastMove?.takeIf { lastMoveMine && (it.capturedCells >= 2 || it.opponentCaptured > 0) }?.let { "cap:${it.id}" }
-                    ?: mascotSignal?.takeIf { it.event in WordSiegeMascotMomentEvents }?.key,
-                finished = mascotOutcome != null,
-            )
             // Tapping the mascot sends it flying to another perch; the right corners stay free
             // for the centre and chat buttons.
-            if (mascotMoment) WordSiegeMascotCompanion(
+            WordSiegeMascotCompanion(
                 anchors = WordSiegeBoardMascotPerches,
                 mascotSize = 76.dp,
                 moveId = lastMove?.id,
@@ -1029,6 +1021,8 @@ private fun PanSiegePlayerCard(
         avatarPath = profile?.avatarPath, gender = profile?.gender,
         avatarVisible = profile?.avatarVisibility != "hidden", isBot = false,
         modifier = modifier,
+        isPro = profile?.isVip == true,
+        frameId = rememberPlayerFrameId(profile?.id),
         scoreArrivalTick = scoreArrivalTick,
         scoreLossTick = scoreLossTick,
         onScoreCenterChanged = onScoreCenterChanged,

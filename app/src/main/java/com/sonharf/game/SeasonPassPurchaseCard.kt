@@ -105,7 +105,7 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
                 ),
             ) {
                 Image(
-                    painter = painterResource(R.drawable.premium_season_pass),
+                    painter = painterResource(StoreProductArtwork.forProduct(ProductCatalog.SEASON_PASS_MONTHLY, R.drawable.premium_season_pass)),
                     contentDescription = null,
                     modifier = Modifier.padding(8.dp).size(66.dp),
                     contentScale = ContentScale.Fit,

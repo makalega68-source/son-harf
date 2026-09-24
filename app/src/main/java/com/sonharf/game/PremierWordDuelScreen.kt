@@ -803,6 +803,8 @@ private fun PremierLobby(
                         width = 76.dp,
                         height = 58.dp,
                         accent = Color.White,
+                        frameId = rememberPlayerFrameId(profile?.id),
+                        isPro = profile?.isVip == true,
                     )
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -1399,14 +1401,7 @@ private fun PremierArena(
             )
             listOf(home, Offset(1f - home.x, home.y))
         }
-        // The mascot is not on the board all the time: it appears at the start of the match, after
-        // a round, for a strong word or streak, and on the result screen.
-        val mascotMoment = rememberWordSiegeMascotMoment(
-            matchKey = room.id,
-            momentKey = mascotRoundReaction?.let { "round:$myRounds:$rivalRounds" }
-                ?: mascotSignal?.takeIf { it.event in WordSiegeMascotMomentEvents }?.key,
-        )
-        if (mascotMoment) WordSiegeMascotCompanion(
+        WordSiegeMascotCompanion(
             anchors = mascotAnchors,
             mascotSize = mascotSize,
             moveId = latestMove?.id,

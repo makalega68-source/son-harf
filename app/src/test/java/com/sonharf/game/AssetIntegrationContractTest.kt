@@ -20,10 +20,10 @@ class AssetIntegrationContractTest {
         val preview = read("src/main/java/com/sonharf/game/StoreProductPreview.kt")
         val frames = read("src/main/java/com/sonharf/game/PurchasedStyleUi.kt")
         val avatar = read("src/main/java/com/sonharf/game/FramedProfileAvatar.kt")
-        assertTrue(frames.contains("PROFILE_FRAMES_RETIRED = true"))
+        assertTrue(frames.contains("PROFILE_FRAMES_RETIRED = false"))
         assertTrue(frames.contains("if (PROFILE_FRAMES_RETIRED) return"))
         assertTrue(preview.contains("PurchasedProfileFrameOverlay("))
-        assertTrue(avatar.contains("val legacyFrameId = frameId"))
+        assertTrue(avatar.contains("object PlayerFrameResolver"))
         assertFalse(avatar.contains("PurchasedProfileFrameOverlay("))
     }
 

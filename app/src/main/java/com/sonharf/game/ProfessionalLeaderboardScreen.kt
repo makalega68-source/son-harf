@@ -297,6 +297,8 @@ private fun ProfessionalPodium(
                                 size = if (first) 52.dp else 44.dp,
                                 accent = accent,
                                 visible = profiles[row.userId]?.avatarVisibility != "hidden",
+                                frameId = rememberPlayerFrameId(row.userId),
+                                isPro = profiles[row.userId]?.isVip == true,
                             )
                             Spacer(Modifier.height(6.dp))
                             Text(
@@ -344,6 +346,8 @@ private fun LeaderboardCompactRow(
                 size = 38.dp,
                 accent = if (isMe) GameColors.PrimaryBlue else GameColors.TacticalTurquoise,
                 visible = profile?.avatarVisibility != "hidden",
+                frameId = rememberPlayerFrameId(row.userId),
+                isPro = profile?.isVip == true,
             )
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {

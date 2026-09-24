@@ -544,7 +544,7 @@ private fun PlayerSearchCard(query: String, onQuery: (String) -> Unit, busy: Boo
 private fun SearchPlayerRow(player: ProfileDto, relationStatus: String?, busy: Boolean, onOpen: () -> Unit = {}, onAdd: () -> Unit) {
     GameSurface {
         Row(Modifier.clickable(onClick = onOpen).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = if (player.isVip) GameColors.PrestigeGold else GameColors.PrimaryBlue, visible = player.avatarVisibility != "hidden")
+            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = if (player.isVip) GameColors.PrestigeGold else GameColors.PrimaryBlue, visible = player.avatarVisibility != "hidden", frameId = rememberPlayerFrameId(player.id), isPro = player.isVip)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(player.displayName, color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -579,7 +579,7 @@ private fun ProfessionalFriendRow(friend: ProfileDto, busy: Boolean, onOpen: () 
     GameSurface {
         Row(Modifier.clickable(onClick = onOpen).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
             Box {
-                ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 46.dp, accent = if (friend.isVip) GameColors.PrestigeGold else GameColors.PrimaryBlue, visible = friend.avatarVisibility != "hidden")
+                ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 46.dp, accent = if (friend.isVip) GameColors.PrestigeGold else GameColors.PrimaryBlue, visible = friend.avatarVisibility != "hidden", frameId = rememberPlayerFrameId(friend.id), isPro = friend.isVip)
                 Box(Modifier.align(Alignment.BottomEnd).size(11.dp).padding(1.dp)) {
                     Surface(modifier = Modifier.fillMaxSize(), shape = CircleShape, color = if (friend.presenceStatus == "online") GameColors.PlayGreen else GameColors.TextSecondary) {}
                 }
@@ -603,7 +603,7 @@ private fun ProfessionalFriendRow(friend: ProfileDto, busy: Boolean, onOpen: () 
 private fun FriendRequestRow(player: ProfileDto, busy: Boolean, onDecline: () -> Unit, onAccept: () -> Unit) {
     GameSurface(borderColor = GameColors.PrimaryBlue.copy(alpha = .32f)) {
         Row(Modifier.padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = GameColors.PrimaryBlue, visible = player.avatarVisibility != "hidden")
+            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = GameColors.PrimaryBlue, visible = player.avatarVisibility != "hidden", frameId = rememberPlayerFrameId(player.id), isPro = player.isVip)
             Spacer(Modifier.width(9.dp))
             Text(player.displayName, color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             IconButton(onClick = onDecline, enabled = !busy) { Icon(Icons.Rounded.Close, gameText("Reddet", "Decline"), tint = GameColors.Danger) }

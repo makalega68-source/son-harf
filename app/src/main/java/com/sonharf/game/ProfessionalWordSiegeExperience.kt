@@ -634,6 +634,8 @@ private fun ProfessionalSiegeGameRow(
                 size = 46.dp,
                 accent = accent,
                 visible = opponent?.avatarVisibility != "hidden",
+                frameId = rememberPlayerFrameId(opponent?.id),
+                isPro = opponent?.isVip == true,
             )
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {

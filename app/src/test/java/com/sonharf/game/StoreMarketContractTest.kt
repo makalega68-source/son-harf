@@ -25,7 +25,7 @@ class StoreMarketContractTest {
         val shop = source("EconomyShopScreen.kt")
         val sheet = source("StoreProductDetailSheet.kt")
         assertTrue(shop.contains("gameText(\"Kozmetik\", \"Cosmetics\")"))
-        assertTrue(shop.contains("gameText(\"Koleksiyon\", \"Collections\")"))
+        assertTrue(shop.contains("gameText(\"Maskotlar\", \"Mascots\")"))
         assertTrue(shop.contains("b.purchaseShopItem(product.id)"))
         assertTrue(shop.contains("b.equipShopItem(product.id)"))
         assertTrue(shop.contains("StoreProductDetailSheet("))
