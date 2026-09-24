@@ -36,6 +36,8 @@ internal fun ProfessionalRetentionScreen(
     var meta by remember { mutableStateOf<MetaProgressV2Dto?>(null) }
     var missions by remember { mutableStateOf<List<UnifiedMissionDto>>(emptyList()) }
     var goals by remember { mutableStateOf<List<GoalRowDto>>(emptyList()) }
+    var siegeMissions by remember { mutableStateOf<List<SiegeMissionDto>>(emptyList()) }
+    var cycle by remember { mutableStateOf<DailyRewardCycleDto?>(null) }
     var loading by remember { mutableStateOf(true) }
     var busyKey by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -46,10 +48,14 @@ internal fun ProfessionalRetentionScreen(
         val metaTask = async { runCatching { backend.getMetaProgressV2() }.getOrNull() }
         val missionTask = async { runCatching { backend.getUnifiedMissions() }.getOrDefault(emptyList()) }
         val goalTask = async { runCatching { backend.getGoals() }.getOrDefault(emptyList()) }
+        val siegeTask = async { runCatching { backend.getSiegeMissions() }.getOrDefault(emptyList()) }
+        val cycleTask = async { runCatching { backend.getDailyRewardCycle() }.getOrNull() }
         growth = growthTask.await()
         meta = metaTask.await()
         missions = missionTask.await()
         goals = goalTask.await()
+        siegeMissions = siegeTask.await()
+        cycle = cycleTask.await()
         loading = false
     }
 
@@ -78,10 +84,25 @@ internal fun ProfessionalRetentionScreen(
                     growth = growth,
                     missions = missions,
                     goals = goals,
+                    siegeMissions = siegeMissions.map { it.asMissionCard() },
                     loading = loading,
                     busyKey = busyKey,
                     notice = notice,
                     onPlay = onPlay,
+                    onClaimSiegeMission = { mission ->
+                        if (busyKey != null) return@ProfessionalMissionTab
+                        scope.launch {
+                            busyKey = mission.missionId
+                            runCatching { backend.claimSiegeMission(mission.missionId) }
+                                .onSuccess {
+                                    notice = gameText("+${it.rewardCoins} Son Coin alındı.", "+${it.rewardCoins} Son Coins claimed.")
+                                    SonHarfSoundFx.missionComplete()
+                                    reload()
+                                }
+                                .onFailure { notice = gameText("Görev ödülü alınamadı.", "Mission reward could not be claimed.") }
+                            busyKey = null
+                        }
+                    },
                     onClaimDailyChallenge = {
                         if (busyKey != null) return@ProfessionalMissionTab
                         scope.launch {
@@ -131,14 +152,20 @@ internal fun ProfessionalRetentionScreen(
                 ProfessionalRetentionTab.DAILY_REWARD -> ProfessionalDailyRewardTab(
                     growth = growth,
                     meta = meta,
+                    cycle = cycle,
                     loading = loading,
                     busy = busyKey != null,
                     notice = notice,
                     onClaim = {
-                        if (busyKey != null || growth?.dailyClaimed == true) return@ProfessionalDailyRewardTab
+                        if (busyKey != null || (cycle?.claimedToday ?: growth?.dailyClaimed) == true) return@ProfessionalDailyRewardTab
                         scope.launch {
                             busyKey = "checkin"
-                            val reward = runCatching { backend.claimDailyCheckin() }.getOrDefault(0)
+                            // The 7-day cycle when the server offers it, else the original check-in.
+                            val reward = if (cycle != null) {
+                                runCatching { backend.claimDailyRewardCycle() }.getOrNull()?.takeIf { it.success }?.reward ?: 0
+                            } else {
+                                runCatching { backend.claimDailyCheckin() }.getOrDefault(0)
+                            }
                             notice = if (reward > 0) {
                                 gameText("+$reward Son Coin günlük ödülün hesabına eklendi.", "+$reward Son Coins added to your account.")
                             } else {
@@ -159,10 +186,12 @@ private fun ProfessionalMissionTab(
     growth: GrowthDashboardDto?,
     missions: List<UnifiedMissionDto>,
     goals: List<GoalRowDto>,
+    siegeMissions: List<UnifiedMissionDto>,
     loading: Boolean,
     busyKey: String?,
     notice: String?,
     onPlay: () -> Unit,
+    onClaimSiegeMission: (UnifiedMissionDto) -> Unit,
     onClaimDailyChallenge: () -> Unit,
     onClaimMission: (UnifiedMissionDto) -> Unit,
     onClaimGoal: (GoalRowDto) -> Unit,
@@ -178,6 +207,18 @@ private fun ProfessionalMissionTab(
                     modifier = Modifier.fillMaxWidth(),
                     color = GameColors.PlayGreen,
                     trackColor = GameColors.SecondarySurface,
+                )
+            }
+        }
+
+        if (siegeMissions.isNotEmpty()) {
+            item { GameSectionHeader(gameText("Kuşatma Görevleri", "Siege Missions")) }
+            items(siegeMissions, key = { "siege:" + it.missionId }) { mission ->
+                ProfessionalMissionCard(
+                    mission = mission,
+                    busy = busyKey == mission.missionId,
+                    onPlay = onPlay,
+                    onClaim = { onClaimSiegeMission(mission) },
                 )
             }
         }
@@ -441,13 +482,14 @@ private fun ProfessionalLegacyGoalCard(
 private fun ProfessionalDailyRewardTab(
     growth: GrowthDashboardDto?,
     meta: MetaProgressV2Dto?,
+    cycle: DailyRewardCycleDto? = null,
     loading: Boolean,
     busy: Boolean,
     notice: String?,
     onClaim: () -> Unit,
 ) {
-    val claimed = growth?.dailyClaimed == true
-    val reward = growth?.dailyReward ?: 40
+    val claimed = cycle?.claimedToday ?: (growth?.dailyClaimed == true)
+    val reward = cycle?.todayReward ?: growth?.dailyReward ?: 40
     val streak = meta?.dailyPlayStreak ?: 0
     val bestStreak = meta?.bestDailyPlayStreak ?: streak
 
@@ -514,8 +556,10 @@ private fun ProfessionalDailyRewardTab(
 
         item {
             DailyStreakWeekStrip(
-                streak = streak,
+                streak = cycle?.streak ?: streak,
                 claimedToday = claimed,
+                serverCycleDay = cycle?.cycleDay,
+                rewards = cycle?.rewards.orEmpty(),
             )
         }
 
@@ -547,8 +591,12 @@ private fun ProfessionalDailyRewardTab(
 private fun DailyStreakWeekStrip(
     streak: Int,
     claimedToday: Boolean,
+    serverCycleDay: Int? = null,
+    rewards: List<Int> = emptyList(),
 ) {
-    val cycleDay = if (streak <= 0) 1 else ((streak - 1) % 7) + 1
+    val legacyCycleDay = run { val cycleDay = if (streak <= 0) 1 else ((streak - 1) % 7) + 1; cycleDay }
+    // The server's day of the 7-day cycle wins; the streak estimate is only a fallback.
+    val cycleDay = serverCycleDay ?: legacyCycleDay
 
     GameSurface(
         borderColor = GameColors.RewardAmber.copy(alpha = .28f),
@@ -629,6 +677,16 @@ private fun DailyStreakWeekStrip(
                                 fontWeight = FontWeight.Black,
                             )
                         }
+                        rewards.getOrNull(day - 1)?.let { amount ->
+                            Text(
+                                "+$amount",
+                                color = if (day == 7) GameColors.PrestigeGold else GameColors.RewardAmber,
+                                fontSize = 9.sp,
+                                lineHeight = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                            )
+                        }
                         Text(
                             gameText("G$day", "D$day"),
                             color = if (isCurrent) GameColors.RewardAmber else GameColors.TextTertiary,
@@ -688,3 +746,19 @@ private fun ProfessionalRetentionNotice(message: String) {
         )
     }
 }
+
+/** Siege missions use the same mission card; the scope line reads KUŞATMA. */
+private fun SiegeMissionDto.asMissionCard(): UnifiedMissionDto = UnifiedMissionDto(
+    missionId = missionId,
+    scope = gameText("Kuşatma", "Siege"),
+    periodStart = periodStart,
+    titleTr = titleTr,
+    titleEn = titleEn,
+    modeKey = "siege",
+    target = target,
+    progress = progress,
+    rewardCoins = rewardCoins,
+    completed = completed,
+    claimed = claimed,
+    routeOrder = 0,
+)

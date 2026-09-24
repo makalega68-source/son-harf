@@ -110,3 +110,16 @@ Neden:
 - Admin RPC execute yüzeyi anon'a kapalıdır; trigger-only admin enforcement fonksiyonları doğrudan authenticated client'a açık değildir.
 
 Son provenance doğrulama tarihi: 12 Eylül 2026. #344 ve #345 provenance auditleri production'a DDL veya data mutation yapmaz. Aynı gün ayrı #343 işi kapsamında uygulanan `20260912090721_shop_sale_window_purchase_enforcement` ileri migration'ı yukarıda ayrıca kayıtlıdır.
+
+## 24 Eylül 2026 — Kelime Kuşatması meta katmanı
+
+Canlıya uygulandı: `siege_meta_v1` ve `siege_meta_v1_claim_scope` (depo dosyası: `supabase/migrations/20260924190000_siege_meta_v1.sql`, ikinci adım dosyaya dahildir).
+
+Yalnız yeni, sürümlü fonksiyonlar eklendi; mevcut fonksiyon, tablo, trigger veya RLS değişmedi:
+
+- `get_siege_match_history_v1`, `get_siege_rivals_v1`: biten Kuşatma maçları ve rakip özeti (son 10 maç, arkadaşlık, engellenenler hariç).
+- `get_siege_missions_v1`, `claim_siege_mission_v1`: gerçek Kuşatma olaylarından günlük görevler; ödül `unified_mission_claims` (scope `daily`, `siege_` önekli kimlikler) ve `diamond_ledger` ile tek sefer verilir.
+- `get_daily_reward_cycle_v1`, `claim_daily_reward_cycle_v1`: `daily_checkins` üzerinde 7 günlük döngü (30/40/50/60/80/100/150, PRO ×2); `claim_daily_checkin_v1` ile aynı gün ikinci ödeme yapılamaz.
+- `get_public_cosmetics_v1`: başka oyuncunun takılı profil kozmetikleri, karşılıklı engel varsa boş.
+
+Hepsi `SECURITY DEFINER`, boş `search_path`, `auth.uid()` ile çalışır; anon execute kapalıdır. Doğrulama: geri alınan (`raise exception`) test blokları — geçmiş/rakip, görev ilerlemesi, çift talep, tamamlanmamış/bilinmeyen görev, oturumsuz erişim, döngü günü ve PRO çarpanı, bakiye ve defter kayıtları.

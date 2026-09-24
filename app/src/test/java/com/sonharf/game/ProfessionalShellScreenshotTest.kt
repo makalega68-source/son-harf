@@ -123,7 +123,7 @@ class ProfessionalShellScreenshotTest {
         compose.setContent {
             GameTheme {
                 Box(Modifier.fillMaxSize().background(GameColors.ElevatedBackground)) {
-                    PlayerProfileContent(player, relation, record, busy = false, notice = null, onAddFriend = {}, onInvite = {}, onMessage = {}, onBlock = {}, onReport = {})
+                    PlayerProfileContent(profile = player, relation = relation, headToHead = record, busy = false, notice = null, onAddFriend = {}, onInvite = {}, onMessage = {}, onBlock = {}, onReport = {})
                 }
             }
         }

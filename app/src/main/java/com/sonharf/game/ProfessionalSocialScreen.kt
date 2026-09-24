@@ -55,6 +55,7 @@ internal fun ProfessionalSocialScreen(
     var openProfileId by remember { mutableStateOf<String?>(null) }
     var messageFriend by remember { mutableStateOf<ProfileDto?>(null) }
     var conversations by remember { mutableStateOf<List<DirectConversation>>(emptyList()) }
+    var siegeRivals by remember { mutableStateOf<List<SiegeRivalDto>>(emptyList()) }
 
     suspend fun reload() = coroutineScope {
         loading = true
@@ -67,6 +68,7 @@ internal fun ProfessionalSocialScreen(
         val historyTask = async { runCatching { backend.getMatchHistory(30) }.getOrDefault(emptyList()) }
         val archTask = async { runCatching { backend.getArchRival() }.getOrNull() }
         val conversationTask = async { runCatching { backend.getDirectConversations() }.getOrDefault(emptyList()) }
+        val siegeRivalTask = async { runCatching { backend.getSiegeRivals(20) }.getOrDefault(emptyList()) }
 
         friends = friendTask.await()
         friendships = friendshipTask.await()
@@ -77,6 +79,7 @@ internal fun ProfessionalSocialScreen(
         matchHistory = historyTask.await()
         archRival = archTask.await()
         conversations = conversationTask.await()
+        siegeRivals = siegeRivalTask.await()
 
         val senders = linkedMapOf<String, ProfileDto>()
         (invites.map { it.senderId } + siegeInvites.map { it.senderId }).distinct().forEach { id ->
@@ -378,6 +381,34 @@ internal fun ProfessionalSocialScreen(
             }
 
             ProfessionalSocialTab.RIVALS -> {
+                if (siegeRivals.isNotEmpty()) {
+                    item { GameSectionHeader(gameText("Kuşatma Rakipleri", "Siege Rivals")) }
+                    items(siegeRivals, key = { "siege-rival:${it.opponentId}" }) { rival ->
+                        SiegeRivalRow(
+                            rival = rival,
+                            busy = busyKey == "siege-rival:${rival.opponentId}",
+                            onOpen = { openProfileId = rival.opponentId },
+                            onRematch = {
+                                if (busyKey != null) return@SiegeRivalRow
+                                scope.launch {
+                                    busyKey = "siege-rival:${rival.opponentId}"
+                                    notice = if (rival.isFriend) {
+                                        runCatching { backend.inviteFriendToWordSiege(rival.opponentId, SonHarfUiState.language) }.fold(
+                                            onSuccess = { gameText("Rövanş daveti gönderildi.", "Rematch invite sent.") },
+                                            onFailure = { gameText("Rövanş daveti gönderilemedi.", "Rematch invite could not be sent.") },
+                                        )
+                                    } else {
+                                        runCatching { backend.sendFriendRequest(rival.opponentId) }.fold(
+                                            onSuccess = { gameText("Rövanş için önce arkadaşlık isteği gönderildi.", "A friend request was sent first for the rematch.") },
+                                            onFailure = { gameText("İstek gönderilemedi.", "Request could not be sent.") },
+                                        )
+                                    }
+                                    busyKey = null
+                                }
+                            },
+                        )
+                    }
+                }
                 archRival?.let { rival -> item { ArchRivalCard(rival) { openProfileId = rival.opponentId } } }
                 if (rivals.isNotEmpty()) item { GameSectionHeader(gameText("Rakip Geçmişi", "Rival History")) }
                 items(rivals, key = { "rival:${it.opponentId}" }) { rival ->
@@ -437,12 +468,15 @@ internal fun ProfessionalSocialScreen(
     }
 
     openProfileId?.let { id ->
+        // Head-to-head: the last 10 siege matches when there are any, else the duel history.
+        val siege = siegeRivals.firstOrNull { it.opponentId == id }
         val record = rivals.firstOrNull { it.opponentId == id }
         PlayerProfileSheet(
             backend = backend,
             playerId = id,
             friendships = friendships,
-            headToHead = record?.let { PlayerHeadToHead(it.matches, it.wins, it.losses) },
+            headToHead = siege?.let { PlayerHeadToHead(minOf(it.matches, 10), it.last10Wins, it.last10Losses) }
+                ?: record?.let { PlayerHeadToHead(it.matches, it.wins, it.losses) },
             onMessage = { friend ->
                 openProfileId = null
                 messageFriend = friend
@@ -678,6 +712,30 @@ private fun ConversationRow(name: String, preview: String, fromMe: Boolean, enab
                 )
             }
             Icon(Icons.Rounded.ChevronRight, null, tint = GameColors.TextTertiary)
+        }
+    }
+}
+
+@Composable
+private fun SiegeRivalRow(rival: SiegeRivalDto, busy: Boolean, onOpen: () -> Unit, onRematch: () -> Unit) {
+    GameSurface {
+        Row(Modifier.clickable(onClick = onOpen).padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = GameColors.TacticalTurquoise.copy(alpha = .14f)) {
+                Icon(Icons.Rounded.GridView, null, tint = GameColors.TacticalTurquoise, modifier = Modifier.padding(8.dp).size(20.dp))
+            }
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f)) {
+                Text(rival.displayName, color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    gameText(
+                        "Son ${minOf(rival.matches, 10)} maç: ${rival.last10Wins}–${rival.last10Losses} • toplam ${rival.matches}",
+                        "Last ${minOf(rival.matches, 10)}: ${rival.last10Wins}–${rival.last10Losses} • ${rival.matches} total",
+                    ),
+                    color = GameColors.TextSecondary,
+                    fontSize = 10.sp,
+                )
+            }
+            GameSecondaryButton(if (busy) "…" else gameText("RÖVANŞ", "REMATCH"), onRematch, enabled = !busy)
         }
     }
 }

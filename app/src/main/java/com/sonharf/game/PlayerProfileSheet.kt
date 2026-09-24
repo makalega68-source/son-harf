@@ -21,6 +21,7 @@ import com.sonharf.game.data.FriendshipDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.getPublicCosmetics
 import com.sonharf.game.data.inviteFriendToWordSiege
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
@@ -101,6 +102,7 @@ internal fun PlayerProfileSheet(
     val scope = rememberCoroutineScope()
     val me = remember { backend.currentUserId() }
     var profile by remember(playerId) { mutableStateOf<ProfileDto?>(null) }
+    var frameId by remember(playerId) { mutableStateOf<String?>(null) }
     var relation by remember(playerId, friendships) { mutableStateOf(playerRelation(me, playerId, friendships)) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -109,6 +111,7 @@ internal fun PlayerProfileSheet(
 
     LaunchedEffect(playerId) {
         profile = runCatching { backend.getProfile(playerId) }.getOrNull()
+        frameId = runCatching { backend.getPublicCosmetics(playerId) }.getOrNull()?.profileFrameId
         if (profile == null) notice = gameText("Profil yüklenemedi.", "Profile could not be loaded.")
     }
 
@@ -128,6 +131,7 @@ internal fun PlayerProfileSheet(
     ) {
         PlayerProfileContent(
             profile = profile,
+            frameId = frameId,
             relation = relation,
             headToHead = headToHead,
             busy = busy,
@@ -223,6 +227,7 @@ internal fun PlayerProfileSheet(
 @Composable
 internal fun PlayerProfileContent(
     profile: ProfileDto?,
+    frameId: String? = null,
     relation: PlayerRelation,
     headToHead: PlayerHeadToHead?,
     busy: Boolean,
@@ -250,7 +255,7 @@ internal fun PlayerProfileContent(
                 gender = profile.gender,
                 name = profile.displayName,
                 size = 76.dp,
-                frameId = null,
+                frameId = frameId,
                 accent = if (profile.isVip) GameColors.PrestigeGold else GameColors.PrimaryBlue,
                 visible = profile.avatarVisibility != "hidden",
                 isPro = profile.isVip,
