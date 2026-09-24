@@ -110,3 +110,9 @@ Neden:
 - Admin RPC execute yüzeyi anon'a kapalıdır; trigger-only admin enforcement fonksiyonları doğrudan authenticated client'a açık değildir.
 
 Son provenance doğrulama tarihi: 12 Eylül 2026. #344 ve #345 provenance auditleri production'a DDL veya data mutation yapmaz. Aynı gün ayrı #343 işi kapsamında uygulanan `20260912090721_shop_sale_window_purchase_enforcement` ileri migration'ı yukarıda ayrıca kayıtlıdır.
+
+## 24 Eylül 2026 — Maskot mağazası
+
+- `20260924090000_mascot_store_v1` production'a MCP ile uygulandı: `store_catalog_enabled_product_guard_v3`, 7 `mascot_*` katalog satırı, `apply_verified_premium_purchase_v1` maskot entitlement eşlemesi ve `get_my_mascots_v1()` (yalnız authenticated).
+- `verify-play-purchase` edge function maskot ürünlerini one-time premium ürün olarak tanıyacak şekilde yeniden deploy edildi.
+- Sahip hesabına test amaçlı 7 maskot entitlement'ı verildi (`source_id = owner_mascot_test_20260924`); gerektiğinde bu source_id ile geri alınabilir.
