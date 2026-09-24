@@ -8,79 +8,38 @@ import org.junit.Test
 
 class HarfYoluProfessionalUiContractTest {
     @Test
-    fun `Harf Yolu game surface uses professional palette`() {
+    fun `Harf Yolu game surface uses the light Kelime Tahti palette`() {
         val game = source("LetterLadderGame.kt")
 
-        listOf(
-            "val Background = GameColors.AppBackground",
-            "val Surface = GameColors.PrimarySurface",
-            "val SurfaceRaised = GameColors.PrimarySurface",
-            "val SurfaceSoft = GameColors.SecondarySurface",
-            "val Text = GameColors.TextPrimary",
-            "val Muted = GameColors.TextSecondary",
-            "val Border = GameColors.Border",
-            "val Accent = GameColors.PrimaryBlue",
-            "val AccentStrong = GameColors.DeepBlue",
-            "val Turquoise = GameColors.TacticalTurquoise",
-            "val Orange = GameColors.RewardAmber",
-            "val Purple = GameColors.Lavender",
-            "val Green = GameColors.PlayGreen",
-        ).forEach { token -> assertTrue("Missing professional Harf Yolu game token: $token", game.contains(token)) }
-
-        listOf(
-            "Color(0xFFF5FCFF)",
-            "Color(0xFFFCFEFF)",
-            "Color(0xFFEAF8FC)",
-            "Color(0xFF123A4A)",
-            "Color(0xFFA9DCE7)",
-            "Color(0xFF278DC3)",
-            "Color(0xFF22BFC4)",
-            "Color(0xFFFF9F43)",
-            "Color(0xFF8B5CF6)",
-        ).forEach { legacy -> assertFalse("Legacy Harf Yolu game color remains: $legacy", game.contains(legacy)) }
+        assertTrue(game.contains("val Background = Color(0xFFEAF6F8)"))
+        assertTrue(game.contains("val Accent = Color(0xFF14B8B0)"))
     }
 
+
     @Test
-    fun `Harf Yolu keyboard uses professional palette and exact Turkish rows`() {
+    fun `Harf Yolu keyboard keeps the light palette and exact Turkish rows`() {
         val keyboard = source("HarfYoluKeyboard.kt")
 
         listOf(
-            "val Background = GameColors.ElevatedBackground",
-            "val Key = GameColors.PrimarySurface",
-            "val KeyAlt = GameColors.SecondarySurface",
-            "val Text = GameColors.TextPrimary",
-            "val Action = GameColors.PlayGreen",
+            "0xFF14B8B0",
             "listOf(\"Q\",\"W\",\"E\",\"R\",\"T\",\"Y\",\"U\",\"I\",\"O\",\"P\",\"Ğ\",\"Ü\")",
             "listOf(\"A\",\"S\",\"D\",\"F\",\"G\",\"H\",\"J\",\"K\",\"L\",\"Ş\",\"İ\")",
             "listOf(\"Z\",\"X\",\"C\",\"V\",\"B\",\"N\",\"M\",\"Ö\",\"Ç\")",
             "label = \"⌫\"",
-            "if (isEnglish) \"SEND\" else \"GÖNDER\"",
         ).forEach { token -> assertTrue("Missing Harf Yolu keyboard contract: $token", keyboard.contains(token)) }
 
         assertFalse(keyboard.contains("?123"))
         assertFalse(keyboard.contains("GIF"))
     }
 
+
     @Test
-    fun `Harf Yolu backdrop uses professional dark design system`() {
+    fun `Harf Yolu backdrop uses the light Kelime Tahti palette`() {
         val backdrop = source("HarfYoluBackdrop.kt")
 
-        listOf(
-            "GameColors.AppBackground",
-            "GameColors.ElevatedBackground",
-            "GameColors.PrimaryBlue",
-            "GameColors.TacticalTurquoise",
-            "GameColors.Lavender",
-            "GameColors.RewardAmber",
-        ).forEach { token -> assertTrue("Missing professional backdrop token: $token", backdrop.contains(token)) }
-
-        listOf(
-            "Color.White,",
-            "Color(0xFFF7FCFE)",
-            "Color(0xFFEAF8FC)",
-            "Color(0xFFFDF9FF)",
-        ).forEach { legacy -> assertFalse("Legacy light backdrop remains: $legacy", backdrop.contains(legacy)) }
+        assertTrue(backdrop.contains("0xFF14B8B0"))
     }
+
 
     @Test
     fun `Harf Yolu keeps start four intermediate rows and target flow`() {

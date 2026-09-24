@@ -56,18 +56,9 @@ class UnifiedThemeSourceContractTest {
     fun legacyThemeFacadeCannotReintroduceRetiredNeonPalette() {
         val legacy = source("SonHarfTheme.kt")
 
-        listOf(
-            "val Background: Color get() = if (alternateDark)",
-            "else GameColors.AppBackground",
-            "val Surface: Color get() = if (alternateDark)",
-            "else GameColors.PrimarySurface",
-            "val Primary: Color get() = GameColors.PrimaryBlue",
-            "val Turquoise: Color get() = GameColors.TacticalTurquoise",
-            "val Success: Color get() = GameColors.PlayGreen",
-            "val Error: Color get() = GameColors.Danger",
-            "val PremiumGold: Color get() = GameColors.PrestigeGold",
-            "val HeroStart: Color get() = GameColors.HeroStart",
-        ).forEach { token -> assertTrue("Missing professional legacy-theme mapping: $token", legacy.contains(token)) }
+        // Light Kelime Tahtı palette (PR #459).
+        assertTrue(legacy.contains("val IsDark: Boolean get() = false"))
+        assertTrue(legacy.contains("Color(0xFF14B8B0)"))
 
         listOf(
             "0xFFEFFF19",

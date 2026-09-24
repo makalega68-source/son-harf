@@ -10,9 +10,9 @@ class ProfessionalAuthContractTest {
     fun `required auth keeps professional shell and verified membership flow`() {
         val source = repoFile("app/src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
 
-        assertTrue(source.contains("GameColors.AppBackground"))
-        assertTrue(source.contains("GameColors.PrimaryBlue"))
-        assertTrue(source.contains("GameColors.TacticalTurquoise"))
+        // Light Kelime Tahtı auth palette (PR #459).
+        assertTrue(source.contains("val Background = Color(0xFFEAF6F8)"))
+        assertTrue(source.contains("lightColorScheme("))
         assertTrue(source.contains("kelime_kusatma_logo_hd"))
         assertTrue(source.contains("KELİME KUŞATMASI"))
         assertTrue(source.contains("verticalScroll(scrollState)"))
