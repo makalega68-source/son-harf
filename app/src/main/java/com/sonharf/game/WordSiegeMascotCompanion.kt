@@ -420,7 +420,7 @@ internal object WordSiegeMascotLines {
     )
 }
 
-internal enum class WordSiegeMascotIdle { WATCH, LOOK_AROUND, NOD, HOP, SPARKLE, TWIRL, FLIP, CHAT, WANDER, PEEK, CHASE }
+internal enum class WordSiegeMascotIdle { WATCH, LOOK_AROUND, NOD, HOP, SPARKLE, TWIRL, FLIP, CHAT, WANDER, PEEK, CHASE, DANCE, WIGGLE, BOUNCE, SPIN_HOP, WAVE }
 
 /**
  * The mascot's decision making: weighted choices with cooldowns and a short memory of what it did
@@ -468,6 +468,11 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
                 // Curious about the rival's move: stretches up to peek.
                 WordSiegeMascotIdle.PEEK to (if (rivalTurn) 1.3f else 0f),
                 WordSiegeMascotIdle.CHASE to .22f * playfulness,
+                WordSiegeMascotIdle.DANCE to .3f * playfulness,
+                WordSiegeMascotIdle.WIGGLE to .6f * playfulness,
+                WordSiegeMascotIdle.BOUNCE to .4f * playfulness,
+                WordSiegeMascotIdle.SPIN_HOP to .25f * playfulness,
+                WordSiegeMascotIdle.WAVE to .45f,
             )
         }
         val weighted = options.map { (idle, baseWeight) ->
@@ -508,6 +513,11 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
         WordSiegeMascotIdle.WANDER -> 240_000L
         WordSiegeMascotIdle.PEEK -> 40_000L
         WordSiegeMascotIdle.CHASE -> 420_000L
+        WordSiegeMascotIdle.DANCE -> 240_000L
+        WordSiegeMascotIdle.WIGGLE -> 60_000L
+        WordSiegeMascotIdle.BOUNCE -> 90_000L
+        WordSiegeMascotIdle.SPIN_HOP -> 180_000L
+        WordSiegeMascotIdle.WAVE -> 120_000L
     }
 
     /** Picks a line it has not said recently. */
@@ -577,6 +587,8 @@ internal fun WordSiegeMascotCompanion(
     requireOwnership: Boolean = true,
     /** Always show this character (the first-run welcome uses the classic one). */
     forcedSkin: WordSiegeMascotSkin? = null,
+    /** First-run entrance: drops in spinning, lands, waves and dances instead of flying in. */
+    grandEntrance: Boolean = false,
 ) {
     if (anchors.isEmpty()) return
     val ownedSkins = WordSiegeMascotOwnership.owned
@@ -827,8 +839,17 @@ internal fun WordSiegeMascotCompanion(
         // Life loop: arrive, greet, then mostly watch with an occasional, never-repeating gesture.
         LaunchedEffect(Unit) {
             delay(250L)
-            if (initialOutcome == null) startTrip { flyTo(0, 1_000) }.join()
-            if (greeting != null && initialOutcome == null) {
+            if (initialOutcome == null) startTrip { flyTo(0, if (grandEntrance) 1 else 1_000) }.join()
+            if (grandEntrance && initialOutcome == null) {
+                perform(WordSiegeMascotAction.INTRO)
+                delay(2_700L)
+                if (greeting != null) say(greeting, holdExtraMillis = 2_500L)
+                perform(WordSiegeMascotAction.WAVE)
+                delay(3_000L)
+                perform(WordSiegeMascotAction.DANCE)
+                delay(2_600L)
+                perform(WordSiegeMascotAction.SPARKLE)
+            } else if (greeting != null && initialOutcome == null) {
                 delay(300L)
                 perform(WordSiegeMascotAction.HOP)
                 say(greeting, holdExtraMillis = 2_500L)
@@ -926,6 +947,20 @@ internal fun WordSiegeMascotCompanion(
                         watching = false
                         perform(WordSiegeMascotAction.PEEK)
                     }
+                    WordSiegeMascotIdle.DANCE -> {
+                        watching = false
+                        perform(WordSiegeMascotAction.DANCE)
+                    }
+                    WordSiegeMascotIdle.WIGGLE -> perform(WordSiegeMascotAction.WIGGLE)
+                    WordSiegeMascotIdle.BOUNCE -> {
+                        watching = false
+                        perform(WordSiegeMascotAction.BOUNCE)
+                    }
+                    WordSiegeMascotIdle.SPIN_HOP -> {
+                        watching = false
+                        perform(WordSiegeMascotAction.SPIN_HOP)
+                    }
+                    WordSiegeMascotIdle.WAVE -> perform(WordSiegeMascotAction.WAVE)
                     WordSiegeMascotIdle.CHASE -> {
                         // A glowing letter drifts by; it follows it with its eyes, then catches it.
                         watching = false
@@ -969,7 +1004,7 @@ internal fun WordSiegeMascotCompanion(
         LaunchedEffect(announcement?.first) {
             val text = announcement?.second ?: return@LaunchedEffect
             lastInteractionAt = SystemClock.uptimeMillis()
-            perform(WordSiegeMascotAction.HOP)
+            perform(WordSiegeMascotAction.SPIN_HOP)
             say(text, holdExtraMillis = 800L)
         }
 
@@ -1131,8 +1166,8 @@ internal fun WordSiegeMascotCompanion(
                             delay(1_700L)
                             perform(WordSiegeMascotAction.TWIRL)
                             delay(2_000L)
-                            perform(WordSiegeMascotAction.HOP)
-                            delay(1_000L)
+                            perform(WordSiegeMascotAction.DANCE)
+                            delay(2_500L)
                             if (mind.chance(.3f)) {
                                 perform(WordSiegeMascotAction.FLIP)
                                 delay(3_100L)

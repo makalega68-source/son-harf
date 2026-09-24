@@ -112,7 +112,8 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
         if (homeRequest > 0) {
             uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
             uiLanguageBeforeGame = null
-            destination = ProfessionalDestination.HOME
+            // Leaving Son Harf returns to where the player opened it (Play tab, matches...).
+            destination = if (destination == ProfessionalDestination.LAST_LETTER) gameReturn else ProfessionalDestination.HOME
         }
     }
 

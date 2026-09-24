@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -547,7 +548,7 @@ private fun CoinProductRow(
                 enabled = !busy && offer != null,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = GameColors.TacticalTurquoise,
-                    contentColor = GameColors.AppBackground,
+                    contentColor = Color.White,
                     disabledContainerColor = GameColors.Disabled,
                     disabledContentColor = GameColors.DisabledContent,
                 ),

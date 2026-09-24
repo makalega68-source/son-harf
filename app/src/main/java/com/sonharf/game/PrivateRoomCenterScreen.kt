@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -364,7 +365,7 @@ internal fun PrivateRoomCenterScreen(
                     shape = GameShapes.Medium,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GameColors.TacticalTurquoise,
-                        contentColor = GameColors.AppBackground,
+                        contentColor = Color.White,
                     ),
                 ) {
                     Text(

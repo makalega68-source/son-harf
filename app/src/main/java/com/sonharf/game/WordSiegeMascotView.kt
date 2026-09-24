@@ -39,6 +39,24 @@ internal enum class WordSiegeMascotEmotion {
 /** Whole-body moves the companion brain can ask for; each one is rare and short. */
 internal enum class WordSiegeMascotAction {
     HOP, TWIRL, FLIP, LOOK_AROUND, NOD, SPARKLE, CHEER, LAND, SHRUG, PEEK, FLINCH, YAWN,
+
+    /** Side-to-side dance with a bouncy beat. */
+    DANCE,
+
+    /** Happy jiggle in place. */
+    WIGGLE,
+
+    /** Hop with a full spin in the air. */
+    SPIN_HOP,
+
+    /** Three quick hops. */
+    BOUNCE,
+
+    /** Raises a hand and waves hello. */
+    WAVE,
+
+    /** Grand entrance: drops in spinning, squashes on landing, pops up and waves. */
+    INTRO,
 }
 
 /** Costume worn over the orb; purely cosmetic. */
@@ -412,6 +430,12 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             WordSiegeMascotAction.PEEK -> 1_600L
             WordSiegeMascotAction.FLINCH -> 520L
             WordSiegeMascotAction.YAWN -> 2_300L
+            WordSiegeMascotAction.DANCE -> 2_400L
+            WordSiegeMascotAction.WIGGLE -> 1_100L
+            WordSiegeMascotAction.SPIN_HOP -> 1_300L
+            WordSiegeMascotAction.BOUNCE -> 1_500L
+            WordSiegeMascotAction.WAVE -> 1_800L
+            WordSiegeMascotAction.INTRO -> 2_600L
         }
         actionKind = action
         actionStartedAt = now
@@ -422,6 +446,9 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             WordSiegeMascotAction.FLIP -> WordSiegeMascotEmotion.LAUGH
             WordSiegeMascotAction.SPARKLE -> WordSiegeMascotEmotion.PROUD
             WordSiegeMascotAction.CHEER -> WordSiegeMascotEmotion.EXCITED
+            WordSiegeMascotAction.DANCE, WordSiegeMascotAction.BOUNCE -> WordSiegeMascotEmotion.LAUGH
+            WordSiegeMascotAction.WIGGLE, WordSiegeMascotAction.WAVE -> WordSiegeMascotEmotion.HAPPY
+            WordSiegeMascotAction.SPIN_HOP, WordSiegeMascotAction.INTRO -> WordSiegeMascotEmotion.EXCITED
             WordSiegeMascotAction.FLINCH -> WordSiegeMascotEmotion.SURPRISED
             else -> null
         }
@@ -432,7 +459,9 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             reactionUntil = now + duration
         }
         if (action == WordSiegeMascotAction.TWIRL || action == WordSiegeMascotAction.SPARKLE ||
-            action == WordSiegeMascotAction.CHEER || action == WordSiegeMascotAction.FLIP
+            action == WordSiegeMascotAction.CHEER || action == WordSiegeMascotAction.FLIP ||
+            action == WordSiegeMascotAction.SPIN_HOP || action == WordSiegeMascotAction.INTRO ||
+            action == WordSiegeMascotAction.DANCE
         ) sparklesStartedAt = now
         invalidate()
     }
@@ -1023,6 +1052,82 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
                 motion[1] = -10f * e
                 motion[4] = -3f * e
             }
+            WordSiegeMascotAction.DANCE -> {
+                // Two-step sway on a beat: lean, dip, lean the other way, with a little hop on each beat.
+                val beat = t * 4f
+                val phase = beat - kotlin.math.floor(beat)
+                val side = if (beat.toInt() % 2 == 0) 1f else -1f
+                val fade = 1f - easeIn(max(0f, t - .85f) / .15f)
+                motion[0] = side * 22f * sin(phase * pi) * fade
+                motion[4] = side * 11f * sin(phase * pi) * fade
+                motion[1] = -18f * abs(sin(phase * pi)) * fade
+                motion[2] = 1f + .05f * (1f - abs(sin(phase * pi))) * fade
+                motion[3] = 1f - .05f * (1f - abs(sin(phase * pi))) * fade
+            }
+            WordSiegeMascotAction.WIGGLE -> {
+                val decay = 1f - t
+                motion[4] = 9f * sin(t * 6f * 2f * pi) * decay
+                motion[2] = 1f + .05f * sin(t * 6f * 2f * pi + pi / 2f) * decay
+                motion[3] = 1f - .05f * sin(t * 6f * 2f * pi + pi / 2f) * decay
+            }
+            WordSiegeMascotAction.SPIN_HOP -> {
+                jump(t, height = 76f, crouch = .1f, spin = 0f)
+                val airborne = ((t - .16f) / (.62f - .16f)).coerceIn(0f, 1f)
+                motion[5] = 360f * easeInOut(airborne)
+            }
+            WordSiegeMascotAction.BOUNCE -> {
+                // Three hops, each a bit smaller.
+                val segment = min(2, (t * 3f).toInt())
+                val u = t * 3f - segment
+                val height = 44f * (1f - segment * .25f)
+                motion[1] = -height * 4f * u * (1f - u)
+                val squash = if (u < .12f) sin(u / .12f * pi) else 0f
+                motion[2] = 1f + .08f * squash
+                motion[3] = 1f - .1f * squash
+            }
+            WordSiegeMascotAction.WAVE -> {
+                // Leans toward the viewer and sways gently while the hand waves (see drawHands).
+                val e = sin(t * pi)
+                motion[4] = 6f * sin(t * 4f * pi) * e
+                motion[1] = -8f * e
+            }
+            WordSiegeMascotAction.INTRO -> {
+                when {
+                    t < .34f -> {
+                        // Drops in from above, spinning twice.
+                        val u = easeIn(t / .34f)
+                        motion[1] = -520f * (1f - u)
+                        motion[5] = 720f * u
+                        motion[2] = 1f - .06f * (1f - u)
+                        motion[3] = 1f + .12f * (1f - u)
+                    }
+                    t < .46f -> {
+                        // Big squash on landing.
+                        val e = sin((t - .34f) / .12f * pi)
+                        motion[5] = 720f
+                        motion[1] = 22f * e
+                        motion[2] = 1f + .2f * e
+                        motion[3] = 1f - .22f * e
+                    }
+                    t < .7f -> {
+                        // Pops back up with a happy stretch.
+                        val u = (t - .46f) / .24f
+                        motion[5] = 720f
+                        motion[1] = -70f * 4f * u * (1f - u)
+                        motion[3] = 1f + .08f * sin(u * pi)
+                        motion[2] = 1f - .05f * sin(u * pi)
+                    }
+                    else -> {
+                        // Settles with a wobble while waving.
+                        val w = (t - .7f) / .3f
+                        motion[5] = 720f
+                        val wobble = sin(w * 3f * pi) * (1f - w)
+                        motion[4] = 5f * wobble
+                        motion[2] = 1f - .03f * wobble
+                        motion[3] = 1f + .04f * wobble
+                    }
+                }
+            }
             WordSiegeMascotAction.LOOK_AROUND -> Unit
         }
         return motion
@@ -1299,7 +1404,11 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
      * face when surprised, flutter in flight and gesture while talking. They stay clear of the body.
      */
     private fun drawHands(canvas: Canvas, now: Long, mood: WordSiegeMascotEmotion, dt: Float) {
-        val cheering = actionKind == WordSiegeMascotAction.CHEER && now < actionUntil
+        val cheering = now < actionUntil && (actionKind == WordSiegeMascotAction.CHEER ||
+            actionKind == WordSiegeMascotAction.DANCE || actionKind == WordSiegeMascotAction.BOUNCE ||
+            actionKind == WordSiegeMascotAction.SPIN_HOP)
+        val waving = now < actionUntil && (actionKind == WordSiegeMascotAction.WAVE ||
+            (actionKind == WordSiegeMascotAction.INTRO && now - actionStartedAt > 1_700L))
         var out = HAND_OUT
         var y = HAND_Y
         var waveL = 0f
@@ -1332,10 +1441,16 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             }
             mood == WordSiegeMascotEmotion.PROUD -> y = 780f
         }
+        if (waving) {
+            // Right hand up high, waving side to side; left hand relaxed.
+            y = 620f
+            waveL = 0f
+            waveR = -250f + sin(now / 95f) * 26f
+        }
         val bobSpeed = if (sleeping) 1_300f else 650f
         handTarget[0] = ORB_CX - out
         handTarget[1] = y + sin(now / bobSpeed) * 9f + waveL
-        handTarget[2] = ORB_CX + out
+        handTarget[2] = ORB_CX + out + if (waving) 60f + sin(now / 140f) * 70f else 0f
         handTarget[3] = y + sin(now / bobSpeed + 1.3f) * 9f + waveR
         // While talking (and not cheering) the right hand gestures along.
         if (speaking && y > 600f) {

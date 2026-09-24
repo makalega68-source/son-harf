@@ -1,6 +1,25 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -110,7 +129,7 @@ private fun MascotWelcomeOverlay(onDone: () -> Unit) {
     val english = SonHarfUiState.language == "en"
     LaunchedEffect(Unit) {
         // It says hello, does its little show and then lets the player in by itself.
-        kotlinx.coroutines.delay(9_000L)
+        kotlinx.coroutines.delay(10_500L)
         onDone()
     }
     Box(
@@ -137,6 +156,7 @@ private fun MascotWelcomeOverlay(onDone: () -> Unit) {
                     greeting = if (english) "Hi! I'm Obi 👋\nWelcome to Word Board!" else "Merhaba! Ben Obi 👋\nKelime Tahtı'na hoş geldin!",
                     requireOwnership = false,
                     forcedSkin = WordSiegeMascotSkin.ORB,
+                    grandEntrance = true,
                 )
             }
             Text(
@@ -176,6 +196,24 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
         mascotAnnouncement = (mascotAnnouncement?.first ?: 0) + 1 to text
     }
 
+    // Staged entrance: the mascot drops in first, then the brand, the cards and the button.
+    val brand = remember { Animatable(0f) }
+    val cards = remember { Animatable(0f) }
+    val cta = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        delay(700L)
+        brand.animateTo(1f, tween(650, easing = FastOutSlowInEasing))
+        cards.animateTo(1f, spring(dampingRatio = .62f, stiffness = 220f))
+        cta.animateTo(1f, tween(420))
+    }
+    val glow = rememberInfiniteTransition(label = "first-run-glow")
+    val halo by glow.animateFloat(
+        initialValue = .75f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2_200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "halo",
+    )
+
     GameTheme {
         Surface(Modifier.fillMaxSize(), color = GameColors.AppBackground) {
             Box(Modifier.fillMaxSize()) {
@@ -184,15 +222,26 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                     modifier = Modifier
                         .fillMaxSize()
                         .statusBarsPadding()
-                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    // First-run welcome is one of the mascot's few moments; it is not a persistent companion.
-                    Box(Modifier.fillMaxWidth().height(196.dp)) {
+                    // The welcome mascot makes a grand entrance with its own intro animation.
+                    Box(Modifier.fillMaxWidth().height(230.dp), contentAlignment = Alignment.Center) {
+                        Box(
+                            Modifier
+                                .size(210.dp)
+                                .graphicsLayer { scaleX = halo; scaleY = halo }
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(GameColors.PrimaryBlue.copy(alpha = .30f), GameColors.Lavender.copy(alpha = .12f), Color.Transparent),
+                                    ),
+                                    CircleShape,
+                                ),
+                        )
                         WordSiegeMascotCompanion(
-                            anchors = listOf(Offset(.5f, .62f)),
-                            mascotSize = 128.dp,
+                            anchors = listOf(Offset(.5f, .58f)),
+                            mascotSize = 150.dp,
                             moveId = null,
                             lastMoveMine = false,
                             playerTurn = false,
@@ -203,30 +252,45 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                             // Everyone meets the classic mascot here; elsewhere it must be purchased.
                             requireOwnership = false,
                             forcedSkin = WordSiegeMascotSkin.ORB,
+                            grandEntrance = true,
                         )
                     }
-                    Image(
-                        painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
-                        contentDescription = "Kelime Kuşatması / Word Siege",
-                        modifier = Modifier.fillMaxWidth(.6f).height(92.dp),
-                        contentScale = ContentScale.Fit,
-                    )
-                    Text(
-                        text = "KELİME KUŞATMASI / WORD SIEGE",
-                        color = GameColors.TextPrimary,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Text(
-                        text = "Dilini seç / Choose your language",
-                        color = GameColors.TextSecondary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(24.dp))
+                    Column(
+                        Modifier.graphicsLayer {
+                            alpha = brand.value
+                            translationY = (1f - brand.value) * 40f
+                            scaleX = .92f + .08f * brand.value
+                            scaleY = .92f + .08f * brand.value
+                        },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
+                            contentDescription = "Kelime Kuşatması / Word Siege",
+                            modifier = Modifier.fillMaxWidth(.58f).height(86.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                        Text(
+                            text = "KELİME KUŞATMASI / WORD SIEGE",
+                            color = GameColors.TextPrimary,
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.Black,
+                            textAlign = TextAlign.Center,
+                            letterSpacing = .5.sp,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Surface(shape = GameShapes.Pill, color = GameColors.PrimaryBlue.copy(alpha = .12f)) {
+                            Text(
+                                text = "Dilini seç / Choose your language",
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                color = GameColors.TextSecondary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(22.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         FirstRunLanguageCard(
                             flag = "🇹🇷",
@@ -234,7 +298,10 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                             subtitle = "Türkçe oyna",
                             selected = selected == "tr",
                             onClick = { choose("tr") },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).graphicsLayer {
+                                alpha = cards.value.coerceIn(0f, 1f)
+                                translationX = (1f - cards.value) * -160f
+                            },
                         )
                         FirstRunLanguageCard(
                             flag = "🇬🇧",
@@ -242,27 +309,23 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                             subtitle = "Play in English",
                             selected = selected == "en",
                             onClick = { choose("en") },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).graphicsLayer {
+                                alpha = cards.value.coerceIn(0f, 1f)
+                                translationX = (1f - cards.value) * 160f
+                            },
                         )
                     }
                     Spacer(Modifier.height(22.dp))
-                    Button(
+                    FirstRunContinueButton(
                         enabled = selected != null,
+                        label = when (selected) {
+                            "en" -> "CONTINUE  ➜"
+                            "tr" -> "DEVAM ET  ➜"
+                            else -> "Dil seç / Choose"
+                        },
                         onClick = { selected?.let(onContinue) },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = GameShapes.Medium,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = GameColors.PrimaryBlue,
-                            contentColor = GameColors.TextPrimary,
-                            disabledContainerColor = GameColors.Disabled,
-                            disabledContentColor = GameColors.DisabledContent,
-                        ),
-                    ) {
-                        Text(
-                            if (selected == "en") "CONTINUE" else "DEVAM ET",
-                            fontWeight = FontWeight.Black,
-                        )
-                    }
+                        modifier = Modifier.graphicsLayer { alpha = cta.value },
+                    )
                 }
             }
         }
@@ -278,24 +341,91 @@ private fun FirstRunLanguageCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val scale by animateFloatAsState(if (selected) 1.05f else 1f, spring(dampingRatio = .5f, stiffness = 400f), label = "card-scale")
+    val shape = RoundedCornerShape(24.dp)
     Surface(
         onClick = onClick,
-        modifier = modifier.height(118.dp),
-        shape = RoundedCornerShape(22.dp),
-        color = if (selected) GameColors.PrimaryBlue.copy(alpha = .16f) else GameColors.PrimarySurface,
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) GameColors.PrimaryBlue else GameColors.Border),
-        shadowElevation = if (selected) 8.dp else 2.dp,
+        modifier = modifier
+            .height(132.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale },
+        shape = shape,
+        color = GameColors.PrimarySurface,
+        border = if (selected) {
+            BorderStroke(2.dp, Brush.linearGradient(listOf(GameColors.PrimaryBlue, GameColors.Lavender)))
+        } else {
+            BorderStroke(1.dp, GameColors.Border)
+        },
+        shadowElevation = if (selected) 12.dp else 3.dp,
     ) {
-        Column(
-            Modifier.fillMaxSize().padding(10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    if (selected) {
+                        Brush.verticalGradient(listOf(GameColors.PrimaryBlue.copy(alpha = .20f), GameColors.Lavender.copy(alpha = .10f)))
+                    } else {
+                        Brush.verticalGradient(listOf(Color.White.copy(alpha = .06f), Color.Transparent))
+                    },
+                ),
         ) {
-            Text(flag, fontSize = 34.sp)
-            Spacer(Modifier.height(4.dp))
-            Text(title, color = if (selected) GameColors.PrimaryBlue else GameColors.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Black)
-            Text(subtitle, color = GameColors.TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-            if (selected) Text("✓", color = GameColors.PrimaryBlue, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Column(
+                Modifier.fillMaxSize().padding(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(flag, fontSize = 40.sp)
+                Spacer(Modifier.height(6.dp))
+                Text(title, color = if (selected) GameColors.PrimaryBlue else GameColors.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(subtitle, color = GameColors.TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
+            if (selected) {
+                Box(Modifier.align(Alignment.TopEnd).padding(8.dp)) {
+                    GameBadgeIcon(Icons.Rounded.Check, GameColors.PlayGreen, size = 24.dp)
+                }
+            }
         }
+    }
+}
+
+/** Gradient call to action with a slow light sweep once a language is chosen. */
+@Composable
+private fun FirstRunContinueButton(enabled: Boolean, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val sweep = rememberInfiniteTransition(label = "cta-sweep")
+    val shine by sweep.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(tween(2_400, easing = LinearEasing)),
+        label = "shine",
+    )
+    val shape = GameShapes.Medium
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .shadow(if (enabled) 10.dp else 0.dp, shape, spotColor = GameColors.PrimaryBlue)
+            .clip(shape)
+            .background(
+                if (enabled) Brush.horizontalGradient(listOf(GameColors.PrimaryBlue, GameColors.TacticalTurquoise, GameColors.Lavender))
+                else Brush.horizontalGradient(listOf(GameColors.Disabled, GameColors.Disabled)),
+            )
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (enabled) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.linearGradient(
+                            0f to Color.Transparent,
+                            .5f to Color.White.copy(alpha = .35f),
+                            1f to Color.Transparent,
+                            start = Offset(shine * 600f, 0f),
+                            end = Offset(shine * 600f + 220f, 160f),
+                        ),
+                    ),
+            )
+        }
+        Text(label, color = if (enabled) Color.White else GameColors.DisabledContent, fontWeight = FontWeight.Black, fontSize = 17.sp, letterSpacing = 1.sp)
     }
 }

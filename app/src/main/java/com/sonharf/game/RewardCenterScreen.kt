@@ -495,7 +495,7 @@ fun RewardCenterScreen() {
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GameColors.RewardAmber,
-                        contentColor = GameColors.AppBackground,
+                        contentColor = Color.White,
                         disabledContainerColor = GameColors.Disabled,
                         disabledContentColor = GameColors.DisabledContent,
                     ),

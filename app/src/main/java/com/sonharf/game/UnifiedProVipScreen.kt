@@ -238,7 +238,7 @@ internal fun UnifiedProVipScreen(
                                 shape = GameShapes.Medium,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = GameColors.RewardAmber,
-                                    contentColor = GameColors.AppBackground,
+                                    contentColor = Color.White,
                                 ),
                             ) {
                                 Icon(Icons.Rounded.MeetingRoom, contentDescription = null)
