@@ -302,6 +302,9 @@ private fun PremiumHomeScreen(
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onSocial)
             }
+            item(key = "invite_friends") {
+                InviteFriendsCard(playerName = profile?.displayName)
+            }
             item(key = "home_secondary_modes") {
                 PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)
             }

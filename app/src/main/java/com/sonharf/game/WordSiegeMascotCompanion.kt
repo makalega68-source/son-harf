@@ -1297,7 +1297,8 @@ internal fun WordSiegeMascotPicker(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                WordSiegeMascotSkin.entries.chunked(3).forEach { row ->
+                // Only characters the player owns are shown; the rest live in the shop.
+                WordSiegeMascotSkin.entries.filter { it in owned }.chunked(3).forEach { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { option ->
                             val selected = option == current
@@ -1328,7 +1329,7 @@ internal fun WordSiegeMascotPicker(
                                     onTap = { if (unlocked) onPick(option) },
                                 )
                                 Text(
-                                    if (unlocked) sh(option.titleTr, option.titleEn) else sh("🔒 ${option.titleTr}", "🔒 ${option.titleEn}"),
+                                    sh(option.titleTr, option.titleEn),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,
@@ -1339,6 +1340,15 @@ internal fun WordSiegeMascotPicker(
                         }
                         repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                     }
+                }
+                if (owned.size < WordSiegeMascotSkin.entries.size) {
+                    Text(
+                        sh("Yeni arkadaşlar Mağaza › Maskotlar bölümünde ✨", "Find new friends in Shop › Mascots ✨"),
+                        fontSize = 11.sp,
+                        color = Color(0xFF5B6478),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         },

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -66,7 +67,9 @@ fun StableV1App() {
 
     LaunchedEffect(languageChosen) {
         if (!languageChosen) return@LaunchedEffect
-        authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
+        // The stored session loads asynchronously: wait for it (and silently re-login with the
+        // remembered credentials if needed) so a signed-in player never sees the email screen again.
+        authenticated = SupabaseProvider.configured && (hasVerifiedMembershipSession() || restoreMembershipSession(context))
         authChecked = true
     }
 
@@ -218,46 +221,31 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                     textAlign = TextAlign.Center,
                 )
                 Spacer(Modifier.height(24.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilterChip(
+                // Two large language cards; the choice is confirmed with the button below.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FirstRunLanguageCard(
+                        flag = "🇹🇷",
+                        title = "TÜRKÇE",
+                        subtitle = "Türkçe oyna",
                         selected = selected == "tr",
                         onClick = { choose("tr") },
-                        label = { Text("TÜRKÇE", fontWeight = FontWeight.Black) },
-                        modifier = Modifier.weight(1f).height(52.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MainUi.BlueSoft,
-                            selectedLabelColor = MainUi.Blue,
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = selected == "tr",
-                            borderColor = MainUi.Border,
-                            selectedBorderColor = MainUi.Blue,
-                        ),
+                        modifier = Modifier.weight(1f),
                     )
-                    FilterChip(
+                    FirstRunLanguageCard(
+                        flag = "🇬🇧",
+                        title = "ENGLISH",
+                        subtitle = "Play in English",
                         selected = selected == "en",
                         onClick = { choose("en") },
-                        label = { Text("ENGLISH", fontWeight = FontWeight.Black) },
-                        modifier = Modifier.weight(1f).height(52.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MainUi.BlueSoft,
-                            selectedLabelColor = MainUi.Blue,
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = selected == "en",
-                            borderColor = MainUi.Border,
-                            selectedBorderColor = MainUi.Blue,
-                        ),
+                        modifier = Modifier.weight(1f),
                     )
                 }
                 Spacer(Modifier.height(22.dp))
                 Button(
                     enabled = selected != null,
                     onClick = { selected?.let(onContinue) },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = MainUiShape.Control,
+                    modifier = Modifier.fillMaxWidth().height(58.dp),
+                    shape = RoundedCornerShape(20.dp),
                     contentPadding = PaddingValues(horizontal = 18.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MainUi.Blue,
@@ -266,9 +254,48 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                         disabledContentColor = MainUi.Muted,
                     ),
                 ) {
-                    Text(if (selected == "en") "CONTINUE" else "DEVAM ET", fontWeight = FontWeight.Black)
+                    Text(
+                        when (selected) {
+                            "en" -> "CONTINUE  ➜"
+                            "tr" -> "DEVAM ET  ➜"
+                            else -> "Dil seç / Choose"
+                        },
+                        fontWeight = FontWeight.Black,
+                        fontSize = 17.sp,
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FirstRunLanguageCard(
+    flag: String,
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(118.dp),
+        shape = RoundedCornerShape(22.dp),
+        color = if (selected) MainUi.BlueSoft else MainUi.Surface,
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MainUi.Blue else MainUi.Border),
+        shadowElevation = if (selected) 8.dp else 2.dp,
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(flag, fontSize = 34.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(title, color = if (selected) MainUi.Blue else MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Text(subtitle, color = MainUi.Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            if (selected) Text("✓", color = MainUi.Blue, fontSize = 14.sp, fontWeight = FontWeight.Black)
         }
     }
 }
