@@ -28,7 +28,10 @@ import kotlinx.coroutines.launch
 private enum class ProfessionalSiegeSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FINISHED }
 
 @Composable
-internal fun ProfessionalWordSiegeExperienceScreen(onExit: () -> Unit) {
+internal fun ProfessionalWordSiegeExperienceScreen(
+    initialAction: WordSiegeEntryAction? = null,
+    onExit: () -> Unit,
+) {
     val backend = remember { OnlineGameBackend() }
     val scope = rememberCoroutineScope()
     val me = remember { backend.currentUserId() }
@@ -49,10 +52,16 @@ internal fun ProfessionalWordSiegeExperienceScreen(onExit: () -> Unit) {
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
-    var practiceActive by remember { mutableStateOf(false) }
+    // Practice opened from the PLAY tab starts at once and goes straight back there on exit.
+    val practiceIsShortcut = initialAction == WordSiegeEntryAction.PRACTICE
+    var practiceActive by remember { mutableStateOf(practiceIsShortcut) }
+    var quickMatchStarted by remember { mutableStateOf(false) }
 
     if (practiceActive) {
-        WordSiegePracticeScreen(onExit = { practiceActive = false })
+        WordSiegePracticeScreen(onExit = {
+            practiceActive = false
+            if (practiceIsShortcut) onExit()
+        })
         return
     }
 
@@ -153,6 +162,32 @@ internal fun ProfessionalWordSiegeExperienceScreen(onExit: () -> Unit) {
         }
     }
 
+    // Quick match: a waiting game opens the match screen, which starts the unrated bot
+    // fallback after WORD_SIEGE_BOT_FALLBACK_DELAY_MS while real matchmaking continues.
+    fun startQuickMatch() {
+        if (busy) return
+        busy = true
+        scope.launch {
+            runCatching { backend.findOrCreateWordSiegeGame(if (SonHarfUiState.isEnglish) "en" else "tr") }
+                .onSuccess { next ->
+                    applyGame(next)
+                    selectedGameId = next.id
+                    notice = if (next.status == "waiting") {
+                        sh("Rakip aranıyor. Oyun açık kalmak zorunda değil.", "Looking for a rival. You may leave this screen.")
+                    } else null
+                }
+                .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
+            busy = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!quickMatchStarted && initialAction == WordSiegeEntryAction.QUICK_MATCH) {
+            quickMatchStarted = true
+            startQuickMatch()
+        }
+    }
+
     Surface(Modifier.fillMaxSize(), color = GameColors.AppBackground) {
         if (selectedGameId == null) {
             ProfessionalWordSiegeLobby(
@@ -165,22 +200,7 @@ internal fun ProfessionalWordSiegeExperienceScreen(onExit: () -> Unit) {
                 onBack = onExit,
                 onRefresh = { scope.launch { refreshGames(showProgress = true) } },
                 onPractice = { practiceActive = true },
-                onNewGame = {
-                    if (busy) return@ProfessionalWordSiegeLobby
-                    busy = true
-                    scope.launch {
-                        runCatching { backend.findOrCreateWordSiegeGame(if (SonHarfUiState.isEnglish) "en" else "tr") }
-                            .onSuccess { next ->
-                                applyGame(next)
-                                selectedGameId = next.id
-                                notice = if (next.status == "waiting") {
-                                    sh("Rakip aranıyor. Oyun açık kalmak zorunda değil.", "Looking for a rival. You may leave this screen.")
-                                } else null
-                            }
-                            .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
-                        busy = false
-                    }
-                },
+                onNewGame = { startQuickMatch() },
                 onOpen = { game ->
                     currentGame = game
                     selectedGameId = game.id

@@ -22,6 +22,9 @@ import com.sonharf.game.data.getVipEntitlements
 
 private enum class WordSiegeEntryMode { STANDARD, SERIES }
 
+/** A shortcut from the PLAY tab straight into a standard-siege flow. */
+internal enum class WordSiegeEntryAction { QUICK_MATCH, PRACTICE, MY_GAMES }
+
 /**
  * Real gameplay entry for Kelime Kuşatması. Paid Series Game is reachable from the same
  * place as the standard arena instead of being hidden behind the store after purchase.
@@ -30,12 +33,18 @@ private enum class WordSiegeEntryMode { STANDARD, SERIES }
 internal fun WordSiegeEntryScreen(
     onExit: () -> Unit,
     onOpenStore: () -> Unit,
+    initialAction: WordSiegeEntryAction? = null,
 ) {
-    var mode by remember { mutableStateOf<WordSiegeEntryMode?>(null) }
+    var mode by remember(initialAction) {
+        mutableStateOf(if (initialAction != null) WordSiegeEntryMode.STANDARD else null)
+    }
 
     when (mode) {
         WordSiegeEntryMode.STANDARD -> {
-            ProfessionalWordSiegeExperienceScreen { mode = null }
+            // Opened from a PLAY shortcut: leaving returns there instead of to this chooser.
+            ProfessionalWordSiegeExperienceScreen(initialAction = initialAction) {
+                if (initialAction != null) onExit() else mode = null
+            }
             return
         }
         WordSiegeEntryMode.SERIES -> {

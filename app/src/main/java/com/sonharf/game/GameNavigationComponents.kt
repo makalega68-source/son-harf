@@ -16,19 +16,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/** Main tabs, in product order. OYNA sits in the middle as the main call to action. */
+internal enum class GameMainTab { HOME, SOCIAL, PLAY, LEAGUE, SHOP }
+
 @Composable
 internal fun GameBottomNavigation(
-    selectedIndex: Int,
-    onHome: () -> Unit,
-    onSocial: () -> Unit,
-    onShop: () -> Unit,
-    onProfile: () -> Unit,
+    selected: GameMainTab?,
+    onSelect: (GameMainTab) -> Unit,
 ) {
     val items = listOf(
-        Triple(Icons.Rounded.Home, gameText("Ana Sayfa", "Home"), onHome),
-        Triple(Icons.Rounded.Groups, gameText("Sosyal", "Social"), onSocial),
-        Triple(Icons.Rounded.Storefront, gameText("Mağaza", "Shop"), onShop),
-        Triple(Icons.Rounded.Person, gameText("Profil", "Profile"), onProfile),
+        Triple(GameMainTab.HOME, Icons.Rounded.Home, gameText("Ana Sayfa", "Home")),
+        Triple(GameMainTab.SOCIAL, Icons.Rounded.Groups, gameText("Sosyal", "Social")),
+        Triple(GameMainTab.PLAY, Icons.Rounded.PlayArrow, gameText("Oyna", "Play")),
+        Triple(GameMainTab.LEAGUE, Icons.Rounded.EmojiEvents, gameText("Lig", "League")),
+        Triple(GameMainTab.SHOP, Icons.Rounded.Storefront, gameText("Market", "Market")),
     )
     Surface(
         color = GameColors.ElevatedBackground,
@@ -39,31 +40,49 @@ internal fun GameBottomNavigation(
             Modifier.fillMaxWidth().navigationBarsPadding().height(62.dp).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            items.forEachIndexed { index, item ->
-                val active = selectedIndex == index
+            items.forEach { (tab, icon, label) ->
+                val active = selected == tab
+                val play = tab == GameMainTab.PLAY
                 Surface(
-                    onClick = item.third,
+                    onClick = { onSelect(tab) },
                     modifier = Modifier.weight(1f).padding(horizontal = 2.dp),
                     shape = GameShapes.Medium,
-                    color = if (active) GameColors.PrimaryBlue.copy(alpha = .15f) else Color.Transparent,
+                    color = if (active && !play) GameColors.PrimaryBlue.copy(alpha = .15f) else Color.Transparent,
                 ) {
                     Column(
-                        Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                        Modifier.fillMaxWidth().padding(vertical = if (play) 3.dp else 7.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Icon(
-                            item.first,
-                            contentDescription = item.second,
-                            tint = if (active) GameColors.PrimaryBlue else GameColors.TextSecondary,
-                            modifier = Modifier.size(23.dp),
-                        )
+                        if (play) {
+                            // A slightly stronger, green play button; same row height as the others.
+                            Surface(
+                                shape = GameShapes.Pill,
+                                color = if (active) GameColors.PlayGreen else GameColors.PlayGreenDeep,
+                                border = BorderStroke(1.dp, GameColors.PlayGreen.copy(alpha = if (active) 1f else .6f)),
+                                shadowElevation = if (active) 4.dp else 1.dp,
+                            ) {
+                                Icon(
+                                    icon,
+                                    contentDescription = label,
+                                    tint = Color.White,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp).size(23.dp),
+                                )
+                            }
+                        } else {
+                            Icon(
+                                icon,
+                                contentDescription = label,
+                                tint = if (active) GameColors.PrimaryBlue else GameColors.TextSecondary,
+                                modifier = Modifier.size(23.dp),
+                            )
+                        }
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            item.second,
+                            label,
                             color = if (active) GameColors.TextPrimary else GameColors.TextSecondary,
                             fontSize = 10.sp,
-                            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                            fontWeight = if (active || play) FontWeight.Bold else FontWeight.Medium,
                             maxLines = 1,
                         )
                     }

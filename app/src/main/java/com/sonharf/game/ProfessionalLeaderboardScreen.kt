@@ -23,7 +23,7 @@ import com.sonharf.game.data.*
 @Composable
 internal fun ProfessionalLeaderboardScreen(
     backend: OnlineGameBackend,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     onCompetition: (() -> Unit)? = null,
 ) {
     var season by remember { mutableStateOf<CompetitiveSeasonDto?>(null) }
