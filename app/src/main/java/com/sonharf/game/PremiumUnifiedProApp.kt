@@ -162,9 +162,18 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             tertiary = SonHarfTheme.Success,
             background = SonHarfTheme.Background,
             surface = SonHarfTheme.Surface,
+            surfaceVariant = SonHarfTheme.SurfaceElevated,
+            surfaceContainerLow = SonHarfTheme.SurfaceSecondary,
+            surfaceContainer = SonHarfTheme.Surface,
+            surfaceContainerHigh = SonHarfTheme.SurfaceElevated,
+            secondaryContainer = SonHarfTheme.PrimarySoft,
+            onSecondaryContainer = SonHarfTheme.TextPrimary,
             onPrimary = SonHarfTheme.OnPrimary,
+            onSecondary = SonHarfTheme.OnGold,
             onBackground = SonHarfTheme.TextPrimary,
             onSurface = SonHarfTheme.TextPrimary,
+            onSurfaceVariant = SonHarfTheme.TextSecondary,
+            outline = SonHarfTheme.Border,
             error = SonHarfTheme.Error,
         )
     }
@@ -549,13 +558,13 @@ private fun PremiumBottomBar(
                         Icon(
                             painterResource(item.second),
                             null,
-                            tint = if (selected) Hf.Gold else Hf.Ivory.copy(alpha = .78f),
+                            tint = if (selected) Hf.Gold else Hf.TextMuted,
                             modifier = Modifier.size(28.dp),
                         )
                         Spacer(Modifier.height(3.dp))
                         Text(
                             item.third,
-                            color = if (selected) Hf.Gold else Hf.Ivory.copy(alpha = .78f),
+                            color = if (selected) Hf.Gold else Hf.TextMuted,
                             fontSize = 12.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                             maxLines = 1,

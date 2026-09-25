@@ -86,29 +86,29 @@ private data class AuthIdentityProfile(
  * Profil teması yüklenmeden önce sabit token kullanılması ilk karede renk sıçramasını önler.
  */
 private object AuthUi {
-    val Background = Color(0xFF171C1B)
-    val BackgroundTop = Color(0xFF1C2322)
-    val Surface = Color(0xFF222827)
-    val SurfaceSoft = Color(0xFF1D2322)
-    val SurfaceRaised = Color(0xFF2A302F)
-    val Modal = Color(0xFF222827)
-    val Primary = Color(0xFF32845E)
-    val PrimarySoft = Color(0xFF1F3A2D)
-    val SoftBlue = Color(0xFFC5AA73)
-    val Turquoise = Color(0xFF40A878)
-    val Lavender = Color(0xFFC5AA73)
-    val Sand = Color(0xFFC5AA73)
-    val Text = Color(0xFFF0EDE3)
-    val Muted = Color(0xFFA9AFAB)
-    val Border = Color(0xFF5C5239)
-    val BorderSoft = Color(0xFF3A3A30)
-    val Success = Color(0xFF32845E)
-    val SuccessSoft = Color(0xFF1F3A2D)
-    val Warning = Color(0xFFC5AA73)
-    val WarningSoft = Color(0xFF3A3326)
-    val Error = Color(0xFFC85A54)
+    val Background get() = SonHarfTheme.Background
+    val BackgroundTop get() = Color(0xFFFFFCF6)
+    val Surface get() = SonHarfTheme.Surface
+    val SurfaceSoft get() = SonHarfTheme.SurfaceSecondary
+    val SurfaceRaised get() = SonHarfTheme.SurfaceElevated
+    val Modal get() = SonHarfTheme.ModalSurface
+    val Primary get() = SonHarfTheme.Primary
+    val PrimarySoft get() = SonHarfTheme.PrimarySoft
+    val SoftBlue get() = SonHarfTheme.PremiumGold
+    val Turquoise get() = SonHarfTheme.Turquoise
+    val Lavender get() = SonHarfTheme.Lavender
+    val Sand get() = SonHarfTheme.Sand
+    val Text get() = SonHarfTheme.TextPrimary
+    val Muted get() = SonHarfTheme.TextSecondary
+    val Border get() = SonHarfTheme.Border
+    val BorderSoft get() = SonHarfTheme.Border
+    val Success get() = SonHarfTheme.Success
+    val SuccessSoft get() = SonHarfTheme.SuccessSoft
+    val Warning get() = SonHarfTheme.Warning
+    val WarningSoft get() = Color(0xFFF6EACC)
+    val Error get() = SonHarfTheme.Error
     val Ivory = Color(0xFFF0EDE3)
-    val Ink = Color(0xFF171C1B)
+    val Ink = Color(0xFF202C27)
 }
 
 private suspend fun currentIdentityProfile(): AuthIdentityProfile? {
@@ -227,7 +227,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         }
     }
 
-    val authColors = darkColorScheme(
+    val authColors = (if (SonHarfTheme.IsDark) darkColorScheme() else lightColorScheme()).copy(
         primary = AuthUi.Primary,
         onPrimary = AuthUi.Ivory,
         primaryContainer = AuthUi.PrimarySoft,

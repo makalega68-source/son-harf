@@ -209,7 +209,7 @@ private fun MascotStoreHero() {
     ) {
         Box(
             Modifier
-                .background(Brush.linearGradient(listOf(Hf.Ground, Hf.Surface, Color(0xFF2A2A20))))
+                .background(Brush.linearGradient(listOf(Hf.Ground, Hf.Surface, Color(0xFFE7D8BE))))
                 .padding(16.dp),
         ) {
             Column(Modifier.fillMaxWidth()) {
@@ -276,10 +276,10 @@ private fun MascotStoreCard(
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh(skin.titleTr, skin.titleEn), color = Hf.Ivory, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                Text(sh(skin.titleTr, skin.titleEn), color = Hf.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
                 Text(sh(skin.kindTr, skin.kindEn), color = Hf.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 Spacer(Modifier.height(3.dp))
-                Text(skin.pitch(), color = Hf.Ivory.copy(alpha = .9f), fontSize = 11.sp, lineHeight = 15.sp)
+                Text(skin.pitch(), color = Hf.Text.copy(alpha = .9f), fontSize = 11.sp, lineHeight = 15.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     sh("Uçar • konuşur • seni hatırlar", "Flies • talks • remembers you"),
@@ -295,7 +295,7 @@ private fun MascotStoreCard(
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Hf.Gold,
-                            contentColor = Hf.Ink,
+                            contentColor = Hf.Ivory,
                             disabledContainerColor = Hf.Disabled,
                             disabledContentColor = Hf.Ivory,
                         ),
@@ -313,7 +313,7 @@ private fun MascotStoreCard(
                     else -> Text(
                         // The list price is shown for information only until Google Play offers the product.
                         sh("${ProductCatalog.MASCOT_LIST_PRICE_TRY} • Google Play'de yakında", "${ProductCatalog.MASCOT_LIST_PRICE_TRY} • Coming soon on Google Play"),
-                        color = Hf.Ivory,
+                        color = Hf.Text,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Black,
                     )

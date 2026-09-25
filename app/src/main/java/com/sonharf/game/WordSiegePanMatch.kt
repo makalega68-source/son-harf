@@ -1083,8 +1083,8 @@ private fun PanSiegeResultSide(label: String, score: Int, accent: Color, modifie
 @Composable
 private fun PanSiegeResultRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f), color = Hf.Ivory, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-        Text(value, color = Hf.Ivory, fontSize = 24.sp, fontWeight = FontWeight.Black)
+        Text(label, Modifier.weight(1f), color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(value, color = Hf.Text, fontSize = 24.sp, fontWeight = FontWeight.Black)
     }
 }
 

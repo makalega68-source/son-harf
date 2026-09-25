@@ -902,7 +902,7 @@ private fun PremierSearching(language: String, onCancel: () -> Unit) {
     ) {
         HfTitleRule(sh("Kelime Tahtı", "Kelime Tahtı"), fontSize = 26.sp)
         Spacer(Modifier.height(40.dp))
-        Text(pt(language, "Rakip aranıyor", "Finding a rival"), color = Hf.Ivory, fontSize = 34.sp, fontWeight = FontWeight.Black)
+        Text(pt(language, "Rakip aranıyor", "Finding a rival"), color = Hf.Text, fontSize = 34.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.height(36.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             PremierSearchSide(pt(language, "SEN", "YOU"), Hf.Green, Hf.Green, Modifier.weight(1f))
@@ -932,7 +932,7 @@ private fun PremierSearching(language: String, onCancel: () -> Unit) {
             HfLetterTile("A", (64 * pulse).dp, fontSize = 36.sp)
         }
         Spacer(Modifier.height(18.dp))
-        Text(pt(language, "Son Harf için eşleşme bekleniyor", "Waiting for a Last Letter match"), color = Hf.Ivory, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text(pt(language, "Son Harf için eşleşme bekleniyor", "Waiting for a Last Letter match"), color = Hf.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Text(pt(language, "Rating ve dil eşleşmesi yapılıyor…", "Matching rating and language…"), color = Hf.TextMuted, fontSize = 12.sp)
         Spacer(Modifier.weight(1f))
         HfSecondaryButton(pt(language, "Vazgeç", "Cancel"), onClick = onCancel, modifier = Modifier.fillMaxWidth(.8f))

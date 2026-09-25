@@ -126,7 +126,7 @@ internal fun MainPlayerProfileScreen(
         val hasEquippedNameStyle = !SonHarfCosmetics.nameStyleId.isNullOrBlank()
         val displayNameColor = when {
             hasEquippedNameStyle -> SonHarfCosmetics.playerNameColor
-            else -> Hf.Ivory
+            else -> Hf.Text
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.clickable(onClick = onEdit)) {
@@ -164,7 +164,7 @@ internal fun MainPlayerProfileScreen(
                     if (p?.isVip == true) {
                         Spacer(Modifier.width(8.dp))
                         Surface(shape = Hf.PillShape, color = Hf.Gold) {
-                            Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 2.dp), color = Hf.Ink, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                            Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 2.dp), color = Hf.Ivory, fontSize = 11.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -212,7 +212,7 @@ internal fun MainPlayerProfileScreen(
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(sh("Arkadaşlar", "Friends"), color = Hf.Ivory, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(sh("Arkadaşlar", "Friends"), color = Hf.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
                         if (p?.isVip == true) {
                             "$friendCount ${sh("arkadaş", "friends")} • $onlineFriendCount ${sh("çevrimiçi", "online")}"
@@ -248,7 +248,7 @@ private fun ProfileStatTile(icon: androidx.compose.ui.graphics.vector.ImageVecto
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
-        color = Hf.Ivory,
+        color = Hf.Text,
         border = BorderStroke(1.5.dp, Hf.Gold),
         shadowElevation = 2.dp,
     ) {

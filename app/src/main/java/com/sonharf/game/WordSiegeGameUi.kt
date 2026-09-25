@@ -32,29 +32,29 @@ import kotlinx.coroutines.launch
 
 /** Match-only presentation. Never changes the selected cosmetic theme or game state. */
 internal object WordSiegeGameUi {
-    val Background = Color(0xFF171C1B)
-    val Surface = Color(0xFF222827)
-    val SurfaceSoft = Color(0xFF1D2322)
-    val Text = Color(0xFFF0EDE3)
-    val Muted = Color(0xFFA9AFAB)
-    val Border = Color(0xFF5C5239)
-    val Blue = Color(0xFF32845E)
-    val Red = Color(0xFFC85A54)
-    val Gold = Color(0xFFC5AA73)
+    val Background: Color get() = SonHarfTheme.Background
+    val Surface: Color get() = SonHarfTheme.Surface
+    val SurfaceSoft: Color get() = SonHarfTheme.SurfaceSecondary
+    val Text: Color get() = SonHarfTheme.TextPrimary
+    val Muted: Color get() = SonHarfTheme.TextSecondary
+    val Border: Color get() = SonHarfTheme.Border
+    val Blue: Color get() = SonHarfTheme.Primary
+    val Red: Color get() = SonHarfTheme.Error
+    val Gold: Color get() = SonHarfTheme.PremiumGold
     val Navy = Color(0xFF171C1B)
     val NavySoft = Color(0xFF222827)
-    val PremiumSurface = Color(0xFF2A302F)
-    val PremiumBorder = Color(0xFFC5AA73)
-    val DisabledBackground = Color(0xFF2A302F)
-    val DisabledContent = Color(0xFF59605D)
+    val PremiumSurface: Color get() = SonHarfTheme.SurfaceElevated
+    val PremiumBorder: Color get() = SonHarfTheme.PremiumGold
+    val DisabledBackground: Color get() = SonHarfTheme.DisabledBackground
+    val DisabledContent: Color get() = SonHarfTheme.DisabledContent
 }
 
 @Composable
 internal fun WordSiegeGameTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = WordSiegeGameUi.Blue, onPrimary = Color(0xFFF0EDE3),
-            secondary = WordSiegeGameUi.Gold, onSecondary = Color(0xFF171C1B),
+        colorScheme = (if (SonHarfTheme.IsDark) darkColorScheme() else lightColorScheme()).copy(
+            primary = WordSiegeGameUi.Blue, onPrimary = SonHarfTheme.OnPrimary,
+            secondary = WordSiegeGameUi.Gold, onSecondary = SonHarfTheme.OnGold,
             background = WordSiegeGameUi.Background, onBackground = WordSiegeGameUi.Text,
             surface = WordSiegeGameUi.Surface, onSurface = WordSiegeGameUi.Text,
             surfaceVariant = WordSiegeGameUi.SurfaceSoft, onSurfaceVariant = WordSiegeGameUi.Muted,
