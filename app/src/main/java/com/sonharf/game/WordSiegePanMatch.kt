@@ -1031,26 +1031,60 @@ private fun PanSiegePlayerCard(
 private fun PanSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
     val won = game.winnerId == me
     val draw = game.winnerId == null
-    val accent = when { draw -> WordSiegeGameUi.Gold; won -> PanSiegeMineBorder; else -> PanSiegeRivalBorder }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = accent.copy(alpha = .08f),
-        border = BorderStroke(1.dp, accent.copy(alpha = .45f)),
-    ) {
-        Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
+    val mine = if (me != null && me == game.playerTwoId) 2 else 1
+    val rival = if (mine == 1) 2 else 1
+    val myWords = panSiegeWordScore(game, mine)
+    val rivalWords = panSiegeWordScore(game, rival)
+    val myCubes = panSiegeAreaCount(game, mine)
+    val myTotal = myWords + if (mine == 1) game.playerOneAreaScore else game.playerTwoAreaScore
+    val rivalTotal = rivalWords + if (rival == 1) game.playerOneAreaScore else game.playerTwoAreaScore
+    HfCard(modifier = Modifier.fillMaxWidth(), color = Hf.Ground) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            HfTitleRule(
                 when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
-                color = accent,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Black,
+                fontSize = 24.sp,
             )
+            Spacer(Modifier.height(14.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                PanSiegeResultSide(sh("SEN", "YOU"), myTotal, Hf.Green, Modifier.weight(1f))
+                PanSiegeResultSide(sh("RAKİP", "RIVAL"), rivalTotal, Hf.Red, Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(14.dp))
+            HfCard(modifier = Modifier.fillMaxWidth(), color = Hf.Ground) {
+                Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                    PanSiegeResultRow(sh("Kazanılan küpler", "Cubes won"), "+$myCubes")
+                    HorizontalDivider(color = Hf.Gold.copy(alpha = .45f))
+                    PanSiegeResultRow(sh("Kelime puanı", "Word points"), "+$myWords")
+                }
+            }
+            Spacer(Modifier.height(8.dp))
             Text(
                 sh("Sonuç = kelime puanı + şu an sahip olunan küpler (küp başına 2)", "Result = word score + currently owned cubes (2 per cube)"),
                 color = WordSiegeGameUi.Muted,
-                fontSize = 9.sp,
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
             )
         }
+    }
+}
+
+@Composable
+private fun PanSiegeResultSide(label: String, score: Int, accent: Color, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Surface(shape = Hf.PillShape, color = accent, border = BorderStroke(1.5.dp, Hf.Gold)) {
+            Text(label, Modifier.fillMaxWidth().padding(vertical = 6.dp), color = Hf.Ivory, fontSize = 17.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+        }
+        Surface(shape = RoundedCornerShape(14.dp), color = Hf.Ivory) {
+            Text("$score", Modifier.fillMaxWidth().padding(vertical = 8.dp), color = Hf.Ink, fontSize = 34.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun PanSiegeResultRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f), color = Hf.Ivory, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(value, color = Hf.Ivory, fontSize = 24.sp, fontWeight = FontWeight.Black)
     }
 }
 
