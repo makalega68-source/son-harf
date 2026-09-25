@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CloudDownload
@@ -44,6 +45,30 @@ import androidx.compose.ui.platform.LocalContext
 import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private object ChatColors {
+    val AppBackground: Color get() = SonHarfTheme.Background
+    val ElevatedBackground: Color get() = SonHarfTheme.SurfaceElevated
+    val PrimarySurface: Color get() = SonHarfTheme.Surface
+    val PrimaryBlue: Color get() = SonHarfTheme.SoftBlue
+    val DeepBlue: Color get() = Color(0xFF1F4FB5)
+    val TacticalTurquoise: Color get() = SonHarfTheme.Turquoise
+    val PlayGreen: Color get() = SonHarfTheme.Success
+    val Lavender: Color get() = SonHarfTheme.Lavender
+    val RewardAmber: Color get() = SonHarfTheme.Warning
+    val Danger: Color get() = SonHarfTheme.Error
+    val TextPrimary: Color get() = SonHarfTheme.TextPrimary
+    val TextSecondary: Color get() = SonHarfTheme.TextSecondary
+    val TextTertiary: Color get() = SonHarfTheme.DisabledContent
+    val Divider: Color get() = SonHarfTheme.Border
+}
+
+private object ChatShapes {
+    val Medium = RoundedCornerShape(14.dp)
+    val Large = RoundedCornerShape(18.dp)
+}
+
+private val ChatScreenHorizontal = 16.dp
 
 private class MascotVoiceController(
     context: Context,
@@ -143,7 +168,7 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
     var nanoAvailability by remember { mutableStateOf(MascotNanoAvailability.CHECKING) }
     var downloadBytes by remember { mutableStateOf<Long?>(null) }
     var mascotActionKey by remember { mutableLongStateOf(1L) }
-    var mascotAction by remember { mutableStateOf<WordSiegeMascotAction?>(WordSiegeMascotAction.INTRO) }
+    var mascotAction by remember { mutableStateOf<WordSiegeMascotAction?>(WordSiegeMascotAction.PEEK) }
 
     val voiceController = remember {
         MascotVoiceController(context) { isSpeaking -> speaking = isSpeaking }
@@ -261,7 +286,7 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
             )
             thinking = false
             mascotActionKey += 1L
-            mascotAction = WordSiegeMascotAction.WIGGLE
+            mascotAction = WordSiegeMascotAction.NOD
             if (speakReply) voiceController.speak(reply)
         }
     }
@@ -290,7 +315,7 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
     Column(
         Modifier
             .fillMaxSize()
-            .background(GameColors.AppBackground)
+            .background(ChatColors.AppBackground)
             .imePadding(),
     ) {
         MascotChatHeader(onBack = {
@@ -329,8 +354,8 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
                     .background(
                         Brush.radialGradient(
                             listOf(
-                                GameColors.TacticalTurquoise.copy(alpha = .18f),
-                                GameColors.PrimaryBlue.copy(alpha = .08f),
+                                ChatColors.TacticalTurquoise.copy(alpha = .18f),
+                                ChatColors.PrimaryBlue.copy(alpha = .08f),
                                 Color.Transparent,
                             ),
                         ),
@@ -351,9 +376,10 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
                     speaking = speaking,
                     actionKey = mascotActionKey,
                     action = mascotAction,
+                    skin = mascotSkin,
                     onTap = {
                         mascotActionKey += 1L
-                        mascotAction = WordSiegeMascotAction.WAVE
+                        mascotAction = WordSiegeMascotAction.HOP
                     },
                 )
             }
@@ -376,7 +402,7 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = GameSpacing.ScreenHorizontal, vertical = 10.dp),
+            contentPadding = PaddingValues(horizontal = ChatScreenHorizontal, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             items(messages, key = { it.id }) { message ->
@@ -392,8 +418,8 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
         if (speechError != null) {
             Text(
                 text = speechError.orEmpty(),
-                modifier = Modifier.padding(horizontal = GameSpacing.ScreenHorizontal, vertical = 2.dp),
-                color = GameColors.RewardAmber,
+                modifier = Modifier.padding(horizontal = ChatScreenHorizontal, vertical = 2.dp),
+                color = ChatColors.RewardAmber,
                 fontSize = 11.sp,
             )
         }
@@ -428,22 +454,22 @@ private fun MascotChatHeader(onBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.Rounded.ArrowBack, gameText("Geri", "Back"), tint = GameColors.TextPrimary)
+            Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = ChatColors.TextPrimary)
         }
         Column(Modifier.weight(1f)) {
             Text(
-                gameText("Maskotla Sohbet", "Mascot Chat"),
-                color = GameColors.TextPrimary,
+                sh("Maskotla Sohbet", "Mascot Chat"),
+                color = ChatColors.TextPrimary,
                 fontSize = 19.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                gameText("Sadece burada konuşur", "Only speaks here"),
-                color = GameColors.TextSecondary,
+                sh("Sadece burada konuşur", "Only speaks here"),
+                color = ChatColors.TextSecondary,
                 fontSize = 11.sp,
             )
         }
-        Icon(Icons.Rounded.VolumeUp, null, tint = GameColors.Lavender, modifier = Modifier.size(22.dp))
+        Icon(Icons.Rounded.VolumeUp, null, tint = ChatColors.Lavender, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(8.dp))
     }
 }
@@ -456,7 +482,7 @@ private fun NanoStatusCard(
     onDownload: () -> Unit,
 ) {
     val ready = state == MascotNanoAvailability.READY
-    val accent = if (ready) GameColors.PlayGreen else GameColors.TacticalTurquoise
+    val accent = if (ready) ChatColors.PlayGreen else ChatColors.TacticalTurquoise
     val title = when (state) {
         MascotNanoAvailability.CHECKING -> if (isTurkish) "Cihaz AI kontrol ediliyor" else "Checking on-device AI"
         MascotNanoAvailability.READY -> "Gemini Nano • ${if (isTurkish) "cihazda hazır" else "ready on device"}"
@@ -478,9 +504,9 @@ private fun NanoStatusCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = GameSpacing.ScreenHorizontal, vertical = 4.dp),
-        shape = GameShapes.Medium,
-        color = GameColors.PrimarySurface,
+            .padding(horizontal = ChatScreenHorizontal, vertical = 4.dp),
+        shape = ChatShapes.Medium,
+        color = ChatColors.PrimarySurface,
         border = BorderStroke(1.dp, accent.copy(alpha = .35f)),
     ) {
         Row(
@@ -490,13 +516,13 @@ private fun NanoStatusCard(
             Box(Modifier.size(9.dp).background(accent, CircleShape))
             Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, color = GameColors.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Text(subtitle, color = GameColors.TextSecondary, fontSize = 10.sp, lineHeight = 13.sp)
+                Text(title, color = ChatColors.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, color = ChatColors.TextSecondary, fontSize = 10.sp, lineHeight = 13.sp)
             }
             if (state == MascotNanoAvailability.DOWNLOADABLE) {
                 Spacer(Modifier.width(8.dp))
                 FilledTonalIconButton(onClick = onDownload, modifier = Modifier.size(38.dp)) {
-                    Icon(Icons.Rounded.CloudDownload, if (isTurkish) "İndir" else "Download", tint = GameColors.TacticalTurquoise)
+                    Icon(Icons.Rounded.CloudDownload, if (isTurkish) "İndir" else "Download", tint = ChatColors.TacticalTurquoise)
                 }
             }
         }
@@ -513,7 +539,7 @@ private fun ModeSelector(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = GameSpacing.ScreenHorizontal, vertical = 4.dp),
+            .padding(horizontal = ChatScreenHorizontal, vertical = 4.dp),
         horizontalArrangement = Arrangement.Center,
     ) {
         FilterChip(
@@ -535,19 +561,19 @@ private fun ModeSelector(
 @Composable
 private fun MascotMessageBubble(message: MascotChatMessage) {
     val alignment = if (message.fromMascot) Alignment.CenterStart else Alignment.CenterEnd
-    val background = if (message.fromMascot) GameColors.PrimarySurface else GameColors.DeepBlue
-    val border = if (message.fromMascot) GameColors.Lavender.copy(alpha = .30f) else GameColors.PrimaryBlue.copy(alpha = .45f)
+    val background = if (message.fromMascot) ChatColors.PrimarySurface else ChatColors.DeepBlue
+    val border = if (message.fromMascot) ChatColors.Lavender.copy(alpha = .30f) else ChatColors.PrimaryBlue.copy(alpha = .45f)
     Box(Modifier.fillMaxWidth(), contentAlignment = alignment) {
         Surface(
             modifier = Modifier.widthIn(max = 300.dp),
-            shape = GameShapes.Large,
+            shape = ChatShapes.Large,
             color = background,
             border = BorderStroke(1.dp, border),
         ) {
             Text(
                 message.text,
                 Modifier.padding(horizontal = 13.dp, vertical = 10.dp),
-                color = GameColors.TextPrimary,
+                color = if (message.fromMascot) ChatColors.TextPrimary else Color.White,
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -558,9 +584,9 @@ private fun MascotMessageBubble(message: MascotChatMessage) {
 private fun MascotThinkingBubble(isTurkish: Boolean) {
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
         Surface(
-            shape = GameShapes.Large,
-            color = GameColors.PrimarySurface,
-            border = BorderStroke(1.dp, GameColors.TacticalTurquoise.copy(alpha = .25f)),
+            shape = ChatShapes.Large,
+            color = ChatColors.PrimarySurface,
+            border = BorderStroke(1.dp, ChatColors.TacticalTurquoise.copy(alpha = .25f)),
         ) {
             Row(
                 Modifier.padding(horizontal = 13.dp, vertical = 10.dp),
@@ -569,10 +595,10 @@ private fun MascotThinkingBubble(isTurkish: Boolean) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(15.dp),
                     strokeWidth = 2.dp,
-                    color = GameColors.TacticalTurquoise,
+                    color = ChatColors.TacticalTurquoise,
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(if (isTurkish) "Düşünüyorum…" else "Thinking…", color = GameColors.TextSecondary, fontSize = 12.sp)
+                Text(if (isTurkish) "Düşünüyorum…" else "Thinking…", color = ChatColors.TextSecondary, fontSize = 12.sp)
             }
         }
     }
@@ -591,10 +617,10 @@ private fun ChatComposer(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = GameColors.ElevatedBackground,
-        border = BorderStroke(1.dp, GameColors.Divider),
+        color = ChatColors.ElevatedBackground,
+        border = BorderStroke(1.dp, ChatColors.Divider),
     ) {
-        Column(Modifier.padding(horizontal = GameSpacing.ScreenHorizontal, vertical = 10.dp)) {
+        Column(Modifier.padding(horizontal = ChatScreenHorizontal, vertical = 10.dp)) {
             if (voiceMode) {
                 Text(
                     if (listening) {
@@ -603,7 +629,7 @@ private fun ChatComposer(
                         if (isTurkish) "Mikrofona dokun; cevabımı sesli vereyim." else "Tap the microphone and I'll answer out loud."
                     },
                     modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-                    color = if (listening) GameColors.PlayGreen else GameColors.TextSecondary,
+                    color = if (listening) ChatColors.PlayGreen else ChatColors.TextSecondary,
                     textAlign = TextAlign.Center,
                     fontSize = 11.sp,
                 )
@@ -614,7 +640,7 @@ private fun ChatComposer(
                         onClick = onMic,
                         enabled = enabled,
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (listening) GameColors.Danger else GameColors.TacticalTurquoise,
+                            containerColor = if (listening) ChatColors.Danger else ChatColors.TacticalTurquoise,
                             contentColor = Color.White,
                         ),
                     ) {
@@ -631,17 +657,17 @@ private fun ChatComposer(
                     placeholder = {
                         Text(
                             if (isTurkish) "Maskota bir şey söyle…" else "Say something to the mascot…",
-                            color = GameColors.TextTertiary,
+                            color = ChatColors.TextTertiary,
                         )
                     },
-                    shape = GameShapes.Large,
+                    shape = ChatShapes.Large,
                 )
                 Spacer(Modifier.width(8.dp))
                 FilledIconButton(
                     onClick = onSend,
                     enabled = enabled && input.isNotBlank(),
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = GameColors.PrimaryBlue,
+                        containerColor = ChatColors.PrimaryBlue,
                         contentColor = Color.White,
                     ),
                 ) {

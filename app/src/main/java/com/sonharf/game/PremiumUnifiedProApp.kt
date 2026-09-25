@@ -25,7 +25,7 @@ import kotlinx.coroutines.delay
 private enum class PremiumDestination {
     HOME, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
     LAST_LETTER, SIEGE, LETTER_PATH,
-    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP, PRO, PRIVATE_ROOM
+    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP, PRO, PRIVATE_ROOM, MASCOT_CHAT
 }
 
 @Composable
@@ -170,6 +170,11 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onSocial = { destination = PremiumDestination.SOCIAL },
                         onShop = { destination = PremiumDestination.SHOP },
                         onProfile = { destination = PremiumDestination.PROFILE },
+                        onMascot = if (WordSiegeMascotOwnership.hasAny) {
+                            { destination = PremiumDestination.MASCOT_CHAT }
+                        } else {
+                            null
+                        },
                     )
                 }
             },
@@ -252,10 +257,19 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.PROFILE_DETAILS -> CompleteProfileScreen(0) {
                         destination = PremiumDestination.PROFILE
                     }
+                    PremiumDestination.MASCOT_CHAT -> {
+                        val owned = WordSiegeMascotOwnership.owned
+                        val picked = remember { WordSiegeMascotBond(shellContext).skinChoice }
+                        val chatSkin = picked?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } ?: WordSiegeMascotSkin.ORB
+                        MascotChatScreen(
+                            onBack = { destination = PremiumDestination.HOME },
+                            mascotSkin = chatSkin,
+                        )
+                    }
                 }
                 // Outside the games the mascot keeps the player company from a bottom corner:
                 // it mostly watches, says a word on some pages and flies aside when touched.
-                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)) {
+                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH, PremiumDestination.MASCOT_CHAT)) {
                     WordSiegeMascotCompanion(
                         anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
                         mascotSize = 83.dp,
@@ -499,10 +513,12 @@ private fun PremiumBottomBar(
     onSocial: () -> Unit,
     onShop: () -> Unit,
     onProfile: () -> Unit,
+    onMascot: (() -> Unit)?,
 ) {
-    val items = listOf(
+    val items = listOfNotNull(
         Triple(PremiumDestination.HOME, Icons.Rounded.Home, sh("ANA SAYFA", "HOME")) to onHome,
         Triple(PremiumDestination.SOCIAL, Icons.Rounded.People, sh("ARKADAŞLAR", "FRIENDS")) to onSocial,
+        onMascot?.let { Triple(PremiumDestination.MASCOT_CHAT, Icons.Rounded.ChatBubble, sh("MASKOT", "MASCOT")) to it },
         Triple(PremiumDestination.SHOP, Icons.Rounded.Storefront, sh("MAĞAZA", "STORE")) to onShop,
         Triple(PremiumDestination.PROFILE, Icons.Rounded.Person, sh("PROFİL", "PROFILE")) to onProfile,
     )
