@@ -18,7 +18,7 @@ class GameModeBrandingAndVisibleActionContractTest {
                 home.contains("\"KELİME\\nKUŞATMASI\"")
         )
         assertTrue(home.contains("onClick = onSiege"))
-        assertTrue(home.contains("sh(\"HEMEN OYNA\", \"PLAY NOW\")"))
+        assertTrue(home.contains("sh(\"OYNA\", \"PLAY\")"))
         assertTrue(home.contains("onClick = onPlay"))
         assertTrue(brand.contains("R.drawable.kelime_kusatma_logo_hd"))
         assertTrue(siegeDrawable.isFile)

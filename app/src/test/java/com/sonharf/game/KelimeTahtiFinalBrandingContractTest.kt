@@ -13,8 +13,8 @@ class KelimeKusatmasiFinalBrandingContractTest {
         val home = source("src/main/java/com/sonharf/game/PremiumHomeV3.kt")
 
         assertTrue(home.contains("onClick = onSiege"))
-        assertTrue(home.contains("sh(\"HEMEN OYNA\", \"PLAY NOW\")"))
-        assertTrue(home.contains("Kelimeyi kur. Alanı ele geçir. Rakibini geç."))
+        assertTrue(home.contains("sh(\"OYNA\", \"PLAY\")"))
+        assertTrue(home.contains("HfTitleRule(\"Kuşatma\""))
         assertTrue(state.contains("OYNA • Harflerini yerleştir, kelimeni oluştur"))
         assertTrue(state.contains("PLAY • Place your tiles, build your word"))
         assertTrue(state.contains(".replace(\"KELİME TAHTI\", \"KELİME KUŞATMASI\")"))

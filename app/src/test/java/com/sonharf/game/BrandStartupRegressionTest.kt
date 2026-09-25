@@ -41,7 +41,7 @@ class BrandStartupRegressionTest {
         assertFalse(authGate.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertFalse(authGate.contains("painterResource(R.drawable.son_harf_gold_teal_logo)"))
         assertTrue(siegeHub.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
-        assertTrue(home.contains("R.drawable.son_harf_app_icon_master"))
+        assertTrue(home.contains("HomeKelimeTileLogo("))
         listOf(launcherBadge, launcherVector, homeVector, authVector, gameVector).forEach {
             assertTrue("Missing compatibility vector drawable: ${it.path}", it.isFile)
             assertTrue(it.readText().contains("<vector"))

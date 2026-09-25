@@ -2,6 +2,8 @@ package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +15,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -122,8 +126,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     // Top-level navigation: Home, Friends/Social, Store, Profile. Club is hidden.
     val topLevel = destination in setOf(
         PremiumDestination.HOME,
-        PremiumDestination.SOCIAL,
         PremiumDestination.SHOP,
+        PremiumDestination.SOCIAL,
+        PremiumDestination.COMPETE,
         PremiumDestination.PROFILE,
     )
     val scheme = if (SonHarfTheme.IsDark) {
@@ -179,14 +184,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumBottomBar(
                         destination = destination,
                         onHome = { destination = PremiumDestination.HOME },
-                        onSocial = { destination = PremiumDestination.SOCIAL },
                         onShop = { destination = PremiumDestination.SHOP },
+                        onSocial = { destination = PremiumDestination.SOCIAL },
+                        onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
-                        onMascot = if (WordSiegeMascotOwnership.hasAny) {
-                            { destination = PremiumDestination.MASCOT_CHAT }
-                        } else {
-                            null
-                        },
                     )
                 }
             },
@@ -199,9 +200,13 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onPrimary = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                         onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
-                        onSocial = { destination = PremiumDestination.SOCIAL },
+                        onShop = { destination = PremiumDestination.SHOP },
+                        onPro = { destination = PremiumDestination.PRO },
+                        onSettings = { destination = PremiumDestination.SETTINGS },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
+                        mascotSkin = if (WordSiegeMascotOwnership.hasAny) chatMascotSkin(shellContext) else null,
+                        onMascot = { destination = PremiumDestination.MASCOT_CHAT },
                     )
                     PremiumDestination.GAMES -> PremiumGameCenter(
                         siegeLanguage = siegeLanguage,
@@ -269,15 +274,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.PROFILE_DETAILS -> CompleteProfileScreen(0) {
                         destination = PremiumDestination.PROFILE
                     }
-                    PremiumDestination.MASCOT_CHAT -> {
-                        val owned = WordSiegeMascotOwnership.owned
-                        val picked = remember { WordSiegeMascotBond(shellContext).skinChoice }
-                        val chatSkin = picked?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } ?: WordSiegeMascotSkin.ORB
-                        MascotChatScreen(
-                            onBack = { destination = PremiumDestination.HOME },
-                            mascotSkin = chatSkin,
-                        )
-                    }
+                    PremiumDestination.MASCOT_CHAT -> MascotChatScreen(
+                        onBack = { destination = PremiumDestination.HOME },
+                        mascotSkin = chatMascotSkin(shellContext),
+                    )
                 }
                 // Outside the games the mascot keeps the player company from a bottom corner:
                 // it mostly watches, says a word on some pages and flies aside when touched.
@@ -301,15 +301,26 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     }
 }
 
+/** The mascot the player picked, if they own it, otherwise their first owned character. */
+private fun chatMascotSkin(context: android.content.Context): WordSiegeMascotSkin {
+    val owned = WordSiegeMascotOwnership.owned
+    val picked = WordSiegeMascotBond(context).skinChoice
+    return picked?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } ?: WordSiegeMascotSkin.ORB
+}
+
 @Composable
 private fun PremiumHomeScreen(
     backend: OnlineGameBackend,
     onPrimary: () -> Unit,
     onCompete: () -> Unit,
     onProfile: () -> Unit,
-    onSocial: () -> Unit,
+    onShop: () -> Unit,
+    onPro: () -> Unit,
+    onSettings: () -> Unit,
     onLastLetter: () -> Unit,
     onLetterPath: () -> Unit,
+    mascotSkin: WordSiegeMascotSkin?,
+    onMascot: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
 
@@ -322,17 +333,25 @@ private fun PremiumHomeScreen(
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
             modifier = Modifier.widthIn(max = 600.dp).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item(key = "home_hero") {
-                PremiumHomeCommandDeck(profile, onProfile, onPrimary, onSocial)
-            }
-            item(key = "invite_friends") {
-                InviteFriendsCard(playerName = profile?.displayName)
+                PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onPro, onSettings)
             }
             item(key = "home_secondary_modes") {
                 PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)
+            }
+            item(key = "home_daily_tasks") {
+                PremiumHomeDailyTasks(onClick = onCompete)
+            }
+            if (mascotSkin != null) {
+                item(key = "home_mascot_chat") {
+                    PremiumHomeMascotCard(skin = mascotSkin, onClick = onMascot)
+                }
+            }
+            item(key = "invite_friends") {
+                InviteFriendsCard(playerName = profile?.displayName)
             }
             item(key = "daily_objective") {
                 PremiumDailyObjective(onClick = onCompete)
@@ -522,46 +541,52 @@ private fun PremiumLanguageChoice(
 private fun PremiumBottomBar(
     destination: PremiumDestination,
     onHome: () -> Unit,
-    onSocial: () -> Unit,
     onShop: () -> Unit,
+    onSocial: () -> Unit,
+    onCompete: () -> Unit,
     onProfile: () -> Unit,
-    onMascot: (() -> Unit)?,
 ) {
-    val items = listOfNotNull(
-        Triple(PremiumDestination.HOME, Icons.Rounded.Home, sh("ANA SAYFA", "HOME")) to onHome,
-        Triple(PremiumDestination.SOCIAL, Icons.Rounded.People, sh("ARKADAŞLAR", "FRIENDS")) to onSocial,
-        onMascot?.let { Triple(PremiumDestination.MASCOT_CHAT, Icons.Rounded.ChatBubble, sh("MASKOT", "MASCOT")) to it },
-        Triple(PremiumDestination.SHOP, Icons.Rounded.Storefront, sh("MAĞAZA", "STORE")) to onShop,
-        Triple(PremiumDestination.PROFILE, Icons.Rounded.Person, sh("PROFİL", "PROFILE")) to onProfile,
+    val items = listOf(
+        Triple(PremiumDestination.HOME, R.drawable.hf_ic_home, sh("Ana Sayfa", "Home")) to onHome,
+        Triple(PremiumDestination.SHOP, R.drawable.hf_ic_store, sh("Mağaza", "Store")) to onShop,
+        Triple(PremiumDestination.SOCIAL, R.drawable.hf_ic_club, sh("Arkadaşlar", "Friends")) to onSocial,
+        Triple(PremiumDestination.COMPETE, R.drawable.hf_ic_compete, sh("Rekabet", "Compete")) to onCompete,
+        Triple(PremiumDestination.PROFILE, R.drawable.hf_ic_profile, sh("Profil", "Profile")) to onProfile,
     )
-    Surface(color = SonHarfTheme.NavigationSurface, shadowElevation = 8.dp) {
-        Column {
-            HorizontalDivider(thickness = 1.dp, color = SonHarfTheme.Border)
-            NavigationBar(containerColor = SonHarfTheme.NavigationSurface, tonalElevation = 0.dp) {
-                items.forEach { (item, onClick) ->
+    Surface(color = SonHarfTheme.NavigationSurface) {
+        Column(Modifier.navigationBarsPadding()) {
+            HorizontalDivider(thickness = 1.dp, color = Hf.Gold.copy(alpha = .22f))
+            Row(Modifier.fillMaxWidth().height(72.dp), verticalAlignment = Alignment.CenterVertically) {
+                items.forEachIndexed { index, (item, onClick) ->
                     val selected = destination == item.first
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = onClick,
-                        icon = { Icon(item.second, null, modifier = Modifier.size(24.dp)) },
-                        label = {
-                            Text(
-                                item.third,
-                                fontSize = 10.sp,
-                                fontWeight = if (selected) FontWeight.Black else FontWeight.SemiBold,
-                                maxLines = 1,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            )
-                        },
-                        alwaysShowLabel = true,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = SonHarfTheme.TextPrimary,
-                            selectedTextColor = SonHarfTheme.TextPrimary,
-                            indicatorColor = SonHarfTheme.PrimarySoft,
-                            unselectedIconColor = SonHarfTheme.TextSecondary,
-                            unselectedTextColor = SonHarfTheme.TextSecondary,
-                        ),
-                    )
+                    if (index > 0) Box(Modifier.width(1.dp).height(34.dp).background(Hf.Gold.copy(alpha = .16f)))
+                    Column(
+                        Modifier.weight(1f).fillMaxHeight().clickable(onClick = onClick),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            painterResource(item.second),
+                            null,
+                            tint = if (selected) Hf.Gold else Hf.Ivory.copy(alpha = .78f),
+                            modifier = Modifier.size(28.dp),
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            item.third,
+                            color = if (selected) Hf.Gold else Hf.Ivory.copy(alpha = .78f),
+                            fontSize = 12.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Box(
+                            Modifier.width(44.dp).height(3.dp).background(
+                                if (selected) Hf.Gold else Color.Transparent,
+                                RoundedCornerShape(99.dp),
+                            ),
+                        )
+                    }
                 }
             }
         }

@@ -52,14 +52,14 @@ class KelimeKusatmasiMasterGddV3ContractTest {
 
         assertTrue(home.contains("FramedProfilePhotoAvatar("))
         assertTrue(home.contains("profile?.diamonds"))
-        assertTrue(home.contains("} Coin"))
+        assertTrue(home.contains("HfCoin("))
         assertTrue(home.contains("\"PRO\""))
         assertTrue(home.contains("profile?.isVip == true"))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
         assertTrue(home.contains("\"${'$'}{it.rating} RP\""))
-        assertTrue(home.contains("Icons.Rounded.Notifications"))
-        assertTrue(home.contains("onClick = onSocial"))
-        assertTrue(home.contains("Bildirimler ve davetler"))
+        assertTrue(home.contains("R.drawable.hf_ic_settings"))
+        assertTrue(home.contains("onClick = onSettings"))
+        assertTrue(home.contains("sh(\"Ayarlar\", \"Settings\")"))
     }
 
     @Test
