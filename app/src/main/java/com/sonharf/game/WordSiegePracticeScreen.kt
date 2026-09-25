@@ -49,12 +49,12 @@ private val WordSiegePracticeBots = listOf(
     PracticeBotProfile("Ceren", "kadın"),
 )
 
-private val PracticePlayerAccent = Color(0xFF32845E)
-private val PracticePlayerFill = Color(0xFF32845E)
-private val PracticeRivalAccent = Color(0xFFC85A54)
-private val PracticeRivalFill = Color(0xFFC85A54)
-private val PracticeNeutralFill = Color(0xFFF0EDE3)
-private val PracticeSiegeWarm = Color(0xFFC5AA73)
+private val PracticePlayerAccent = Color(0xFF3E9F4D)
+private val PracticePlayerFill = Color(0xFF3E9F4D)
+private val PracticeRivalAccent = Color(0xFFD0514A)
+private val PracticeRivalFill = Color(0xFFD0514A)
+private val PracticeNeutralFill = Color(0xFFF3EEDF)
+private val PracticeSiegeWarm = Color(0xFFE0A82E)
 
 @Composable
 internal fun WordSiegePracticeScreen(

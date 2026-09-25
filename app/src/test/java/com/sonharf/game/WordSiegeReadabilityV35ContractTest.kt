@@ -26,14 +26,14 @@ class WordSiegeReadabilityV35ContractTest {
         assertFalse(screen.contains("takeLast(8)"))
     }
 
-    @Test fun strategicBonusesStayQuieterThanOwnedLetters() {
+    @Test fun bonusSquaresUseWordBoardColorsWhileOwnershipStaysGreenAndRed() {
         val online = read("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
-        listOf("0xFFE7E2D5", "0xFFE1DBCB", "0xFFE9E3D6", "0xFFE3DCCC", "0xFFE8DDBF", "0xFFEBE1C3").forEach {
+        listOf("0xFF5DADE2", "0xFFE573A5", "0xFF7DC36B", "0xFFE0914A", "0xFF9B6FD1", "0xFFF2C14E").forEach {
             assertTrue(online.contains(it))
             assertTrue(practice.contains(it))
         }
-        assertTrue(online.contains("PanSiegeMine = Color(0xFF32845E)"))
-        assertTrue(online.contains("PanSiegeRival = Color(0xFFC85A54)"))
+        assertTrue(online.contains("PanSiegeMine = Color(0xFF3E9F4D)"))
+        assertTrue(online.contains("PanSiegeRival = Color(0xFFD0514A)"))
     }
 }

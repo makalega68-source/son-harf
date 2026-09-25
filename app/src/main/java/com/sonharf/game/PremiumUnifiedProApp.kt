@@ -549,13 +549,13 @@ private fun PremiumBottomBar(
                         Icon(
                             painterResource(item.second),
                             null,
-                            tint = if (selected) Hf.Gold else Hf.Ivory.copy(alpha = .78f),
+                            tint = if (selected) Hf.Green else Hf.Text.copy(alpha = .78f),
                             modifier = Modifier.size(28.dp),
                         )
                         Spacer(Modifier.height(3.dp))
                         Text(
                             item.third,
-                            color = if (selected) Hf.Gold else Hf.Ivory.copy(alpha = .78f),
+                            color = if (selected) Hf.Green else Hf.Text.copy(alpha = .78f),
                             fontSize = 12.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                             maxLines = 1,
@@ -563,7 +563,7 @@ private fun PremiumBottomBar(
                         Spacer(Modifier.height(4.dp))
                         Box(
                             Modifier.width(44.dp).height(3.dp).background(
-                                if (selected) Hf.Gold else Color.Transparent,
+                                if (selected) Hf.Green else Color.Transparent,
                                 RoundedCornerShape(99.dp),
                             ),
                         )

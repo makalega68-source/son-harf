@@ -86,42 +86,42 @@ private const val PREMIER_ROUND_PREP_SECONDS = 20
 
 /** Yetişkin, yüksek okunabilirlikli Son Harf oyun paleti. */
 private object PremierUi {
-    val Background = Color(0xFF171C1B)
-    val Surface = Color(0xFF222827)
-    val Ink = Color(0xFFF0EDE3)
-    val Muted = Color(0xFFA9AFAB)
-    val Ocean = Color(0xFFC5AA73)
-    val OceanDeep = Color(0xFF32845E)
-    val Sky = Color(0xFFC5AA73)
-    val Ice = Color(0xFF1D2322)
-    val Border = Color(0xFF5C5239)
-    val Green = Color(0xFF32845E)
-    val GreenSoft = Color(0xFF173B30)
-    val Red = Color(0xFFC85A54)
-    val RedSoft = Color(0xFF442624)
-    val Gold = Color(0xFFC5AA73)
-    val GoldSoft = Color(0xFF3A3326)
+    val Background = Color(0xFFE6ECF2)
+    val Surface = Color(0xFFFFFFFF)
+    val Ink = Color(0xFF243142)
+    val Muted = Color(0xFF6B7A8C)
+    val Ocean = Color(0xFF2C3E55)
+    val OceanDeep = Color(0xFF3E9F4D)
+    val Sky = Color(0xFF5DADE2)
+    val Ice = Color(0xFFF3F6F9)
+    val Border = Color(0xFFD2DBE5)
+    val Green = Color(0xFF3E9F4D)
+    val GreenSoft = Color(0xFFE1F2E3)
+    val Red = Color(0xFFD0514A)
+    val RedSoft = Color(0xFFFBE4E2)
+    val Gold = Color(0xFFE0A82E)
+    val GoldSoft = Color(0xFFFFF3D6)
 }
 
 private object PremierArenaSky {
-    val BackgroundTop = Color(0xFF171C1B)
-    val BackgroundMid = Color(0xFF1A201F)
-    val BackgroundBottom = Color(0xFF151A19)
-    val Surface = Color(0xFF222827)
-    val SurfaceBlue = Color(0xFF1D2322)
-    val Ink = Color(0xFFF0EDE3)
-    val Muted = Color(0xFFA9AFAB)
-    val Ocean = Color(0xFFC5AA73)
-    val OceanDeep = Color(0xFF8F764A)
-    val Border = Color(0xFF5C5239)
-    val Rival = Color(0xFFC85A54)
-    val RivalSoft = Color(0xFF442624)
-    val Green = Color(0xFF32845E)
-    val GreenSoft = Color(0xFF173B30)
-    val Gold = Color(0xFFC5AA73)
-    val GoldSoft = Color(0xFF3A3326)
-    val Red = Color(0xFFC85A54)
-    val RedSoft = Color(0xFF442624)
+    val BackgroundTop = Color(0xFFE6ECF2)
+    val BackgroundMid = Color(0xFFE9EEF3)
+    val BackgroundBottom = Color(0xFFEDF1F5)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceBlue = Color(0xFFF3F6F9)
+    val Ink = Color(0xFF243142)
+    val Muted = Color(0xFF6B7A8C)
+    val Ocean = Color(0xFF2C3E55)
+    val OceanDeep = Color(0xFF22324A)
+    val Border = Color(0xFFD2DBE5)
+    val Rival = Color(0xFFD0514A)
+    val RivalSoft = Color(0xFFFBE4E2)
+    val Green = Color(0xFF3E9F4D)
+    val GreenSoft = Color(0xFFE1F2E3)
+    val Gold = Color(0xFFE0A82E)
+    val GoldSoft = Color(0xFFFFF3D6)
+    val Red = Color(0xFFD0514A)
+    val RedSoft = Color(0xFFFBE4E2)
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr
@@ -795,7 +795,7 @@ private fun PremierLobby(
         ) {
             Column(
                 Modifier.background(
-                    Brush.linearGradient(listOf(Color(0xFF171C1B), PremierUi.OceanDeep))
+                    Brush.linearGradient(listOf(Color(0xFF2C3E55), PremierUi.OceanDeep))
                 ).padding(22.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
@@ -908,7 +908,7 @@ private fun PremierSearching(language: String, onCancel: () -> Unit) {
     ) {
         HfTitleRule(sh("Kelime Tahtı", "Kelime Tahtı"), fontSize = 26.sp)
         Spacer(Modifier.height(40.dp))
-        Text(pt(language, "Rakip aranıyor", "Finding a rival"), color = Hf.Ivory, fontSize = 34.sp, fontWeight = FontWeight.Black)
+        Text(pt(language, "Rakip aranıyor", "Finding a rival"), color = Hf.Text, fontSize = 34.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.height(36.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             PremierSearchSide(pt(language, "SEN", "YOU"), Hf.Green, Hf.Green, Modifier.weight(1f))
@@ -917,7 +917,7 @@ private fun PremierSearching(language: String, onCancel: () -> Unit) {
                 Text("VS", Modifier.padding(horizontal = 8.dp), color = Hf.Gold, fontSize = 28.sp, fontWeight = FontWeight.Black)
                 Box(Modifier.width(18.dp).height(2.dp).background(Hf.Gold))
             }
-            PremierSearchSide(pt(language, "RAKİP", "RIVAL"), Color(0xFF8A8F8C), Color(0xFF3A3F3D), Modifier.weight(1f))
+            PremierSearchSide(pt(language, "RAKİP", "RIVAL"), Color(0xFF9AA7B5), Color(0xFFE3E9EF), Modifier.weight(1f))
         }
         Spacer(Modifier.weight(1f))
         Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
@@ -938,7 +938,7 @@ private fun PremierSearching(language: String, onCancel: () -> Unit) {
             HfLetterTile("A", (64 * pulse).dp, fontSize = 36.sp)
         }
         Spacer(Modifier.height(18.dp))
-        Text(pt(language, "Son Harf için eşleşme bekleniyor", "Waiting for a Last Letter match"), color = Hf.Ivory, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text(pt(language, "Son Harf için eşleşme bekleniyor", "Waiting for a Last Letter match"), color = Hf.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Text(pt(language, "Rating ve dil eşleşmesi yapılıyor…", "Matching rating and language…"), color = Hf.TextMuted, fontSize = 12.sp)
         Spacer(Modifier.weight(1f))
         HfSecondaryButton(pt(language, "Vazgeç", "Cancel"), onClick = onCancel, modifier = Modifier.fillMaxWidth(.8f))
@@ -951,7 +951,7 @@ private fun PremierSearchSide(label: String, ring: Color, pill: Color, modifier:
         Box(Modifier.size(96.dp).border(6.dp, ring, CircleShape).padding(6.dp).background(Hf.Surface, CircleShape))
         Spacer(Modifier.height(12.dp))
         Surface(shape = Hf.PillShape, color = pill, border = BorderStroke(1.5.dp, Hf.Gold)) {
-            Text(label, Modifier.padding(horizontal = 26.dp, vertical = 6.dp), color = Hf.Ivory, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Text(label, Modifier.padding(horizontal = 26.dp, vertical = 6.dp), color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -969,7 +969,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
         PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Ocean, nameColor = SonHarfCosmetics.playerNameColor)
         Spacer(Modifier.height(16.dp))
         Surface(shape = RoundedCornerShape(99.dp), color = Color.Transparent) {
-            Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.OceanDeep, Color(0xFF171C1B)))).padding(horizontal = 27.dp, vertical = 10.dp)) {
+            Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.OceanDeep, Color(0xFF2C3E55)))).padding(horizontal = 27.dp, vertical = 10.dp)) {
                 Text("VS", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
             }
         }
@@ -1020,22 +1020,22 @@ private fun PremierStatPill(text: String, accent: Color) {
 
 /** Word-game palette: a calm teal board, cream letter tiles, one soft colour per player. */
 private object PremierBoard {
-    val BoardTop = Color(0xFF222827)
-    val BoardBottom = Color(0xFF171C1B)
-    val Tile = Color(0xFFF0EDE3)
-    val TileEdge = Color(0xFFD8D1C0)
-    val TileInk = Color(0xFF171C1B)
-    val Gold = Color(0xFFC5AA73)
-    val GoldEdge = Color(0xFF8F764A)
-    val Ink = Color(0xFF171C1B)
-    val Muted = Color(0xFF68716D)
-    val Mine = Color(0xFF32845E)
-    val MineSoft = Color(0xFFDCE8DF)
-    val Rival = Color(0xFFC85A54)
-    val RivalSoft = Color(0xFFF3DDDA)
-    val Danger = Color(0xFFC85A54)
-    val Card = Color(0xFFF0EDE3)
-    val CardBorder = Color(0xFFC5AA73)
+    val BoardTop = Color(0xFFF6F1E3)
+    val BoardBottom = Color(0xFFEFE7D2)
+    val Tile = Color(0xFFF7E3A6)
+    val TileEdge = Color(0xFFC9A560)
+    val TileInk = Color(0xFF4A3217)
+    val Gold = Color(0xFFE0A82E)
+    val GoldEdge = Color(0xFFB07F1E)
+    val Ink = Color(0xFF243142)
+    val Muted = Color(0xFF6B7A8C)
+    val Mine = Color(0xFF3E9F4D)
+    val MineSoft = Color(0xFFE1F2E3)
+    val Rival = Color(0xFFD0514A)
+    val RivalSoft = Color(0xFFFBE4E2)
+    val Danger = Color(0xFFD0514A)
+    val Card = Color(0xFFFFFFFF)
+    val CardBorder = Color(0xFFD2DBE5)
 }
 
 /** Every turn is 15 seconds; a new round's first turn adds the preparation break on the server. */
@@ -1380,7 +1380,7 @@ private fun PremierArena(
                             )
                         }
                     }
-                    Text("▼", color = Color.White.copy(alpha = .45f), fontSize = 12.sp)
+                    Text("▼", color = PremierBoard.Ink.copy(alpha = .45f), fontSize = 12.sp)
                     // The letter to play, flanked by the round's word counts (mirrored).
                     Box(
                         modifier = Modifier.fillMaxWidth().height((if (targetSize > mascotSize) targetSize else mascotSize) + 6.dp),
@@ -1649,7 +1649,7 @@ private fun PremierRoundPrep(
 ) {
     val pulse = rememberInfiniteTransition(label = "prep")
     val beat by pulse.animateFloat(1f, 1.08f, infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "prep-beat")
-    Box(Modifier.fillMaxSize().background(Color(0xE6171C1B)), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Color(0xE62C3E55)), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 24.dp)) {
             if (lastRoundWon != null) {
                 Text(
@@ -1958,12 +1958,12 @@ private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String, 
     }
     Surface(
         shape = RoundedCornerShape(99.dp),
-        color = if (myTurn) PremierBoard.Gold.copy(alpha = pulse) else Color.White.copy(alpha = .14f),
+        color = if (myTurn) PremierBoard.Gold.copy(alpha = pulse) else PremierBoard.Ink.copy(alpha = .08f),
     ) {
         Text(
             label,
             Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
-            color = if (myTurn) PremierBoard.TileInk else Color.White,
+            color = if (myTurn) PremierBoard.TileInk else PremierBoard.Ink,
             fontSize = 11.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = .6.sp,
@@ -2046,7 +2046,7 @@ private fun PremierPressureStrip(
                         .height(10.dp)
                         .drawBehind {
                             val r = size.height / 2f
-                            drawRoundRect(Color(0xFF2E3533), cornerRadius = CornerRadius(r, r))
+                            drawRoundRect(Color(0xFFD8E0E8), cornerRadius = CornerRadius(r, r))
                             // Drains symmetrically toward the middle.
                             val w = size.width * progress
                             drawRoundRect(
@@ -2168,7 +2168,7 @@ private fun PremierTargetCard(
                 gameMode == "expert" -> pt(language, "HEDEF • x${round.coerceIn(1, 3)}", "TARGET • x${round.coerceIn(1, 3)}")
                 else -> pt(language, "HEDEF HARF", "TARGET LETTER")
             },
-            color = if (suddenDeath) PremierBoard.Danger else Color.White.copy(alpha = .7f),
+            color = if (suddenDeath) PremierBoard.Danger else PremierBoard.Ink.copy(alpha = .7f),
             fontSize = 9.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = 1.4.sp,
@@ -2190,7 +2190,7 @@ private fun PremierLastWordCard(
     if (latestPlayedWord.isBlank()) {
         Text(
             latestPlayedWord.ifBlank { pt(language, "İLK KELİME SERBEST", "FREE OPENING WORD") },
-            color = Color.White.copy(alpha = .8f),
+            color = PremierBoard.Ink.copy(alpha = .8f),
             fontSize = if (veryCompact) 14.sp else 16.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = 1.sp,
@@ -2238,7 +2238,7 @@ private fun PremierLastWordCard(
 @Composable
 private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: Boolean = false, meId: String? = null) {
     if (words.isEmpty()) {
-        Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = Color.White.copy(alpha = .6f), fontSize = 10.sp)
+        Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierBoard.Ink.copy(alpha = .6f), fontSize = 10.sp)
         return
     }
     // Pro users see the full played-word history so they can avoid repeats;
@@ -2248,7 +2248,7 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
         if (isPro) {
             Text(
                 pt(language, "PRO • Tüm oynanan kelimeler (${words.size})", "PRO • All played words (${words.size})"),
-                color = Color.White.copy(alpha = .55f),
+                color = PremierBoard.Ink.copy(alpha = .55f),
                 fontSize = 8.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 6.dp),
@@ -2263,13 +2263,13 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
                 val mine = entry.playerId != null && entry.playerId == meId
                 Surface(
                     shape = RoundedCornerShape(9.dp),
-                    color = Color.White.copy(alpha = .12f),
+                    color = Color.White,
                     border = BorderStroke(1.dp, (if (mine) PremierBoard.Mine else PremierBoard.Rival).copy(alpha = .8f)),
                 ) {
                     Text(
                         premierUpper(entry.normalizedWord.ifBlank { entry.word }, language),
                         Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        color = Color.White.copy(alpha = .9f),
+                        color = PremierBoard.Ink.copy(alpha = .9f),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -2501,7 +2501,7 @@ private fun PremierChatSheet(
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.takeLast(50).lastIndex)
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFFF0EDE3)) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFFFFFFFF)) {
         Column(
             Modifier.fillMaxWidth().imePadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),

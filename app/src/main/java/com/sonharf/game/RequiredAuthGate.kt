@@ -86,29 +86,29 @@ private data class AuthIdentityProfile(
  * Profil teması yüklenmeden önce sabit token kullanılması ilk karede renk sıçramasını önler.
  */
 private object AuthUi {
-    val Background = Color(0xFF171C1B)
-    val BackgroundTop = Color(0xFF1C2322)
-    val Surface = Color(0xFF222827)
-    val SurfaceSoft = Color(0xFF1D2322)
-    val SurfaceRaised = Color(0xFF2A302F)
-    val Modal = Color(0xFF222827)
-    val Primary = Color(0xFF32845E)
-    val PrimarySoft = Color(0xFF1F3A2D)
-    val SoftBlue = Color(0xFFC5AA73)
-    val Turquoise = Color(0xFF40A878)
-    val Lavender = Color(0xFFC5AA73)
-    val Sand = Color(0xFFC5AA73)
-    val Text = Color(0xFFF0EDE3)
-    val Muted = Color(0xFFA9AFAB)
-    val Border = Color(0xFF5C5239)
-    val BorderSoft = Color(0xFF3A3A30)
-    val Success = Color(0xFF32845E)
-    val SuccessSoft = Color(0xFF1F3A2D)
-    val Warning = Color(0xFFC5AA73)
-    val WarningSoft = Color(0xFF3A3326)
-    val Error = Color(0xFFC85A54)
-    val Ivory = Color(0xFFF0EDE3)
-    val Ink = Color(0xFF171C1B)
+    val Background = Color(0xFFE6ECF2)
+    val BackgroundTop = Color(0xFFF3F6F9)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceSoft = Color(0xFFF3F6F9)
+    val SurfaceRaised = Color(0xFFEAF0F5)
+    val Modal = Color(0xFFFFFFFF)
+    val Primary = Color(0xFF3E9F4D)
+    val PrimarySoft = Color(0xFFE1F2E3)
+    val SoftBlue = Color(0xFF5DADE2)
+    val Turquoise = Color(0xFF52B360)
+    val Lavender = Color(0xFFE0A82E)
+    val Sand = Color(0xFFF7E3A6)
+    val Text = Color(0xFF243142)
+    val Muted = Color(0xFF6B7A8C)
+    val Border = Color(0xFFD2DBE5)
+    val BorderSoft = Color(0xFFE3E9EF)
+    val Success = Color(0xFF3E9F4D)
+    val SuccessSoft = Color(0xFFE1F2E3)
+    val Warning = Color(0xFFE0A82E)
+    val WarningSoft = Color(0xFFFFF3D6)
+    val Error = Color(0xFFD0514A)
+    val Ivory = Color(0xFFFFFFFF)
+    val Ink = Color(0xFF4A3217)
 }
 
 private suspend fun currentIdentityProfile(): AuthIdentityProfile? {
@@ -227,7 +227,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         }
     }
 
-    val authColors = darkColorScheme(
+    val authColors = lightColorScheme(
         primary = AuthUi.Primary,
         onPrimary = AuthUi.Ivory,
         primaryContainer = AuthUi.PrimarySoft,
@@ -641,7 +641,7 @@ private fun AuthBrandHeader() {
             "KELİME".forEachIndexed { index, letter ->
                 Surface(
                     shape = RoundedCornerShape(9.dp),
-                    color = AuthUi.Ivory,
+                    color = Color(0xFFF7E3A6),
                     border = BorderStroke(1.dp, AuthUi.Sand.copy(alpha = .55f)),
                     shadowElevation = 3.dp,
                 ) {

@@ -36,7 +36,7 @@ private val HomeHeroShape = RoundedCornerShape(18.dp)
 private val HomeCardShape = RoundedCornerShape(16.dp)
 private val HomeControlShape = RoundedCornerShape(12.dp)
 private val HomeMicroShape = RoundedCornerShape(10.dp)
-private val HomeHairline = Color(0xFF2E3533)
+private val HomeHairline = Color(0xFFD2DBE5)
 
 @Composable
 internal fun PremiumHomeCommandDeck(
@@ -84,7 +84,7 @@ private fun HomeStatusRow(
                     Spacer(Modifier.width(4.dp))
                     Text(
                         profile?.let { homeLeagueName(ratingLeagueProgress(it.rating).leagueName) + sh(" Lig", " League") } ?: sh("Lig", "League"),
-                        color = Hf.Ivory,
+                        color = Hf.Text,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -98,7 +98,7 @@ private fun HomeStatusRow(
             Spacer(Modifier.width(7.dp))
             Text(
                 profile?.diamonds?.let { homeGrouped(it) } ?: "—",
-                color = Hf.Ivory,
+                color = Hf.Text,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Black,
                 maxLines = 1,
@@ -224,7 +224,7 @@ internal fun PremiumHomeDailyTasks(onClick: () -> Unit) {
             Icon(Icons.Rounded.AssignmentTurnedIn, null, tint = Hf.Gold, modifier = Modifier.size(38.dp))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh("Günlük görevler", "Daily tasks"), color = Hf.Ivory, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(sh("Günlük görevler", "Daily tasks"), color = Hf.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Spacer(Modifier.height(2.dp))
                 Text(
                     if (streakDays > 0) sh("Bugünün görevlerini tamamla · $streakDays gün seri", "Complete today's tasks · $streakDays-day streak")
@@ -237,7 +237,7 @@ internal fun PremiumHomeDailyTasks(onClick: () -> Unit) {
             }
             Spacer(Modifier.width(10.dp))
             Column(horizontalAlignment = Alignment.End, modifier = Modifier.width(84.dp)) {
-                Text(if (loading) "…" else "$completedTasks / 2", color = Hf.Ivory, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(if (loading) "…" else "$completedTasks / 2", color = Hf.Text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
                 HfProgressBar(progress, Modifier.fillMaxWidth())
             }
@@ -396,7 +396,7 @@ private fun PremiumHomeModeCard(
                 Text(
                     title,
                     modifier = Modifier.weight(1f),
-                    color = Hf.Ivory,
+                    color = Hf.Text,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,

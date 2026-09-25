@@ -42,25 +42,41 @@ import androidx.compose.ui.unit.sp
 
 /** Higgsfield theme components; sizes and colours follow the package's SVG components. */
 internal object Hf {
-    val Ground = Color(0xFF171C1B)
-    val Surface = Color(0xFF222827)
-    val Ivory = Color(0xFFF0EDE3)
-    val Gold = Color(0xFFC5AA73)
-    val GoldLight = Color(0xFFE0CC9E)
-    val GoldDeep = Color(0xFF8F764A)
-    val Green = Color(0xFF32845E)
-    val GreenLight = Color(0xFF40A878)
-    val GreenPressed = Color(0xFF286B4D)
-    val Red = Color(0xFFC85A54)
-    val RedLight = Color(0xFFE47770)
-    val Muted = Color(0xFF68716D)
-    val Disabled = Color(0xFF59605D)
-    val TextMuted = Color(0xFFA9AFAB)
-    val Ink = Color(0xFF171C1B)
-    val PlayerPanel = Color(0xFF173B30)
-    val RivalPanel = Color(0xFF442624)
-    val TileBorder = Color(0xFFD8D1C0)
-    val TileShade = Color(0xFFB8AF9E)
+    // "Kelimelik tarzı" light board-game palette (theme D).
+    val Ground = Color(0xFFE6ECF2)
+    val Surface = Color(0xFFFFFFFF)
+    val Navy = Color(0xFF2C3E55)
+    val Border = Color(0xFFD2DBE5)
+    /** Primary text on the ground and on white cards. */
+    val Text = Color(0xFF243142)
+    /** Text and icons on green, red and navy fills. */
+    val OnAccent = Color(0xFFFFFFFF)
+    /** Card and window fill (was the ivory surface of the dark theme). */
+    val Ivory = Color(0xFFFFFDF7)
+    val Gold = Color(0xFFE0A82E)
+    val GoldLight = Color(0xFFF2C14E)
+    val GoldDeep = Color(0xFFB07F1E)
+    val Green = Color(0xFF3E9F4D)
+    val GreenLight = Color(0xFF52B360)
+    val GreenPressed = Color(0xFF2B7537)
+    val Red = Color(0xFFD0514A)
+    val RedLight = Color(0xFFE57A73)
+    val Muted = Color(0xFF9AA7B5)
+    val Disabled = Color(0xFFB5C0CC)
+    val TextMuted = Color(0xFF6B7A8C)
+    val Ink = Color(0xFF243142)
+    val PlayerPanel = Color(0xFFE1F2E3)
+    val RivalPanel = Color(0xFFFBE4E2)
+    /** Letter tiles: warm cream with brown letters, like a word-board game. */
+    val Tile = Color(0xFFF7E3A6)
+    val TileInk = Color(0xFF4A3217)
+    val TileBorder = Color(0xFFC9A560)
+    val TileShade = Color(0xFFD9BD7A)
+    // Board bonus squares.
+    val BonusH2 = Color(0xFF5DADE2)
+    val BonusH3 = Color(0xFFE573A5)
+    val BonusK2 = Color(0xFF7DC36B)
+    val BonusK3 = Color(0xFFE0914A)
 
     val ButtonShape = RoundedCornerShape(16.dp)
     val CardShape = RoundedCornerShape(16.dp)
@@ -74,7 +90,7 @@ internal fun HfTitleRule(
     title: String,
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 26.sp,
-    color: Color = Hf.Ivory,
+    color: Color = Hf.Text,
 ) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         HfRule(Modifier.weight(1f))
@@ -132,7 +148,7 @@ internal fun HfPrimaryButton(
         else -> Hf.Green
     }
     val rim = when {
-        !enabled -> Color(0xFF707875)
+        !enabled -> Color(0xFFC3CCD6)
         danger -> Hf.RedLight
         pressed -> Hf.Green
         else -> Hf.GreenLight
@@ -155,7 +171,7 @@ internal fun HfPrimaryButton(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text,
-                color = if (enabled) Hf.Ivory else Hf.Ivory.copy(alpha = .6f),
+                color = if (enabled) Hf.OnAccent else Hf.OnAccent.copy(alpha = .75f),
                 fontSize = fontSize,
                 fontWeight = FontWeight.Black,
                 letterSpacing = .8.sp,
@@ -163,7 +179,7 @@ internal fun HfPrimaryButton(
             )
             if (trailingChevron) {
                 Spacer(Modifier.width(10.dp))
-                Icon(Icons.Rounded.ChevronRight, null, tint = Hf.Ivory, modifier = Modifier.size(26.dp))
+                Icon(Icons.Rounded.ChevronRight, null, tint = Hf.OnAccent, modifier = Modifier.size(26.dp))
             }
         }
     }
@@ -199,7 +215,7 @@ internal fun HfSecondaryButton(
                 Icon(icon, null, tint = Hf.Gold, modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(10.dp))
             }
-            Text(text, color = Hf.Ivory, fontSize = fontSize, fontWeight = FontWeight.Black, letterSpacing = .6.sp, maxLines = 1)
+            Text(text, color = Hf.Text, fontSize = fontSize, fontWeight = FontWeight.Black, letterSpacing = .6.sp, maxLines = 1)
             if (trailingChevron) {
                 Spacer(Modifier.width(8.dp))
                 Icon(Icons.Rounded.ChevronRight, null, tint = Hf.Gold, modifier = Modifier.size(24.dp))
@@ -213,8 +229,8 @@ internal fun HfSecondaryButton(
 internal fun HfCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    borderColor: Color = Hf.Gold.copy(alpha = .75f),
-    color: Color = Hf.Ground,
+    borderColor: Color = Hf.Border,
+    color: Color = Hf.Surface,
     shape: androidx.compose.ui.graphics.Shape = Hf.CardShape,
     content: @Composable () -> Unit,
 ) {
@@ -292,10 +308,10 @@ internal fun HfLetterTile(
     elevation: Dp = 3.dp,
 ) {
     val (fill, rim, ink) = when (tone) {
-        HfTileTone.IVORY -> Triple(Hf.Ivory, Hf.TileBorder, Hf.Ink)
-        HfTileTone.SELECTED -> Triple(Color(0xFFD6C38D), Hf.Gold, Hf.Ink)
-        HfTileTone.PLAYER -> Triple(Hf.Green, Hf.GreenLight, Hf.Ivory)
-        HfTileTone.RIVAL -> Triple(Hf.Red, Hf.RedLight, Hf.Ivory)
+        HfTileTone.IVORY -> Triple(Hf.Tile, Hf.TileBorder, Hf.TileInk)
+        HfTileTone.SELECTED -> Triple(Hf.GoldLight, Hf.GoldDeep, Hf.TileInk)
+        HfTileTone.PLAYER -> Triple(Hf.Green, Hf.GreenLight, Hf.OnAccent)
+        HfTileTone.RIVAL -> Triple(Hf.Red, Hf.RedLight, Hf.OnAccent)
     }
     val shape = RoundedCornerShape(size * .17f)
     Box(
@@ -348,7 +364,7 @@ internal fun HfSegmentedTabs(
             ) {
                 Text(
                     label,
-                    color = Hf.Ivory,
+                    color = if (isSelected) Hf.OnAccent else Hf.Text,
                     fontSize = 14.sp,
                     fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
                     maxLines = 1,
@@ -370,7 +386,7 @@ internal fun HfChip(label: String, selected: Boolean, onClick: () -> Unit, modif
         border = BorderStroke(1.5.dp, if (selected) Hf.GreenLight else Hf.Gold),
     ) {
         Box(Modifier.padding(horizontal = 18.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
-            Text(label, color = Hf.Ivory, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(label, color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
 }
@@ -398,7 +414,7 @@ internal fun HfIconVector(icon: ImageVector, tint: Color = Hf.Gold, size: Dp = 2
 internal fun HfProgressBar(progress: Float, modifier: Modifier = Modifier, color: Color = Hf.Gold) {
     Canvas(modifier.height(8.dp)) {
         val r = CornerRadius(size.height / 2f)
-        drawRoundRect(Color(0xFF2E3533), cornerRadius = r)
+        drawRoundRect(Color(0xFFD8E0E8), cornerRadius = r)
         val w = size.width * progress.coerceIn(0f, 1f)
         if (w > 0f) drawRoundRect(color, size = androidx.compose.ui.geometry.Size(w, size.height), cornerRadius = r)
     }
@@ -437,7 +453,7 @@ internal fun HfConfirmDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(title, color = Hf.Ink, fontSize = 21.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-                Text(message, color = Color(0xFF4A504D), fontSize = 14.sp, textAlign = TextAlign.Center)
+                Text(message, color = Color(0xFF56657A), fontSize = 14.sp, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(4.dp))
                 HfPrimaryButton(dismissText, onClick = onDismiss, trailingChevron = false, height = 50.dp, fontSize = 16.sp)
                 HfPrimaryButton(

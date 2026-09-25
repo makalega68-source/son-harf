@@ -37,10 +37,10 @@ import kotlinx.coroutines.launch
 internal val SiegePurple = MainUi.Purple
 internal val SiegePurpleSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) MainUi.SurfaceSoft else MainUi.SurfaceSoft
 internal val SiegeBlueSoft = MainUi.BlueSoft
-private val SiegeTile = Color(0xFFF0EDE3)
-private val SiegeTileBorder = Color(0xFFC5AA73)
-private val SiegeLightTileText = Color(0xFF171C1B)
-private val SiegeLightTileMuted = Color(0xFF68716D)
+private val SiegeTile = Color(0xFFF7E3A6)
+private val SiegeTileBorder = Color(0xFFC9A560)
+private val SiegeLightTileText = Color(0xFF4A3217)
+private val SiegeLightTileMuted = Color(0xFF6B7A8C)
 
 private enum class SiegeListSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FINISHED }
 

@@ -208,7 +208,7 @@ private fun WordSiegeBagDialog(
                                 Surface(
                                     modifier = Modifier.weight(1f).height(58.dp),
                                     shape = RoundedCornerShape(12.dp),
-                                    color = Color(0xFFF0EDE3),
+                                    color = Color(0xFFF7E3A6),
                                     border = BorderStroke(1.dp, WordSiegeGameUi.Border.copy(alpha = .72f)),
                                     shadowElevation = 1.dp,
                                 ) {

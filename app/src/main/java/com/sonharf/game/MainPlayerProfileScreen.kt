@@ -126,7 +126,7 @@ internal fun MainPlayerProfileScreen(
         val hasEquippedNameStyle = !SonHarfCosmetics.nameStyleId.isNullOrBlank()
         val displayNameColor = when {
             hasEquippedNameStyle -> SonHarfCosmetics.playerNameColor
-            else -> Hf.Ivory
+            else -> Hf.Text
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.clickable(onClick = onEdit)) {
@@ -212,7 +212,7 @@ internal fun MainPlayerProfileScreen(
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(sh("Arkadaşlar", "Friends"), color = Hf.Ivory, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(sh("Arkadaşlar", "Friends"), color = Hf.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
                         if (p?.isVip == true) {
                             "$friendCount ${sh("arkadaş", "friends")} • $onlineFriendCount ${sh("çevrimiçi", "online")}"

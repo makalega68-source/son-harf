@@ -432,10 +432,10 @@ private fun MainToggleSetting(
             onCheckedChange = onChange,
             enabled = enabled,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Hf.Ivory,
+                checkedThumbColor = Hf.Text,
                 checkedTrackColor = Hf.Green,
                 checkedBorderColor = Hf.Green,
-                uncheckedThumbColor = Hf.Ivory,
+                uncheckedThumbColor = Hf.Text,
                 uncheckedTrackColor = Color(0xFF4F5553),
                 uncheckedBorderColor = Color(0xFF4F5553),
             ),

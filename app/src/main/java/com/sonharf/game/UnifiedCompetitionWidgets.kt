@@ -124,7 +124,7 @@ internal fun UnifiedRouteCard(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth().height(7.dp),
                 color = if (mission.completed) PortalGreen else PortalBlue,
-                trackColor = Color(0xFF2E3533),
+                trackColor = Color(0xFFD8E0E8),
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("${mission.progress.coerceAtMost(mission.target)}/${mission.target}", color = PortalMuted, fontSize = 9.sp)
@@ -179,7 +179,7 @@ internal fun UnifiedMissionCard(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth().height(6.dp),
                 color = if (mission.completed) PortalGreen else PortalBlue,
-                trackColor = Color(0xFF2E3533),
+                trackColor = Color(0xFFD8E0E8),
             )
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("${mission.progress.coerceAtMost(mission.target)}/${mission.target}", color = PortalMuted, fontSize = 9.sp, modifier = Modifier.weight(1f))

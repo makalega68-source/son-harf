@@ -136,7 +136,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Palette, null, tint = Hf.Gold, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(sh("Koleksiyonum", "My collection"), color = Hf.Ivory, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(sh("Koleksiyonum", "My collection"), color = Hf.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
                 if (loading || busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp, color = Hf.Gold)
             }
@@ -247,7 +247,7 @@ private fun ProfileThemeCard(
                     )
                 }
             }
-            Text(title, color = Hf.Ivory, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             Text(subtitle, color = Hf.TextMuted, fontSize = 12.sp)
             Spacer(Modifier.weight(1f))
             ProfileUseButton(active = active, enabled = enabled, onClick = onClick)
@@ -269,7 +269,7 @@ private fun ProfileUseButton(active: Boolean, enabled: Boolean, onClick: () -> U
         Box(contentAlignment = Alignment.Center) {
             Text(
                 if (active) sh("Kullanılıyor", "Equipped") else sh("Kullan", "Equip"),
-                color = if (active) Hf.Ivory else Hf.Ink,
+                color = if (active) Hf.OnAccent else Hf.Ink,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -302,7 +302,7 @@ private fun OwnedStyleCard(
                         StoreProductPreview(item, Modifier.fillMaxSize())
                     }
                 }
-                Text(sh(item.nameTr, item.nameEn), color = Hf.Ivory, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(sh(item.nameTr, item.nameEn), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 if (!item.active) {
                     Text(sh("Arşiv ürünü • Koleksiyonunda", "Retired item • In your collection"), color = Hf.TextMuted, fontSize = 11.sp)
                 }
@@ -326,7 +326,7 @@ private fun OwnedStyleCard(
                         containerColor = Hf.Ivory,
                         contentColor = Hf.Ink,
                         disabledContainerColor = if (active) Hf.Green else Hf.Disabled,
-                        disabledContentColor = Hf.Ivory,
+                        disabledContentColor = Hf.Text,
                     ),
                 ) {
                     Text(if (active) sh("Kullanılıyor", "Equipped") else sh("Kullan", "Equip"), fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -334,7 +334,7 @@ private fun OwnedStyleCard(
             }
             if (active) {
                 Surface(Modifier.align(Alignment.TopEnd).padding(8.dp).size(28.dp), shape = androidx.compose.foundation.shape.CircleShape, color = Hf.Green, border = BorderStroke(1.5.dp, Hf.GreenLight)) {
-                    Icon(Icons.Rounded.CheckCircle, null, tint = Hf.Ivory, modifier = Modifier.padding(3.dp))
+                    Icon(Icons.Rounded.CheckCircle, null, tint = Hf.OnAccent, modifier = Modifier.padding(3.dp))
                 }
             }
         }

@@ -94,17 +94,17 @@ class AssetIntegrationContractTest {
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
         listOf(
-            "0xFFD8D1C0", "0xFF32845E", "0xFFC85A54", "0xFF40A878", "0xFFE47770",
-            "0xFFE7E2D5", "0xFFE1DBCB", "0xFFE9E3D6", "0xFFE3DCCC", "0xFFE8DDBF", "0xFFEBE1C3",
+            "0xFFC9A560", "0xFF3E9F4D", "0xFFD0514A", "0xFF52B360", "0xFFE57A73",
+            "0xFF5DADE2", "0xFFE573A5", "0xFF7DC36B", "0xFFE0914A", "0xFF9B6FD1", "0xFFF2C14E",
         ).forEach { assertTrue(online.contains(it)) }
         assertTrue(online.contains("border.copy(alpha = .92f)"))
         assertTrue(online.contains("val regionGap = 1.25.dp"))
 
         assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFD5CEBD)"))
-        assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFF0EDE3)"))
-        assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFF0EDE3)"))
-        assertTrue(practice.contains("PracticeSiegeMine = Color(0xFF32845E)"))
-        assertTrue(practice.contains("PracticeSiegeRival = Color(0xFFC85A54)"))
+        assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFF3EEDF)"))
+        assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFF3EEDF)"))
+        assertTrue(practice.contains("PracticeSiegeMine = Color(0xFF3E9F4D)"))
+        assertTrue(practice.contains("PracticeSiegeRival = Color(0xFFD0514A)"))
         assertTrue(practice.contains("PracticeSiegeThreat = Color(0xFFD8903D)"))
         assertTrue(practice.contains("val regionGap = 1.25.dp"))
         assertTrue(practice.contains(".padding(regionGap)"))

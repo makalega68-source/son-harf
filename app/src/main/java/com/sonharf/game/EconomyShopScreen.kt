@@ -97,11 +97,11 @@ private fun StoreTitleBar(balance: Int?, onBack: (() -> Unit)?) {
                 Icon(painterResource(R.drawable.hf_ic_back), sh("Geri", "Back"), tint = Hf.Gold, modifier = Modifier.size(30.dp))
             }
         }
-        Text(sh("Mağaza", "Store"), color = Hf.Ivory, fontSize = 28.sp, fontWeight = FontWeight.Black)
+        Text(sh("Mağaza", "Store"), color = Hf.Text, fontSize = 28.sp, fontWeight = FontWeight.Black)
         HfPill(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 6.dp)) {
             HfCoin(20.dp)
             Spacer(Modifier.width(8.dp))
-            Text(balance?.let { storeGrouped(it) } ?: "—", color = Hf.Ivory, fontSize = 17.sp, fontWeight = FontWeight.Black)
+            Text(balance?.let { storeGrouped(it) } ?: "—", color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -294,7 +294,7 @@ private fun EconomyCatalogScreen(
                     Icon(Icons.Rounded.VerifiedUser, null, tint = Hf.Gold, modifier = Modifier.size(25.dp))
                     Spacer(Modifier.width(10.dp))
                     Column {
-                        Text(sh("ADİL OYUN SÖZÜ", "FAIR PLAY PROMISE"), color = Hf.Ivory, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        Text(sh("ADİL OYUN SÖZÜ", "FAIR PLAY PROMISE"), color = Hf.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
                         Text(sh("Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz.", "Store products never provide match power, score, or rating advantages."), color = Hf.TextMuted, fontSize = 11.sp)
                     }
                 }
@@ -303,7 +303,7 @@ private fun EconomyCatalogScreen(
 
         if (!notice.isNullOrBlank()) item {
             HfCard(modifier = Modifier.fillMaxWidth(), color = Hf.Surface) {
-                Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = Hf.Ivory, fontSize = 13.sp, textAlign = TextAlign.Center)
+                Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = Hf.Text, fontSize = 13.sp, textAlign = TextAlign.Center)
             }
         }
         item { Spacer(Modifier.height(10.dp)) }
@@ -354,7 +354,7 @@ private fun StoreProBanner(active: Boolean, onClick: () -> Unit) {
     ) {
         Row(
             Modifier
-                .background(Brush.horizontalGradient(listOf(Hf.Ground, Color(0xFF232B22), Color(0xFF3A3524))))
+                .background(Brush.horizontalGradient(listOf(Hf.Navy, Color(0xFF34496A), Color(0xFF3E5577))))
                 .padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -368,7 +368,7 @@ private fun StoreProBanner(active: Boolean, onClick: () -> Unit) {
                 if (active) sh("PRO üyeliğin aktif. Ayrıcalıklarını gör.", "Your PRO membership is active. See your perks.")
                 else sh("Reklamsız oyun, özel içerikler ve daha fazlası!", "Ad-free play, exclusive content and more!"),
                 modifier = Modifier.weight(1f),
-                color = Hf.Ivory,
+                color = Hf.OnAccent,
                 fontSize = 14.sp,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.Medium,
@@ -412,7 +412,7 @@ private fun VerifiedStoreProductCard(
                 if (owned || equipped) {
                     Surface(shape = Hf.PillShape, color = Hf.Green) {
                         Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Check, null, tint = Hf.Ivory, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Rounded.Check, null, tint = Hf.OnAccent, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 when {
@@ -420,7 +420,7 @@ private fun VerifiedStoreProductCard(
                                     owned -> sh("SAHİPSİN", "OWNED")
                                     else -> ""
                                 },
-                                color = Hf.Ivory,
+                                color = Hf.OnAccent,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -444,7 +444,7 @@ private fun VerifiedStoreProductCard(
             }
             if (equipped) {
                 Surface(Modifier.align(Alignment.TopEnd).padding(8.dp).size(24.dp), shape = CircleShape, color = Hf.Green) {
-                    Icon(Icons.Rounded.Check, null, tint = Hf.Ivory, modifier = Modifier.padding(4.dp))
+                    Icon(Icons.Rounded.Check, null, tint = Hf.OnAccent, modifier = Modifier.padding(4.dp))
                 }
             }
             if (lockedByPro) {
@@ -470,7 +470,7 @@ private fun ProShopCard(active: Boolean, onClick: () -> Unit) {
                 }
                 Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) Hf.GreenLight else Hf.Gold, fontWeight = FontWeight.Black)
             }
-            Text(sh("Özel oda • PRO profil rozeti • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar", "Private rooms • PRO profile badge • advanced stats • ad-free experience • social benefits"), color = Hf.Ivory, fontSize = 13.sp)
+            Text(sh("Özel oda • PRO profil rozeti • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar", "Private rooms • PRO profile badge • advanced stats • ad-free experience • social benefits"), color = Hf.Text, fontSize = 13.sp)
             Text(sh("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez.", "PRO provides no score, word-hint, or rating advantage in ranked matches."), color = Hf.GreenLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
     }

@@ -32,17 +32,17 @@ class CalmLayeredThemeContractTest {
             "val TextSecondary: Color get()",
         ).forEach { token -> assertTrue("Missing theme layer: $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("Color(0xFF171C1B)"))
-        assertTrue(theme.contains("Color(0xFF222827)"))
-        assertTrue(theme.contains("Color(0xFF32845E)"))
-        assertTrue(theme.contains("Color(0xFFC85A54)"))
-        assertTrue(theme.contains("Color(0xFFC5AA73)"))
-        assertTrue(theme.contains("Color(0xFFF0EDE3)"))
-        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
+        assertTrue(theme.contains("Color(0xFFE6ECF2)"))
+        assertTrue(theme.contains("Color(0xFFFFFFFF)"))
+        assertTrue(theme.contains("Color(0xFF3E9F4D)"))
+        assertTrue(theme.contains("Color(0xFFD0514A)"))
+        assertTrue(theme.contains("Color(0xFFE0A82E)"))
+        assertTrue(theme.contains("Color(0xFFF7E3A6)"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
     }
 
     @Test
-    fun shellUsesDarkSystemChromeWithReadableLightIcons() {
+    fun shellUsesLightSystemChromeWithReadableDarkIcons() {
         val primitives = source("AppUiPrimitives.kt")
         val styles = projectFile("app/src/main/res/values/styles.xml").readText()
 
@@ -52,11 +52,11 @@ class CalmLayeredThemeContractTest {
         assertTrue(primitives.contains("internal object MainUiShape"))
         assertFalse(primitives.contains("internal val PortalBlue = Color(0xFF1769E0)"))
 
-        assertTrue(styles.contains("<item name=\"android:windowBackground\">#171C1B</item>"))
-        assertTrue(styles.contains("<item name=\"android:statusBarColor\">#171C1B</item>"))
-        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#131716</item>"))
-        assertTrue(styles.contains("<item name=\"android:windowLightStatusBar\">false</item>"))
-        assertTrue(styles.contains("<item name=\"android:windowLightNavigationBar\">false</item>"))
+        assertTrue(styles.contains("<item name=\"android:windowBackground\">#E6ECF2</item>"))
+        assertTrue(styles.contains("<item name=\"android:statusBarColor\">#E6ECF2</item>"))
+        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#FFFFFF</item>"))
+        assertTrue(styles.contains("<item name=\"android:windowLightStatusBar\">true</item>"))
+        assertTrue(styles.contains("<item name=\"android:windowLightNavigationBar\">true</item>"))
     }
 
     private fun source(name: String) = projectFile("app/src/main/java/com/sonharf/game/$name").readText()
