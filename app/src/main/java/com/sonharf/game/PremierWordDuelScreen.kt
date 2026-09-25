@@ -84,42 +84,42 @@ private const val PREMIER_ROUND_PREP_SECONDS = 20
 
 /** Yetişkin, yüksek okunabilirlikli Son Harf oyun paleti. */
 private object PremierUi {
-    val Background = Color(0xFF06101D)
-    val Surface = Color(0xFF0D1B2A)
-    val Ink = Color(0xFFF4F7FB)
-    val Muted = Color(0xFF9AAFC4)
-    val Ocean = Color(0xFF00D6C9)
-    val OceanDeep = Color(0xFF2F6BFF)
-    val Sky = Color(0xFF8B5CF6)
-    val Ice = Color(0xFF13273A)
-    val Border = Color(0xFF27445E)
-    val Green = Color(0xFF24D6A3)
-    val GreenSoft = Color(0xFF0D3A32)
-    val Red = Color(0xFFFF5C5C)
-    val RedSoft = Color(0xFF3A1A23)
-    val Gold = Color(0xFFFFB64A)
-    val GoldSoft = Color(0xFF3A2A13)
+    val Background = Color(0xFF171C1B)
+    val Surface = Color(0xFF222827)
+    val Ink = Color(0xFFF0EDE3)
+    val Muted = Color(0xFFA9AFAB)
+    val Ocean = Color(0xFFC5AA73)
+    val OceanDeep = Color(0xFF32845E)
+    val Sky = Color(0xFFC5AA73)
+    val Ice = Color(0xFF1D2322)
+    val Border = Color(0xFF5C5239)
+    val Green = Color(0xFF32845E)
+    val GreenSoft = Color(0xFF173B30)
+    val Red = Color(0xFFC85A54)
+    val RedSoft = Color(0xFF442624)
+    val Gold = Color(0xFFC5AA73)
+    val GoldSoft = Color(0xFF3A3326)
 }
 
 private object PremierArenaSky {
-    val BackgroundTop = Color(0xFFEAF8FF)
-    val BackgroundMid = Color(0xFFDDF3FC)
-    val BackgroundBottom = Color(0xFFCFEAF7)
-    val Surface = Color(0xFFF9FDFF)
-    val SurfaceBlue = Color(0xFFE6F5FB)
-    val Ink = Color(0xFF17364D)
-    val Muted = Color(0xFF647D8D)
-    val Ocean = Color(0xFF4E98AA)
-    val OceanDeep = Color(0xFF2E6F82)
-    val Border = Color(0xFFB8D6E1)
-    val Rival = Color(0xFFD77B70)
-    val RivalSoft = Color(0xFFFBE8E4)
-    val Green = Color(0xFF6F9E7B)
-    val GreenSoft = Color(0xFFE8F3E9)
-    val Gold = Color(0xFFC89C39)
-    val GoldSoft = Color(0xFFF7ECCA)
-    val Red = Color(0xFFC65C55)
-    val RedSoft = Color(0xFFF8E2DF)
+    val BackgroundTop = Color(0xFF171C1B)
+    val BackgroundMid = Color(0xFF1A201F)
+    val BackgroundBottom = Color(0xFF151A19)
+    val Surface = Color(0xFF222827)
+    val SurfaceBlue = Color(0xFF1D2322)
+    val Ink = Color(0xFFF0EDE3)
+    val Muted = Color(0xFFA9AFAB)
+    val Ocean = Color(0xFFC5AA73)
+    val OceanDeep = Color(0xFF8F764A)
+    val Border = Color(0xFF5C5239)
+    val Rival = Color(0xFFC85A54)
+    val RivalSoft = Color(0xFF442624)
+    val Green = Color(0xFF32845E)
+    val GreenSoft = Color(0xFF173B30)
+    val Gold = Color(0xFFC5AA73)
+    val GoldSoft = Color(0xFF3A3326)
+    val Red = Color(0xFFC85A54)
+    val RedSoft = Color(0xFF442624)
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr
@@ -791,7 +791,7 @@ private fun PremierLobby(
         ) {
             Column(
                 Modifier.background(
-                    Brush.linearGradient(listOf(Color(0xFF0C2250), PremierUi.OceanDeep))
+                    Brush.linearGradient(listOf(Color(0xFF171C1B), PremierUi.OceanDeep))
                 ).padding(22.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
@@ -935,7 +935,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
         PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Ocean, nameColor = SonHarfCosmetics.playerNameColor)
         Spacer(Modifier.height(16.dp))
         Surface(shape = RoundedCornerShape(99.dp), color = Color.Transparent) {
-            Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.OceanDeep, Color(0xFF0C2250)))).padding(horizontal = 27.dp, vertical = 10.dp)) {
+            Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.OceanDeep, Color(0xFF171C1B)))).padding(horizontal = 27.dp, vertical = 10.dp)) {
                 Text("VS", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
             }
         }
@@ -986,22 +986,22 @@ private fun PremierStatPill(text: String, accent: Color) {
 
 /** Word-game palette: a calm teal board, cream letter tiles, one soft colour per player. */
 private object PremierBoard {
-    val BoardTop = Color(0xFF2B6570)
-    val BoardBottom = Color(0xFF1F4E58)
-    val Tile = Color(0xFFFFF6E4)
-    val TileEdge = Color(0xFFE2CFA6)
-    val TileInk = Color(0xFF3B2C1A)
-    val Gold = Color(0xFFF2C25B)
-    val GoldEdge = Color(0xFFC99A35)
-    val Ink = Color(0xFF1F3A4D)
-    val Muted = Color(0xFF6E8795)
-    val Mine = Color(0xFF3D9AA8)
-    val MineSoft = Color(0xFFE4F3F5)
-    val Rival = Color(0xFFC98A7F)
-    val RivalSoft = Color(0xFFF8ECEA)
-    val Danger = Color(0xFFD4665B)
-    val Card = Color(0xFFFFFFFF)
-    val CardBorder = Color(0xFFD9E6EC)
+    val BoardTop = Color(0xFF222827)
+    val BoardBottom = Color(0xFF171C1B)
+    val Tile = Color(0xFFF0EDE3)
+    val TileEdge = Color(0xFFD8D1C0)
+    val TileInk = Color(0xFF171C1B)
+    val Gold = Color(0xFFC5AA73)
+    val GoldEdge = Color(0xFF8F764A)
+    val Ink = Color(0xFF171C1B)
+    val Muted = Color(0xFF68716D)
+    val Mine = Color(0xFF32845E)
+    val MineSoft = Color(0xFFDCE8DF)
+    val Rival = Color(0xFFC85A54)
+    val RivalSoft = Color(0xFFF3DDDA)
+    val Danger = Color(0xFFC85A54)
+    val Card = Color(0xFFF0EDE3)
+    val CardBorder = Color(0xFFC5AA73)
 }
 
 /** Every turn is 15 seconds; a new round's first turn adds the preparation break on the server. */
@@ -1541,13 +1541,13 @@ private fun PremierWordCountChip(label: String, words: Int, color: Color, active
     Surface(
         modifier = modifier.width(66.dp),
         shape = RoundedCornerShape(14.dp),
-        color = Color.White,
+        color = PremierBoard.Card,
         border = BorderStroke(if (active) 2.dp else 1.dp, if (active) color else PremierBoard.CardBorder),
         shadowElevation = (2f + 4f * glow).dp,
     ) {
         Column(
             Modifier
-                .background(Brush.verticalGradient(listOf(color.copy(alpha = .10f + .08f * glow), Color.White)))
+                .background(Brush.verticalGradient(listOf(color.copy(alpha = .10f + .08f * glow), PremierBoard.Card)))
                 .padding(horizontal = 6.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -1605,7 +1605,7 @@ private fun PremierRoundPrep(
 ) {
     val pulse = rememberInfiniteTransition(label = "prep")
     val beat by pulse.animateFloat(1f, 1.08f, infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "prep-beat")
-    Box(Modifier.fillMaxSize().background(Color(0xD91A3A44)), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Color(0xE6171C1B)), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 24.dp)) {
             if (lastRoundWon != null) {
                 Text(
@@ -2002,7 +2002,7 @@ private fun PremierPressureStrip(
                         .height(10.dp)
                         .drawBehind {
                             val r = size.height / 2f
-                            drawRoundRect(Color(0xFFDCE8EE), cornerRadius = CornerRadius(r, r))
+                            drawRoundRect(Color(0xFF2E3533), cornerRadius = CornerRadius(r, r))
                             // Drains symmetrically toward the middle.
                             val w = size.width * progress
                             drawRoundRect(
@@ -2457,7 +2457,7 @@ private fun PremierChatSheet(
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.takeLast(50).lastIndex)
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFFF7FAFB)) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFFF0EDE3)) {
         Column(
             Modifier.fillMaxWidth().imePadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),

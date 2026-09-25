@@ -43,27 +43,27 @@ import com.sonharf.game.data.WordSiegeMoveDto
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val PanSiegeTile = Color(0xFFF4F7F5)
-private val PanSiegeTileBorder = Color(0xFF8EA697)
-private val PanSiegeBoardSurface = Color(0xFFE8ECE8)
+private val PanSiegeTile = Color(0xFFF0EDE3)
+private val PanSiegeTileBorder = Color(0xFFD8D1C0)
+private val PanSiegeBoardSurface = Color(0xFFD6CFBE)
 private val PanSiegeFrameNavy = Color(0xFF102C4C)
 private val PanSiegeFrameEdge = Color(0xFF9EC7D8)
 private val PanSiegeFrameInner = Color(0xFFD7E7ED)
-private val PanSiegeNeutral = Color(0xFFFAF7EF)
-private val PanSiegeMine = Color(0xFF8BD8AA)
-private val PanSiegeRival = Color(0xFFEDA09B)
-private val PanSiegeNeutralBorder = Color(0xFFB8C3BC)
-private val PanSiegeBonusBorder = Color(0xFFA79BB2)
-private val PanSiegeMineBorder = Color(0xFF2D7B4C)
-private val PanSiegeRivalBorder = Color(0xFFA33F3B)
-private val PanSiegeBonus2H = Color(0xFFEAF5F8)
-private val PanSiegeBonus3H = Color(0xFFDDEDF4)
-private val PanSiegeBonus2K = Color(0xFFF3EEF7)
-private val PanSiegeBonus3K = Color(0xFFECE4F2)
-private val PanSiegeBonus4K = Color(0xFFF6EEDC)
-private val PanSiegeBonusStar = Color(0xFFF8F0D6)
-private val PanSiegeLastMove = Color(0xFFE7B95E)
-private val PanSiegeBonusLabel = Color(0xFF66717A)
+private val PanSiegeNeutral = Color(0xFFF0EDE3)
+private val PanSiegeMine = Color(0xFF32845E)
+private val PanSiegeRival = Color(0xFFC85A54)
+private val PanSiegeNeutralBorder = Color(0xFFC9C2B5)
+private val PanSiegeBonusBorder = Color(0xFFBDB29B)
+private val PanSiegeMineBorder = Color(0xFF40A878)
+private val PanSiegeRivalBorder = Color(0xFFE47770)
+private val PanSiegeBonus2H = Color(0xFFE7E2D5)
+private val PanSiegeBonus3H = Color(0xFFE1DBCB)
+private val PanSiegeBonus2K = Color(0xFFE9E3D6)
+private val PanSiegeBonus3K = Color(0xFFE3DCCC)
+private val PanSiegeBonus4K = Color(0xFFE8DDBF)
+private val PanSiegeBonusStar = Color(0xFFEBE1C3)
+private val PanSiegeLastMove = Color(0xFFC5AA73)
+private val PanSiegeBonusLabel = Color(0xFF68716D)
 private val PanSiegeCellSize = 52.dp
 internal const val WORD_SIEGE_BOT_FALLBACK_DELAY_MS = 15_000L
 
@@ -629,9 +629,9 @@ private fun PanSiegeBoard(
 
     Surface(
         modifier = modifier,
-        color = Color(0xFF2F1D13),
+        color = Color(0xFF171C1B),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(2.dp, Color(0xFFC6A56B)),
+        border = BorderStroke(2.dp, Color(0xFFC5AA73)),
         shadowElevation = 14.dp,
     ) {
         Box(
@@ -641,10 +641,10 @@ private fun PanSiegeBoard(
                 .clip(RoundedCornerShape(14.dp))
                 .background(
                     Brush.linearGradient(
-                        listOf(Color(0xFFE8D8BF), Color(0xFFD8BE98), Color(0xFFF1E6D4), Color(0xFFCFAE7E))
+                        listOf(Color(0xFF222827), Color(0xFF1D2322), Color(0xFF222827), Color(0xFF1A201F))
                     )
                 )
-                .border(1.dp, Color(0xFFB88C55), RoundedCornerShape(14.dp))
+                .border(1.dp, Color(0xFFC5AA73), RoundedCornerShape(14.dp))
                 .clipToBounds()
                 .onGloballyPositioned {
                     viewport = it.size
@@ -760,8 +760,8 @@ private fun PanSiegeBoard(
                 onClick = { toggleViewport(WordSiegeBoardSpec.CenterIndex) },
                 modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
                 shape = CircleShape,
-                containerColor = Color.White.copy(alpha = .94f),
-                contentColor = PanSiegeFrameNavy,
+                containerColor = Color(0xFF171C1B).copy(alpha = .92f),
+                contentColor = Color(0xFFC5AA73),
             ) {
                 Icon(Icons.Rounded.CenterFocusStrong, sh("Merkeze dön", "Center board"), Modifier.size(19.dp))
             }
@@ -770,8 +770,8 @@ private fun PanSiegeBoard(
                 onClick = onChat,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp),
                 shape = CircleShape,
-                containerColor = Color.White.copy(alpha = .96f),
-                contentColor = PanSiegeFrameNavy,
+                containerColor = Color(0xFF171C1B).copy(alpha = .92f),
+                contentColor = Color(0xFFC5AA73),
             ) {
                 Icon(Icons.Rounded.Chat, sh("Oyun içi sohbet", "In-game chat"), Modifier.size(20.dp))
             }
@@ -839,12 +839,12 @@ private fun PanSiegeBoardCell(
         bonusSurface != null -> bonusSurface
         else -> PanSiegeNeutral
     }
-    val displayBase = if (pending) Color(0xFFF2DFC0) else baseColor
+    val displayBase = if (pending) Color(0xFFE3D6B0) else baseColor
     val border = when {
         pending -> PanSiegeTileBorder
         letter != null && owner == myOwner -> PanSiegeMineBorder
         letter != null && owner != 0 -> PanSiegeRivalBorder
-        activeBonus == WordSiegeBoardSpec.CenterBonus || activeBonus == WordSiegeBoardSpec.StarBonus -> Color(0xFF8D7438)
+        activeBonus == WordSiegeBoardSpec.CenterBonus || activeBonus == WordSiegeBoardSpec.StarBonus -> Color(0xFF8F764A)
         activeBonus != null -> PanSiegeBonusBorder
         else -> PanSiegeNeutralBorder
     }
@@ -906,15 +906,15 @@ private fun PanSiegeBoardCell(
                 if (letter != null) {
                     Text(
                         letter,
-                        color = Color(0xFF2A1B13),
+                        color = if (!pending && owner != 0) Color(0xFFF0EDE3) else Color(0xFF171C1B),
                         fontSize = if (overview) 24.sp else 22.sp,
-                        fontFamily = FontFamily.Serif,
+                        fontFamily = FontFamily.SansSerif,
                         fontWeight = FontWeight.Black,
                         letterSpacing = if (overview) .10.sp else .25.sp,
                     )
                     Text(
                         panSiegeLetterValue(letter),
-                        color = Color(0xFF17372C).copy(alpha = .78f),
+                        color = (if (!pending && owner != 0) Color(0xFFF0EDE3) else Color(0xFF171C1B)).copy(alpha = .78f),
                         fontSize = WordSiegeBoardAccessibility.BoardLetterPoint,
                         fontWeight = FontWeight.Black,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
@@ -959,19 +959,19 @@ private fun PanSiegeRackTile(
         modifier = modifier.height(48.dp).combinedClickable(enabled = enabled, onClick = onClick),
         color = when {
             used -> WordSiegeGameUi.SurfaceSoft
-            selected -> Color(0xFFEBCB92)
-            else -> Color(0xFFF2DFC0)
+            selected -> Color(0xFFD6C38D)
+            else -> Color(0xFFE3D6B0)
         },
         shape = RoundedCornerShape(9.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PanSiegeMineBorder else Color(0xFF8A6841)),
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PanSiegeMineBorder else Color(0xFFB8AF9E)),
         shadowElevation = if (selected) 7.dp else 4.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 letter.toString(),
-                color = if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else Color(0xFF2A1B13),
+                color = if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else Color(0xFF171C1B),
                 fontSize = 22.sp,
-                fontFamily = FontFamily.Serif,
+                fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Black,
                 letterSpacing = .35.sp,
             )

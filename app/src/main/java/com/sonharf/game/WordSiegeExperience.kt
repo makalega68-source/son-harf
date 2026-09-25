@@ -35,12 +35,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 internal val SiegePurple = MainUi.Purple
-internal val SiegePurpleSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) MainUi.SurfaceSoft else Color(0xFFF0ECFF)
+internal val SiegePurpleSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) MainUi.SurfaceSoft else MainUi.SurfaceSoft
 internal val SiegeBlueSoft = MainUi.BlueSoft
-private val SiegeTile = Color(0xFFFFE3A5)
-private val SiegeTileBorder = Color(0xFFD99818)
-private val SiegeLightTileText = Color(0xFF2F2A1F)
-private val SiegeLightTileMuted = Color(0xFF5D4B20)
+private val SiegeTile = Color(0xFFF0EDE3)
+private val SiegeTileBorder = Color(0xFFC5AA73)
+private val SiegeLightTileText = Color(0xFF171C1B)
+private val SiegeLightTileMuted = Color(0xFF68716D)
 
 private enum class SiegeListSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FINISHED }
 
@@ -893,7 +893,7 @@ internal fun WordSiegeBoard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFFE7EDF5),
+        color = Color(0xFFD6CFBE),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, MainUi.Border),
     ) {
@@ -1000,7 +1000,7 @@ internal fun WordSiegeRackTile(
         color = when {
             used -> MainUi.SurfaceSoft
             selected -> SiegeTile
-            else -> Color(0xFFFFF1C9)
+            else -> Color(0xFFE3D6B0)
         },
         shape = RoundedCornerShape(9.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MainUi.Blue else SiegeTileBorder.copy(alpha = .7f)),

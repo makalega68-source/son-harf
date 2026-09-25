@@ -36,26 +36,26 @@ import com.sonharf.game.data.WordSiegeCellDto
 import kotlinx.coroutines.delay
 
 private val PracticeSiegeCellSize = 52.dp
-private val PracticeSiegeTile = Color(0xFFF4F7F5)
-private val PracticeSiegeTileBorder = Color(0xFF8EA697)
-internal val PracticeSiegeBoardSurface = Color(0xFFE5EAE5)
-internal val PracticeSiegeNeutral = Color(0xFFFAF7EF)
-private val PracticeSiegeEmpty = Color(0xFFFAF7EF)
-private val PracticeSiegeMine = Color(0xFF8BD8AA)
-private val PracticeSiegeRival = Color(0xFFEDA09B)
-private val PracticeSiegeMineBorder = Color(0xFF2D7B4C)
-private val PracticeSiegeRivalBorder = Color(0xFFA33F3B)
+private val PracticeSiegeTile = Color(0xFFF0EDE3)
+private val PracticeSiegeTileBorder = Color(0xFFD8D1C0)
+internal val PracticeSiegeBoardSurface = Color(0xFFD5CEBD)
+internal val PracticeSiegeNeutral = Color(0xFFF0EDE3)
+private val PracticeSiegeEmpty = Color(0xFFF0EDE3)
+private val PracticeSiegeMine = Color(0xFF32845E)
+private val PracticeSiegeRival = Color(0xFFC85A54)
+private val PracticeSiegeMineBorder = Color(0xFF40A878)
+private val PracticeSiegeRivalBorder = Color(0xFFE47770)
 private val PracticeSiegeThreat = Color(0xFFD8903D)
-private val PracticeSiegeLightTileText = Color(0xFF17372C)
-private val PracticeZoneWatch = Color(0xFFEAF5F8)
-private val PracticeZoneCritical = Color(0xFFDDEDF4)
-private val PracticeZoneFort = Color(0xFFF3EEF7)
-private val PracticeZoneSiege = Color(0xFFECE4F2)
-private val PracticeZoneCrown = Color(0xFFF6EEDC)
-private val PracticeZoneReward = Color(0xFFF8F0D6)
-private val PracticeLastMove = Color(0xFFE7B95E)
+private val PracticeSiegeLightTileText = Color(0xFF171C1B)
+private val PracticeZoneWatch = Color(0xFFE7E2D5)
+private val PracticeZoneCritical = Color(0xFFE1DBCB)
+private val PracticeZoneFort = Color(0xFFE9E3D6)
+private val PracticeZoneSiege = Color(0xFFE3DCCC)
+private val PracticeZoneCrown = Color(0xFFE8DDBF)
+private val PracticeZoneReward = Color(0xFFEBE1C3)
+private val PracticeLastMove = Color(0xFFC5AA73)
 private val PracticeDefinitionBadge = Color(0xFF5C8299)
-private val PracticeSiegeBonusLabel = Color(0xFF66717A)
+private val PracticeSiegeBonusLabel = Color(0xFF68716D)
 
 internal data class PracticeResolvedWord(
     val word: String,
@@ -170,9 +170,9 @@ internal fun WordSiegePracticeBoard(
 
     Surface(
         modifier = modifier,
-        color = Color(0xFF2F1D13),
+        color = Color(0xFF171C1B),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(2.dp, Color(0xFFC6A56B)),
+        border = BorderStroke(2.dp, Color(0xFFC5AA73)),
         shadowElevation = 12.dp,
     ) {
         Box(
@@ -180,7 +180,7 @@ internal fun WordSiegePracticeBoard(
                 .fillMaxSize()
                 .padding(4.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFFF0E6D7), Color(0xFFE5D2B7), Color(0xFFF7F1E8), Color(0xFFD9BE98))))
+                .background(Brush.linearGradient(listOf(Color(0xFF222827), Color(0xFF1D2322), Color(0xFF222827), Color(0xFF1A201F))))
                 .clipToBounds()
                 .onGloballyPositioned {
                     viewport = it.size
@@ -362,13 +362,13 @@ private fun WordSiegePracticeBoardCell(
         zoneSurface != null -> zoneSurface
         else -> PracticeSiegeEmpty
     }
-    val displayCellColor = if (pending) Color(0xFFF2DFC0) else cellColor
+    val displayCellColor = if (pending) Color(0xFFE3D6B0) else cellColor
     val borderColor = when {
         threatened && owner != 0 -> PracticeSiegeThreat
         pending -> PracticeSiegeTileBorder
         owner == myOwner -> PracticeSiegeMineBorder
         owner != 0 -> PracticeSiegeRivalBorder
-        activeZone == WordSiegeBoardSpec.CenterBonus || activeZone == WordSiegeBoardSpec.StarBonus -> Color(0xFF8D7438)
+        activeZone == WordSiegeBoardSpec.CenterBonus || activeZone == WordSiegeBoardSpec.StarBonus -> Color(0xFF8F764A)
         activeZone != null -> WordSiegeGameUi.Border.copy(alpha = .8f)
         else -> WordSiegeGameUi.Border.copy(alpha = .45f)
     }
@@ -436,15 +436,15 @@ private fun WordSiegePracticeBoardCell(
         if (letter != null) {
             Text(
                 letter,
-                color = Color(0xFF2A1B13),
+                color = if (!pending && owner != 0) Color(0xFFF0EDE3) else Color(0xFF171C1B),
                 fontSize = if (overview) 24.sp else 22.sp,
-                fontFamily = FontFamily.Serif,
+                fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Black,
                 letterSpacing = if (overview) .10.sp else .25.sp,
             )
             Text(
                 practiceLetterValue(letter),
-                color = PracticeSiegeLightTileText.copy(alpha = .78f),
+                color = (if (!pending && owner != 0) Color(0xFFF0EDE3) else PracticeSiegeLightTileText).copy(alpha = .78f),
                 fontSize = WordSiegeBoardAccessibility.BoardLetterPoint,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
@@ -500,8 +500,8 @@ internal fun WordSiegePracticeRackTile(
         modifier = modifier.height(48.dp).combinedClickable(onClick = onClick, enabled = enabled),
         color = when {
             used -> WordSiegeGameUi.SurfaceSoft
-            selected -> Color(0xFFE1ECE4)
-            else -> Color(0xFFF2DFC0)
+            selected -> Color(0xFFD6C38D)
+            else -> Color(0xFFE3D6B0)
         },
         shape = RoundedCornerShape(9.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PracticeSiegeMineBorder else PracticeSiegeTileBorder.copy(alpha = .7f)),
@@ -512,7 +512,7 @@ internal fun WordSiegePracticeRackTile(
                 letter.toString(),
                 color = if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else PracticeSiegeLightTileText,
                 fontSize = 22.sp,
-                fontFamily = FontFamily.Serif,
+                fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Black,
                 letterSpacing = .35.sp,
             )

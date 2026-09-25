@@ -93,10 +93,11 @@ object SonHarfCosmetics {
             text = Color(0xFF263238), action = Color(0xFF2A72E5), actionText = Color.White,
             border = Color(0xFFCFD9E6), secondaryBorder = Color(0xFF14B8B1),
         )
+        // Higgsfield default: ivory letter keys, grey special keys, green enter on graphite.
         else -> WordKeyboardPalette(
-            background = Color(0xFFF0F5F1), key = Color(0xFFFFFEF8), keyAlt = Color(0xFFDDE9E1),
-            text = Color(0xFF213C31), action = Color(0xFF4F7964), actionText = Color.White,
-            border = Color(0xFFC4D5CA), secondaryBorder = Color(0xFF6D9080),
+            background = Color(0xFF171C1B), key = Color(0xFFF0EDE3), keyAlt = Color(0xFFD1D3D0),
+            text = Color(0xFF171C1B), action = Color(0xFF32845E), actionText = Color(0xFFF0EDE3),
+            border = Color(0xFFC8C1B4), secondaryBorder = Color(0xFF9EA39F),
         )
     }
 

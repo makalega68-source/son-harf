@@ -40,20 +40,20 @@ internal fun HarfYoluBackdrop(modifier: Modifier = Modifier) {
     )
 
     Canvas(modifier = modifier) {
-        val blue = Color(0xFF14B8B0)
-        val turquoise = Color(0xFF22C3C9)
-        val orange = Color(0xFF8B6CF0)
-        val purple = Color(0xFF8B6CF0)
-        val paleBlue = Color(0xFFE0F3F5)
+        val blue = Color(0xFF32845E)
+        val turquoise = Color(0xFF40A878)
+        val orange = Color(0xFFC5AA73)
+        val purple = Color(0xFFC5AA73)
+        val paleBlue = Color(0xFF1D2322)
 
         drawRect(
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    Color(0xFFEAF6F8),
-                    Color(0xFFE0F3F5),
+                    Color(0xFF171C1B),
+                    Color(0xFF1A201F),
                     paleBlue.copy(alpha = .86f),
-                    Color(0xFFFFFFFF),
-                    Color(0xFFEAF6F8),
+                    Color(0xFF1A201F),
+                    Color(0xFF171C1B),
                 ),
             ),
         )
@@ -77,7 +77,7 @@ internal fun HarfYoluBackdrop(modifier: Modifier = Modifier) {
         glow(turquoise, .05f - .012f * phase, .74f - .010f * phase, .64f, .18f)
         glow(orange, .04f + .010f * phase, .34f, .34f, .10f)
         glow(purple, .96f - .010f * phase, .80f, .40f, .12f)
-        glow(Color(0xFFEEEBFC), .50f, .47f, .54f, .62f)
+        glow(Color(0xFF2A302F), .50f, .47f, .54f, .62f)
 
         data class Tile(val x: Float, val y: Float, val scale: Float, val color: Color)
         val tiles = listOf(
@@ -106,7 +106,7 @@ internal fun HarfYoluBackdrop(modifier: Modifier = Modifier) {
             )
             val inset = side * .20f
             drawRoundRect(
-                color = Color(0xFF0B1B33).copy(alpha = .16f),
+                color = Color(0xFFF0EDE3).copy(alpha = .05f),
                 topLeft = Offset(center.x - side / 2f + inset, center.y - side / 2f + inset),
                 size = Size(side - inset * 2f, side - inset * 2f),
                 cornerRadius = CornerRadius(side * .14f, side * .14f),

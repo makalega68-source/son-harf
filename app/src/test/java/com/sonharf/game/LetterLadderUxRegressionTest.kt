@@ -77,10 +77,9 @@ class LetterLadderUxRegressionTest {
         assertTrue(source.contains("HarfYoluBackdrop(Modifier.fillMaxSize())"))
         assertFalse(source.contains("FirstRunLanguageBackdrop(Modifier.fillMaxSize())"))
         assertTrue(backdrop.contains("rememberInfiniteTransition"))
-        assertTrue(backdrop.contains("0xFF14B8B0"))
-        assertTrue(backdrop.contains("0xFF22C3C9"))
-        assertTrue(backdrop.contains("0xFF8B6CF0"))
-        assertTrue(backdrop.contains("0xFF8B6CF0"))
+        assertTrue(backdrop.contains("0xFF32845E"))
+        assertTrue(backdrop.contains("0xFF40A878"))
+        assertTrue(backdrop.contains("0xFFC5AA73"))
     }
 
     @Test
@@ -91,9 +90,9 @@ class LetterLadderUxRegressionTest {
         assertTrue(keyboard.contains("Harf Yolu'na özel kompakt klavye"))
         assertTrue(keyboard.contains("HarfYoluKeyboardUi"))
         assertFalse(keyboard.contains("SonHarfCosmetics.keyboardPalette"))
-        assertTrue(keyboard.contains("0xFF14B8B0"))
-        assertTrue(keyboard.contains("0xFFE0F3F5"))
-        assertTrue(keyboard.contains("0xFF0B1B33"))
+        assertTrue(keyboard.contains("0xFF32845E"))
+        assertTrue(keyboard.contains("0xFFF0EDE3"))
+        assertTrue(keyboard.contains("0xFF171C1B"))
         assertTrue(keyboard.contains("keySound()"))
         assertTrue(keyboard.contains("actionSound()"))
         assertTrue(keyboard.contains("33.dp"))

@@ -32,12 +32,12 @@ class UnifiedThemeSourceContractTest {
         assertTrue(theme.contains("Color(0xFF32845E)"))
         assertTrue(theme.contains("Color(0xFFC5AA73)"))
 
-        // The approved meta shell stays light; Son Harf now uses a scoped sky-blue arena
+        // The Higgsfield shell is graphite; Son Harf keeps its own scoped arena palette
         // with the shared in-game mascot while preserving the application theme elsewhere.
         assertTrue(premier.contains("private object PremierArenaSky"))
-        assertTrue(premier.contains("Color(0xFFEAF8FF)"))
-        assertTrue(premier.contains("Color(0xFFDDF3FC)"))
-        assertTrue(premier.contains("Color(0xFFCFEAF7)"))
+        assertTrue(premier.contains("Color(0xFF171C1B)"))
+        assertTrue(premier.contains("Color(0xFF1A201F)"))
+        assertTrue(premier.contains("Color(0xFF151A19)"))
         assertTrue(premier.contains("Brush.verticalGradient("))
         assertTrue(premier.contains("WordSiegeMascotCompanion("))
         assertTrue(premier.contains("PremierKeyboard(language, input"))

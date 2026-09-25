@@ -55,27 +55,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private object LetterLadderUi {
-    val Background = Color(0xFFEAF6F8)
-    val Surface = Color(0xFFFFFFFF)
-    val SurfaceRaised = Color(0xFFE0F3F5)
-    val SurfaceSoft = Color(0xFFEEEBFC)
-    val Text = Color(0xFF0B1B33)
-    val Muted = Color(0xFF3B4B66)
-    val Border = Color(0xFFC3D6E4)
-    val Accent = Color(0xFF14B8B0)
-    val AccentStrong = Color(0xFF0E9A93)
-    val Turquoise = Color(0xFF22C3C9)
-    val TurquoiseStrong = Color(0xFF0E9A93)
-    val TurquoiseSoft = Color(0xFFD2F2F0)
-    val Orange = Color(0xFF8B6CF0)
-    val OrangeSoft = Color(0xFFFFEBDA)
-    val Purple = Color(0xFFFF8A2A)
-    val PurpleSoft = Color(0xFFEEE9FF)
-    val AccentText = Color(0xFF0B1B33)
-    val Live = Accent
-    val Coral = Orange
-    val Green = Accent
-    val Gold = Orange
+    val Background = Color(0xFF171C1B)
+    val Surface = Color(0xFF222827)
+    val SurfaceRaised = Color(0xFF1D2322)
+    val SurfaceSoft = Color(0xFF2A302F)
+    val Text = Color(0xFFF0EDE3)
+    val Muted = Color(0xFFA9AFAB)
+    val Border = Color(0xFF5C5239)
+    val Accent = Color(0xFF32845E)
+    val AccentStrong = Color(0xFF286B4D)
+    val Turquoise = Color(0xFF40A878)
+    val TurquoiseStrong = Color(0xFF32845E)
+    val TurquoiseSoft = Color(0xFF173B30)
+    val Orange = Color(0xFFC5AA73)
+    val OrangeSoft = Color(0xFF3A3326)
+    val Purple = Color(0xFFC85A54)
+    val PurpleSoft = Color(0xFF442624)
+    val AccentText = Color(0xFFF0EDE3)
 }
 
 internal data class LetterLadderPuzzle(

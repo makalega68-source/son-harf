@@ -28,7 +28,7 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("WordSiegeMascotEmotion.FOCUS"))
         assertTrue(screen.contains("PremierKeyboard(language, input"))
         assertTrue(screen.contains("PremierArenaSky.BackgroundTop"))
-        assertTrue(screen.contains("Color(0xFFEAF8FF)"))
+        assertTrue(screen.contains("Color(0xFF171C1B)"))
 
         // Chat remains typed/realtime and now has an unread red indicator.
         assertTrue(screen.contains("Text(pt(language, \"SOHBET\", \"CHAT\")"))

@@ -22,17 +22,17 @@ import androidx.compose.ui.unit.sp
 
 /** Harf Yolu'na özel, ana temayla uyumlu zümrüt-altın klavye paleti. */
 private object HarfYoluKeyboardUi {
-    val Background = Color(0xFFE0F3F5)
-    val Key = Color(0xFFE0F3F5)
-    val KeyAlt = Color(0xFFEEEBFC)
-    val Text = Color(0xFF0B1B33)
-    val Border = Color(0xFFC3D6E4)
-    val AltBorder = Color(0xFF9C88E8)
-    val Action = Color(0xFF14B8B0)
-    val ActionPressed = Color(0xFF0E9A93)
-    val ActionText = Color(0xFF0B1B33)
-    val Disabled = Color(0xFFDDE5EE)
-    val DisabledText = Color(0xFF5E6D84)
+    val Background = Color(0xFF171C1B)
+    val Key = Color(0xFFF0EDE3)
+    val KeyAlt = Color(0xFFD1D3D0)
+    val Text = Color(0xFF171C1B)
+    val Border = Color(0xFFC8C1B4)
+    val AltBorder = Color(0xFF9EA39F)
+    val Action = Color(0xFF32845E)
+    val ActionPressed = Color(0xFF286B4D)
+    val ActionText = Color(0xFFF0EDE3)
+    val Disabled = Color(0xFF2A302F)
+    val DisabledText = Color(0xFF59605D)
 }
 
 /**
