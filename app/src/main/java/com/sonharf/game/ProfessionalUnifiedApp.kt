@@ -4,7 +4,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -34,6 +39,7 @@ private enum class ProfessionalDestination {
     SHOP,
     PRO,
     PRIVATE_ROOM,
+    MASCOT_CHAT,
 }
 
 @Composable
@@ -147,7 +153,8 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
             ProfessionalDestination.SHOP,
             ProfessionalDestination.LEADERBOARD,
             ProfessionalDestination.PROFILE,
-            ProfessionalDestination.RETENTION -> ProfessionalDestination.HOME
+            ProfessionalDestination.RETENTION,
+            ProfessionalDestination.MASCOT_CHAT -> ProfessionalDestination.HOME
             ProfessionalDestination.COMPETE -> ProfessionalDestination.LEADERBOARD
             ProfessionalDestination.MATCHES -> matchesReturn
             ProfessionalDestination.RULES -> ProfessionalDestination.PLAY
@@ -183,6 +190,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
         ProfessionalDestination.SIEGE,
         ProfessionalDestination.SERIES,
         ProfessionalDestination.LETTER_PATH,
+        ProfessionalDestination.MASCOT_CHAT,
     )
 
     GameTheme {
@@ -204,6 +212,17 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                                 GameMainTab.SHOP -> ProfessionalDestination.SHOP
                             }
                         },
+                    )
+                }
+            },
+            floatingActionButton = {
+                if (destination == ProfessionalDestination.HOME) {
+                    ExtendedFloatingActionButton(
+                        onClick = { destination = ProfessionalDestination.MASCOT_CHAT },
+                        icon = { Icon(Icons.Rounded.Forum, null) },
+                        text = { Text(gameText("Maskotla Sohbet", "Mascot Chat")) },
+                        containerColor = GameColors.Lavender,
+                        contentColor = GameColors.TextPrimary,
                     )
                 }
             },
@@ -306,6 +325,10 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                             privateRoomReturn = ProfessionalDestination.PRO
                             openGame(ProfessionalDestination.LAST_LETTER, language)
                         },
+                    )
+
+                    ProfessionalDestination.MASCOT_CHAT -> MascotChatScreen(
+                        onBack = { destination = ProfessionalDestination.HOME },
                     )
 
                     ProfessionalDestination.LAST_LETTER -> OnlineGameScreenV6()
