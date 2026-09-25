@@ -847,8 +847,9 @@ private fun WordSiegePracticeContent(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val chatListState = rememberLazyListState()
+                    // Newest at the bottom above the input; older messages move up.
                     LaunchedEffect(chatMessages.size) {
-                        if (chatMessages.isNotEmpty()) chatListState.animateScrollToItem(chatMessages.lastIndex)
+                        if (chatMessages.isNotEmpty()) chatListState.animateScrollToItem(0)
                     }
                     if (chatMessages.isEmpty()) {
                         Text(
@@ -860,9 +861,10 @@ private fun WordSiegePracticeContent(
                         LazyColumn(
                             state = chatListState,
                             modifier = Modifier.fillMaxWidth().heightIn(min = 170.dp, max = 320.dp),
+                            reverseLayout = true,
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            itemsIndexed(chatMessages) { _, item ->
+                            itemsIndexed(chatMessages.asReversed()) { _, item ->
                                 val (mine, message) = item
                                 Box(Modifier.fillMaxWidth()) {
                                     Surface(

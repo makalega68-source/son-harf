@@ -2534,11 +2534,15 @@ private fun PremierChatSheet(
 ) {
     var draft by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    // Newest message sits at the bottom, right above the input, and older ones move up; the list
+    // is laid out bottom-up so it stays anchored when the keyboard opens and shrinks it.
+    val recent = messages.takeLast(50).asReversed()
     LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.takeLast(50).lastIndex)
+        if (messages.isNotEmpty()) listState.animateScrollToItem(0)
     }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color(0xFFFFFFFF)) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color(0xFFFFFFFF)) {
         Column(
             Modifier.fillMaxWidth().imePadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -2571,9 +2575,10 @@ private fun PremierChatSheet(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp, max = 280.dp),
+                    reverseLayout = true,
                     verticalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
-                    items(messages.takeLast(50), key = { it.id }) { message ->
+                    items(recent, key = { it.id }) { message ->
                         val mine = message.senderId == meId
                         Row(
                             Modifier.fillMaxWidth(),

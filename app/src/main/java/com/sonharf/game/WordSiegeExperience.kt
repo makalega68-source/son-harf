@@ -1104,8 +1104,16 @@ private fun WordSiegeChatDialog(
                         Text(sh("Henüz mesaj yok.", "No messages yet."), color = MainUi.Muted, fontSize = 12.sp)
                     }
                 } else {
-                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(messages.takeLast(40), key = { it.id }) { message ->
+                    // Newest at the bottom above the input and follows new messages; older ones move up.
+                    val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
+                    LaunchedEffect(messages.size) { chatListState.animateScrollToItem(0) }
+                    LazyColumn(
+                        Modifier.weight(1f),
+                        state = chatListState,
+                        reverseLayout = true,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        items(messages.takeLast(40).asReversed(), key = { it.id }) { message ->
                             Row(
                                 Modifier.fillMaxWidth(),
                                 horizontalArrangement = if (message.senderId == me) Arrangement.End else Arrangement.Start,

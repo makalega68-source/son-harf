@@ -21,7 +21,8 @@ class WordSiegeReadabilityV35ContractTest {
         val screen = read("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt")
         assertTrue(screen.contains("LazyColumn("))
         assertTrue(screen.contains("rememberLazyListState()"))
-        assertTrue(screen.contains("itemsIndexed(chatMessages)"))
+        assertTrue(screen.contains("itemsIndexed(chatMessages.asReversed())"))
+        assertTrue(screen.contains("reverseLayout = true"))
         assertFalse(screen.contains("chatMessages.takeLast(5)"))
         assertFalse(screen.contains("takeLast(8)"))
     }
