@@ -7,6 +7,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.scaleIn
@@ -327,7 +328,9 @@ fun PremierWordDuelScreen() {
         }
     }
 
-    LaunchedEffect(room?.id, room?.botTurn, room?.status) {
+    // Keyed on the round and word count too, so a bot turn that follows
+    // another bot turn, e.g. the bot opening a round right after it missed, still runs.
+    LaunchedEffect(room?.id, room?.botTurn, room?.status, room?.roundNo, words.size) {
         val active = room ?: return@LaunchedEffect
         val botPlayable = active.status in setOf("playing", "final", "sudden_death")
         if (!active.isBot || !active.botTurn || !botPlayable) return@LaunchedEffect
@@ -351,7 +354,9 @@ fun PremierWordDuelScreen() {
         } finally {
             botThinking = false
         }
-        for (attempt in 0 until 4) {
+        // Keep asking until the server bot moves; never leave the match waiting on a silent bot.
+        var attempt = 0
+        while (true) {
             val synced = runCatching { backend.getRoom(active.id) }.getOrNull()
             if (synced != null && (
                     !synced.botTurn ||
@@ -369,9 +374,10 @@ fun PremierWordDuelScreen() {
                 notice = ""
                 return@LaunchedEffect
             }
-            delay(700L + attempt * 250L)
+            attempt += 1
+            if (attempt >= 4) notice = pt(language, "Rakip hamlesi yeniden eşitleniyor…", "Resyncing rival move…")
+            delay((700L + attempt * 250L).coerceAtMost(3_000L))
         }
-        notice = pt(language, "Rakip hamlesi yeniden eşitleniyor…", "Resyncing rival move…")
     }
 
     LaunchedEffect(
@@ -1529,12 +1535,22 @@ private object PremierBotBrain {
     }
 }
 
+private const val PREMIER_WORD_TILE_STAGGER_MS = 95L
+private const val PREMIER_WORD_TILE_DROP_MS = 380L
+
+/** How long the played word's tiles take to finish dropping in. */
+private fun premierWordLandMillis(letters: Int): Long =
+    (letters - 1).coerceAtLeast(0) * PREMIER_WORD_TILE_STAGGER_MS + PREMIER_WORD_TILE_DROP_MS
+
 /** A human-like pause before the bot answers: quick for easy letters, longer when it "thinks". */
 private fun premierBotThinkMillis(room: GameRoomDto, words: List<GameWordDto>): Long {
     val required = premierRequiredToken(room, words)
     val hardLetter = required.lowercase(Locale.ROOT) in setOf("ğ", "j", "ı", "ü", "z", "l", "v", "ö", "x", "q", "y", "k")
-    val base = if (hardLetter) 1_700L else 1_050L
-    return base + kotlin.random.Random.nextLong(0L, 1_600L)
+    // The bot waits until the word just played has fully landed and been readable for a moment.
+    val lastWord = words.lastOrNull()?.let { it.normalizedWord.ifBlank { it.word } }.orEmpty()
+    val landed = premierWordLandMillis(lastWord.length) + 900L
+    val base = if (hardLetter) 1_300L else 700L
+    return landed + base + kotlin.random.Random.nextLong(0L, 1_200L)
 }
 
 /** Three round pips (gold = you, coral = rival) around the round number. */
@@ -2203,8 +2219,8 @@ private fun PremierLastWordCard(
             // Staggered drop: each tile falls in a moment after the previous one.
             val fall = remember(latestPlayedWord, index) { Animatable(0f) }
             LaunchedEffect(latestPlayedWord, index) {
-                delay(index * 55L)
-                fall.animateTo(1f, spring(dampingRatio = .55f, stiffness = 420f))
+                delay(index * PREMIER_WORD_TILE_STAGGER_MS)
+                fall.animateTo(1f, tween(PREMIER_WORD_TILE_DROP_MS.toInt(), easing = FastOutSlowInEasing))
             }
             PremierLetterTile(
                 letter = char.toString(),
