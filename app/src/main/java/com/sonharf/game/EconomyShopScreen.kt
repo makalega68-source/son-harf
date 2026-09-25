@@ -187,6 +187,9 @@ private fun EconomyCatalogScreen(
         if (section == 0 || section == 2) {
             item { StoreProBanner(profile?.isVip == true) { onSection(3) } }
         }
+        if (section == 0 || section == 2) {
+            item { StoreCoinGuide() }
+        }
 
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Gold, trackColor = Hf.Surface) }
 
@@ -484,4 +487,55 @@ private fun storeKindLabel(kind: String?): String = when (kind) {
     "profile_frame" -> sh("Çerçeve", "Frame")
     "victory_effect", "vfx" -> sh("Efekt", "Effect")
     else -> kind.replace('_', ' ').replaceFirstChar { it.uppercase() }
+}
+
+/** Where Son Coin comes from and where it goes: the whole loop on one card. */
+@Composable
+private fun StoreCoinGuide() {
+    HfGamePanel(HfPanel.NavySet, Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HfCoin(26.dp)
+                Spacer(Modifier.width(10.dp))
+                Text(sh("SON COIN REHBERİ", "SON COIN GUIDE"), color = Hf.GoldLight, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                StoreGuideColumn(
+                    sh("KAZAN", "EARN"),
+                    Color(0xFF8BE39A),
+                    listOf(
+                        "📅 " + sh("Günlük giriş", "Daily login"),
+                        "🎯 " + sh("Günlük görevler", "Daily tasks"),
+                        "🏆 " + sh("Haftalık Kupa", "Weekly Cup"),
+                        "🐷 " + sh("Kumbara", "Piggy bank"),
+                        "📺 " + sh("Ödüllü reklam", "Rewarded ad"),
+                    ),
+                    Modifier.weight(1f),
+                )
+                StoreGuideColumn(
+                    sh("HARCA", "SPEND"),
+                    Color(0xFFFFC46B),
+                    listOf(
+                        "💡 " + sh("Ekstra ipucu · 25", "Extra hint · 25"),
+                        "🍓 " + sh("Maskot meyvesi", "Mascot fruit"),
+                        "🖼 " + sh("Çerçeveler", "Frames"),
+                        "⌨ " + sh("Klavyeler", "Keyboards"),
+                        "🛡 " + sh("Kulüp kur · 1.000", "Found a club · 1,000"),
+                    ),
+                    Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StoreGuideColumn(title: String, accent: Color, rows: List<String>, modifier: Modifier) {
+    Column(
+        modifier.background(Color.White.copy(alpha = .08f), RoundedCornerShape(14.dp)).padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Text(title, color = accent, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+        rows.forEach { Text(it, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+    }
 }

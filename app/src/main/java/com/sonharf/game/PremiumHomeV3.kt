@@ -572,3 +572,31 @@ private fun homeLeagueName(value: String): String = when (value) {
     "EFSANE" -> sh("Efsane", "Legend")
     else -> value
 }
+
+/** Home entry to the mascot room: shown when the player owns a mascot. */
+@Composable
+internal fun PremiumMascotRoomCard() {
+    if (!WordSiegeMascotOwnership.hasAny) return
+    var open by remember { mutableStateOf(false) }
+    HfGamePanel(HfPanel.PurpleSet, Modifier.fillMaxWidth(), onClick = { open = true }) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(50.dp).background(Color.White.copy(alpha = .9f), CircleShape), contentAlignment = Alignment.Center) {
+                Text("💞", fontSize = 26.sp)
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(sh("Maskot Odası", "Mascot Room"), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text(
+                    sh("Sev, oyna, besle: dostluğunu büyüt", "Love, play, feed: grow your bond"),
+                    color = Color.White.copy(alpha = .9f),
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            HfPanelPill(sh("GİR", "ENTER"), ink = HfPanel.PurpleSet[2])
+        }
+    }
+    if (open) MascotRoomDialog(onDismiss = { open = false })
+}

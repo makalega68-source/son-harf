@@ -293,6 +293,22 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                 "Try this: ${MascotHints.pattern(word, shown, language)} (${word.length} letters)")
         }
     }
+    val hintScope = rememberCoroutineScope()
+    var buyingHint by remember { mutableStateOf(false) }
+    fun buyHint() {
+        if (buyingHint) return
+        buyingHint = true
+        hintScope.launch {
+            val bought = com.sonharf.game.data.MascotRoomBackend.buyHint("kelime_atolyesi")
+            if (bought != null) {
+                hintsLeft += 1
+                askHint()
+            } else {
+                hintText = sh("Jeton yetmedi... biraz daha oynayıp biriktirelim!", "Not enough coins... let's play a bit more!")
+            }
+            buyingHint = false
+        }
+    }
 
     Box(
         Modifier
@@ -330,7 +346,8 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     else -> sh("Harflere dokun, kelimeni kur.", "Tap letters to build your word.")
                 },
                 hintsLeft = if (current != null && !current.over) hintsLeft else 0,
-                onHint = { askHint() },
+                canBuyHint = current != null && !current.over,
+                onHint = { if (hintsLeft > 0) askHint() else buyHint() },
             )
             when {
                 loadFailed -> AtelierLoadError { loadNonce += 1 }
@@ -509,6 +526,7 @@ private fun AtelierMascotRow(
     action: WordSiegeMascotAction?,
     hint: String,
     hintsLeft: Int,
+    canBuyHint: Boolean,
     onHint: () -> Unit,
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -526,7 +544,7 @@ private fun AtelierMascotRow(
         )
         Spacer(Modifier.width(10.dp))
         Text(hint, color = AtelierUi.InkMuted, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        if (hintsLeft > 0) {
+        if (hintsLeft > 0 || canBuyHint) {
             Spacer(Modifier.width(8.dp))
             OutlinedButton(
                 onClick = onHint,
@@ -536,7 +554,12 @@ private fun AtelierMascotRow(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 modifier = Modifier.heightIn(min = 36.dp),
             ) {
-                Text(sh("💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)"), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    if (hintsLeft > 0) sh("💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)")
+                    else "💡 ${com.sonharf.game.data.MascotRoomBackend.HINT_PRICE} SC",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                )
             }
         }
     }

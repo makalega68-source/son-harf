@@ -338,6 +338,9 @@ private fun PremiumHomeScreen(
             item(key = "home_secondary_modes") {
                 PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
             }
+            item(key = "mascot_room") {
+                PremiumMascotRoomCard()
+            }
             item(key = "home_daily_tasks") {
                 PremiumHomeDailyTasks(onClick = onCompete)
             }

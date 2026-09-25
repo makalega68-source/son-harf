@@ -728,7 +728,7 @@ internal fun WordSiegeMascotCompanion(
         fun say(text: String, holdExtraMillis: Long = 0L) {
             speechJob?.cancel()
             speechId += 1
-            speech = text
+            speech = MascotVoice.style(text, skin, speechId)
             speechJob = scope.launch {
                 talking = true
                 delay(text.length * 34L + 250L)

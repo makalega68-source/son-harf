@@ -885,6 +885,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         drawLids(canvas, RIGHT_EYE_X, EYE_Y, 122f, 126f, lid, slant, 1f, lower)
         canvas.restoreToCount(eyeLayer)
         if (skin == WordSiegeMascotSkin.PINK) drawGirlLashes(canvas, RIGHT_EYE_X, EYE_Y, 122f, 126f, lid, 1f)
+        drawAnimeEyes(canvas, now, mood, lid, gazeX + tremor, gazeY)
 
         val browY = poseValue[P_BROW_Y] - lid * 6f - yawn * 22f - shrug * 26f
         val browTilt = Math.toDegrees(poseValue[P_BROW_TILT].toDouble()).toFloat()
@@ -899,6 +900,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
         drawLayer(canvas, "cheek_left", 0f, -lower * 10f)
         drawLayer(canvas, "cheek_right", 0f, -lower * 10f)
+        drawBlushLines(canvas, mood, cheek)
 
         // Talking: irregular syllables layered on the current expression.
         val mouthOpen = if (speaking) {
@@ -922,6 +924,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         if (hat != WordSiegeMascotHat.NONE) drawHat(canvas, now) else decor.drawTuft(canvas, now)
         decor.drawFront(canvas)
         if (sleeping) drawSleepZ(canvas, now)
+        drawAnimeMarks(canvas, now, mood)
         drawSparkles(canvas, now)
         drawTwinkles(canvas, now)
         drawHearts(canvas, now)
@@ -1330,6 +1333,124 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         path.cubicTo(x + r, y + r, x + r * .9f, y - r * .3f, x, y - r * 1.9f)
         path.close()
         canvas.drawPath(path, detailPaint)
+    }
+
+    // ---- Anime visual language -----------------------------------------------------------------
+
+    private val animePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+
+    /**
+     * Kira-kira eyes: a second catchlight always, four-point stars in the irises when thrilled,
+     * and "^ ^" smiling crescents when it laughs with its eyes closed.
+     */
+    private fun drawAnimeEyes(canvas: Canvas, now: Long, mood: WordSiegeMascotEmotion, lid: Float, lookX: Float, lookY: Float) {
+        val open = (1f - lid).coerceIn(0f, 1f)
+        val dx = lookX.coerceIn(-1f, 1f) * 24f
+        val dy = lookY.coerceIn(-1f, 1f) * 20f
+        val thrilled = mood == WordSiegeMascotEmotion.EXCITED || mood == WordSiegeMascotEmotion.PROUD ||
+            (actionKind == WordSiegeMascotAction.SPARKLE || actionKind == WordSiegeMascotAction.CHEER) && now < actionUntil
+        for ((ix, side) in listOf(LEFT_IRIS_X to -1f, RIGHT_IRIS_X to 1f)) {
+            if (open > .25f) {
+                // Small lower catchlight, the second highlight every anime eye has.
+                detailPaint.color = 0xFFFFFFFF.toInt()
+                detailPaint.alpha = (200f * open).toInt()
+                canvas.drawCircle(ix + dx + 30f, IRIS_Y + dy + 42f, 13f, detailPaint)
+            }
+            if (thrilled && open > .35f) {
+                val pulse = .8f + .2f * sin(now / 140f + side)
+                drawStar(canvas, ix + dx - 6f, IRIS_Y + dy - 8f, 46f * pulse * open, 0xFFFFF4C2.toInt(), (240f * open).toInt())
+            }
+        }
+        detailPaint.alpha = 255
+        if (mood == WordSiegeMascotEmotion.LAUGH && lid > .7f) {
+            animePaint.color = 0xFF2A1740.toInt()
+            animePaint.strokeWidth = 16f
+            animePaint.alpha = (255f * ((lid - .7f) / .3f).coerceIn(0f, 1f)).toInt()
+            for (cx in floatArrayOf(LEFT_EYE_X, RIGHT_EYE_X)) {
+                path.rewind()
+                path.moveTo(cx - 70f, EYE_Y + 20f)
+                path.quadTo(cx, EYE_Y - 60f, cx + 70f, EYE_Y + 20f)
+                canvas.drawPath(path, animePaint)
+            }
+            animePaint.alpha = 255
+        }
+    }
+
+    /** "///" blush strokes over the cheeks when it is happy, proud or being petted. */
+    private fun drawBlushLines(canvas: Canvas, mood: WordSiegeMascotEmotion, cheek: Float) {
+        val shy = when (mood) {
+            WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.PROUD, WordSiegeMascotEmotion.LAUGH -> .6f
+            else -> 0f
+        }.coerceAtLeast(cheek)
+        if (shy < .35f) return
+        animePaint.color = 0xFFE8436E.toInt()
+        animePaint.strokeWidth = 7f
+        animePaint.alpha = (200f * shy).toInt()
+        for (cx in floatArrayOf(LEFT_CHEEK_X, RIGHT_CHEEK_X)) {
+            for (i in -1..1) {
+                val x = cx + i * 26f
+                canvas.drawLine(x - 8f, CHEEK_Y + 18f, x + 10f, CHEEK_Y - 18f, animePaint)
+            }
+        }
+        animePaint.alpha = 255
+    }
+
+    /**
+     * Manga marks around the head: a throbbing cross vein when angry, a big sliding sweat drop
+     * when surprised or shrugging, and musical notes while dancing or clapping.
+     */
+    private fun drawAnimeMarks(canvas: Canvas, now: Long, mood: WordSiegeMascotEmotion) {
+        if (mood == WordSiegeMascotEmotion.ANGRY) {
+            val beat = 1f + .12f * abs(sin(now / 120f))
+            val cx = ORB_CX + 250f
+            val cy = ORB_CY - 330f
+            animePaint.color = 0xFFE5304A.toInt()
+            animePaint.strokeWidth = 15f
+            val r = 34f * beat
+            for (q in 0 until 4) {
+                val sx = if (q % 2 == 0) -1f else 1f
+                val sy = if (q < 2) -1f else 1f
+                path.rewind()
+                path.moveTo(cx + sx * r * .25f, cy + sy * r)
+                path.quadTo(cx + sx * r * .25f, cy + sy * r * .25f, cx + sx * r, cy + sy * r * .25f)
+                canvas.drawPath(path, animePaint)
+            }
+        }
+        val action = actionKind.takeIf { now < actionUntil }
+        if (mood == WordSiegeMascotEmotion.SURPRISED || action == WordSiegeMascotAction.SHRUG) {
+            val t = (now % 1_600L) / 1_600f
+            detailPaint.color = 0xFF9FE3FF.toInt()
+            detailPaint.alpha = (235f * (1f - t * .6f)).toInt()
+            drawDrop(canvas, ORB_CX + 330f, ORB_CY - 250f + easeIn(t) * 60f, 34f)
+            detailPaint.color = 0xFFFFFFFF.toInt()
+            detailPaint.alpha = 190
+            canvas.drawCircle(ORB_CX + 322f, ORB_CY - 250f + easeIn(t) * 60f + 10f, 8f, detailPaint)
+            detailPaint.alpha = 255
+        }
+        if (action == WordSiegeMascotAction.DANCE || action == WordSiegeMascotAction.CLAP) {
+            val base = actionStartedAt
+            for (i in 0 until 3) {
+                val p = (((now - base) - i * 260L) % 1_200L) / 1_200f
+                if (p < 0f) continue
+                val x = ORB_CX + (if (i % 2 == 0) -360f else 360f) + sin(p * 6f) * 20f
+                val y = ORB_CY - 200f - p * 220f
+                animePaint.color = if (i == 1) 0xFFFF7EB6.toInt() else 0xFF7C6CFF.toInt()
+                animePaint.alpha = (255f * sin(p * PI.toFloat())).toInt()
+                animePaint.strokeWidth = 9f
+                canvas.drawLine(x + 20f, y, x + 20f, y - 70f, animePaint)
+                canvas.drawLine(x + 20f, y - 70f, x + 50f, y - 55f, animePaint)
+                detailPaint.color = animePaint.color
+                detailPaint.alpha = animePaint.alpha
+                ovalRect.set(x - 12f, y - 14f, x + 24f, y + 12f)
+                canvas.drawOval(ovalRect, detailPaint)
+            }
+            animePaint.alpha = 255
+            detailPaint.alpha = 255
+        }
     }
 
     private fun drawSweat(canvas: Canvas, now: Long) {

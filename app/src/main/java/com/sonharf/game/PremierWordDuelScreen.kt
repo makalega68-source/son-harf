@@ -1248,6 +1248,23 @@ private fun PremierArena(
         hintsLeft -= 1
         hintRequest = next to text
     }
+    // Free hints used up against a bot: one more costs Son Coin (server-checked).
+    val hintScope = rememberCoroutineScope()
+    var buyingHint by remember(room.id) { mutableStateOf(false) }
+    fun buyHint() {
+        if (buyingHint) return
+        buyingHint = true
+        hintScope.launch {
+            val bought = com.sonharf.game.data.MascotRoomBackend.buyHint("son_harf")
+            if (bought != null) {
+                hintsLeft += 1
+                askHint()
+            } else {
+                hintRequest = ((hintRequest?.first ?: 0) + 1) to pt(language, "Jeton yetmedi... maç kazanıp biriktirelim mi?", "Not enough coins... let's win some matches?")
+            }
+            buyingHint = false
+        }
+    }
 
     // Real score changes from the server (streak and long-word bonuses included).
     var gainKey by remember(room.id) { mutableIntStateOf(0) }
@@ -1552,16 +1569,17 @@ private fun PremierArena(
             if (notice.isNotBlank()) {
                 Text(notice, color = PremierBoard.Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
             }
-            if (myTurn && !preparing && hintsLeft > 0) {
+            if (myTurn && !preparing && (hintsLeft > 0 || room.isBot)) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.End) {
                     Surface(
-                        onClick = { askHint() },
+                        onClick = { if (hintsLeft > 0) askHint() else buyHint() },
                         shape = RoundedCornerShape(99.dp),
                         color = PremierBoard.Gold.copy(alpha = .18f),
                         border = BorderStroke(1.dp, PremierBoard.Gold.copy(alpha = .7f)),
                     ) {
                         Text(
-                            pt(language, "💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)"),
+                            if (hintsLeft > 0) pt(language, "💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)")
+                            else pt(language, "💡 +1 İpucu · ${com.sonharf.game.data.MascotRoomBackend.HINT_PRICE} SC", "💡 +1 Hint · ${com.sonharf.game.data.MascotRoomBackend.HINT_PRICE} SC"),
                             Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                             color = PremierBoard.Ink,
                             fontSize = 12.sp,
