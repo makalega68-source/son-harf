@@ -86,27 +86,29 @@ private data class AuthIdentityProfile(
  * Profil teması yüklenmeden önce sabit token kullanılması ilk karede renk sıçramasını önler.
  */
 private object AuthUi {
-    val Background = Color(0xFFEAF6F8)
-    val BackgroundTop = Color(0xFFE0F3F5)
-    val Surface = Color(0xFFFFFFFF)
-    val SurfaceSoft = Color(0xFFE0F3F5)
-    val SurfaceRaised = Color(0xFFEEEBFC)
-    val Modal = Color(0xFFFFFFFF)
-    val Primary = Color(0xFF14B8B0)
-    val PrimarySoft = Color(0xFFD2F2F0)
-    val SoftBlue = Color(0xFF8B6CF0)
-    val Turquoise = Color(0xFF22C3C9)
-    val Lavender = Color(0xFF8B6CF0)
-    val Sand = Color(0xFFFF8A2A)
-    val Text = Color(0xFF0B1B33)
-    val Muted = Color(0xFF3B4B66)
-    val Border = Color(0xFFC3D6E4)
-    val BorderSoft = Color(0xFFD6E3EE)
-    val Success = Color(0xFF12A89F)
-    val SuccessSoft = Color(0xFFD2F2F0)
-    val Warning = Color(0xFFFF9F2E)
-    val WarningSoft = Color(0xFFFFEBDA)
-    val Error = Color(0xFFE8622C)
+    val Background = Color(0xFF171C1B)
+    val BackgroundTop = Color(0xFF1C2322)
+    val Surface = Color(0xFF222827)
+    val SurfaceSoft = Color(0xFF1D2322)
+    val SurfaceRaised = Color(0xFF2A302F)
+    val Modal = Color(0xFF222827)
+    val Primary = Color(0xFF32845E)
+    val PrimarySoft = Color(0xFF1F3A2D)
+    val SoftBlue = Color(0xFFC5AA73)
+    val Turquoise = Color(0xFF40A878)
+    val Lavender = Color(0xFFC5AA73)
+    val Sand = Color(0xFFC5AA73)
+    val Text = Color(0xFFF0EDE3)
+    val Muted = Color(0xFFA9AFAB)
+    val Border = Color(0xFF5C5239)
+    val BorderSoft = Color(0xFF3A3A30)
+    val Success = Color(0xFF32845E)
+    val SuccessSoft = Color(0xFF1F3A2D)
+    val Warning = Color(0xFFC5AA73)
+    val WarningSoft = Color(0xFF3A3326)
+    val Error = Color(0xFFC85A54)
+    val Ivory = Color(0xFFF0EDE3)
+    val Ink = Color(0xFF171C1B)
 }
 
 private suspend fun currentIdentityProfile(): AuthIdentityProfile? {
@@ -225,17 +227,17 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         }
     }
 
-    val authColors = lightColorScheme(
+    val authColors = darkColorScheme(
         primary = AuthUi.Primary,
-        onPrimary = Color(0xFF0B1B33),
+        onPrimary = AuthUi.Ivory,
         primaryContainer = AuthUi.PrimarySoft,
         onPrimaryContainer = AuthUi.Text,
         secondary = AuthUi.Turquoise,
-        onSecondary = Color(0xFF0B1B33),
+        onSecondary = AuthUi.Ivory,
         secondaryContainer = AuthUi.SurfaceSoft,
         onSecondaryContainer = AuthUi.Primary,
         tertiary = AuthUi.Lavender,
-        onTertiary = Color(0xFF0B1B33),
+        onTertiary = AuthUi.Ivory,
         background = AuthUi.Background,
         surface = AuthUi.Surface,
         surfaceVariant = AuthUi.SurfaceSoft,
@@ -595,12 +597,12 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 shape = RoundedCornerShape(18.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (register) AuthUi.Turquoise else AuthUi.Primary,
-                                    contentColor = Color(0xFF0B1B33),
+                                    contentColor = AuthUi.Ivory,
                                 ),
                                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
                             ) {
                                 if (busy) {
-                                    CircularProgressIndicator(Modifier.size(22.dp), color = Color(0xFF0B1B33), strokeWidth = 2.5.dp)
+                                    CircularProgressIndicator(Modifier.size(22.dp), color = AuthUi.Ivory, strokeWidth = 2.5.dp)
                                 } else {
                                     Text(
                                         if (register) sh("KAYIT OL", "REGISTER") else sh("GİRİŞ YAP", "SIGN IN"),
@@ -639,10 +641,11 @@ private fun AuthBrandHeader() {
             "KELİME".forEachIndexed { index, letter ->
                 Surface(
                     shape = RoundedCornerShape(9.dp),
-                    color = if (index % 2 == 0) AuthUi.Primary else AuthUi.Lavender,
+                    color = AuthUi.Ivory,
+                    border = BorderStroke(1.dp, AuthUi.Sand.copy(alpha = .55f)),
                     shadowElevation = 3.dp,
                 ) {
-                    Text(letter.toString(), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text(letter.toString(), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = AuthUi.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -769,7 +772,7 @@ private fun EmailVerificationCard(
                 enabled = !busy && otpCode.length == 6,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AuthUi.Primary, contentColor = Color(0xFF0B1B33)),
+                colors = ButtonDefaults.buttonColors(containerColor = AuthUi.Primary, contentColor = AuthUi.Ivory),
             ) {
                 Text(if (busy) "…" else sh("KODU DOĞRULA", "VERIFY CODE"), fontWeight = FontWeight.Black)
             }

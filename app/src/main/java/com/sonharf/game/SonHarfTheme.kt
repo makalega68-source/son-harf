@@ -3,22 +3,31 @@ package com.sonharf.game
 import androidx.compose.ui.graphics.Color
 
 /**
- * KELİME TAHTI görsel sistemi: açık turkuaz/beyaz zemin, turkuaz-mavi eylemler,
- * turuncu vurgu, eflatun premium ve koyu lacivert metin. Eski semantik isimler
- * yalnızca derleme uyumluluğu için alias olarak kalır.
+ * KELİME TAHTI Higgsfield premium palette: graphite ground, ivory text, champagne-gold detail.
+ * In gameplay green only ever means the player and red only ever means the rival.
+ * Older semantic names stay as aliases so every screen resolves from this one source.
  */
 internal object KelimeKusatmasiPalette {
-    val MonsterBlack = Color(0xFFEAF6F8)
-    val MonsterSurface = Color(0xFFFFFFFF)
-    val MonsterSurface2 = Color(0xFFE0F3F5)
-    val MonsterSurface3 = Color(0xFFEEEBFC)
-    val MonsterLime = Color(0xFF14B8B0)
-    val MonsterRed = Color(0xFFE8622C)
-    val MonsterPink = Color(0xFF8B6CF0)
-    val MonsterOrange = Color(0xFFFF8A2A)
-    val MonsterText = Color(0xFF0B1B33)
-    val MonsterMuted = Color(0xFF3B4B66)
-    val MonsterBorder = Color(0xFFC3D6E4)
+    val MonsterBlack = Color(0xFF171C1B)
+    val MonsterSurface = Color(0xFF222827)
+    val MonsterSurface2 = Color(0xFF1D2322)
+    val MonsterSurface3 = Color(0xFF2A302F)
+    val MonsterLime = Color(0xFF32845E)
+    val MonsterRed = Color(0xFFC85A54)
+    val MonsterPink = Color(0xFFC5AA73)
+    val MonsterOrange = Color(0xFFC5AA73)
+    val MonsterText = Color(0xFFF0EDE3)
+    val MonsterMuted = Color(0xFFA9AFAB)
+    val MonsterBorder = Color(0xFF5C5239)
+
+    val Ivory = Color(0xFFF0EDE3)
+    val Champagne = Color(0xFFC5AA73)
+    val PlayerGreen = Color(0xFF32845E)
+    val PlayerGreenLight = Color(0xFF40A878)
+    val RivalRed = Color(0xFFC85A54)
+    val Muted = Color(0xFF68716D)
+    val Disabled = Color(0xFF59605D)
+    val InkOnIvory = Color(0xFF171C1B)
 
     // Compatibility aliases for screens that still reference the previous palette names.
     val RoyalBlue: Color get() = MonsterLime
@@ -41,36 +50,37 @@ internal object KelimeKusatmasiPalette {
 /**
  * Application-wide KELİME TAHTI visual system.
  *
- * Light turquoise foundation with dark navy text. Gameplay, navigation, backend, scoring
- * and authorization are untouched; only visible colors resolve from here.
+ * Graphite foundation with ivory text and champagne-gold lines. Gameplay, navigation, backend,
+ * scoring and authorization are untouched; only visible colors resolve from here. The purchased
+ * Black Theme deepens the ground to near-black.
  */
 internal object SonHarfTheme {
     private val alternateDark: Boolean get() = SonHarfCosmetics.darkArenaTheme
 
-    // Light-first UI: every Material shell uses the light color scheme with dark text.
-    val IsDark: Boolean get() = false
+    // Dark-first UI: every Material shell uses the dark color scheme with ivory text.
+    val IsDark: Boolean get() = true
 
     // Foundation layers.
-    val Background: Color get() = if (alternateDark) Color(0xFFE2EEF8) else KelimeKusatmasiPalette.MonsterBlack
+    val Background: Color get() = if (alternateDark) Color(0xFF0E1110) else KelimeKusatmasiPalette.MonsterBlack
     val Surface: Color get() = KelimeKusatmasiPalette.MonsterSurface
-    val SurfaceSecondary: Color get() = if (alternateDark) Color(0xFFDDE9F7) else KelimeKusatmasiPalette.MonsterSurface2
+    val SurfaceSecondary: Color get() = if (alternateDark) Color(0xFF161A19) else KelimeKusatmasiPalette.MonsterSurface2
     val SurfaceElevated: Color get() = KelimeKusatmasiPalette.MonsterSurface3
-    val NavigationSurface: Color get() = Color(0xFFFFFFFF)
-    val ModalSurface: Color get() = Color(0xFFFFFFFF)
+    val NavigationSurface: Color get() = if (alternateDark) Color(0xFF0B0D0D) else Color(0xFF131716)
+    val ModalSurface: Color get() = Color(0xFF222827)
 
-    // Gameplay layers: calm light field, white readable letter tiles.
-    val GameSurface: Color get() = if (alternateDark) Color(0xFFDCE8F6) else Color(0xFFDDF1F4)
-    val GameTile: Color get() = Color(0xFFFFFFFF)
-    val GameTileBorder: Color get() = Color(0xFF9DB5C8)
+    // Gameplay layers: graphite field, ivory letter tiles.
+    val GameSurface: Color get() = if (alternateDark) Color(0xFF0E1110) else Color(0xFF171C1B)
+    val GameTile: Color get() = KelimeKusatmasiPalette.Ivory
+    val GameTileBorder: Color get() = Color(0xFFD6CFBE)
 
-    // Brand/accent family: turquoise, blue, lilac, orange.
+    // Accent family: player green for actions, champagne gold for detail and prestige.
     val Primary: Color get() = KelimeKusatmasiPalette.MonsterLime
-    val PrimarySoft: Color get() = Color(0xFFD2F2F0)
-    val SoftBlue: Color get() = Color(0xFF3D7BEF)
-    val Turquoise: Color get() = Color(0xFF22C3C9)
+    val PrimarySoft: Color get() = Color(0xFF1F3A2D)
+    val SoftBlue: Color get() = KelimeKusatmasiPalette.Champagne
+    val Turquoise: Color get() = KelimeKusatmasiPalette.PlayerGreenLight
     val ActionOrange: Color get() = KelimeKusatmasiPalette.MonsterOrange
     val Lavender: Color get() = KelimeKusatmasiPalette.MonsterPink
-    val Sand: Color get() = Color(0xFFFFB463)
+    val Sand: Color get() = Color(0xFFD9C28F)
 
     // Text and dividers.
     val TextPrimary: Color get() = KelimeKusatmasiPalette.MonsterText
@@ -78,29 +88,30 @@ internal object SonHarfTheme {
     val Border: Color get() = KelimeKusatmasiPalette.MonsterBorder
 
     // Semantic states.
-    val Success: Color get() = Color(0xFF12A89F)
-    val SuccessSoft: Color get() = Color(0xFFD2F2F0)
-    val Error: Color get() = Color(0xFFE8622C)
-    val Warning: Color get() = Color(0xFFFF9F2E)
-    val DisabledBackground: Color get() = Color(0xFFDDE5EE)
-    val DisabledContent: Color get() = Color(0xFF5E6D84)
+    val Success: Color get() = KelimeKusatmasiPalette.PlayerGreen
+    val SuccessSoft: Color get() = Color(0xFF1F3A2D)
+    val Error: Color get() = KelimeKusatmasiPalette.RivalRed
+    val Warning: Color get() = KelimeKusatmasiPalette.Champagne
+    val DisabledBackground: Color get() = Color(0xFF2A302F)
+    val DisabledContent: Color get() = KelimeKusatmasiPalette.Disabled
 
-    val OnPrimary: Color get() = Color(0xFF0B1B33)
-    val OnSecondary: Color get() = Color(0xFF0B1B33)
-    val OnTertiary: Color get() = Color(0xFF0B1B33)
+    val OnPrimary: Color get() = KelimeKusatmasiPalette.Ivory
+    val OnSecondary: Color get() = KelimeKusatmasiPalette.Ivory
+    val OnTertiary: Color get() = KelimeKusatmasiPalette.Ivory
+    val OnGold: Color get() = KelimeKusatmasiPalette.InkOnIvory
 
-    // Deep navy → blue hero; white text is used only on this dark surface.
-    val HeroStart: Color get() = Color(0xFF0C2250)
-    val HeroMiddle: Color get() = Color(0xFF16398A)
-    val HeroEnd: Color get() = Color(0xFF1D4FB0)
+    // Graphite hero with a faint emerald cast; ivory text sits on it.
+    val HeroStart: Color get() = Color(0xFF1B2120)
+    val HeroMiddle: Color get() = Color(0xFF222827)
+    val HeroEnd: Color get() = Color(0xFF1C2A23)
 
     // Compatibility naming used by existing hero/game cards.
-    val Forest: Color get() = Color(0xFF22C3C9)
-    val ForestDeep: Color get() = Color(0xFF0B1B33)
+    val Forest: Color get() = KelimeKusatmasiPalette.PlayerGreen
+    val ForestDeep: Color get() = Color(0xFF171C1B)
 
-    // Premium prestige is lilac; standard actions use turquoise/blue, key actions orange.
-    val PremiumGold: Color get() = Color(0xFF8B6CF0)
-    val PremiumGoldLight: Color get() = Color(0xFFB7A3FF)
+    // Premium prestige is champagne gold.
+    val PremiumGold: Color get() = KelimeKusatmasiPalette.Champagne
+    val PremiumGoldLight: Color get() = Color(0xFFE2CFA0)
 
     val PrimaryBlue: Color get() = Primary
     val PrimaryBlueSoft: Color get() = PrimarySoft

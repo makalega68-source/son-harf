@@ -23,14 +23,14 @@ class UnifiedThemeSourceContractTest {
         assertFalse(unified.contains("MageCatDirector.onLobbyGreet()"))
         assertFalse(unified.contains("com.sonharf.game.mascot"))
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
-        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
         assertTrue(theme.contains("val SecondaryAccent: Color get()"))
         assertTrue(theme.contains("val NavigationSurface: Color get()"))
         assertTrue(theme.contains("val GameSurface: Color get()"))
         assertTrue(theme.contains("val GameTile: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
-        assertTrue(theme.contains("Color(0xFF14B8B0)"))
-        assertTrue(theme.contains("Color(0xFF8B6CF0)"))
+        assertTrue(theme.contains("Color(0xFF32845E)"))
+        assertTrue(theme.contains("Color(0xFFC5AA73)"))
 
         // The approved meta shell stays light; Son Harf now uses a scoped sky-blue arena
         // with the shared in-game mascot while preserving the application theme elsewhere.

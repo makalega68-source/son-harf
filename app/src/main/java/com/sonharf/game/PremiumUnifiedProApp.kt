@@ -129,13 +129,25 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     val scheme = if (SonHarfTheme.IsDark) {
         darkColorScheme(
             primary = SonHarfTheme.Primary,
-            secondary = SonHarfTheme.Turquoise,
+            secondary = SonHarfTheme.PremiumGold,
             tertiary = SonHarfTheme.Success,
             background = SonHarfTheme.Background,
             surface = SonHarfTheme.Surface,
+            surfaceVariant = SonHarfTheme.SurfaceElevated,
+            surfaceContainerLowest = SonHarfTheme.Background,
+            surfaceContainerLow = SonHarfTheme.SurfaceSecondary,
+            surfaceContainer = SonHarfTheme.Surface,
+            surfaceContainerHigh = SonHarfTheme.SurfaceElevated,
+            surfaceContainerHighest = SonHarfTheme.SurfaceElevated,
+            secondaryContainer = SonHarfTheme.PrimarySoft,
+            onSecondaryContainer = SonHarfTheme.TextPrimary,
             onPrimary = SonHarfTheme.OnPrimary,
+            onSecondary = SonHarfTheme.OnGold,
             onBackground = SonHarfTheme.TextPrimary,
             onSurface = SonHarfTheme.TextPrimary,
+            onSurfaceVariant = SonHarfTheme.TextSecondary,
+            outline = SonHarfTheme.Border,
+            outlineVariant = SonHarfTheme.Border,
             error = SonHarfTheme.Error,
         )
     } else {
