@@ -1596,18 +1596,8 @@ private fun PremierArena(
             hint = hintRequest,
         )
 
-        if (myTurn && room.validWordCount > 0) {
-            PurchasedVictoryVfx(
-                eventKey = "turn:${room.id}:${room.validWordCount}",
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        if (moveFeedback?.accepted == true) {
-            PurchasedVictoryVfx(
-                eventKey = "accepted:${room.id}:${room.validWordCount}:${moveFeedback.message}",
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        // Turn and accepted-word feedback live on the target tile itself (a light sweep), so no
+        // screen-centred rings are drawn over the board.
 
         AnimatedVisibility(
             visible = floatingMessage != null,
@@ -2258,7 +2248,24 @@ private fun PremierLetterTile(
     }
 }
 
-/** The letter to play: one big gold tile that breathes when it is your turn. */
+/** A diagonal band of light that sweeps across a tile; [position] runs from -0.4 to 1.4. */
+@Composable
+private fun PremierTileShine(position: Float, modifier: Modifier) {
+    Canvas(modifier) {
+        val x = size.width * position
+        val band = size.width * .35f
+        drawRect(
+            brush = Brush.linearGradient(
+                listOf(Color.Transparent, Color.White.copy(alpha = .7f), Color.Transparent),
+                start = Offset(x - band, 0f),
+                end = Offset(x + band, size.height),
+            ),
+            size = size,
+        )
+    }
+}
+
+/** The letter to play: one polished tile; a light sweep marks each new letter and your turn. */
 @Composable
 private fun PremierTargetCard(
     language: String,
@@ -2271,9 +2278,17 @@ private fun PremierTargetCard(
     active: Boolean = true,
     suddenDeath: Boolean = false,
 ) {
-    val transition = rememberInfiniteTransition(label = "target-tile")
-    // A soft halo pulses around the tile on your turn; the tile itself stays calm and solid.
-    val halo by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1_400), RepeatMode.Restart), label = "target-halo")
+    // A light sweep crosses the tile whenever a new letter arrives, and again gently on your turn.
+    val shine = remember(required) { Animatable(-.4f) }
+    LaunchedEffect(required, active) {
+        shine.snapTo(-.4f)
+        shine.animateTo(1.4f, tween(950, easing = FastOutSlowInEasing))
+        while (active) {
+            delay(2_600)
+            shine.snapTo(-.4f)
+            shine.animateTo(1.4f, tween(1_100, easing = FastOutSlowInEasing))
+        }
+    }
     // A new letter settles in.
     val drop = remember(required) { Animatable(0f) }
     LaunchedEffect(required) { drop.animateTo(1f, spring(dampingRatio = .62f, stiffness = 300f)) }
@@ -2281,19 +2296,6 @@ private fun PremierTargetCard(
     val shape = RoundedCornerShape(tile * .24f)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(size), contentAlignment = Alignment.Center) {
-            if (active) {
-                Box(
-                    Modifier
-                        .size(tile)
-                        .graphicsLayer {
-                            val grow = 1f + .32f * halo
-                            scaleX = grow
-                            scaleY = grow
-                            alpha = (1f - halo) * .55f
-                        }
-                        .border(3.dp, PremierBoard.Mine, shape),
-                )
-            }
             Box(
                 Modifier
                     .size(tile)
@@ -2324,6 +2326,7 @@ private fun PremierTargetCard(
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.sp,
                 )
+                PremierTileShine(shine.value, Modifier.matchParentSize())
             }
         }
         Text(

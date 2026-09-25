@@ -82,10 +82,9 @@ class PremierDuelUxRegressionTest {
         // History chips center as a group instead of hugging the left edge.
         assertTrue(screen.contains("Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally)"))
 
-        // Purchased action VFX is used cosmetically on turn arrival and accepted moves.
-        assertTrue(screen.contains("PurchasedVictoryVfx("))
-        assertTrue(screen.contains("eventKey = \"turn:"))
-        assertTrue(screen.contains("eventKey = \"accepted:"))
+        // Turn and accepted-word feedback is a light sweep on the target tile, not screen-centred rings.
+        assertFalse(screen.contains("PurchasedVictoryVfx("))
+        assertTrue(screen.contains("PremierTileShine(shine.value"))
 
         // Target card and central letter remain compact on real devices.
         assertTrue(screen.contains("if (veryCompact) 74.dp"))

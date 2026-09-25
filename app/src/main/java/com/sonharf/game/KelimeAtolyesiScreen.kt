@@ -5,6 +5,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -66,6 +68,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private const val COMBO_WINDOW_MS = 6_000L
+private const val COMBO_STEP_POINTS = 10
+private const val COMBO_MAX_BONUS = 30
+private const val TASK_TIME_BONUS_SECONDS = 5
 
 /** Light natural-wood table palette for Kelime Atölyesi. */
 private object AtelierUi {
@@ -135,6 +142,9 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var newBest by remember { mutableStateOf(false) }
     // Mascot hints: three per round, only when the player taps the hint button.
     var hintsLeft by remember { mutableIntStateOf(MascotHints.HINTS_PER_MATCH) }
+    // Action: quick words chain into a combo, finished tasks add time.
+    var combo by remember { mutableIntStateOf(0) }
+    var lastWordAt by remember { mutableStateOf(0L) }
     var hintText by remember { mutableStateOf<String?>(null) }
     var mascotAction by remember { mutableStateOf<WordSiegeMascotAction?>(null) }
     var mascotActionKey by remember { mutableStateOf(0L) }
@@ -161,6 +171,8 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             newBest = false
             hintsLeft = MascotHints.HINTS_PER_MATCH
             hintText = null
+            combo = 0
+            lastWordAt = 0L
             secondsLeft = KelimeAtolyesiEngine.ROUND_SECONDS
             roundKey += 1
         }
@@ -214,16 +226,26 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                 AtelierReject.NOT_IN_DICTIONARY -> feedback = AtelierFeedback(sh("“$shown” sözlükte yok.", "“$shown” is not in the dictionary."), false, nonce)
                 AtelierReject.ROUND_OVER -> Unit
                 null -> {
-                    state = result.state
+                    val now = System.currentTimeMillis()
+                    combo = if (lastWordAt > 0L && now - lastWordAt <= COMBO_WINDOW_MS) combo + 1 else 1
+                    lastWordAt = now
+                    val comboBonus = if (combo >= 2) (COMBO_STEP_POINTS * (combo - 1)).coerceAtMost(COMBO_MAX_BONUS) else 0
+                    val timeBonus = result.completed.size * TASK_TIME_BONUS_SECONDS
+                    if (timeBonus > 0) secondsLeft += timeBonus
+                    state = result.state.copy(score = result.state.score + comboBonus)
                     hintText = null
                     mascotAction = if (result.completed.isNotEmpty()) WordSiegeMascotAction.CLAP else WordSiegeMascotAction.HOP
                     mascotActionKey += 1
-                    gain = result.gained
+                    gain = result.gained + comboBonus
                     gainNonce += 1
                     val taskNote = if (result.completed.isNotEmpty()) {
-                        sh(" · Görev +${result.taskPoints}", " · Task +${result.taskPoints}")
+                        sh(" · Görev +${result.taskPoints} · +$timeBonus sn", " · Task +${result.taskPoints} · +$timeBonus s")
                     } else ""
-                    feedback = AtelierFeedback("$shown +${result.wordPoints}$taskNote", true, nonce)
+                    val comboNote = if (comboBonus > 0) sh(" · KOMBO x$combo", " · COMBO x$combo") else ""
+                    feedback = AtelierFeedback("$shown +${result.wordPoints}$taskNote$comboNote", true, nonce)
+                    if (comboBonus > 0 && result.completed.isEmpty()) {
+                        mascotAction = WordSiegeMascotAction.DANCE
+                    }
                     if (result.completed.isNotEmpty()) {
                         happyUntil = System.currentTimeMillis() + 1_600
                         SonHarfSoundFx.missionComplete()
@@ -277,7 +299,12 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             )
             AtelierMascotRow(
                 skin = mascotSkin,
-                happy = happyUntil > System.currentTimeMillis() || current?.over == true && current.allTasksDone,
+                mood = when {
+                    happyUntil > System.currentTimeMillis() || current?.over == true && current.allTasksDone -> WordSiegeMascotEmotion.HAPPY
+                    current != null && !current.over && secondsLeft <= 10 -> WordSiegeMascotEmotion.STRESSED
+                    combo >= 2 && System.currentTimeMillis() - lastWordAt <= COMBO_WINDOW_MS -> WordSiegeMascotEmotion.EXCITED
+                    else -> WordSiegeMascotEmotion.CALM
+                },
                 actionKey = mascotActionKey,
                 action = mascotAction,
                 hint = when {
@@ -313,6 +340,21 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                         state = current.unpickAt(index)
                     }
                     AtelierFeedbackLine(feedback)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        OutlinedButton(
+                            onClick = {
+                                SonHarfSoundFx.puzzleTap()
+                                state = current.copy(pool = current.pool.shuffled())
+                            },
+                            shape = RoundedCornerShape(99.dp),
+                            border = BorderStroke(1.dp, AtelierUi.TileEdge),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = AtelierUi.Cream, contentColor = AtelierUi.Ink),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 2.dp),
+                            modifier = Modifier.heightIn(min = 32.dp),
+                        ) {
+                            Text(sh("⟲ Karıştır", "⟲ Shuffle"), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                     AtelierPool(current, language) { tileId ->
                         SonHarfSoundFx.puzzleTap()
                         state = current.pick(tileId)
@@ -349,6 +391,7 @@ private fun AtelierTopBar(seconds: Int, score: Int, onBack: () -> Unit) {
             label = sh("Süre", "Time"),
             value = "0:${seconds.toString().padStart(2, '0')}",
             accent = if (seconds <= 10) AtelierUi.Danger else AtelierUi.Ink,
+            pulse = seconds in 1..10,
         )
         Spacer(Modifier.width(8.dp))
         AtelierChip(label = sh("Puan", "Score"), value = score.toString(), accent = AtelierUi.Green)
@@ -356,9 +399,12 @@ private fun AtelierTopBar(seconds: Int, score: Int, onBack: () -> Unit) {
 }
 
 @Composable
-private fun AtelierChip(label: String, value: String, accent: Color) {
+private fun AtelierChip(label: String, value: String, accent: Color, pulse: Boolean = false) {
+    val beat by androidx.compose.animation.core.rememberInfiniteTransition(label = "chip")
+        .animateFloat(1f, 1.1f, androidx.compose.animation.core.infiniteRepeatable(tween(420), androidx.compose.animation.core.RepeatMode.Reverse), label = "chip-beat")
     Column(
         Modifier
+            .graphicsLayer { if (pulse) { scaleX = beat; scaleY = beat } }
             .clip(RoundedCornerShape(12.dp))
             .background(AtelierUi.Cream)
             .border(1.dp, AtelierUi.TileEdge.copy(alpha = .6f), RoundedCornerShape(12.dp))
@@ -373,7 +419,7 @@ private fun AtelierChip(label: String, value: String, accent: Color) {
 @Composable
 private fun AtelierMascotRow(
     skin: WordSiegeMascotSkin,
-    happy: Boolean,
+    mood: WordSiegeMascotEmotion,
     actionKey: Long,
     action: WordSiegeMascotAction?,
     hint: String,
@@ -387,8 +433,8 @@ private fun AtelierMascotRow(
             lastMoveMine = false,
             pendingCells = emptyList(),
             playerTurn = true,
-            requestedEmotion = if (happy) WordSiegeMascotEmotion.HAPPY else WordSiegeMascotEmotion.CALM,
-            modifier = Modifier.size(56.dp),
+            requestedEmotion = mood,
+            modifier = Modifier.size(96.dp),
             actionKey = actionKey,
             action = action,
             skin = skin,
@@ -439,19 +485,22 @@ private fun AtelierPoolTile(letter: String, tileId: Long, size: Dp, used: Boolea
     // Each new tile (a fresh round or a refill) settles in with a short pop.
     val appear = remember(tileId) { Animatable(.55f) }
     LaunchedEffect(tileId) { appear.animateTo(1f, tween(260, easing = FastOutSlowInEasing)) }
+    val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by press.collectIsPressedAsState()
+    val squeeze by androidx.compose.animation.core.animateFloatAsState(if (pressed) .88f else 1f, tween(90), label = "tile-press")
     Box(
         Modifier
             .size(size)
             .graphicsLayer {
-                scaleX = appear.value
-                scaleY = appear.value
+                scaleX = appear.value * squeeze
+                scaleY = appear.value * squeeze
                 alpha = if (used) .38f else appear.value
             }
             .shadow(if (used) 0.dp else 3.dp, RoundedCornerShape(12.dp))
             .clip(RoundedCornerShape(12.dp))
             .background(if (used) AtelierUi.TileUsed else AtelierUi.Cream)
             .border(1.dp, AtelierUi.TileEdge, RoundedCornerShape(12.dp))
-            .clickable(enabled = !used, onClick = onClick)
+            .clickable(interactionSource = press, indication = null, enabled = !used, onClick = onClick)
             .semantics { contentDescription = letter },
         contentAlignment = Alignment.Center,
     ) {

@@ -46,8 +46,8 @@ class WordSiegePanAreaContractTest {
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
         val accessibility = projectFile("app/src/main/java/com/sonharf/game/WordSiegeBoardAccessibility.kt").readText()
 
-        assertTrue(pan.contains("PanSiegeMine = Color(0xFF3E9F4D)"))
-        assertTrue(pan.contains("PanSiegeRival = Color(0xFFD0514A)"))
+        assertTrue(pan.contains("PanSiegeMine = Color(0xFF5FAF73)"))
+        assertTrue(pan.contains("PanSiegeRival = Color(0xFFD9776F)"))
         assertTrue(pan.contains("fontSize = 22.sp"))
         assertTrue(pan.contains("WordSiegeBoardAccessibility.BoardLetterPoint"))
         assertTrue(pan.contains("WordSiegeBoardAccessibility.BoardBonus"))
