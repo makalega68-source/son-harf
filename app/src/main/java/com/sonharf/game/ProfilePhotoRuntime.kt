@@ -137,8 +137,8 @@ private fun SyntheticProfilePortrait(name: String, gender: String?, modifier: Mo
             Brush.linearGradient(
                 listOf(
                     accent.copy(alpha = .18f),
-                    (visual?.color ?: Color(0xFF57C7F3)).copy(alpha = .28f),
-                    Color.White,
+                    (visual?.color ?: Color(0xFFC5AA73)).copy(alpha = .22f),
+                    Color(0xFF222827),
                 )
             )
         ),
@@ -201,7 +201,7 @@ internal fun ProfilePhotoAvatar(
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
+            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFE0CC9E), accent, Color(0xFF8F764A), Color(0xFFE0CC9E)))).padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (bitmap != null) {
@@ -233,7 +233,7 @@ internal fun ProfilePhotoAvatarWithGender(
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
+            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFE0CC9E), accent, Color(0xFF8F764A), Color(0xFFE0CC9E)))).padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (bitmap != null) {
@@ -278,7 +278,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
                 .clip(CircleShape)
                 .background(
                     Brush.sweepGradient(
-                        listOf(Color.White, accent.copy(alpha = .86f), Color(0xFF57C7F3), Color.White)
+                        listOf(Color(0xFFE0CC9E), accent.copy(alpha = .86f), Color(0xFF8F764A), Color(0xFFE0CC9E))
                     )
                 )
                 .padding(3.dp),

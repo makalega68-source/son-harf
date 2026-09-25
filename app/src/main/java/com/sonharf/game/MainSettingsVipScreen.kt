@@ -151,7 +151,7 @@ internal fun MainSettingsScreen(
                 }
                 Text(
                     sh("Gizli olduğunda fotoğraf yerine adının baş harfi görünür.", "When hidden, your initial appears instead of the photo."),
-                    color = MainUi.Muted,
+                    color = SettingsMutedInk,
                     fontSize = 9.sp,
                 )
             }
@@ -179,7 +179,7 @@ internal fun MainSettingsScreen(
             MainSettingsGroup(sh("HESAP", "ACCOUNT")) {
                 val email = runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.currentUserOrNull()?.email }.getOrNull().orEmpty()
                 if (email.isNotBlank()) {
-                    Text(email, color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(email, color = Hf.Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(3.dp))
                 }
                 MainSettingsLink(Icons.Rounded.ManageAccounts, sh("Hesap ve gizlilik", "Account & privacy"), sh("Engellenenler ve hesap silme", "Blocked users and account deletion"), onAccount)
@@ -399,13 +399,17 @@ internal fun MainVipScreen(
 
 @Composable
 private fun MainSettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
-            content()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, color = Hf.Gold, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp, modifier = Modifier.padding(start = 4.dp))
+        Surface(shape = Hf.CardShape, color = Hf.Ivory, contentColor = Hf.Ink, border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .6f))) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                content()
+            }
         }
     }
 }
+
+private val SettingsMutedInk = Color(0xFF4A504D)
 
 @Composable
 private fun MainToggleSetting(
@@ -416,16 +420,26 @@ private fun MainToggleSetting(
     enabled: Boolean = true,
     onChange: (Boolean) -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(12.dp), color = MainUi.BlueSoft) {
-            Icon(icon, null, tint = MainUi.Blue, modifier = Modifier.padding(8.dp).size(19.dp))
-        }
-        Spacer(Modifier.width(10.dp))
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = Hf.Ink, modifier = Modifier.size(30.dp))
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = MainUi.Muted, fontSize = 8.5.sp)
+            Text(title, color = Hf.Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = SettingsMutedInk, fontSize = 12.sp)
         }
-        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
+        Switch(
+            checked = checked,
+            onCheckedChange = onChange,
+            enabled = enabled,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Hf.Ivory,
+                checkedTrackColor = Hf.Green,
+                checkedBorderColor = Hf.Green,
+                uncheckedThumbColor = Hf.Ivory,
+                uncheckedTrackColor = Color(0xFF4F5553),
+                uncheckedBorderColor = Color(0xFF4F5553),
+            ),
+        )
     }
 }
 
@@ -436,16 +450,14 @@ private fun MainSettingsLink(
     subtitle: String,
     onClick: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(12.dp), color = MainUi.BlueSoft) {
-            Icon(icon, null, tint = MainUi.Blue, modifier = Modifier.padding(8.dp).size(19.dp))
-        }
-        Spacer(Modifier.width(10.dp))
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = Hf.Ink, modifier = Modifier.size(30.dp))
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = MainUi.Muted, fontSize = 8.5.sp)
+            Text(title, color = Hf.Ink, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = SettingsMutedInk, fontSize = 12.sp)
         }
-        Icon(Icons.Rounded.ChevronRight, null, tint = MainUi.Muted)
+        Icon(Icons.Rounded.ChevronRight, null, tint = Hf.GoldDeep, modifier = Modifier.size(28.dp))
     }
 }
 

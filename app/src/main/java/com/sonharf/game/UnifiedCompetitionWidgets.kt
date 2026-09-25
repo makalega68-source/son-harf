@@ -24,7 +24,7 @@ internal fun WeeklyClubPodiumCard(clubs: List<ClubDirectoryRowDto>) {
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = PortalCard,
-        border = BorderStroke(1.dp, Color(0xFFDDE5EE)),
+        border = BorderStroke(1.dp, SonHarfTheme.Border),
         shadowElevation = 2.dp,
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -61,7 +61,7 @@ internal fun WeeklyPlayerPodiumCard(
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = PortalCard,
-        border = BorderStroke(1.dp, Color(0xFFDDE5EE)),
+        border = BorderStroke(1.dp, SonHarfTheme.Border),
         shadowElevation = 2.dp,
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -124,7 +124,7 @@ internal fun UnifiedRouteCard(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth().height(7.dp),
                 color = if (mission.completed) PortalGreen else PortalBlue,
-                trackColor = Color(0xFFEAF0F7),
+                trackColor = Color(0xFF2E3533),
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("${mission.progress.coerceAtMost(mission.target)}/${mission.target}", color = PortalMuted, fontSize = 9.sp)
@@ -155,7 +155,7 @@ internal fun UnifiedMissionCard(
     Surface(
         shape = RoundedCornerShape(17.dp),
         color = PortalCard,
-        border = BorderStroke(1.dp, if (mission.completed) PortalGreen.copy(alpha = .28f) else Color(0xFFDDE5EE)),
+        border = BorderStroke(1.dp, if (mission.completed) PortalGreen.copy(alpha = .28f) else SonHarfTheme.Border),
     ) {
         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -179,7 +179,7 @@ internal fun UnifiedMissionCard(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth().height(6.dp),
                 color = if (mission.completed) PortalGreen else PortalBlue,
-                trackColor = Color(0xFFEAF0F7),
+                trackColor = Color(0xFF2E3533),
             )
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("${mission.progress.coerceAtMost(mission.target)}/${mission.target}", color = PortalMuted, fontSize = 9.sp, modifier = Modifier.weight(1f))

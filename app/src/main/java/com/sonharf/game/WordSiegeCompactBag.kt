@@ -168,7 +168,7 @@ private fun WordSiegeBagButton(
             if (proAccess == false) Icons.Rounded.Lock else Icons.Rounded.GridView,
             null,
             Modifier.size(14.dp),
-            tint = if (proAccess == true) WordSiegeGameUi.Gold else WordSiegeGameUi.Navy,
+            tint = if (proAccess == true) WordSiegeGameUi.Gold else WordSiegeGameUi.Muted,
         )
         Spacer(Modifier.width(3.dp))
         Column(horizontalAlignment = Alignment.Start) {
@@ -208,7 +208,7 @@ private fun WordSiegeBagDialog(
                                 Surface(
                                     modifier = Modifier.weight(1f).height(58.dp),
                                     shape = RoundedCornerShape(12.dp),
-                                    color = Color(0xFFF8FBFB),
+                                    color = Color(0xFFF0EDE3),
                                     border = BorderStroke(1.dp, WordSiegeGameUi.Border.copy(alpha = .72f)),
                                     shadowElevation = 1.dp,
                                 ) {

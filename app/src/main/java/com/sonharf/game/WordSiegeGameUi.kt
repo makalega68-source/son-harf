@@ -122,8 +122,9 @@ internal fun WordSiegeScoreCard(
     }
     Surface(
         modifier = modifier.height(92.dp),
-        color = lerp(WordSiegeGameUi.Surface, accent, if (active) .055f else .018f),
-        shape = RoundedCornerShape(18.dp),
+        color = lerp(WordSiegeGameUi.Background, accent, if (active) .30f else .20f),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(if (active) 2.dp else 1.dp, accent.copy(alpha = if (active) 1f else .55f)),
         shadowElevation = if (active) 3.dp else 1.dp,
     ) {
         Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -203,13 +204,13 @@ internal fun WordSiegeScoreCard(
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         shape = RoundedCornerShape(13.dp),
-                        color = accent.copy(alpha = .10f),
+                        color = accent.copy(alpha = .35f),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 "$score",
                                 Modifier.semantics { contentDescription = totalDescription },
-                                color = if (lossGlow.value > 0f) lerp(accent, Color(0xFFB94B4B), lossGlow.value) else accent,
+                                color = if (lossGlow.value > 0f) lerp(WordSiegeGameUi.Text, Color(0xFFB94B4B), lossGlow.value) else WordSiegeGameUi.Text,
                                 fontSize = scoreFontSize,
                                 lineHeight = 24.sp,
                                 fontWeight = FontWeight.Black,
@@ -257,7 +258,7 @@ internal fun WordSiegeCompactAction(
         shape = RoundedCornerShape(10.dp),
         contentPadding = PaddingValues(1.dp),
         colors = ButtonDefaults.textButtonColors(
-            contentColor = WordSiegeGameUi.Navy,
+            contentColor = WordSiegeGameUi.Gold,
             disabledContentColor = WordSiegeGameUi.DisabledContent,
         ),
         border = BorderStroke(1.dp, if (enabled) WordSiegeGameUi.Border else WordSiegeGameUi.Border.copy(alpha = .45f)),

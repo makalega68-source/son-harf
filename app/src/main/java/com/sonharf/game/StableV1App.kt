@@ -249,7 +249,7 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                     contentPadding = PaddingValues(horizontal = 18.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MainUi.Blue,
-                        contentColor = MainUi.Surface,
+                        contentColor = MainUi.Text,
                         disabledContainerColor = MainUi.Border,
                         disabledContentColor = MainUi.Muted,
                     ),
