@@ -235,9 +235,9 @@ internal fun HfCard(
     content: @Composable () -> Unit,
 ) {
     if (onClick != null) {
-        Surface(onClick = onClick, modifier = modifier, shape = shape, color = color, border = BorderStroke(1.5.dp, borderColor), content = content)
+        Surface(onClick = onClick, modifier = modifier, shape = shape, color = color, border = BorderStroke(1.5.dp, borderColor), shadowElevation = 3.dp, content = content)
     } else {
-        Surface(modifier = modifier, shape = shape, color = color, border = BorderStroke(1.5.dp, borderColor), content = content)
+        Surface(modifier = modifier, shape = shape, color = color, border = BorderStroke(1.5.dp, borderColor), shadowElevation = 3.dp, content = content)
     }
 }
 
