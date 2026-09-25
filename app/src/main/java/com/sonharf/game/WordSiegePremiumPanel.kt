@@ -184,7 +184,7 @@ internal fun WordSiegePremiumPanel(
                 }
                 Spacer(Modifier.width(7.dp))
                 Text(
-                    sh("KUŞATMA ARAÇLARI", "SIEGE TOOLS"),
+                    sh("OYUN ARAÇLARI", "GAME TOOLS"),
                     color = WordSiegeGameUi.Text,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Black,

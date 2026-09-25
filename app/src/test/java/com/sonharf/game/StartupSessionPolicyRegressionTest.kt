@@ -15,9 +15,9 @@ class StartupSessionPolicyRegressionTest {
         assertTrue(main.contains("startupSessionPolicyApplied = true"))
         assertTrue(main.contains("applySessionPolicy && !rememberLogin && !authDeepLink"))
         assertFalse(main.contains("SupabaseProvider.configured && !rememberLogin && !authDeepLink\n"))
-        assertTrue(main.contains("Kelime Kuşatması hazırlanıyor"))
-        assertTrue(main.contains("Preparing Word Siege"))
-        assertFalse(main.contains("Kelime Tahtı hazırlanıyor"))
+        assertTrue(main.contains("Kelime Tahtı hazırlanıyor"))
+        assertTrue(main.contains("Preparing Word Throne"))
+        assertFalse(main.contains("Kelime Kuşatması hazırlanıyor"))
     }
 
     private fun projectFile(path: String): File {

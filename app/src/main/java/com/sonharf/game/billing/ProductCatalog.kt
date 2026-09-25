@@ -10,7 +10,7 @@ object ProductCatalog {
     const val COINS_3500 = "coins_3500"
     const val COINS_8000 = "coins_8000"
 
-    // Kelime Kuşatması permanent premium products.
+    // Kelime Tahtı permanent premium products.
     const val SERIES_GAME = "series_game"
     const val LETTER_TABLE = "letter_table"
     const val SCORE_CALCULATOR = "score_calculator"

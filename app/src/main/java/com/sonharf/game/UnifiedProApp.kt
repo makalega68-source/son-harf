@@ -498,7 +498,7 @@ private fun PremiumPlayButton(onClick: () -> Unit) {
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text(sh("KELİME TAHTI", "WORD THRONE"), color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
                     Text(sh("Kelimeyi kur. Bölgeyi ele geçir. Rakibini geride bırak.", "Build words. Capture territory. Leave your rival behind."), color = Color.White.copy(alpha = .84f), fontSize = 11.sp, lineHeight = 15.sp)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {

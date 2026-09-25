@@ -418,7 +418,7 @@ private fun WordSiegeGamesList(
                     Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                    Text(sh("KELİME TAHTI", "WORD THRONE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh("Süre yok • 1v1 • En fazla 10 devam eden oyun", "No timer • 1v1 • Up to 10 ongoing games"),
                         color = MainUi.Muted,
@@ -433,7 +433,7 @@ private fun WordSiegeGamesList(
 
         item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                HfGameIconSlot(96.dp)
+                HfGameArt(R.drawable.kelime_tahti_brand_logo, 240.dp, 120.dp, description = "Kelime Tahtı")
             }
         }
 
@@ -1032,7 +1032,7 @@ private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
         ) {
             Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
+                    when { draw -> sh("BERABERE", "DRAW"); won -> sh("TAHT SENİN!", "THE THRONE IS YOURS!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
                     color = accent,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Black,

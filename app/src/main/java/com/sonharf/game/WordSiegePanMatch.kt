@@ -258,7 +258,7 @@ internal fun WordSiegePanMatch(
                 Icon(Icons.Rounded.ArrowBack, sh("Oyunlar", "Games"), tint = WordSiegeGameUi.Text)
             }
             Column(Modifier.weight(1f)) {
-                Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = WordSiegeGameUi.Text, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(sh("KELİME TAHTI", "WORD THRONE"), color = WordSiegeGameUi.Text, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(
                     if (game.status == "playing") {
                         if (visualMyTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")
@@ -1041,7 +1041,7 @@ private fun PanSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
     HfCard(modifier = Modifier.fillMaxWidth(), color = Hf.Ground) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             HfTitleRule(
-                when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
+                when { draw -> sh("BERABERE", "DRAW"); won -> sh("TAHT SENİN!", "THE THRONE IS YOURS!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
                 fontSize = 24.sp,
             )
             Spacer(Modifier.height(14.dp))

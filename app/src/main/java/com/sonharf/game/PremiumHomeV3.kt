@@ -48,7 +48,8 @@ internal fun PremiumHomeCommandDeck(
     onSettings: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        HfTitleRule(sh("Kelime Tahtı", "Kelime Tahtı"), fontSize = 28.sp)
+        // The Kelime Tahtı logo crowns the home screen.
+        HfGameArt(R.drawable.kelime_tahti_brand_logo, 300.dp, 150.dp, description = "Kelime Tahtı")
         HomeStatusRow(profile, onProfile, onShop, onPro, onSettings)
         HomeSiegeHero(onSiege)
     }
@@ -140,7 +141,7 @@ internal fun HomeKelimeTileLogo(modifier: Modifier = Modifier) {
         modifier
             .fillMaxWidth()
             .height(tile * 3 + gap * 2 + 10.dp)
-            .clearAndSetSemantics { contentDescription = "KELİME KUŞATMASI" },
+            .clearAndSetSemantics { contentDescription = "KELİME TAHTI" },
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.matchParentSize()) {
@@ -186,7 +187,7 @@ internal fun HomeKelimeTileLogo(modifier: Modifier = Modifier) {
 private fun HomeSiegeHero(onSiege: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         HomeKelimeTileLogo()
-        HfTitleRule("Kuşatma", fontSize = 40.sp)
+        HfTitleRule(sh("Ana Oyun", "Main Game"), fontSize = 30.sp)
         HfPrimaryButton(
             sh("OYNA", "PLAY"),
             onClick = onSiege,
@@ -367,14 +368,14 @@ internal fun PremiumOtherGames(onLastLetter: () -> Unit, onWorkshop: () -> Unit)
             modifier = Modifier.weight(1f).fillMaxHeight(),
             title = "Son Harf",
             subtitle = sh("Son harfle yeni kelime bul", "Find a word from the last letter"),
-            art = { HfGameIconSlot(120.dp, 74.dp) },
+            art = { HfGameArt(R.drawable.son_harf_game_icon, 86.dp, 86.dp, description = "Son Harf") },
             onPlay = onLastLetter,
         )
         PremiumHomeModeCard(
             modifier = Modifier.weight(1f).fillMaxHeight(),
             title = sh("Kelime Atölyesi", "Word Workshop"),
             subtitle = sh("7 harfle 3 görevi tamamla", "Finish 3 tasks with 7 letters"),
-            art = { HfGameIconSlot(150.dp, 74.dp) },
+            art = { HfGameArt(R.drawable.kelime_atolyesi_game_icon, 86.dp, 86.dp, description = "Kelime Atölyesi") },
             onPlay = onWorkshop,
         )
     }

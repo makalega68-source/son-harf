@@ -36,7 +36,7 @@ class WordSiegeContractTest {
 
         // Legacy UnifiedProApp remains untouched; the active StableV1App -> PremiumUnifiedProApp flow owns the current brand.
         assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(home.contains("sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
+        assertTrue(home.contains("sh(\"KELİME TAHTI\", \"WORD THRONE\")"))
         assertTrue(home.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
         assertTrue(home.contains("SAVAŞA GİR"))
         assertFalse(home.contains("KELİME FETHİ"))

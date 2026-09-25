@@ -395,7 +395,8 @@ private fun PremiumGameCenter(
         item {
             PremiumGameCard(
                 icon = Icons.Rounded.GridView,
-                title = sh("KELİME KUŞATMASI", "KELİME KUŞATMASI"),
+                title = sh("KELİME TAHTI", "KELİME TAHTI"),
+                artRes = R.drawable.kelime_tahti_brand_logo,
                 subtitle = sh("Ana oyun • taktik alan savaşı", "Main game • tactical territory battle"),
                 language = siegeLanguage,
                 onLanguageChange = onSiegeLanguage,
@@ -407,6 +408,7 @@ private fun PremiumGameCenter(
             PremiumGameCard(
                 icon = Icons.Rounded.Bolt,
                 title = sh("SON HARF", "LAST LETTER"),
+                artRes = R.drawable.son_harf_game_icon,
                 subtitle = sh("Hızlı kelime düellosu", "Fast word duel"),
                 language = lastLetterLanguage,
                 onLanguageChange = onLastLetterLanguage,
@@ -417,6 +419,7 @@ private fun PremiumGameCenter(
             PremiumGameCard(
                 icon = Icons.Rounded.Route,
                 title = sh("KELİME ATÖLYESİ", "WORD WORKSHOP"),
+                artRes = R.drawable.kelime_atolyesi_game_icon,
                 subtitle = sh("7 harf, 3 görev, 60 saniye", "7 letters, 3 tasks, 60 seconds"),
                 language = workshopLanguage,
                 onLanguageChange = onWorkshopLanguage,
@@ -432,6 +435,7 @@ private fun PremiumGameCard(
     title: String,
     subtitle: String,
     language: String,
+    artRes: Int? = null,
     onLanguageChange: (String) -> Unit,
     primary: Boolean = false,
     onClick: () -> Unit,
@@ -460,7 +464,7 @@ private fun PremiumGameCard(
                 Spacer(Modifier.height(10.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                HfGameIconSlot(50.dp)
+                if (artRes != null) HfGameArt(artRes, 58.dp, 58.dp) else HfGameIconSlot(50.dp)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(title, color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, fontSize = 14.sp)

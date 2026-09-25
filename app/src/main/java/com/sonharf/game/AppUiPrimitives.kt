@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Shared app-shell palette, resolved from the single Kelime Kuşatması theme source. */
+/** Shared app-shell palette, resolved from the single Kelime Tahtı theme source. */
 internal object MainUi {
     // Default pages stay slightly translucent so the purchased-kit-inspired vector backdrop can
     // provide depth without becoming a full-screen image layer.

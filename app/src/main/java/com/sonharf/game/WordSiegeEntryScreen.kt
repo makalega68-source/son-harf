@@ -66,7 +66,7 @@ private val SiegeEntryCardShape = RoundedCornerShape(18.dp)
 private val SiegeEntryControlShape = RoundedCornerShape(13.dp)
 
 /**
- * Active Kelime Kuşatması entrance. Brand/logo artwork is intentionally not embedded here:
+ * Active Kelime Tahtı entrance. Brand/logo artwork is intentionally not embedded here:
  * the layout leaves branding independent so final logo assets can be swapped later without
  * rebuilding navigation or gameplay surfaces.
  */
@@ -152,7 +152,7 @@ internal fun WordSiegeEntryScreen(
                     }
                     Column(Modifier.weight(1f)) {
                         Text(
-                            sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                            sh("KELİME TAHTI", "WORD THRONE"),
                             color = SonHarfTheme.TextPrimary,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Black,
@@ -232,9 +232,9 @@ internal fun WordSiegeEntryScreen(
                             shownGames.isEmpty() -> {
                                 Text(
                                     if (libraryTab == WordSiegeLibraryTab.ACTIVE) {
-                                        sh("Devam eden Kuşatma oyunun yok.", "You have no active Siege games.")
+                                        sh("Devam eden oyunun yok.", "You have no active games.")
                                     } else {
-                                        sh("Henüz biten Kuşatma oyunun yok.", "You have no finished Siege games yet.")
+                                        sh("Henüz biten oyunun yok.", "You have no finished games yet.")
                                     },
                                     color = SonHarfTheme.TextSecondary,
                                     fontSize = 10.sp,
@@ -448,7 +448,7 @@ private fun SiegeGameLibraryRow(game: WordSiegeGameDto, onClick: () -> Unit) {
             Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    if (isSeries) sh("Hızlı Kuşatma", "Quick Siege") else sh("Klasik Kuşatma", "Classic Siege"),
+                    if (isSeries) sh("Hızlı Oyun", "Quick Game") else sh("Klasik Oyun", "Classic Game"),
                     color = SonHarfTheme.TextPrimary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,

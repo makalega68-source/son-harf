@@ -746,8 +746,8 @@ private fun EmailVerificationCard(
             )
             Text(
                 sh(
-                    "Maildeki doğrulama bağlantısına dokunduğunda Kelime Kuşatması otomatik açılır. Bağlantı çalışmazsa e-postadaki 6 haneli kodu gir.",
-                    "Tap the verification link in the email to reopen Word Siege. If the link does not work, enter the 6-digit code from the email.",
+                    "Maildeki doğrulama bağlantısına dokunduğunda Kelime Tahtı otomatik açılır. Bağlantı çalışmazsa e-postadaki 6 haneli kodu gir.",
+                    "Tap the verification link in the email to reopen Word Throne. If the link does not work, enter the 6-digit code from the email.",
                 ),
                 color = AuthUi.Muted,
                 fontSize = 13.sp,

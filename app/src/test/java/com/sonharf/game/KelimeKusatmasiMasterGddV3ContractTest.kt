@@ -33,7 +33,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val firstRun = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
 
-        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
+        assertTrue(shell.contains("title = sh(\"KELİME TAHTI\", \"KELİME TAHTI\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(shell.contains("title = sh(\"KELİME ATÖLYESİ\", \"WORD WORKSHOP\")"))
         assertTrue(firstRun.contains("selected == \"tr\""))
@@ -41,9 +41,10 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertFalse(firstRun.contains("selected == \"es\""))
         assertFalse(firstRun.contains("selected == \"fr\""))
         assertFalse(firstRun.contains("selected == \"de\""))
-        assertTrue(localization.contains(".replace(\"WORD THRONE\", \"KELİME KUŞATMASI\")"))
-        assertTrue(localization.contains(".replace(\"TAHT SENİN!\", \"KUŞATMA SENİN!\")"))
-        assertTrue(localization.contains(".replace(\"THE THRONE IS YOURS!\", \"SIEGE WON!\")"))
+        // The brand is Kelime Tahtı again: legacy Kuşatma names map to it.
+        assertTrue(localization.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
+        assertTrue(localization.contains(".replace(\"KUŞATMA SENİN!\", \"TAHT SENİN!\")"))
+        assertTrue(localization.contains(".replace(\"SIEGE WON!\", \"THE THRONE IS YOURS!\")"))
     }
 
     @Test

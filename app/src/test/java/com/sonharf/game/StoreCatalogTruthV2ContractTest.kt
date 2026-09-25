@@ -47,8 +47,8 @@ class StoreCatalogTruthV2ContractTest {
         val benefits = projectFile("app/src/main/java/com/sonharf/game/StorefrontCards.kt").readText()
         val frames = projectFile("app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt").readText()
 
-        assertTrue(dialog.contains("KELİME KUŞATMASI PRO"))
-        assertTrue(pro.contains("KELİME KUŞATMASI PRO"))
+        assertTrue(dialog.contains("KELİME TAHTI PRO"))
+        assertTrue(pro.contains("KELİME TAHTI PRO"))
         assertFalse(dialog.contains("Kelime Tahtı PRO"))
         assertFalse(pro.contains("SON HARF PRO"))
 

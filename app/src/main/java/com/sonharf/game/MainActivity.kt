@@ -263,7 +263,7 @@ private fun StartupLoading() {
             Spacer(Modifier.height(24.dp))
             CircularProgressIndicator(color = SonHarfBlue, strokeWidth = 3.dp)
             Spacer(Modifier.height(14.dp))
-            Text(sh("Kelime Kuşatması hazırlanıyor…", "Preparing Word Siege…"), color = SonHarfText, fontWeight = FontWeight.Bold)
+            Text(sh("Kelime Tahtı hazırlanıyor…", "Preparing Word Throne…"), color = SonHarfText, fontWeight = FontWeight.Bold)
             Text(sh("Oturum ve ayarlar güvenli biçimde yükleniyor.", "Loading session and settings safely."), color = SonHarfMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
         }
     }

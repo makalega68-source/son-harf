@@ -29,7 +29,7 @@ class AuthLanguageBrandContractTest {
         assertTrue(auth.contains("Verification email sent"))
 
         assertTrue(auth.contains("sh(\"E-postanı doğrula\", \"Verify your email\")"))
-        assertTrue(auth.contains("Word Siege. If the link does not work"))
+        assertTrue(auth.contains("Word Throne. If the link does not work"))
         assertTrue(auth.contains("sh(\"6 haneli doğrulama kodu\", \"6-digit verification code\")"))
         assertTrue(auth.contains("sh(\"KODU DOĞRULA\", \"VERIFY CODE\")"))
         assertTrue(auth.contains("sh(\"KODU YENİDEN GÖNDER\", \"RESEND CODE\")"))

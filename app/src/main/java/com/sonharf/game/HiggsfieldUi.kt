@@ -421,6 +421,17 @@ internal fun HfProgressBar(progress: Float, modifier: Modifier = Modifier, color
 }
 
 /** Reserved space for a game icon; left empty until the new game artwork arrives. */
+/** Game artwork (logo or game icon) scaled to fit the given box. */
+@Composable
+internal fun HfGameArt(res: Int, width: Dp, height: Dp = width, modifier: Modifier = Modifier, description: String? = null) {
+    androidx.compose.foundation.Image(
+        painter = painterResource(res),
+        contentDescription = description,
+        modifier = modifier.size(width, height),
+        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+    )
+}
+
 @Composable
 internal fun HfGameIconSlot(width: Dp, height: Dp = width, modifier: Modifier = Modifier) {
     Box(modifier.size(width, height))

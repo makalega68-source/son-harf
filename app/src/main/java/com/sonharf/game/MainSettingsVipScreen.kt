@@ -198,7 +198,7 @@ internal fun MainSettingsScreen(
 
         item {
             Text(
-                "Kelime Kuşatması ${BuildConfig.VERSION_NAME} • Android",
+                "Kelime Tahtı ${BuildConfig.VERSION_NAME} • Android",
                 Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 color = MainUi.Muted,
                 fontSize = 9.sp,
@@ -228,7 +228,7 @@ internal fun MainSettingsScreen(
         AlertDialog(
             onDismissRequest = { logoutDialog = false },
             title = { Text(sh("Çıkış yapılsın mı?", "Sign out?"), fontWeight = FontWeight.Black) },
-            text = { Text(sh("Bu cihazdaki Kelime Kuşatması oturumu kapatılacak.", "Your Word Siege session on this device will end.")) },
+            text = { Text(sh("Bu cihazdaki Kelime Tahtı oturumu kapatılacak.", "Your Word Throne session on this device will end.")) },
             dismissButton = { TextButton(onClick = { logoutDialog = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
             confirmButton = {
                 Button(

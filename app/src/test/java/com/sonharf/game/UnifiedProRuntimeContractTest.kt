@@ -14,7 +14,7 @@ class UnifiedProRuntimeContractTest {
         assertTrue(startup.contains("UnifiedProApp("))
         assertFalse(startup.contains("LiveDuelRuntimeShell("))
         assertFalse(startup.contains("MonsterExperienceApp("))
-        assertTrue(unified.contains("KELİME KUŞATMASI"))
+        assertTrue(unified.contains("KELİME TAHTI"))
         assertTrue(unified.contains("PremiumPlayButton(onClick = onSiege)"))
         assertTrue(unified.contains("SAVAŞA GİR"))
         assertFalse(unified.contains("MageCat"))

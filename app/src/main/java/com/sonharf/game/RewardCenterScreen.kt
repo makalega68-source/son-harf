@@ -165,7 +165,7 @@ fun RewardCenterScreen() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text(sh("KELİME KUŞATMASI ÖDÜLLERİ", "WORD SIEGE REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
+            Text(sh("KELİME TAHTI ÖDÜLLERİ", "WORD THRONE REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
             Text(
                 if (isPro) {
                     sh(
