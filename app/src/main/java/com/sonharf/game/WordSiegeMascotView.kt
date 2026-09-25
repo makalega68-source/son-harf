@@ -531,8 +531,11 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
     }
 
+    private var jellyAt = 0L
+
     fun reactToTap() {
         val now = SystemClock.uptimeMillis()
+        jellyAt = now
         tapTimes[tapCount % tapTimes.size] = now
         tapCount++
         val poked = tapCount >= tapTimes.size && tapTimes.all { now - it < 2_000L }
@@ -803,6 +806,13 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             val actionT = ((now - actionStartedAt).toFloat() / (actionUntil - actionStartedAt)).coerceIn(0f, 1f)
             val m = actionMotion(activeAction, actionT)
             dx += m[0]; dy += m[1]; sx *= m[2]; sy *= m[3]; rotation += m[4]; spin += m[5]
+        }
+        if (jellyAt != 0L && now - jellyAt < 900L) {
+            // Jelly squish on a tap: a damped, volume-keeping wobble like a soft toy.
+            val t = (now - jellyAt) / 1_000f
+            val w = .16f * kotlin.math.exp(-5.5f * t) * cos(t * 26f)
+            sx *= 1f + w
+            sy *= 1f - w
         }
         if (mood == WordSiegeMascotEmotion.STRESSED || urgency > .3f) {
             // A slight nervous shiver, not a head shake.

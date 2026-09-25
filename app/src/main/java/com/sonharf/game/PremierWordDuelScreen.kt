@@ -29,6 +29,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
@@ -1670,6 +1671,57 @@ private fun PremierArena(
                 youStart = room.currentPlayerId == meId,
                 onQuickMessage = onQuickMessage,
                 onOpenChat = onQuickChat,
+            )
+        }
+        // Tension: the screen edge beats red on the player's last five seconds.
+        PremierHeartbeatEdge(active = myTurn && live && !preparing && turnSeconds in 1..5, seconds = turnSeconds)
+        // Excitement: a flame badge while the player is on a word streak.
+        PremierStreakFlame(streak = myStreak, language = language, modifier = Modifier.align(Alignment.TopCenter).padding(top = 92.dp))
+    }
+}
+
+@Composable
+private fun PremierHeartbeatEdge(active: Boolean, seconds: Int) {
+    if (!active) return
+    val beat = rememberInfiniteTransition(label = "heartbeat")
+    val pulse by beat.animateFloat(
+        0f, 1f,
+        infiniteRepeatable(keyframes { durationMillis = 700; 0f at 0; 1f at 120; .35f at 240; .85f at 340; 0f at 700 }),
+        label = "heartbeat-pulse",
+    )
+    val strength = (6 - seconds) / 5f
+    Canvas(Modifier.fillMaxSize()) {
+        val edge = size.minDimension * .22f
+        val color = Color(0xFFE5304A).copy(alpha = (.18f + .32f * strength) * pulse)
+        drawRect(Brush.verticalGradient(listOf(color, Color.Transparent), endY = edge))
+        drawRect(Brush.verticalGradient(listOf(Color.Transparent, color), startY = size.height - edge))
+        drawRect(Brush.horizontalGradient(listOf(color, Color.Transparent), endX = edge))
+        drawRect(Brush.horizontalGradient(listOf(Color.Transparent, color), startX = size.width - edge))
+    }
+}
+
+@Composable
+private fun PremierStreakFlame(streak: Int, language: String, modifier: Modifier) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = streak >= 2,
+        modifier = modifier,
+        enter = androidx.compose.animation.scaleIn(spring(dampingRatio = .45f)) + androidx.compose.animation.fadeIn(),
+        exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut(),
+    ) {
+        val flicker = rememberInfiniteTransition(label = "flame")
+        val s by flicker.animateFloat(1f, 1.12f, infiniteRepeatable(tween(380), RepeatMode.Reverse), label = "flame-scale")
+        Surface(
+            shape = RoundedCornerShape(99.dp),
+            color = Color(0xFFFF7A1A),
+            shadowElevation = 6.dp,
+            modifier = Modifier.graphicsLayer { scaleX = s; scaleY = s },
+        ) {
+            Text(
+                pt(language, "🔥 $streak SERİ!", "🔥 $streak STREAK!"),
+                Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Black,
             )
         }
     }
