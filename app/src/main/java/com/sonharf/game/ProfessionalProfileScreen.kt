@@ -241,8 +241,8 @@ private fun ProfileIdentityCard(
         Box(
             Modifier.fillMaxWidth().background(
                 Brush.linearGradient(
-                    if (isPro) listOf(Color(0xFFEEEBFC), Color(0xFFF6F3FF), GameColors.PrimarySurface)
-                    else listOf(Color(0xFFD2F2F0), GameColors.PrimarySurface, GameColors.ElevatedBackground)
+                    if (isPro) listOf(Color(0xFF27304A), Color(0xFF30274A), GameColors.PrimarySurface)
+                    else listOf(Color(0xFF17345A), GameColors.PrimarySurface, GameColors.ElevatedBackground)
                 ),
                 GameShapes.Hero,
             ).padding(18.dp)

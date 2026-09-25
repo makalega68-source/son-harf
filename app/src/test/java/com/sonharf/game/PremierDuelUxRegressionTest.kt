@@ -28,8 +28,8 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("WordSiegeMascotEmotion.FOCUS"))
         assertTrue(screen.contains("PremierKeyboard(language, input"))
         assertTrue(screen.contains("PremierArenaSky.BackgroundTop"))
-        // Light sky arena (PR #459); the mascot stays on the arena during the match.
-        assertTrue(screen.contains("Color(0xFFEAF8FF)"))
+        // Navy arena; the mascot stays on the arena during the match.
+        assertFalse(screen.contains("Color(0xFFEAF8FF)"))
         assertFalse(screen.contains("if (mascotMoment) WordSiegeMascotCompanion("))
         // No level/XP system in Son Harf.
         assertFalse(screen.contains("Seviye"))

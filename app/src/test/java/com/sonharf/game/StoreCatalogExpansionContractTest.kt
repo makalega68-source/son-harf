@@ -45,8 +45,8 @@ class StoreCatalogExpansionContractTest {
     fun blackThemeRestylesTheProfessionalShell() {
         val design = source("app/src/main/java/com/sonharf/game/GameDesignSystem.kt")
         assertTrue(design.contains("object GameDarkPalette"))
-        assertTrue(design.contains("if (SonHarfCosmetics.darkArenaTheme) GameDarkPalette.AppBackground else GameLightPalette.AppBackground"))
-        assertTrue(design.contains("if (GameColors.isDark) darkColorScheme("))
+        assertTrue(design.contains("if (SonHarfCosmetics.darkArenaTheme) GameDarkPalette.AppBackground else GameNavyPalette.AppBackground"))
+        assertTrue(design.contains("val scheme = darkColorScheme("))
     }
 
     @Test

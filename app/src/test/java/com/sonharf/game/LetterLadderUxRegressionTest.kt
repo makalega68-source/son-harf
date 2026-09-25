@@ -70,45 +70,51 @@ class LetterLadderUxRegressionTest {
     }
 
     @Test
-    fun harfYoluUsesItsOwnDynamicFiveColorBackdrop() {
+    fun harfYoluUsesItsOwnProfessionalDynamicBackdrop() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
         val backdrop = projectFile("app/src/main/java/com/sonharf/game/HarfYoluBackdrop.kt").readText()
 
         assertTrue(source.contains("HarfYoluBackdrop(Modifier.fillMaxSize())"))
         assertFalse(source.contains("FirstRunLanguageBackdrop(Modifier.fillMaxSize())"))
         assertTrue(backdrop.contains("rememberInfiniteTransition"))
-        assertTrue(backdrop.contains("0xFF14B8B0"))
-        assertTrue(backdrop.contains("0xFF22C3C9"))
-        assertTrue(backdrop.contains("0xFF8B6CF0"))
-        assertTrue(backdrop.contains("0xFF8B6CF0"))
+        assertTrue(backdrop.contains("GameColors.AppBackground"))
+        assertTrue(backdrop.contains("GameColors.PrimaryBlue"))
+        assertTrue(backdrop.contains("GameColors.TacticalTurquoise"))
+        assertTrue(backdrop.contains("GameColors.RewardAmber"))
+        assertTrue(backdrop.contains("GameColors.Lavender"))
     }
 
     @Test
-    fun harfYoluUsesIsolatedFiveColorKeyboardAndQuietDedicatedFeedback() {
+    fun harfYoluUsesIsolatedProfessionalKeyboardAndQuietDedicatedFeedback() {
         val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
         val sound = projectFile("app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt").readText()
 
-        assertTrue(keyboard.contains("Harf Yolu'na özel kompakt klavye"))
+        assertTrue(keyboard.contains("Harf Yolu keyboard aligned with the professional app palette"))
         assertTrue(keyboard.contains("HarfYoluKeyboardUi"))
         assertFalse(keyboard.contains("SonHarfCosmetics.keyboardPalette"))
-        assertTrue(keyboard.contains("0xFF14B8B0"))
-        assertTrue(keyboard.contains("0xFFE0F3F5"))
-        assertTrue(keyboard.contains("0xFF0B1B33"))
+        assertTrue(keyboard.contains("GameColors.ElevatedBackground"))
+        assertTrue(keyboard.contains("GameColors.PrimarySurface"))
+        assertTrue(keyboard.contains("GameColors.PlayGreen"))
+        assertTrue(keyboard.contains("GameColors.Lavender"))
         assertTrue(keyboard.contains("keySound()"))
         assertTrue(keyboard.contains("actionSound()"))
-        assertTrue(keyboard.contains("33.dp"))
+        assertTrue(keyboard.contains("34.dp"))
         assertTrue(sound.contains("fun puzzleKey()"))
         assertTrue(sound.contains("fun puzzleError()"))
         assertTrue(sound.contains("fun puzzleHint()"))
     }
 
     @Test
-    fun harfYoluKeyboardActionsFollowSelectedLanguage() {
+    fun harfYoluKeyboardActionsFollowSelectedLanguageWithoutSystemExtras() {
         val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
 
         assertTrue(keyboard.contains("val isEnglish = language.equals(\"en\", ignoreCase = true)"))
-        assertTrue(keyboard.contains("label = if (isEnglish) \"CLEAR\" else \"TEMİZLE\""))
-        assertTrue(keyboard.contains("label = if (isEnglish) \"SUBMIT  ➤\" else \"GÖNDER  ➤\""))
+        assertTrue(keyboard.contains("label = \"⌫\""))
+        assertTrue(keyboard.contains("label = if (isEnglish) \"SEND\" else \"GÖNDER\""))
+        assertFalse(keyboard.contains("TEMİZLE"))
+        assertFalse(keyboard.contains("CLEAR"))
+        assertFalse(keyboard.contains("?123"))
+        assertFalse(keyboard.contains("GIF"))
     }
 
     private fun projectFile(path: String): File {

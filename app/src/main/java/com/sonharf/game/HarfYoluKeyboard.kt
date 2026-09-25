@@ -20,24 +20,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Harf Yolu'na özel, ana temayla uyumlu zümrüt-altın klavye paleti. */
+/** Harf Yolu keyboard aligned with the professional app palette. */
 private object HarfYoluKeyboardUi {
-    val Background = Color(0xFFE0F3F5)
-    val Key = Color(0xFFE0F3F5)
-    val KeyAlt = Color(0xFFEEEBFC)
-    val Text = Color(0xFF0B1B33)
-    val Border = Color(0xFFC3D6E4)
-    val AltBorder = Color(0xFF9C88E8)
-    val Action = Color(0xFF14B8B0)
-    val ActionPressed = Color(0xFF0E9A93)
-    val ActionText = Color(0xFF0B1B33)
-    val Disabled = Color(0xFFDDE5EE)
-    val DisabledText = Color(0xFF5E6D84)
+    val Background = GameColors.ElevatedBackground
+    val Key = GameColors.PrimarySurface
+    val KeyAlt = GameColors.SecondarySurface
+    val Text = GameColors.TextPrimary
+    val Border = GameColors.Border
+    val AltBorder = GameColors.Lavender.copy(alpha = .58f)
+    val Action = GameColors.PlayGreen
+    val ActionPressed = GameColors.PlayGreenDeep
+    val ActionText = Color.White
+    val Disabled = GameColors.Disabled
+    val DisabledText = GameColors.DisabledContent
 }
 
 /**
- * Harf Yolu'na özel kompakt klavye overload'u.
- * Ortak EmbeddedGameKeyboard dosyasını ve diğer oyunların klavye davranışını değiştirmez.
+ * Harf Yolu-specific compact keyboard overload.
+ * It intentionally exposes only letters, Backspace and Send; system-keyboard extras and a
+ * separate clear key are not part of this game input surface.
  */
 @Composable
 internal fun EmbeddedWordKeyboard(
@@ -66,8 +67,8 @@ internal fun EmbeddedWordKeyboard(
             listOf("Z","X","C","V","B","N","M","Ö","Ç"),
         )
     }
-    val keyHeight = if (compact) 33.dp else 38.dp
-    val rowGap = if (compact) 3.dp else 5.dp
+    val keyHeight = if (compact) 34.dp else 40.dp
+    val rowGap = if (compact) 4.dp else 5.dp
     val keyGap = if (compact) 2.dp else 3.dp
     val secondInset = if (compact) 5.dp else 7.dp
     val thirdInset = if (compact) 13.dp else 17.dp
@@ -77,9 +78,10 @@ internal fun EmbeddedWordKeyboard(
         color = HarfYoluKeyboardUi.Background,
         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
         border = BorderStroke(1.dp, HarfYoluKeyboardUi.Border),
+        shadowElevation = 4.dp,
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = if (compact) 4.dp else 6.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = if (compact) 5.dp else 7.dp),
             verticalArrangement = Arrangement.spacedBy(rowGap),
         ) {
             rows.forEachIndexed { index, row ->
@@ -108,12 +110,12 @@ internal fun EmbeddedWordKeyboard(
 
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = thirdInset),
-                horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 7.dp),
             ) {
                 HarfYoluKeyButton(
                     label = "⌫",
                     enabled = enabled && value.isNotEmpty(),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1.15f),
                     height = keyHeight,
                     alt = true,
                     onClick = {
@@ -122,20 +124,9 @@ internal fun EmbeddedWordKeyboard(
                     },
                 )
                 HarfYoluKeyButton(
-                    label = if (isEnglish) "CLEAR" else "TEMİZLE",
-                    enabled = enabled && value.isNotEmpty(),
-                    modifier = Modifier.weight(1.35f),
-                    height = keyHeight,
-                    alt = true,
-                    onClick = {
-                        actionSound()
-                        onValueChange("")
-                    },
-                )
-                HarfYoluKeyButton(
-                    label = if (isEnglish) "SUBMIT  ➤" else "GÖNDER  ➤",
+                    label = if (isEnglish) "SEND" else "GÖNDER",
                     enabled = submitEnabled && value.isNotBlank(),
-                    modifier = Modifier.weight(2.15f),
+                    modifier = Modifier.weight(2.85f),
                     height = keyHeight,
                     action = true,
                     onClick = {
@@ -186,7 +177,7 @@ private fun HarfYoluKeyButton(
     ) {
         Text(
             label,
-            fontSize = if (label.length > 4) 9.sp else 14.sp,
+            fontSize = if (label.length > 4) 10.sp else 14.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
         )

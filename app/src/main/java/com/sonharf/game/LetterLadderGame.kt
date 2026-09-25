@@ -55,27 +55,27 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private object LetterLadderUi {
-    val Background = Color(0xFFEAF6F8)
-    val Surface = Color(0xFFFFFFFF)
-    val SurfaceRaised = Color(0xFFE0F3F5)
-    val SurfaceSoft = Color(0xFFEEEBFC)
-    val Text = Color(0xFF0B1B33)
-    val Muted = Color(0xFF3B4B66)
-    val Border = Color(0xFFC3D6E4)
-    val Accent = Color(0xFF14B8B0)
-    val AccentStrong = Color(0xFF0E9A93)
-    val Turquoise = Color(0xFF22C3C9)
-    val TurquoiseStrong = Color(0xFF0E9A93)
-    val TurquoiseSoft = Color(0xFFD2F2F0)
-    val Orange = Color(0xFF8B6CF0)
-    val OrangeSoft = Color(0xFFFFEBDA)
-    val Purple = Color(0xFFFF8A2A)
-    val PurpleSoft = Color(0xFFEEE9FF)
-    val AccentText = Color(0xFF0B1B33)
-    val Live = Accent
-    val Coral = Orange
-    val Green = Accent
-    val Gold = Orange
+    val Background = GameColors.AppBackground
+    val Surface = GameColors.PrimarySurface
+    val SurfaceRaised = GameColors.PrimarySurface
+    val SurfaceSoft = GameColors.SecondarySurface
+    val Text = GameColors.TextPrimary
+    val Muted = GameColors.TextSecondary
+    val Border = GameColors.Border
+    val Accent = GameColors.PrimaryBlue
+    val AccentStrong = GameColors.DeepBlue
+    val Turquoise = GameColors.TacticalTurquoise
+    val TurquoiseStrong = GameColors.TacticalTurquoise
+    val TurquoiseSoft = GameColors.TacticalTurquoise.copy(alpha = .14f)
+    val Orange = GameColors.RewardAmber
+    val OrangeSoft = GameColors.RewardAmber.copy(alpha = .14f)
+    val Purple = GameColors.Lavender
+    val PurpleSoft = GameColors.Lavender.copy(alpha = .14f)
+    val AccentText = Color.White
+    val Live = Purple
+    val Coral = Purple
+    val Green = GameColors.PlayGreen
+    val Gold = GameColors.RewardAmber
 }
 
 internal data class LetterLadderPuzzle(

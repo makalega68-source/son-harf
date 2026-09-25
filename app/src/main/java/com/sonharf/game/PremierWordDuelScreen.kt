@@ -84,13 +84,13 @@ private const val PREMIER_ROUND_PREP_SECONDS = 20
 
 /** Yetişkin, yüksek okunabilirlikli Son Harf oyun paleti. */
 private object PremierUi {
-    val Background = Color(0xFF06101D)
-    val Surface = Color(0xFF0D1B2A)
+    val Background = GameColors.AppBackground
+    val Surface = GameColors.PrimarySurface
     val Ink = Color(0xFFF4F7FB)
     val Muted = Color(0xFF9AAFC4)
     val Ocean = Color(0xFF00D6C9)
     val OceanDeep = Color(0xFF2F6BFF)
-    val Sky = Color(0xFF8B5CF6)
+    val Sky = GameColors.Lavender
     val Ice = Color(0xFF13273A)
     val Border = Color(0xFF27445E)
     val Green = Color(0xFF24D6A3)
@@ -102,9 +102,10 @@ private object PremierUi {
 }
 
 private object PremierArenaSky {
-    val BackgroundTop = Color(0xFFEAF8FF)
-    val BackgroundMid = Color(0xFFDDF3FC)
-    val BackgroundBottom = Color(0xFFCFEAF7)
+    // Navy arena (design system); the board and player cards sit on it as lighter panels.
+    val BackgroundTop = GameColors.AppBackground
+    val BackgroundMid = GameColors.ElevatedBackground
+    val BackgroundBottom = Color(0xFF0C131D)
     val Surface = Color(0xFFF9FDFF)
     val SurfaceBlue = Color(0xFFE6F5FB)
     val Ink = Color(0xFF17364D)
@@ -988,11 +989,11 @@ private fun PremierStatPill(text: String, accent: Color) {
 
 /** Word-game palette: a calm teal board, cream letter tiles, one soft colour per player. */
 private object PremierBoard {
-    val BoardTop = Color(0xFF2B6570)
-    val BoardBottom = Color(0xFF1F4E58)
-    val Tile = Color(0xFFFFF6E4)
-    val TileEdge = Color(0xFFE2CFA6)
-    val TileInk = Color(0xFF3B2C1A)
+    val BoardTop = Color(0xFF1F3550)
+    val BoardBottom = Color(0xFF172A41)
+    val Tile = Color(0xFFF4F7FB)
+    val TileEdge = Color(0xFFC9D4E3)
+    val TileInk = GameColors.TextDark
     val Gold = Color(0xFFF2C25B)
     val GoldEdge = Color(0xFFC99A35)
     val Ink = Color(0xFF1F3A4D)
@@ -1607,7 +1608,7 @@ private fun PremierRoundPrep(
 ) {
     val pulse = rememberInfiniteTransition(label = "prep")
     val beat by pulse.animateFloat(1f, 1.08f, infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "prep-beat")
-    Box(Modifier.fillMaxSize().background(Color(0xD91A3A44)), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Color(0xD90B1220)), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 24.dp)) {
             if (lastRoundWon != null) {
                 Text(

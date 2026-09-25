@@ -32,38 +32,26 @@ import kotlinx.coroutines.launch
 
 /** Match-only presentation. Never changes the selected cosmetic theme or game state. */
 internal object WordSiegeGameUi {
-    val Background = Color(0xFFEAF6F8)
-    val Surface = Color(0xFFFFFFFF)
-    val SurfaceSoft = Color(0xFFE0F3F5)
-    val Text = Color(0xFF0B1B33)
-    val Muted = Color(0xFF3B4B66)
-    val Border = Color(0xFFC3D6E4)
-    val Blue = Color(0xFF14B8B0)
-    val Red = Color(0xFFE8622C)
-    val Gold = Color(0xFF8B6CF0)
-    val Navy = Color(0xFF102C4C)
-    val NavySoft = Color(0xFF173B62)
-    val PremiumSurface = Color(0xFFF6F3FF)
-    val PremiumBorder = Color(0xFFB7A3FF)
-    val DisabledBackground = Color(0xFFDDE5EE)
-    val DisabledContent = Color(0xFF5E6D84)
+    val Background = GameColors.AppBackground
+    val Surface = GameColors.PrimarySurface
+    val SurfaceSoft = GameColors.SecondarySurface
+    val Text = GameColors.TextPrimary
+    val Muted = GameColors.TextSecondary
+    val Border = GameColors.Border
+    val Blue = GameColors.TacticalTurquoise
+    val Red = GameColors.Danger
+    val Gold = GameColors.RewardAmber
+    val DisabledBackground = GameColors.Disabled
+    val DisabledContent = GameColors.DisabledContent
+    val Navy = GameColors.TextPrimary
+    val NavySoft = GameColors.SecondarySurface
+    val PremiumSurface = GameColors.ElevatedBackground
+    val PremiumBorder = GameColors.Lavender.copy(alpha = .55f)
 }
 
 @Composable
 internal fun WordSiegeGameTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = WordSiegeGameUi.Blue, onPrimary = Color(0xFF0B1B33),
-            secondary = WordSiegeGameUi.Gold, onSecondary = Color(0xFF0B1B33),
-            background = WordSiegeGameUi.Background, onBackground = WordSiegeGameUi.Text,
-            surface = WordSiegeGameUi.Surface, onSurface = WordSiegeGameUi.Text,
-            surfaceVariant = WordSiegeGameUi.SurfaceSoft, onSurfaceVariant = WordSiegeGameUi.Muted,
-            outline = WordSiegeGameUi.Border, error = WordSiegeGameUi.Red,
-        ),
-        typography = MaterialTheme.typography,
-        shapes = MaterialTheme.shapes,
-        content = content,
-    )
+    GameTheme(content)
 }
 
 @Composable
@@ -295,7 +283,7 @@ internal fun WordSiegeOwnershipLegend() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(sh("● Sen", "● You"), Modifier.weight(1f), color = Color(0xFF3F7C53), fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Text(sh("● Sen", "● You"), Modifier.weight(1f), color = Color(0xFF64C987), fontSize = 10.sp, fontWeight = FontWeight.Black)
             Text(
                 sh("1 küp = 2 puan", "1 cube = 2 points"),
                 Modifier.weight(1f),

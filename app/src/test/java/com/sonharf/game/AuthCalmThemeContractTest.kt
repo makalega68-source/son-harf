@@ -8,31 +8,72 @@ import org.junit.Test
 
 class AuthCalmThemeContractTest {
     @Test
-    fun requiredAuthGateUsesCalmLayeredPaletteWithoutLegacyBrightBlueLilac() {
+    fun requiredAuthGateUsesProfessionalDarkGamePalette() {
         val auth = source("RequiredAuthGate.kt")
 
         listOf(
             "private object AuthUi",
-            "val Background = Color(0xFFEAF6F8)",
-            "val Surface = Color(0xFFFFFFFF)",
-            "val SurfaceSoft = Color(0xFFE0F3F5)",
-            "val Primary = Color(0xFF14B8B0)",
-            "val SoftBlue = Color(0xFF8B6CF0)",
-            "val Turquoise = Color(0xFF22C3C9)",
-            "val Lavender = Color(0xFF8B6CF0)",
-            "val Sand = Color(0xFFFF8A2A)",
-            "val Border = Color(0xFFC3D6E4)",
+            "val Background = GameColors.AppBackground",
+            "val Surface = GameColors.PrimarySurface",
+            "val SurfaceSoft = GameColors.SecondarySurface",
+            "val Primary = GameColors.PrimaryBlue",
+            "val Turquoise = GameColors.TacticalTurquoise",
+            "val Lavender = GameColors.Lavender",
+            "val Sand = GameColors.PrestigeGold",
+            "val Text = GameColors.TextPrimary",
+            "val Muted = GameColors.TextSecondary",
+            "val Border = GameColors.Border",
+            "val Success = GameColors.PlayGreen",
+            "val Warning = GameColors.RewardAmber",
+            "val Error = GameColors.Danger",
+            "darkColorScheme(",
             "selectedContainerColor = AuthUi.PrimarySoft",
             "containerColor = if (register) AuthUi.Turquoise else AuthUi.Primary",
-        ).forEach { token -> assertTrue("Missing calm auth theme token: $token", auth.contains(token)) }
+        ).forEach { token -> assertTrue("Missing professional auth theme token: $token", auth.contains(token)) }
 
         listOf(
-            "Color(0xFF1769E0)",
-            "Color(0xFF6A4FD8)",
-            "Color(0xFF8CB8F3)",
-            "Color(0xFFB8D4F7)",
-            "Color(0xFF173B77)",
-        ).forEach { legacy -> assertFalse("Legacy auth color still present: $legacy", auth.contains(legacy)) }
+            "Color(0xFFF4F7F2)",
+            "Color(0xFFFFFDF7)",
+            "Color(0xFFEAF2EE)",
+            "Color(0xFF4F725E)",
+            "lightColorScheme(",
+        ).forEach { legacy -> assertFalse("Legacy light auth color still present: $legacy", auth.contains(legacy)) }
+    }
+
+    @Test
+    fun passwordRecoveryUsesProfessionalResponsiveShellWithoutWeakeningSecurityFlow() {
+        val recovery = source("PasswordRecoveryScreen.kt")
+
+        listOf(
+            "GameTheme {",
+            "color = GameColors.AppBackground",
+            "GameTopBar(",
+            "GameSurface(",
+            "GamePrimaryButton(",
+            "GameTertiaryButton(",
+            "verticalScroll(rememberScrollState())",
+            ".imePadding()",
+            "GameColors.PrimaryBlue",
+            "GameColors.PlayGreen",
+            "GameColors.Danger",
+        ).forEach { token -> assertTrue("Missing professional recovery token: $token", recovery.contains(token)) }
+
+        listOf(
+            "Color(0xFFF4F7F2)",
+            "Color(0xFFFFFDF7)",
+            "Color(0xFF26382F)",
+            "Color(0xFF65766D)",
+            "SonHarfBrandLogo(",
+        ).forEach { legacy -> assertFalse("Legacy recovery UI still present: $legacy", recovery.contains(legacy)) }
+
+        listOf(
+            "SupabaseProvider.client.auth.updateUser",
+            "RememberedCredentialVault.clear(context)",
+            "SonHarfPreferences.setRememberLogin(context, false)",
+            "SupabaseProvider.client.auth.signOut()",
+            "password.length < 6",
+            "password != confirmPassword",
+        ).forEach { token -> assertTrue("Recovery security behavior missing: $token", recovery.contains(token)) }
     }
 
     @Test

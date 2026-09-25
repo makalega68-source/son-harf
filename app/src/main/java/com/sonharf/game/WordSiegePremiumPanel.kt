@@ -170,7 +170,7 @@ internal fun WordSiegePremiumPanel(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = RoundedCornerShape(99.dp),
-                    color = if (hasAnyPremiumTool) WordSiegeGameUi.Gold else WordSiegeGameUi.Navy,
+                    color = if (hasAnyPremiumTool) WordSiegeGameUi.Gold else WordSiegeGameUi.NavySoft,
                 ) {
                     Row(Modifier.padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(

@@ -29,12 +29,12 @@ class UnifiedThemeSourceContractTest {
         assertTrue(startup.contains("GameTheme {"))
         assertTrue(startup.contains("GameColors.AppBackground"))
 
-        assertTrue(design.contains("val AppBackground = Color(0xFFEAF6F8)"))
-        assertTrue(design.contains("val PrimarySurface = Color(0xFFFFFFFF)"))
-        assertTrue(design.contains("val PrimaryBlue = Color(0xFF14B8B0)"))
-        assertTrue(design.contains("val TacticalTurquoise = Color(0xFF22C3C9)"))
+        assertTrue(design.contains("val AppBackground = Color(0xFF101722)"))
+        assertTrue(design.contains("val PrimarySurface = Color(0xFF1C2939)"))
+        assertTrue(design.contains("val PrimaryBlue = Color(0xFF3D8BFF)"))
+        assertTrue(design.contains("val TacticalTurquoise = Color(0xFF20B6B0)"))
         assertTrue(design.contains("val PlayGreen = Color(0xFF38C970)"))
-        assertTrue(design.contains("val RewardAmber = Color(0xFFFF8A2A)"))
+        assertTrue(design.contains("val RewardAmber = Color(0xFFF2A73B)"))
 
         assertTrue(design.contains("val SonHarfBackground = Color(0xFFF3EEE5)"))
         assertTrue(design.contains("val SonHarfSurface = Color(0xFFFFFBF4)"))
@@ -43,11 +43,14 @@ class UnifiedThemeSourceContractTest {
         assertTrue(design.contains("val SonHarfGreen = Color(0xFF789B73)"))
         assertTrue(design.contains("val SonHarfRival = Color(0xFFD27869)"))
 
-        // Son Harf keeps the PR #459 board and light sky arena; the in-game mascot is back on the arena.
-        assertTrue(premier.contains("private object PremierArenaSky"))
-        assertTrue(premier.contains("Color(0xFFEAF8FF)"))
+        // Son Harf keeps the PR #459 board on the navy design system; the mascot stays on the arena.
+        assertTrue(premier.contains("val Background = GameColors.AppBackground"))
+        assertTrue(premier.contains("val Surface = GameColors.PrimarySurface"))
+        assertTrue(premier.contains("val BackgroundTop = GameColors.AppBackground"))
+        assertTrue(premier.contains("Brush.verticalGradient(listOf(PremierUi.Surface, PremierUi.Background))"))
         assertTrue(premier.contains("PremierKeyboard(language, input"))
         assertTrue(premier.contains("WordSiegeMascotCompanion("))
+        assertFalse(premier.contains("Color(0xFFEAF8FF)"))
         assertFalse(premier.contains("val Background = Color(0xFFF3EEE5)"))
         assertFalse(premier.contains("MageCatCompanion("))
     }
@@ -56,9 +59,18 @@ class UnifiedThemeSourceContractTest {
     fun legacyThemeFacadeCannotReintroduceRetiredNeonPalette() {
         val legacy = source("SonHarfTheme.kt")
 
-        // Light Kelime Tahtı palette (PR #459).
-        assertTrue(legacy.contains("val IsDark: Boolean get() = false"))
-        assertTrue(legacy.contains("Color(0xFF14B8B0)"))
+        listOf(
+            "val Background: Color get() = if (alternateDark)",
+            "else GameColors.AppBackground",
+            "val Surface: Color get() = if (alternateDark)",
+            "else GameColors.PrimarySurface",
+            "val Primary: Color get() = GameColors.PrimaryBlue",
+            "val Turquoise: Color get() = GameColors.TacticalTurquoise",
+            "val Success: Color get() = GameColors.PlayGreen",
+            "val Error: Color get() = GameColors.Danger",
+            "val PremiumGold: Color get() = GameColors.PrestigeGold",
+            "val HeroStart: Color get() = GameColors.HeroStart",
+        ).forEach { token -> assertTrue("Missing professional legacy-theme mapping: $token", legacy.contains(token)) }
 
         listOf(
             "0xFFEFFF19",

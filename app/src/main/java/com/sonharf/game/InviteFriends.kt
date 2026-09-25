@@ -56,7 +56,7 @@ internal enum class InviteChannel(
     SMS("SMS", "✉️", 0xFF34A853, emptyList()),
     EMAIL("E-posta", "📧", 0xFFEA4335, emptyList()),
     COPY("Kopyala", "🔗", 0xFF6B7A90, emptyList()),
-    MORE("Diğer", "➕", 0xFF8B6CF0, emptyList()),
+    MORE("Diğer", "➕", 0xFF3D8BFF, emptyList()),
 }
 
 internal object SonHarfInvite {
@@ -159,7 +159,7 @@ internal fun InviteFriendsCard(playerName: String?, modifier: Modifier = Modifie
     ) {
         Row(
             Modifier
-                .background(Brush.linearGradient(listOf(Color(0xFF14B8B0), Color(0xFF3E7BFA), Color(0xFF8B6CF0))))
+                .background(Brush.linearGradient(listOf(GameColors.DeepBlue, GameColors.PrimaryBlue, GameColors.TacticalTurquoise)))
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -179,7 +179,7 @@ internal fun InviteFriendsCard(playerName: String?, modifier: Modifier = Modifie
                 )
             }
             Surface(shape = RoundedCornerShape(99.dp), color = Color.White) {
-                Text(sh("DAVET", "INVITE"), Modifier.padding(horizontal = 12.dp, vertical = 7.dp), color = Color(0xFF3E4FB8), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Text(sh("DAVET", "INVITE"), Modifier.padding(horizontal = 12.dp, vertical = 7.dp), color = GameColors.DeepBlue, fontSize = 12.sp, fontWeight = FontWeight.Black)
             }
         }
     }
@@ -190,13 +190,13 @@ internal fun InviteFriendsCard(playerName: String?, modifier: Modifier = Modifie
 @Composable
 private fun InviteFriendsSheet(playerName: String?, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Color.White) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = GameColors.ElevatedBackground) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-            Text(sh("Arkadaşını davet et", "Invite a friend"), fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color(0xFF0B1B33))
+            Text(sh("Arkadaşını davet et", "Invite a friend"), fontSize = 20.sp, fontWeight = FontWeight.Black, color = GameColors.TextPrimary)
             Text(
                 sh("Bir kanal seç; davet mesajı hazır gelir.", "Pick a channel; the invite message is ready to send."),
                 fontSize = 12.sp,
-                color = Color(0xFF5B6478),
+                color = GameColors.TextSecondary,
             )
             Spacer(Modifier.height(16.dp))
             InviteChannel.entries.chunked(4).forEach { row ->
@@ -228,7 +228,7 @@ private fun InviteFriendsSheet(playerName: String?, onDismiss: () -> Unit) {
                                 },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0B1B33),
+                                color = GameColors.TextPrimary,
                                 textAlign = TextAlign.Center,
                                 maxLines = 1,
                             )

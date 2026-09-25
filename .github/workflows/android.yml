@@ -60,9 +60,9 @@ jobs:
           grep -q 'ProfessionalDestination.SIEGE -> WordSiegeEntryScreen' app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt
           grep -q 'ProfessionalDestination.LETTER_PATH -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt
           grep -q 'ProfessionalDestination.PRO -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt
-          grep -q 'val AppBackground = Color(0xFFEAF6F8)' app/src/main/java/com/sonharf/game/GameDesignSystem.kt
-          grep -q 'val PrimaryBlue = Color(0xFF14B8B0)' app/src/main/java/com/sonharf/game/GameDesignSystem.kt
-          grep -q 'val TacticalTurquoise = Color(0xFF22C3C9)' app/src/main/java/com/sonharf/game/GameDesignSystem.kt
+          grep -q 'val AppBackground = Color(0xFF101722)' app/src/main/java/com/sonharf/game/GameDesignSystem.kt
+          grep -q 'val PrimaryBlue = Color(0xFF3D8BFF)' app/src/main/java/com/sonharf/game/GameDesignSystem.kt
+          grep -q 'val TacticalTurquoise = Color(0xFF20B6B0)' app/src/main/java/com/sonharf/game/GameDesignSystem.kt
           grep -q 'val PlayGreen = Color(0xFF38C970)' app/src/main/java/com/sonharf/game/GameDesignSystem.kt
           ! grep -RqiE 'ProfHammy|Prof\. Hammy|prof_hammy' app/src/main/java app/src/main/res
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt

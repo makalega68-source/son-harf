@@ -28,12 +28,13 @@ class Pr459PortContractTest {
     }
 
     @Test
-    fun appUsesTheLightKelimeTahtiPalette() {
-        val design = source("GameDesignSystem.kt")
-        assertTrue(design.contains("val AppBackground = Color(0xFFEAF6F8)"))
-        assertTrue(design.contains("val TextPrimary = Color(0xFF0B1B33)"))
-        assertTrue(design.contains("lightColorScheme("))
-        assertTrue(source("SonHarfTheme.kt").contains("val IsDark: Boolean get() = false"))
+    fun portedScreensUseTheNavyPalette() {
+        listOf("InviteFriends.kt", "RequiredAuthGate.kt", "WordSiegeGameUi.kt", "PremierWordDuelScreen.kt", "MascotStore.kt").forEach { name ->
+            val text = source(name)
+            listOf("0xFFEAF6F8", "0xFF14B8B0", "0xFF8B6CF0", "0xFFEAF8FF", "0xFF1B0F3B", "0xFF3A1A78").forEach { light ->
+                assertFalse("$name still uses $light", text.contains(light))
+            }
+        }
     }
 
     private fun source(name: String): String =

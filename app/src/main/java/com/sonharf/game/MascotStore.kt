@@ -94,7 +94,7 @@ private fun WordSiegeMascotSkin.cardBrush(): Brush {
     val decor = WordSiegeMascotDecor.of(this)
     val light = Color(decor.handColors[0])
     val dark = Color(decor.handColors[1])
-    return Brush.linearGradient(listOf(Color(0xFF14102A), dark.copy(alpha = .85f), light.copy(alpha = .55f)))
+    return Brush.linearGradient(listOf(Color(0xFF0B1220), dark.copy(alpha = .85f), light.copy(alpha = .55f)))
 }
 
 /** The mascot shop: every character shown alive, sold as a permanent Google Play product. */
@@ -209,7 +209,7 @@ private fun MascotStoreHero() {
     ) {
         Box(
             Modifier
-                .background(Brush.linearGradient(listOf(Color(0xFF1B0F3B), Color(0xFF3A1A78), Color(0xFF0E4C7A))))
+                .background(Brush.linearGradient(listOf(Color(0xFF101722), Color(0xFF1A2A44), Color(0xFF0E4C7A))))
                 .padding(16.dp),
         ) {
             Column(Modifier.fillMaxWidth()) {
@@ -295,7 +295,7 @@ private fun MascotStoreCard(
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFFFE08A),
-                            contentColor = Color(0xFF1B0F3B),
+                            contentColor = Color(0xFF101722),
                             disabledContainerColor = Color(0x55FFFFFF),
                             disabledContentColor = Color.White,
                         ),
@@ -306,7 +306,7 @@ private fun MascotStoreCard(
                         onClick = onBuy,
                         enabled = !busy,
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF1B0F3B)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF101722)),
                     ) {
                         Text(sh("SATIN AL • ", "BUY • ") + offer.formattedPrice, fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }
