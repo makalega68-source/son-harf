@@ -12,6 +12,7 @@ import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -894,27 +895,57 @@ private fun PremierLoading(language: String) {
 @Composable
 private fun PremierSearching(language: String, onCancel: () -> Unit) {
     val transition = rememberInfiniteTransition(label = "search")
-    val pulse by transition.animateFloat(0.82f, 1f, infiniteRepeatable(tween(850), RepeatMode.Reverse), label = "pulse")
+    val pulse by transition.animateFloat(0.92f, 1.06f, infiniteRepeatable(tween(850), RepeatMode.Reverse), label = "pulse")
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(24.dp),
+        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
     ) {
-        Box(
-            Modifier.size((132 * pulse).dp).clip(CircleShape).background(Brush.radialGradient(listOf(PremierUi.Sky.copy(alpha = .45f), PremierUi.Ice, Color.Transparent))),
-            contentAlignment = Alignment.Center,
-        ) {
-            Surface(shape = CircleShape, color = PremierUi.Surface, border = BorderStroke(2.dp, PremierUi.Ocean)) {
-                Icon(Icons.Rounded.Groups, null, tint = PremierUi.Ocean, modifier = Modifier.padding(27.dp).size(42.dp))
+        HfTitleRule(sh("Kelime Tahtı", "Kelime Tahtı"), fontSize = 26.sp)
+        Spacer(Modifier.height(40.dp))
+        Text(pt(language, "Rakip aranıyor", "Finding a rival"), color = Hf.Ivory, fontSize = 34.sp, fontWeight = FontWeight.Black)
+        Spacer(Modifier.height(36.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            PremierSearchSide(pt(language, "SEN", "YOU"), Hf.Green, Hf.Green, Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.width(18.dp).height(2.dp).background(Hf.Gold))
+                Text("VS", Modifier.padding(horizontal = 8.dp), color = Hf.Gold, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                Box(Modifier.width(18.dp).height(2.dp).background(Hf.Gold))
             }
+            PremierSearchSide(pt(language, "RAKİP", "RIVAL"), Color(0xFF8A8F8C), Color(0xFF3A3F3D), Modifier.weight(1f))
         }
-        Spacer(Modifier.height(24.dp))
-        Text(pt(language, "RAKİP ARANIYOR", "SEARCHING FOR RIVAL"), color = PremierUi.Ink, fontSize = 23.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-        Spacer(Modifier.height(6.dp))
-        Text(pt(language, "Rating ve dil eşleşmesi yapılıyor…", "Matching rating and language…"), color = PremierUi.Muted, fontSize = 12.sp)
-        Spacer(Modifier.height(24.dp))
-        OutlinedButton(onClick = onCancel, shape = RoundedCornerShape(15.dp), border = BorderStroke(1.dp, PremierUi.Border)) {
-            Text(pt(language, "İPTAL", "CANCEL"), color = PremierUi.Muted, fontWeight = FontWeight.Black)
+        Spacer(Modifier.weight(1f))
+        Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.matchParentSize()) {
+                val c = Offset(size.width / 2f, size.height / 2f)
+                val stroke = 3.dp.toPx()
+                listOf(180f, 150f, 210f, 0f, 30f, -30f).forEach { deg ->
+                    val rad = Math.toRadians(deg.toDouble())
+                    val dir = Offset(kotlin.math.cos(rad).toFloat(), kotlin.math.sin(rad).toFloat())
+                    drawLine(Hf.Gold, c + dir * (size.width * .36f), c + dir * (size.width * .47f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                }
+                val chevron = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(c.x - size.width * .22f, size.height * .18f); lineTo(c.x, size.height * .02f); lineTo(c.x + size.width * .22f, size.height * .18f)
+                    moveTo(c.x - size.width * .22f, size.height * .82f); lineTo(c.x, size.height * .98f); lineTo(c.x + size.width * .22f, size.height * .82f)
+                }
+                drawPath(chevron, Hf.Gold, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 5.dp.toPx()))
+            }
+            HfLetterTile("A", (64 * pulse).dp, fontSize = 36.sp)
+        }
+        Spacer(Modifier.height(18.dp))
+        Text(pt(language, "Son Harf için eşleşme bekleniyor", "Waiting for a Last Letter match"), color = Hf.Ivory, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text(pt(language, "Rating ve dil eşleşmesi yapılıyor…", "Matching rating and language…"), color = Hf.TextMuted, fontSize = 12.sp)
+        Spacer(Modifier.weight(1f))
+        HfSecondaryButton(pt(language, "Vazgeç", "Cancel"), onClick = onCancel, modifier = Modifier.fillMaxWidth(.8f))
+    }
+}
+
+@Composable
+private fun PremierSearchSide(label: String, ring: Color, pill: Color, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(96.dp).border(6.dp, ring, CircleShape).padding(6.dp).background(Hf.Surface, CircleShape))
+        Spacer(Modifier.height(12.dp))
+        Surface(shape = Hf.PillShape, color = pill, border = BorderStroke(1.5.dp, Hf.Gold)) {
+            Text(label, Modifier.padding(horizontal = 26.dp, vertical = 6.dp), color = Hf.Ivory, fontSize = 16.sp, fontWeight = FontWeight.Black)
         }
     }
 }
