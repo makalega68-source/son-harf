@@ -1,10 +1,6 @@
 package com.sonharf.game
 
-import com.google.mlkit.genai.common.DownloadStatus
-import com.google.mlkit.genai.common.FeatureStatus
-import com.google.mlkit.genai.prompt.Generation
 import java.util.Locale
-import kotlinx.coroutines.flow.collect
 
 internal enum class MascotNanoAvailability {
     CHECKING,
@@ -15,52 +11,13 @@ internal enum class MascotNanoAvailability {
 }
 
 internal class MascotNanoEngine {
-    private val model by lazy { Generation.getClient() }
-
-    suspend fun checkAvailability(): MascotNanoAvailability = runCatching {
-        when (model.checkStatus()) {
-            FeatureStatus.AVAILABLE -> MascotNanoAvailability.READY
-            FeatureStatus.DOWNLOADABLE -> MascotNanoAvailability.DOWNLOADABLE
-            FeatureStatus.DOWNLOADING -> MascotNanoAvailability.DOWNLOADING
-            else -> MascotNanoAvailability.UNAVAILABLE
-        }
-    }.getOrDefault(MascotNanoAvailability.UNAVAILABLE)
+    suspend fun checkAvailability(): MascotNanoAvailability = MascotNanoAvailability.UNAVAILABLE
 
     suspend fun download(onProgress: (MascotNanoAvailability, Long?) -> Unit): Boolean {
-        var completed = false
-        return runCatching {
-            model.download().collect { status ->
-                when (status) {
-                    is DownloadStatus.DownloadStarted -> {
-                        onProgress(MascotNanoAvailability.DOWNLOADING, null)
-                    }
-                    is DownloadStatus.DownloadProgress -> {
-                        onProgress(MascotNanoAvailability.DOWNLOADING, status.totalBytesDownloaded)
-                    }
-                    DownloadStatus.DownloadCompleted -> {
-                        completed = true
-                        onProgress(MascotNanoAvailability.READY, null)
-                    }
-                    is DownloadStatus.DownloadFailed -> {
-                        onProgress(MascotNanoAvailability.DOWNLOADABLE, null)
-                    }
-                }
-            }
-            completed || model.checkStatus() == FeatureStatus.AVAILABLE
-        }.getOrElse {
-            onProgress(MascotNanoAvailability.DOWNLOADABLE, null)
-            false
-        }
+        return false
     }
 
-    suspend fun generate(prompt: String): String? = runCatching {
-        model.generateContent(prompt)
-            .candidates
-            .firstOrNull()
-            ?.text
-            ?.trim()
-            ?.takeIf { it.isNotBlank() }
-    }.getOrNull()
+    suspend fun generate(prompt: String): String? = null
 }
 
 internal data class MascotChatMessage(
