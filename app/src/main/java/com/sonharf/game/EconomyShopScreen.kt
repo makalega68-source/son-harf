@@ -6,7 +6,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -55,37 +54,29 @@ fun EconomyShopScreen(
     Column(Modifier.fillMaxSize().background(SonHarfBg)) {
         StoreTitleBar(balance = balance, onBack = onBack)
         HorizontalDivider(color = Hf.Gold.copy(alpha = .18f))
-        // Categories follow the kinds that are actually on sale; PRO lives in the banner below.
+        // The store sells two things only: PRO membership and the mascots. Coin cosmetics
+        // (themes, keyboards, name styles, effects) and the season pass are off the shelf;
+        // anything a player already owns stays usable from Profile > Koleksiyonum.
+        val shown = if (tab == 4) 4 else 3
         val categories = listOf(
-            Triple(0, null as String?, sh("Öne Çıkan", "Featured")),
-            Triple(2, "game_theme", sh("Tema", "Theme")),
-            Triple(2, "keyboard_theme", sh("Klavye", "Keyboard")),
-            Triple(2, "name_style", sh("İsim", "Name")),
-            Triple(2, "victory_effect", sh("Efekt", "Effect")),
-            Triple(4, null, sh("Maskotlar", "Mascots")),
-            Triple(1, null, sh("Sezon", "Season")),
+            3 to sh("PRO Üyelik", "PRO Membership"),
+            4 to sh("Maskotlar", "Mascots"),
         )
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(categories.size) { position ->
-                val (index, kind, label) = categories[position]
-                val selected = tab == index && (index != 2 || kindFilter == kind)
-                HfChip(label = label, selected = selected, onClick = {
-                    tab = index
-                    kindFilter = kind
-                })
+            categories.forEach { (index, label) ->
+                HfChip(label = label, selected = shown == index, onClick = { tab = index; kindFilter = null })
             }
         }
         Box(Modifier.weight(1f)) {
-            if (tab == 1) SeasonCenterContent()
             // Mascot characters, each a permanent Google Play product.
-            else if (tab == 4) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
+            if (shown == 4) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
                 MascotStoreSection()
             }
             else EconomyCatalogScreen(
-                section = tab,
+                section = shown,
                 kindFilter = kindFilter,
                 onSection = { tab = it; if (it != 2) kindFilter = null },
                 onRewards = { rewards = true },
