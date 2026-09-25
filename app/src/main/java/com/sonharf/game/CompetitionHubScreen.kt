@@ -31,44 +31,25 @@ import kotlinx.coroutines.launch
 fun CompetitionHubScreen(onBack: () -> Unit, clubEntry: Boolean = false) {
     // clubEntry retained for source compatibility; the club surface is hidden everywhere.
     @Suppress("UNUSED_PARAMETER") val ignoredClubEntry = clubEntry
-    var tab by remember { mutableIntStateOf(1) }
-    Column(
-        Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))
-        )
-    ) {
-        Box(Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) {
-            MainScreenHeader(
-                title = sh("REKABET MERKEZİ", "COMPETITION HUB"),
-                subtitle = sh("Haftalık Kupa • Rakipler", "Weekly Cup • Rivals"),
-                onBack = onBack,
-            )
-        }
-
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            FilterChip(
-                selected = tab == 1,
-                onClick = { tab = 1 },
-                leadingIcon = { Icon(Icons.Rounded.EmojiEvents, null, Modifier.size(16.dp)) },
-                label = { Text(sh("KUPA", "CUP"), fontWeight = FontWeight.Black, fontSize = 9.sp) },
-                modifier = Modifier.weight(1f),
-            )
-            FilterChip(
-                selected = tab == 2,
-                onClick = { tab = 2 },
-                leadingIcon = { Text("⚔", fontSize = 14.sp) },
-                label = { Text(sh("RAKİPLER", "RIVALS"), fontWeight = FontWeight.Black, fontSize = 9.sp) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-
-        Box(Modifier.weight(1f)) {
-            when (tab) {
-                1 -> WeeklyTournamentTab()
-                else -> RivalHistoryTab()
+    // 0 = ranking (08 preview), 1 = weekly cup, 2 = rivals.
+    var tab by remember { mutableIntStateOf(0) }
+    androidx.activity.compose.BackHandler(enabled = tab != 0) { tab = 0 }
+    Column(Modifier.fillMaxSize().background(SonHarfBg)) {
+        if (tab == 0) {
+            CompetitionRankingView(onCup = { tab = 1 }, onRivals = { tab = 2 })
+        } else {
+            Box(Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) {
+                MainScreenHeader(
+                    title = if (tab == 1) sh("Haftalık Kupa", "Weekly Cup") else sh("Rakipler", "Rivals"),
+                    subtitle = "",
+                    onBack = { tab = 0 },
+                )
+            }
+            Box(Modifier.weight(1f)) {
+                when (tab) {
+                    1 -> WeeklyTournamentTab()
+                    else -> RivalHistoryTab()
+                }
             }
         }
     }
