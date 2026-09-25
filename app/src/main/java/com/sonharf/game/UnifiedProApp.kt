@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -333,32 +334,35 @@ private fun DailyObjectiveCard(onClick: () -> Unit) {
 
 @Composable
 private fun HomeBrandHeader(onTasks: () -> Unit, onVip: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxWidth().height(82.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        UnifiedRoundAction(
-            icon = Icons.Rounded.Notifications,
-            onClick = onTasks,
-            modifier = Modifier.align(Alignment.CenterStart),
-        )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Column(Modifier.weight(1f)) {
             SonHarfOfficialLogo(
-                modifier = Modifier.width(184.dp).height(53.dp),
+                modifier = Modifier.width(238.dp).height(72.dp),
             )
             Text(
                 sh("Kelimeyi kur, alanı kuşat, rakibini geç", "Build words, control territory, beat your rival"),
-                color = UnifiedUi.Muted,
-                fontSize = 8.5.sp,
+                color = Color(0xFF4F7964),
+                fontSize = 9.5.sp,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(start = 9.dp, top = 1.dp),
             )
         }
-        UnifiedRoundAction(
-            icon = Icons.Rounded.WorkspacePremium,
-            onClick = onVip,
-            modifier = Modifier.align(Alignment.CenterEnd),
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                UnifiedRoundAction(Icons.Rounded.Notifications, onTasks)
+                UnifiedRoundAction(Icons.Rounded.WorkspacePremium, onVip)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                sh("Kelime oyunu +\ntaktik alan savaşı", "Word game +\ntactical territory battle"),
+                color = Color(0xFF436C59),
+                fontSize = 7.5.sp,
+                lineHeight = 8.5.sp,
+                textAlign = TextAlign.End,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
 
@@ -796,19 +800,19 @@ private fun UnifiedQuickTile(
 }
 
 @Composable
-private fun UnifiedRoundAction(icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun UnifiedRoundAction(icon: ImageVector, onClick: () -> Unit) {
     Surface(
-        modifier = modifier
+        modifier = Modifier
             .size(48.dp)
             .sonHarfPressScale(pressedScale = 0.94f)
             .clickable(onClick = onClick),
         shape = CircleShape,
-        color = UnifiedUi.Surface,
-        border = BorderStroke(1.2.dp, UnifiedUi.Border),
+        color = Color(0xFFFBFCF7).copy(alpha = .94f),
+        border = BorderStroke(1.2.dp, Color(0xFFB9CCC0)),
         shadowElevation = 1.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = UnifiedUi.Gold, modifier = Modifier.size(21.dp))
+            Icon(icon, null, tint = Color(0xFF244D3D), modifier = Modifier.size(21.dp))
         }
     }
 }
@@ -823,9 +827,9 @@ private fun UnifiedBottomBar(
     onProfile: () -> Unit,
 ) {
     NavigationBar(
-        containerColor = UnifiedUi.Navigation.copy(alpha = .98f),
+        containerColor = Color(0xFFF2F6F0).copy(alpha = .98f),
         tonalElevation = 0.dp,
-        modifier = Modifier.border(0.5.dp, UnifiedUi.Border),
+        modifier = Modifier.border(0.5.dp, Color(0xFFDDE6DF)),
     ) {
         listOf(
             Triple(UnifiedDestination.HOME, Icons.Rounded.Home, sh("ANA", "HOME")) to onHome,
@@ -842,11 +846,11 @@ private fun UnifiedBottomBar(
                 icon = { Icon(item.second, null) },
                 label = { Text(item.third, fontSize = 8.sp, fontWeight = if (destination == item.first) FontWeight.Bold else FontWeight.Normal) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = UnifiedUi.Gold,
-                    selectedTextColor = UnifiedUi.Gold,
-                    indicatorColor = UnifiedUi.Surface2,
-                    unselectedIconColor = UnifiedUi.Muted,
-                    unselectedTextColor = UnifiedUi.Muted,
+                    selectedIconColor = Color(0xFF3F745E),
+                    selectedTextColor = Color(0xFF3F745E),
+                    indicatorColor = Color(0xFFDDE9E1),
+                    unselectedIconColor = Color(0xFF6A8075),
+                    unselectedTextColor = Color(0xFF6A8075),
                 ),
             )
         }

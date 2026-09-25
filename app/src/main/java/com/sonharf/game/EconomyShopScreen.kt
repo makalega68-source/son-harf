@@ -1,19 +1,23 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -21,6 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
+
+/** Tab index of the mascot shelf; indices 0–3 keep their historical meaning. */
+private const val STORE_TAB_MASCOTS = 4
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,29 +40,58 @@ fun EconomyShopScreen(
 ) {
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 3)) }
     var rewards by remember { mutableStateOf(false) }
+
     if (rewards) {
-        Column {
-            TextButton(onClick = { rewards = false }) { Text(sh("Mağazaya dön", "Back to shop")) }
-            RewardCenterScreen()
+        Column(Modifier.fillMaxSize().background(GameColors.AppBackground)) {
+            GameTopBar(
+                title = gameText("Ödüller", "Rewards"),
+                subtitle = gameText("İsteğe bağlı ödüller ve günlük kazanımlar", "Optional rewards and daily earnings"),
+                onBack = { rewards = false },
+            )
+            Box(Modifier.weight(1f)) { RewardCenterScreen() }
         }
         return
     }
-    Column(Modifier.fillMaxSize().background(SonHarfBg)) {
-        MainScreenHeader(
-            title = sh("MAĞAZA", "SHOP"),
-            subtitle = sh("Kelime Tahtı · Tarzını seç", "Kelime Tahtı · Make it yours"),
+
+    Column(Modifier.fillMaxSize().background(GameColors.AppBackground)) {
+        GameTopBar(
+            title = gameText("Mağaza", "Shop"),
+            subtitle = gameText("Görünüm, konfor ve prestij", "Appearance, comfort and prestige"),
             onBack = onBack,
+            trailing = {
+                // Owned items live in the inventory, separate from the catalog.
+                GameIconButton(
+                    icon = Icons.Rounded.Inventory2,
+                    description = gameText("Envanterim", "My inventory"),
+                    onClick = onCollection,
+                )
+            },
         )
-        ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp, containerColor = Color.Transparent, divider = {}) {
-            listOf(sh("Öne Çıkan", "Featured"), sh("Sezon", "Season"), sh("Görünümler", "Styles"), "PRO")
-                .forEachIndexed { index, label ->
-                    Tab(selected = tab == index, onClick = { tab = index }, text = {
-                        Text(label, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = if (tab == index) FontWeight.Bold else FontWeight.Medium)
-                    })
-                }
-        }
+        // Four clear tabs; collections and the season are opened from the Featured tab.
+        val tabOrder = listOf(0, STORE_TAB_MASCOTS, 1, 3)
+        SegmentedGameTabs(
+            labels = listOf(
+                gameText("Öne Çıkan", "Featured"),
+                gameText("Maskotlar", "Mascots"),
+                gameText("Kozmetik", "Cosmetics"),
+                "PRO",
+            ),
+            selectedIndex = tabOrder.indexOf(tab).coerceAtLeast(0),
+            onSelected = { tab = tabOrder[it] },
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
+        Spacer(Modifier.height(6.dp))
         Box(Modifier.weight(1f)) {
-            if (tab == 1) SeasonCenterContent()
+            if (tab == STORE_TAB_MASCOTS) Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                // Mascot characters are permanent Google Play products; ownership comes from the server.
+                MascotStoreSection()
+            }
+            else if (tab == 2) StoreCollectionsTab(
+                catalog = { EconomyCatalogScreen(2, { tab = it }, { rewards = true }, onMembershipChanged, onCollection, onPro) },
+                season = { SeasonCenterContent() },
+            )
             else EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection, onPro)
         }
     }
@@ -73,6 +109,7 @@ private fun EconomyCatalogScreen(
 ) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
+    val twoColumnProducts = LocalConfiguration.current.screenWidthDp >= 380
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var items by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -84,16 +121,18 @@ private fun EconomyCatalogScreen(
     var showCoins by remember { mutableStateOf(false) }
     var selectedBundle by remember { mutableStateOf<StoreBundleDto?>(null) }
     var showVip by remember { mutableStateOf(false) }
+    var selectedProduct by remember { mutableStateOf<ShopItemDto?>(null) }
+    var kindFilter by remember { mutableStateOf<String?>(null) }
 
     suspend fun reload() {
         val b = backend
         if (b == null) {
-            notice = sh("Mağaza sunucu bağlantısı olmadan kullanılamaz.", "The shop requires a server connection.")
+            notice = gameText("Mağaza sunucu bağlantısı olmadan kullanılamaz.", "The shop requires a server connection.")
             return
         }
         val id = b.currentUserId()
         if (id == null) {
-            notice = sh("Oyuncu oturumu hazırlanamadı.", "Player session is not ready.")
+            notice = gameText("Oyuncu oturumu hazırlanamadı.", "Player session is not ready.")
             return
         }
         runCatching {
@@ -105,7 +144,7 @@ private fun EconomyCatalogScreen(
             onMembershipChanged(profile?.isVip == true)
             storefront = b.getStorefront()
         }.onFailure {
-            notice = sh("Mağaza verileri yüklenemedi.", "Shop data could not be loaded.")
+            notice = gameText("Mağaza verileri yüklenemedi.", "Shop data could not be loaded.")
         }
     }
 
@@ -118,14 +157,56 @@ private fun EconomyCatalogScreen(
     fun isEquipped(item: ShopItemDto): Boolean = equipped.isEquipped(item)
 
     val filtered = when (section) {
-        2 -> items
+        1 -> items.filter { kindFilter == null || it.kind == kindFilter }
         else -> emptyList()
     }
-    val bundles = storefront?.bundles.orEmpty().filter { b -> b.items.isNotEmpty() && b.items.all { it.isRuntimeReadyStyle() } }
+
+    // Purchase and equip are server-side RPCs; the client only reports their result.
+    fun purchase(product: ShopItemDto) {
+        val b = backend ?: return
+        if (busy != null) return
+        scope.launch {
+            busy = product.id
+            val displayName = if (SonHarfUiState.isEnglish) product.nameEn else product.nameTr
+            runCatching { b.purchaseShopItem(product.id) }
+                .onSuccess {
+                    notice = gameText("$displayName satın alındı. Şimdi kullanabilirsin.", "$displayName purchased. You can equip it now.")
+                    reload()
+                }
+                .onFailure {
+                    val raw = it.message.orEmpty()
+                    notice = when {
+                        "insufficient_diamonds" in raw -> gameText("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                        "vip_required" in raw -> gameText("Bu ürün PRO üyelerine özel.", "This item is exclusive to PRO members.")
+                        "already_owned" in raw -> gameText("Bu ürüne zaten sahipsin.", "You already own this item.")
+                        else -> gameText("Satın alma tamamlanamadı.", "Purchase failed.")
+                    }
+                }
+            busy = null
+        }
+    }
+
+    fun equip(product: ShopItemDto) {
+        val b = backend ?: return
+        if (busy != null) return
+        scope.launch {
+            busy = product.id
+            runCatching { b.equipShopItem(product.id) }
+                .onSuccess {
+                    notice = gameText("Görünüm kullanılıyor.", "Style equipped.")
+                    reload()
+                }
+                .onFailure { notice = gameText("Görünüm uygulanamadı.", "Could not equip the style.") }
+            busy = null
+        }
+    }
+    val bundles = storefront?.bundles.orEmpty().filter { bundle ->
+        bundle.items.isNotEmpty() && bundle.items.all { it.isRuntimeReadyStyle() }
+    }
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
@@ -137,16 +218,32 @@ private fun EconomyCatalogScreen(
             )
         }
 
-        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfTheme.Primary) }
+        if (loading) item {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth().height(5.dp),
+                color = GameColors.PrimaryBlue,
+                trackColor = GameColors.SecondarySurface,
+            )
+        }
 
         item {
-            Row {
-                Spacer(Modifier.weight(1f))
-                TextButton(enabled = busy == null && !loading, onClick = {
-                    scope.launch { loading = true; notice = null; reload(); loading = false }
-                }) { Text(sh("Yenile", "Refresh"), fontSize = 12.sp) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                GameIconButton(
+                    icon = Icons.Rounded.Refresh,
+                    contentDescription = gameText("Mağazayı yenile", "Refresh shop"),
+                    onClick = {
+                        if (busy == null && !loading) scope.launch {
+                            loading = true
+                            notice = null
+                            reload()
+                            loading = false
+                        }
+                    },
+                    tint = if (busy == null && !loading) GameColors.PrimaryBlue else GameColors.DisabledContent,
+                )
             }
         }
+
         if (section == 0) {
             item {
                 StoreDailyRewardCard(storefront, busy != null || loading) {
@@ -155,174 +252,299 @@ private fun EconomyCatalogScreen(
                         busy = "daily"
                         runCatching { b.claimDailyCheckin() }
                             .onSuccess { amount ->
-                                notice = if (amount > 0) sh("+$amount Son Coin eklendi.", "+$amount Son Coin added.")
-                                    else sh("Bugünkü ödülünü aldın.", "You already claimed today's gift.")
+                                notice = if (amount > 0) gameText("+$amount Son Coin eklendi.", "+$amount Son Coin added.")
+                                else gameText("Bugünkü ödülünü aldın.", "You already claimed today's gift.")
                                 reload()
-                            }.onFailure { notice = sh("Ödül alınamadı. Tekrar deneyebilirsin.", "Could not claim the gift. Please retry.") }
+                            }
+                            .onFailure {
+                                notice = gameText("Ödül alınamadı. Tekrar deneyebilirsin.", "Could not claim the gift. Please retry.")
+                            }
                         busy = null
                     }
                 }
             }
             item { ProShopCard(profile?.isVip == true) { onSection(3) } }
-            item { StorePromoCard(sh("Sezon Bileti", "Season Pass"), sh("Sezonu ve ödül yolunu keşfet", "Explore the season and reward track"), sh("İncele", "Explore")) { onSection(1) } }
+            item {
+                StorePromoCard(
+                    gameText("Maskotlar", "Mascots"),
+                    gameText("Oyunda seninle oynayan canlı karakterler", "Living characters that play along with you"),
+                    gameText("Gör", "View"),
+                    artwork = R.drawable.store_product_emoji_vip,
+                ) { onSection(STORE_TAB_MASCOTS) }
+            }
+            item {
+                StorePromoCard(
+                    gameText("Sezon Bileti", "Season Pass"),
+                    gameText("Sezonu ve ödül yolunu keşfet", "Explore the season and reward track"),
+                    gameText("İncele", "Explore"),
+                    artwork = R.drawable.store_product_season_pass_monthly,
+                ) { onSection(2) }
+            }
             bundles.firstOrNull { it.section == "starter" }?.let { bundle ->
                 item { StoreBundleCard(bundle, owned, busy != null || loading) { selectedBundle = bundle } }
             }
             if (items.isNotEmpty()) {
                 item { VerifiedProductsHero(items, owned) }
-                item { TextButton(onClick = { onSection(2) }) { Text(sh("Tüm görünümler", "All styles")) } }
+                item {
+                    GameSecondaryButton(
+                        text = gameText("Tüm kozmetikleri aç", "View all cosmetics"),
+                        onClick = { onSection(1) },
+                        modifier = Modifier.fillMaxWidth(),
+                        icon = Icons.Rounded.Palette,
+                    )
+                }
             }
             bundles.filter { it.section == "limited" }.forEach { bundle ->
                 item { StoreBundleCard(bundle, owned, busy != null || loading) { selectedBundle = bundle } }
             }
-            if (storefront?.rewardedEnabled == true) item { TextButton(onClick = onRewards) { Text(sh("İsteğe bağlı reklam ödülleri", "Optional ad rewards")) } }
+            if (storefront?.rewardedEnabled == true) item {
+                GameTertiaryButton(
+                    text = gameText("İsteğe bağlı reklam ödülleri", "Optional ad rewards"),
+                    onClick = onRewards,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Rounded.CardGiftcard,
+                )
+            }
         }
+
         if (section == 3) {
             val proActive = profile?.isVip == true
             item { ProShopCard(proActive) { if (proActive) onPro() else showVip = true } }
             item { StoreProBenefits() }
             if (proActive) item {
-                TextButton(onClick = onPro, modifier = Modifier.fillMaxWidth()) {
-                    Text(sh("PRO ARAÇLARINI AÇ", "OPEN PRO TOOLS"), fontWeight = FontWeight.Black)
-                }
+                GameSecondaryButton(
+                    text = gameText("PRO araçlarını aç", "Open PRO tools"),
+                    onClick = onPro,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Rounded.WorkspacePremium,
+                )
             }
         }
-        if (filtered.isEmpty() && !loading && section == 2) {
-            item {
-                Surface(
-                    color = SonHarfSurface,
-                    shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, SonHarfTheme.Border),
-                ) {
-                    Text(
-                        sh("Şu anda satışta görünüm yok.", "No styles are on sale right now."),
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        color = SonHarfMuted,
-                        fontSize = 11.sp,
-                        textAlign = TextAlign.Center,
-                    )
+
+        if (section == 1) {
+            val kinds = items.map { it.kind }.distinct()
+            if (kinds.size > 1) item {
+                StoreKindFilter(kinds = kinds, selected = kindFilter, onSelect = { kindFilter = it })
+            }
+        }
+
+        if (section == 2) {
+            // Collections come from the catalog's bundle sections; nothing is hard-coded per season.
+            val groups = bundles.groupBy { it.section }
+            if (groups.isEmpty() && !loading) item {
+                GameEmptyState(
+                    icon = Icons.Rounded.CollectionsBookmark,
+                    title = gameText("Aktif koleksiyon yok", "No active collections"),
+                    body = gameText("Sezon ve etkinlik koleksiyonları yayınlandığında burada görünür.", "Season and event collections appear here when they go live."),
+                )
+            }
+            groups.forEach { (section, group) ->
+                item(key = "collection-$section") { StoreCollectionTitle(section) }
+                group.forEach { bundle ->
+                    item(key = "bundle-${bundle.id}") {
+                        StoreBundleCard(bundle, owned, busy != null || loading) { selectedBundle = bundle }
+                    }
                 }
             }
         }
 
-        items(filtered, key = { it.id }) { item ->
-            val mine = item.id in owned
-            val active = isEquipped(item)
-            VerifiedStoreProductCard(
-                item = item,
-                owned = mine,
-                equipped = active,
-                busy = busy != null || loading,
-                proActive = profile?.isVip == true,
+        if (filtered.isEmpty() && !loading && section == 1) {
+            item {
+                GameEmptyState(
+                    icon = Icons.Rounded.Storefront,
+                    title = gameText("Satışta görünüm yok", "No styles on sale"),
+                    body = gameText("Katalog güncellendiğinde burada görünecek.", "New catalog items will appear here when available."),
+                )
+            }
+        }
+
+        items(
+            items = filtered.chunked(if (twoColumnProducts) 2 else 1),
+            key = { group -> group.joinToString(separator = "|") { it.id } },
+        ) { group ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.Top,
             ) {
-                val b = backend
-                if (b == null || busy != null) return@VerifiedStoreProductCard
-                scope.launch {
-                    busy = item.id
-                    val displayName = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
-                    if (mine) {
-                        onCollection()
-                    } else {
-                        runCatching { b.purchaseShopItem(item.id) }
-                            .onSuccess {
-                                notice = sh("$displayName satın alındı. Profil > Koleksiyonum'dan kullanabilirsin.", "$displayName purchased. Equip it from Profile > My Collection.")
-                                reload()
-                            }
-                            .onFailure {
-                                val raw = it.message.orEmpty()
-                                notice = when {
-                                    "insufficient_diamonds" in raw -> sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
-                                    "vip_required" in raw -> sh("Bu ürün PRO üyelerine özel.", "This item is exclusive to PRO members.")
-                                    "already_owned" in raw -> sh("Bu ürüne zaten sahipsin.", "You already own this item.")
-                                    else -> sh("Satın alma tamamlanamadı.", "Purchase failed.")
-                                }
-                            }
+                group.forEach { product ->
+                    val mine = product.id in owned
+                    val active = isEquipped(product)
+                    VerifiedStoreProductCard(
+                        item = product,
+                        owned = mine,
+                        equipped = active,
+                        busy = busy != null || loading,
+                        proActive = profile?.isVip == true,
+                        compact = twoColumnProducts,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        val b = backend
+                        if (b == null || busy != null) return@VerifiedStoreProductCard
+                        selectedProduct = product
                     }
-                    busy = null
                 }
+                if (twoColumnProducts && group.size == 1) Spacer(Modifier.weight(1f))
             }
         }
 
         item {
-            Surface(
-                color = SonHarfTheme.SurfaceSecondary,
-                shape = RoundedCornerShape(18.dp),
-                border = BorderStroke(1.dp, SonHarfTheme.Border),
-            ) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.VerifiedUser, null, tint = SonHarfTheme.Success, modifier = Modifier.size(25.dp))
+            GameSurface(elevated = true, borderColor = GameColors.PlayGreen.copy(alpha = .35f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    GameBadgeIcon(Icons.Rounded.VerifiedUser, GameColors.PlayGreen, size = 42.dp)
                     Spacer(Modifier.width(10.dp))
                     Column {
-                        Text(sh("ADİL OYUN SÖZÜ", "FAIR PLAY PROMISE"), color = SonHarfText, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz.", "Store products never provide match power, score, or rating advantages."), color = SonHarfMuted, fontSize = 10.sp)
+                        Text(
+                            gameText("ADİL OYUN SÖZÜ", "FAIR PLAY PROMISE"),
+                            color = GameColors.TextPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Text(
+                            gameText(
+                                "Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz.",
+                                "Store products never provide match power, score, or rating advantages.",
+                            ),
+                            color = GameColors.TextSecondary,
+                            fontSize = 10.sp,
+                        )
                     }
                 }
             }
         }
 
         if (!notice.isNullOrBlank()) item {
-            Surface(color = SonHarfSurface2, shape = RoundedCornerShape(15.dp)) {
-                Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfText, fontSize = 10.sp, textAlign = TextAlign.Center)
+            Surface(
+                color = GameColors.SecondarySurface,
+                shape = GameShapes.Medium,
+                border = BorderStroke(1.dp, GameColors.Border),
+            ) {
+                Text(
+                    notice!!,
+                    Modifier.fillMaxWidth().padding(12.dp),
+                    color = GameColors.TextPrimary,
+                    fontSize = 10.sp,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
         item { Spacer(Modifier.height(10.dp)) }
     }
 
     if (showVip) VipPurchaseDialog(onVerified = { scope.launch { reload() } }) { showVip = false }
-    if (showCoins) ModalBottomSheet(onDismissRequest = { showCoins = false }, containerColor = SonHarfSurface) {
-        GooglePlayProductsCard { scope.launch { reload() } }
-        Spacer(Modifier.navigationBarsPadding().height(12.dp))
+
+    selectedProduct?.let { product ->
+        StoreProductDetailSheet(
+            item = product,
+            owned = product.id in owned,
+            equipped = isEquipped(product),
+            proActive = profile?.isVip == true,
+            balance = profile?.diamonds ?: 0,
+            busy = busy != null || loading,
+            onBuy = { purchase(product) },
+            onEquip = { equip(product) },
+            onPro = {
+                selectedProduct = null
+                onSection(3)
+            },
+            onDismiss = { selectedProduct = null },
+        )
     }
+
+    if (showCoins) {
+        ModalBottomSheet(
+            onDismissRequest = { showCoins = false },
+            containerColor = GameColors.PrimarySurface,
+            contentColor = GameColors.TextPrimary,
+        ) {
+            GooglePlayProductsCard { scope.launch { reload() } }
+            Spacer(Modifier.navigationBarsPadding().height(12.dp))
+        }
+    }
+
     selectedBundle?.let { bundle ->
         AlertDialog(
             onDismissRequest = { if (busy == null) selectedBundle = null },
-            title = { Text(sh(bundle.nameTr, bundle.nameEn)) },
-            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                bundle.items.forEach { p -> Text(sh(p.nameTr, p.nameEn) + if (p.id in owned) sh(" · Sende var", " · Owned") else "") }
-                Text("${bundle.diamondPrice} Son Coin", fontWeight = FontWeight.Bold)
-                Text(sh("Sende olan ürünler tekrar verilmez.", "Already owned items are not granted again."), fontSize = 12.sp)
-            } },
-            confirmButton = { TextButton(enabled = busy == null, onClick = {
-                val b = backend
-                if (b != null && busy == null) scope.launch {
-                    busy = bundle.id
-                    runCatching { b.purchaseStoreBundle(bundle.id) }
-                        .onSuccess { notice = sh("Paket koleksiyonuna eklendi.", "Bundle added to your collection."); reload() }
-                        .onFailure { error ->
-                            notice = if ("insufficient_diamonds" in error.message.orEmpty()) sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
-                                else sh("Paket alınamadı. Teklifi yenileyip tekrar dene.", "Could not purchase. Refresh the offer and retry.")
-                        }
-                    selectedBundle = null
-                    busy = null
+            containerColor = GameColors.PrimarySurface,
+            titleContentColor = GameColors.TextPrimary,
+            textContentColor = GameColors.TextSecondary,
+            title = { Text(gameText(bundle.nameTr, bundle.nameEn)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    bundle.items.forEach { product ->
+                        Text(gameText(product.nameTr, product.nameEn) + if (product.id in owned) gameText(" · Sende var", " · Owned") else "")
+                    }
+                    Text("${bundle.diamondPrice} Son Coin", color = GameColors.RewardAmber, fontWeight = FontWeight.Bold)
+                    Text(
+                        gameText("Sende olan ürünler tekrar verilmez.", "Already owned items are not granted again."),
+                        fontSize = 12.sp,
+                    )
                 }
-            }) { Text(sh("Satın al", "Buy")) } },
-            dismissButton = { TextButton(enabled = busy == null, onClick = { selectedBundle = null }) { Text(sh("Vazgeç", "Cancel")) } },
+            },
+            confirmButton = {
+                TextButton(enabled = busy == null, onClick = {
+                    val b = backend
+                    if (b != null && busy == null) scope.launch {
+                        busy = bundle.id
+                        runCatching { b.purchaseStoreBundle(bundle.id) }
+                            .onSuccess {
+                                notice = gameText("Paket koleksiyonuna eklendi.", "Bundle added to your collection.")
+                                reload()
+                            }
+                            .onFailure { error ->
+                                notice = if ("insufficient_diamonds" in error.message.orEmpty()) {
+                                    gameText("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                                } else {
+                                    gameText("Paket alınamadı. Teklifi yenileyip tekrar dene.", "Could not purchase. Refresh the offer and retry.")
+                                }
+                            }
+                        selectedBundle = null
+                        busy = null
+                    }
+                }) { Text(gameText("Satın al", "Buy"), color = GameColors.PrimaryBlue) }
+            },
+            dismissButton = {
+                TextButton(enabled = busy == null, onClick = { selectedBundle = null }) {
+                    Text(gameText("Vazgeç", "Cancel"), color = GameColors.TextSecondary)
+                }
+            },
         )
     }
 }
 
 @Composable
 private fun StoreCollectionHeader(balance: Int, ownedCount: Int, total: Int, onCoins: () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfTheme.Surface),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, SonHarfTheme.Border),
-    ) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = RoundedCornerShape(16.dp), color = SonHarfTheme.PrimarySoft) {
-                Icon(Icons.Rounded.Storefront, null, Modifier.padding(11.dp).size(27.dp), tint = SonHarfTheme.Primary)
+    GameSurface(elevated = true, borderColor = GameColors.PrimaryBlue.copy(alpha = .28f)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = GameShapes.Medium, color = GameColors.PrimaryBlue.copy(alpha = .14f)) {
+                Icon(
+                    Icons.Rounded.Storefront,
+                    null,
+                    modifier = Modifier.padding(11.dp).size(27.dp),
+                    tint = GameColors.PrimaryBlue,
+                )
             }
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh("Koleksiyon", "Collection"), color = SonHarfText, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                Text(sh("Görünüm · konfor · prestij", "Appearance · comfort · prestige"), color = SonHarfMuted, fontSize = 10.sp)
-                Text(sh("Koleksiyon $ownedCount/$total", "Collection $ownedCount/$total"), color = SonHarfTheme.Primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(gameText("Koleksiyon", "Collection"), color = GameColors.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Text(gameText("Görünüm · konfor · prestij", "Appearance · comfort · prestige"), color = GameColors.TextSecondary, fontSize = 10.sp)
+                Text(
+                    gameText("Koleksiyon $ownedCount/$total", "Collection $ownedCount/$total"),
+                    color = GameColors.PrimaryBlue,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
             }
-            Surface(onClick = onCoins, shape = RoundedCornerShape(99.dp), color = SonHarfGold.copy(alpha = .14f), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .30f))) {
+            Surface(
+                onClick = onCoins,
+                shape = GameShapes.Pill,
+                color = GameColors.RewardAmber.copy(alpha = .14f),
+                border = BorderStroke(1.dp, GameColors.RewardAmber.copy(alpha = .35f)),
+            ) {
                 Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Toll, null, Modifier.size(16.dp), tint = SonHarfGold)
+                    GameCoinIcon(18.dp)
                     Spacer(Modifier.width(4.dp))
-                    Text("$balance SC", color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                    Text("$balance SC", color = GameColors.TextPrimary, fontWeight = FontWeight.Black, fontSize = 12.sp)
                 }
             }
         }
@@ -337,28 +559,35 @@ private fun VerifiedProductsHero(items: List<ShopItemDto>, owned: Set<String>) {
         items.firstOrNull { it.kind == "name_style" },
     ).ifEmpty { items.take(3) }.take(3)
     if (featured.isEmpty()) return
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfTheme.PrimarySoft.copy(alpha = .62f)),
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, SonHarfTheme.Primary.copy(alpha = .25f)),
-    ) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(sh("Öne çıkan görünümler", "Featured styles"), color = SonHarfTheme.Primary, fontWeight = FontWeight.Black, fontSize = 12.sp)
-            Text(sh("Tahta, klavye ve profil görünümünü kişiselleştir.", "Personalize your board, keyboard, and profile style."), color = SonHarfMuted, fontSize = 9.sp)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                featured.forEach { item ->
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        StoreProductPreview(item, Modifier.fillMaxWidth().height(82.dp))
-                        Spacer(Modifier.height(5.dp))
-                        Text(
-                            if (item.id in owned) sh("SAHİPSİN", "OWNED") else if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr,
-                            color = if (item.id in owned) SonHarfTheme.Success else SonHarfText,
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
+
+    GameSurface(borderColor = GameColors.TacticalTurquoise.copy(alpha = .30f)) {
+        Text(
+            gameText("Öne çıkan görünümler", "Featured styles"),
+            color = GameColors.TacticalTurquoise,
+            fontWeight = FontWeight.Black,
+            fontSize = 12.sp,
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            gameText("Tahta, klavye ve profil görünümünü kişiselleştir.", "Personalize your board, keyboard, and profile style."),
+            color = GameColors.TextSecondary,
+            fontSize = 9.sp,
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            featured.forEach { item ->
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    StoreProductPreview(item, Modifier.fillMaxWidth().height(82.dp))
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        if (item.id in owned) gameText("SAHİPSİN", "OWNED")
+                        else if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr,
+                        color = if (item.id in owned) GameColors.PlayGreen else GameColors.TextPrimary,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }
@@ -372,58 +601,135 @@ private fun VerifiedStoreProductCard(
     equipped: Boolean,
     busy: Boolean,
     proActive: Boolean,
+    compact: Boolean = false,
+    modifier: Modifier = Modifier,
     onAction: () -> Unit,
 ) {
     val name = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
     val description = if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr
     val lockedByPro = item.vipOnly && !proActive && !owned
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfTheme.Surface),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(if (equipped) 2.dp else 1.dp, if (equipped) SonHarfTheme.Success else SonHarfTheme.Border),
+    // The whole card opens the product detail sheet, including PRO-only and equipped items.
+    Surface(
+        onClick = onAction,
+        enabled = !busy,
+        modifier = modifier,
+        color = GameColors.PrimarySurface,
+        shape = GameShapes.Large,
+        border = BorderStroke(
+            if (equipped) 2.dp else 1.dp,
+            if (equipped) GameColors.PlayGreen else GameColors.Border,
+        ),
     ) {
-        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            StoreProductPreview(item, Modifier.size(76.dp))
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        if (compact) {
+            Column(
+                Modifier.fillMaxWidth().padding(11.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                StoreProductPreview(item, Modifier.fillMaxWidth().height(92.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(name, Modifier.weight(1f), color = SonHarfText, fontSize = 15.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (equipped) Icon(Icons.Rounded.CheckCircle, null, tint = SonHarfTheme.Success, modifier = Modifier.size(18.dp))
+                    Text(
+                        name,
+                        Modifier.weight(1f),
+                        color = GameColors.TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (equipped) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Rounded.CheckCircle, null, tint = GameColors.PlayGreen, modifier = Modifier.size(17.dp))
+                    }
                 }
-                Text(description, color = SonHarfMuted, fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (item.vipOnly) Text("PRO", color = SonHarfGold, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    description,
+                    color = GameColors.TextSecondary,
+                    fontSize = 9.sp,
+                    minLines = 2,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (item.vipOnly) Text("PRO", color = GameColors.PrestigeGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                StorePriceLabel(owned = owned, equipped = equipped, price = item.diamondPrice)
+                Button(
+                    onClick = onAction,
+                    enabled = !busy && !equipped && !lockedByPro,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 42.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    shape = GameShapes.Small,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GameColors.PrimaryBlue,
+                        contentColor = GameColors.TextPrimary,
+                        disabledContainerColor = GameColors.Disabled,
+                        disabledContentColor = GameColors.DisabledContent,
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp),
+                ) {
+                    Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
                     Text(
                         when {
-                            equipped -> sh("AKTİF", "ACTIVE")
-                            owned -> sh("SAHİPSİN", "OWNED")
-                            else -> "${item.diamondPrice} SC"
+                            equipped -> gameText("KULLANILIYOR", "EQUIPPED")
+                            owned -> gameText("KULLAN", "EQUIP")
+                            lockedByPro -> "PRO"
+                            else -> gameText("SATIN AL", "BUY")
                         },
-                        color = if (owned) SonHarfTheme.Success else SonHarfGold,
-                        fontSize = 11.sp,
+                        fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
+                        maxLines = 1,
                     )
-                    Spacer(Modifier.weight(1f))
-                    Button(
-                        onClick = onAction,
-                        enabled = !busy && !equipped && !lockedByPro,
-                        contentPadding = PaddingValues(horizontal = 11.dp, vertical = 0.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary),
-                    ) {
-                        Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
+                }
+            }
+        } else {
+            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                StoreProductPreview(item, Modifier.size(76.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            when {
-                                equipped -> sh("AKTİF", "ACTIVE")
-                                owned -> sh("PROFİLDE KULLAN", "USE IN PROFILE")
-                                lockedByPro -> "PRO"
-                                else -> sh("SATIN AL", "BUY")
-                            },
-                            fontSize = 10.sp,
+                            name,
+                            Modifier.weight(1f),
+                            color = GameColors.TextPrimary,
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
+                        if (equipped) Icon(Icons.Rounded.CheckCircle, null, tint = GameColors.PlayGreen, modifier = Modifier.size(18.dp))
+                    }
+                    Text(description, color = GameColors.TextSecondary, fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (item.vipOnly) Text("PRO", color = GameColors.PrestigeGold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        StorePriceLabel(owned = owned, equipped = equipped, price = item.diamondPrice)
+                        Spacer(Modifier.weight(1f))
+                        Button(
+                            onClick = onAction,
+                            enabled = !busy && !equipped && !lockedByPro,
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                            shape = GameShapes.Small,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = GameColors.PrimaryBlue,
+                                contentColor = GameColors.TextPrimary,
+                                disabledContainerColor = GameColors.Disabled,
+                                disabledContentColor = GameColors.DisabledContent,
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp),
+                        ) {
+                            Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                when {
+                                    equipped -> gameText("KULLANILIYOR", "EQUIPPED")
+                                    owned -> gameText("KULLAN", "EQUIP")
+                                    lockedByPro -> "PRO"
+                                    else -> gameText("SATIN AL", "BUY")
+                                },
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                            )
+                        }
                     }
                 }
             }
@@ -433,27 +739,130 @@ private fun VerifiedStoreProductCard(
 
 @Composable
 private fun ProShopCard(active: Boolean, onClick: () -> Unit) {
-    Card(
+    Surface(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MainUi.BlueSoft),
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .25f)),
+        color = GameColors.PrestigeGold.copy(alpha = .10f),
+        shape = GameShapes.Large,
+        border = BorderStroke(1.dp, GameColors.PrestigeGold.copy(alpha = .38f)),
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Surface(shape = CircleShape, color = Color.White) {
-                        Icon(Icons.Rounded.WorkspacePremium, null, Modifier.padding(10.dp).size(28.dp), tint = SonHarfGold)
-                    }
+                    Image(
+                        painterResource(R.drawable.store_product_vip_yearly),
+                        contentDescription = null,
+                        modifier = Modifier.size(56.dp),
+                    )
                     Column {
-                        Text("PRO", color = MainUi.Blue, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Reklamsız + profil + analiz", "Ad-free + profile + analysis"), color = SonHarfMuted, fontSize = 9.sp)
+                        Text("PRO", color = GameColors.PrestigeGold, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                        Text(gameText("Reklamsız + profil + analiz", "Ad-free + profile + analysis"), color = GameColors.TextSecondary, fontSize = 9.sp)
                     }
                 }
-                Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) SonHarfTheme.Success else MainUi.Blue, fontWeight = FontWeight.Black)
+                Text(
+                    if (active) gameText("AKTİF", "ACTIVE") else gameText("KEŞFET ›", "EXPLORE ›"),
+                    color = if (active) GameColors.PlayGreen else GameColors.PrestigeGold,
+                    fontWeight = FontWeight.Black,
+                )
             }
-            Text(sh("Özel oda • PRO profil rozeti • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar", "Private rooms • PRO profile badge • advanced stats • ad-free experience • social benefits"), color = SonHarfText, fontSize = 10.sp)
-            Text(sh("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez.", "PRO provides no score, word-hint, or rating advantage in ranked matches."), color = SonHarfTheme.Success, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text(
+                gameText(
+                    "Özel oda • PRO profil rozeti • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar",
+                    "Private rooms • PRO profile badge • advanced stats • ad-free experience • social benefits",
+                ),
+                color = GameColors.TextPrimary,
+                fontSize = 10.sp,
+            )
+            Text(
+                gameText(
+                    "PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez.",
+                    "PRO provides no score, word-hint, or rating advantage in ranked matches.",
+                ),
+                color = GameColors.PlayGreen,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+            )
         }
+    }
+}
+
+/** KOLEKSİYON: catalog collections (bundle sections) and the season store. */
+@Composable
+private fun StoreCollectionsTab(catalog: @Composable () -> Unit, season: @Composable () -> Unit) {
+    var sub by remember { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        SegmentedGameTabs(
+            labels = listOf(gameText("Koleksiyonlar", "Collections"), gameText("Sezon", "Season")),
+            selectedIndex = sub,
+            onSelected = { sub = it },
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
+        Box(Modifier.weight(1f)) { if (sub == 1) season() else catalog() }
+    }
+}
+
+@Composable
+private fun StoreCollectionTitle(section: String) {
+    val title = when (section) {
+        "starter" -> gameText("Başlangıç koleksiyonu", "Starter collection")
+        "limited" -> gameText("Sınırlı süreli koleksiyon", "Limited-time collection")
+        "season" -> gameText("Sezon koleksiyonu", "Season collection")
+        "tournament" -> gameText("Turnuva koleksiyonu", "Tournament collection")
+        "league" -> gameText("Lig koleksiyonu", "League collection")
+        else -> section.replace('_', ' ').replaceFirstChar { it.titlecase() }
+    }
+    Text(title, color = GameColors.Lavender, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black)
+}
+
+@Composable
+private fun StoreKindFilter(kinds: List<String>, selected: String?, onSelect: (String?) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        FilterChip(
+            selected = selected == null,
+            onClick = { onSelect(null) },
+            label = { Text(gameText("Tümü", "All")) },
+            colors = FilterChipDefaults.filterChipColors(
+                containerColor = GameColors.PrimarySurface,
+                labelColor = GameColors.TextSecondary,
+                selectedContainerColor = GameColors.Lavender.copy(alpha = .22f),
+                selectedLabelColor = GameColors.TextPrimary,
+            ),
+        )
+        kinds.forEach { kind ->
+            FilterChip(
+                selected = selected == kind,
+                onClick = { onSelect(kind) },
+                label = { Text(storeKindLabel(kind), maxLines = 1) },
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = GameColors.PrimarySurface,
+                    labelColor = GameColors.TextSecondary,
+                    selectedContainerColor = GameColors.Lavender.copy(alpha = .22f),
+                    selectedLabelColor = GameColors.TextPrimary,
+                ),
+            )
+        }
+    }
+}
+
+/** Price with the Son Coin icon, or the owned/active state. */
+@Composable
+private fun StorePriceLabel(owned: Boolean, equipped: Boolean, price: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (!owned && !equipped) {
+            GameCoinIcon(15.dp)
+            Spacer(Modifier.width(4.dp))
+        }
+        Text(
+            when {
+                equipped -> gameText("AKTİF", "ACTIVE")
+                owned -> gameText("SAHİPSİN", "OWNED")
+                else -> "$price"
+            },
+            color = if (owned) GameColors.PlayGreen else GameColors.RewardAmber,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Black,
+        )
     }
 }

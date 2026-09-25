@@ -13,11 +13,11 @@ class ShopButtonStateContractTest {
 
         assertTrue(source.contains("var busy by remember { mutableStateOf<String?>(null) }"))
         assertTrue(source.contains("if (b == null || busy != null) return@VerifiedStoreProductCard"))
-        assertTrue(source.contains("busy = item.id"))
+        assertTrue(source.contains("busy = product.id"))
         assertTrue(source.contains("busy = null"))
         assertTrue(source.contains("enabled = !busy && !equipped && !lockedByPro"))
-        assertTrue(source.contains("equipped -> sh(\"AKTİF\", \"ACTIVE\")"))
-        assertTrue(source.contains("owned -> sh(\"SAHİPSİN\", \"OWNED\")"))
+        assertTrue(source.contains("equipped -> gameText(\"AKTİF\", \"ACTIVE\")"))
+        assertTrue(source.contains("owned -> gameText(\"SAHİPSİN\", \"OWNED\")"))
     }
 
     private fun projectFile(path: String): File {

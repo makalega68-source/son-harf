@@ -8,8 +8,9 @@ import org.junit.Test
 
 class CalmLayeredThemeContractTest {
     @Test
-    fun purchasedMonsterThemeDefinesIndependentSemanticLayers() {
+    fun compatibilityThemeMapsToProfessionalSemanticLayers() {
         val theme = source("SonHarfTheme.kt")
+        val design = source("GameDesignSystem.kt")
 
         listOf(
             "val Background: Color get()",
@@ -32,18 +33,33 @@ class CalmLayeredThemeContractTest {
             "val TextSecondary: Color get()",
         ).forEach { token -> assertTrue("Missing theme layer: $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("Color(0xFF071714)"))
-        assertTrue(theme.contains("Color(0xFF0E2521)"))
-        assertTrue(theme.contains("Color(0xFF3FC486)"))
-        assertTrue(theme.contains("Color(0xFFC94C4C)"))
-        assertTrue(theme.contains("Color(0xFFC9A552)"))
-        assertTrue(theme.contains("Color(0xFFF4F7F4)"))
-        assertTrue(theme.contains("Color(0xFF9DB0A9)"))
+        listOf(
+            "Color(0xFF101722)",
+            "Color(0xFF151F2D)",
+            "Color(0xFF1C2939)",
+            "Color(0xFF243448)",
+            "Color(0xFF3D8BFF)",
+            "Color(0xFF20B6B0)",
+            "Color(0xFF38C970)",
+            "Color(0xFF9874E8)",
+            "Color(0xFFF2A73B)",
+            "Color(0xFFE75D65)",
+            "Color(0xFFF4F7FB)",
+            "Color(0xFFA8B5C6)",
+        ).forEach { token -> assertTrue("Missing professional palette token: $token", design.contains(token)) }
+
         assertTrue(theme.contains("val IsDark: Boolean get() = true"))
+        assertTrue(theme.contains("GameColors.AppBackground"))
+        assertTrue(theme.contains("GameColors.PrimaryBlue"))
+        assertTrue(theme.contains("GameColors.TacticalTurquoise"))
+        assertTrue(theme.contains("GameColors.PlayGreen"))
+        assertTrue(theme.contains("GameColors.Lavender"))
+        assertFalse(theme.contains("Color(0xFFEFFF19)"))
+        assertFalse(theme.contains("Color(0xFFFF245C)"))
     }
 
     @Test
-    fun shellUsesMonsterDarkChromeInsteadOfPreviousBlueLightShell() {
+    fun shellUsesProfessionalDarkChromeInsteadOfRetiredMonsterChrome() {
         val primitives = source("AppUiPrimitives.kt")
         val styles = projectFile("app/src/main/res/values/styles.xml").readText()
 
@@ -53,11 +69,13 @@ class CalmLayeredThemeContractTest {
         assertTrue(primitives.contains("internal object MainUiShape"))
         assertFalse(primitives.contains("internal val PortalBlue = Color(0xFF1769E0)"))
 
-        assertTrue(styles.contains("<item name=\"android:windowBackground\">#071714</item>"))
-        assertTrue(styles.contains("<item name=\"android:statusBarColor\">#071714</item>"))
-        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#091A17</item>"))
+        assertTrue(styles.contains("<item name=\"android:windowBackground\">#101722</item>"))
+        assertTrue(styles.contains("<item name=\"android:statusBarColor\">#101722</item>"))
+        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#151F2D</item>"))
         assertTrue(styles.contains("<item name=\"android:windowLightStatusBar\">false</item>"))
         assertTrue(styles.contains("<item name=\"android:windowLightNavigationBar\">false</item>"))
+        assertFalse(styles.contains("#0D0F12"))
+        assertFalse(styles.contains("#111318"))
     }
 
     private fun source(name: String) = projectFile("app/src/main/java/com/sonharf/game/$name").readText()

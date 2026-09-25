@@ -1,0 +1,100 @@
+name: Siege Match Finish V34
+
+on:
+  push:
+    branches:
+      - claude/kelime-tahti-home-redesign-7ojb7d
+    paths:
+      - 'tools/polish_siege_match_finish_v34.py'
+      - 'tools/fix_v34_generated_contract.py'
+      - 'tools/fix_v34_remaining_contracts.py'
+      - '.github/workflows/siege-match-finish-v34.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  polish-test-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout canonical branch
+        uses: actions/checkout@v4
+        with:
+          ref: claude/kelime-tahti-home-redesign-7ojb7d
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+
+      - name: Apply match finish polish
+        shell: bash
+        run: |
+          python3 tools/polish_siege_match_finish_v34.py
+          python3 tools/fix_v34_generated_contract.py
+          python3 tools/fix_v34_remaining_contracts.py
+
+      - name: Unit tests and debug APK
+        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Commit verified source
+        shell: bash
+        run: |
+          git config user.name "kelime-tahti-ci"
+          git config user.email "actions@github.com"
+          git add app/build.gradle.kts \
+                  app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt \
+                  app/src/main/java/com/sonharf/game/WordSiegeBoardSpec.kt \
+                  app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt \
+                  app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt \
+                  app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt \
+                  app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt \
+                  app/src/test/java/com/sonharf/game/AssetIntegrationContractTest.kt \
+                  app/src/test/java/com/sonharf/game/SimpleKelimeTahtiRestoreContractTest.kt \
+                  app/src/test/java/com/sonharf/game/KelimeTahtiFinalBrandingContractTest.kt \
+                  app/src/test/java/com/sonharf/game/KelimeTahtiDifferentiationContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeEntryModesContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeFinalRulesTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeOnlineBoardVisualContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePanAreaContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeBoardSpecTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePracticeBoardContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePracticeEngineTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePracticeVisualContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePracticeUxAndBotRegressionTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeProfileRegressionTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeReadabilityContractTest.kt
+          git rm tools/polish_siege_match_finish_v34.py tools/fix_v34_generated_contract.py tools/fix_v34_remaining_contracts.py
+          git diff --cached --check
+          git commit -m "Polish siege board, chat and rematch flow"
+          git push origin HEAD:claude/kelime-tahti-home-redesign-7ojb7d
+
+      - name: Prepare APK
+        shell: bash
+        run: |
+          mkdir -p final-apk
+          cp app/build/outputs/apk/debug/app-debug.apk final-apk/Kelime-Tahti-Guncel-v34.apk
+          sha256sum final-apk/Kelime-Tahti-Guncel-v34.apk > final-apk/SHA256.txt
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kelime-tahti-siege-v34
+          path: final-apk/
+          if-no-files-found: error
+          retention-days: 7

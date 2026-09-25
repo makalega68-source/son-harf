@@ -128,8 +128,8 @@ internal fun MainPlayerProfileScreen(
                     Brush.horizontalGradient(
                         listOf(
                             if (p?.isVip == true) SonHarfTheme.ForestDeep else SonHarfTheme.Primary.copy(alpha = .22f),
-                            if (p?.isVip == true) Color(0xFF244B3B) else SonHarfTheme.Surface,
-                            if (p?.isVip == true) Color(0xFF1B3329) else SonHarfTheme.Turquoise.copy(alpha = .12f),
+                            if (p?.isVip == true) SonHarfTheme.HeroMiddle else SonHarfTheme.Surface,
+                            if (p?.isVip == true) SonHarfTheme.HeroEnd else SonHarfTheme.Turquoise.copy(alpha = .12f),
                         )
                     )
                 ).padding(20.dp)

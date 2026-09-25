@@ -132,12 +132,22 @@ class WordSiegePracticeEngineTest {
     }
 
     @Test
-    fun consecutivePassesFinishPractice() {
-        val first = WordSiegePracticeEngine.pass(WordSiegePracticeEngine.newGame(random = Random(1)), 1)
-        val finished = WordSiegePracticeEngine.pass(first, 2)
+    fun fourPassOrExchangeActionsOnlyFinishWhenBagIsBelowTwenty() {
+        val fresh = WordSiegePracticeEngine.newGame(random = Random(1))
+        var state = fresh.copy(bag = "A".repeat(21))
+        repeat(4) { turn ->
+            state = WordSiegePracticeEngine.pass(state, if (turn % 2 == 0) 1 else 2)
+        }
+        assertEquals("playing", state.status)
 
-        assertEquals("finished", finished.status)
-        assertEquals("consecutive_passes", finished.lastAction)
+        state = state.copy(bag = "A".repeat(19), consecutivePasses = 0, currentOwner = 1)
+        state = WordSiegePracticeEngine.pass(state, 1)
+        state = WordSiegePracticeEngine.exchange(state, 2, setOf(0))
+        state = WordSiegePracticeEngine.pass(state, 1)
+        state = WordSiegePracticeEngine.exchange(state, 2, setOf(0))
+
+        assertEquals("finished", state.status)
+        assertEquals("consecutive_passes", state.lastAction)
     }
 
     @Test

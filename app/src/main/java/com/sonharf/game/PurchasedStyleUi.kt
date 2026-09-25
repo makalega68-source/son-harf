@@ -241,7 +241,20 @@ private fun SafeFrameArtwork(
     return false
 }
 
-private const val PROFILE_FRAMES_RETIRED = true
+private const val PROFILE_FRAMES_RETIRED = false
+
+/** Frames are not sold: the server keeps profile_frame products inactive. Owned frames still render. */
+private const val PROFILE_FRAME_SALES_CLOSED = true
+
+/** Draws the artwork of a known profile frame id; used by every player avatar. */
+@Composable
+internal fun PlayerFrameArtwork(frameId: String, modifier: Modifier = Modifier) {
+    SafeFrameArtwork(
+        drawable = PurchasedFrameCatalog.drawable(frameId),
+        frameId = frameId,
+        modifier = modifier,
+    )
+}
 
 @Composable
 internal fun PurchasedProfileFrameOverlay(frameId: String?, modifier: Modifier = Modifier) {
@@ -272,7 +285,7 @@ private fun legacyFrameSpec(item: ShopItemDto): PurchasedFrameSpec = PurchasedFr
 internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
     // Frames are retired product-wide. Preserve legacy implementation below for purchase-history
     // auditability, but do not expose a sale/equip surface in the live UI.
-    if (PROFILE_FRAMES_RETIRED) return
+    if (PROFILE_FRAME_SALES_CLOSED) return
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()

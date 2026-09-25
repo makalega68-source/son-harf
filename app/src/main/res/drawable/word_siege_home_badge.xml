@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="140dp"
+    android:height="90dp"
+    android:viewportWidth="140"
+    android:viewportHeight="90">
+
+    <!-- Quiet tactical grid: neutral cells stay subordinate to owned territory. -->
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.10" android:pathData="M8,8h26v20h-26z" />
+    <path android:fillColor="#22C3C9" android:fillAlpha="0.88" android:pathData="M38,8h26v20h-26z" />
+    <path android:fillColor="#22C3C9" android:fillAlpha="0.70" android:pathData="M68,8h26v20h-26z" />
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.10" android:pathData="M98,8h26v20h-26z" />
+
+    <path android:fillColor="#22C3C9" android:fillAlpha="0.68" android:pathData="M8,34h26v20h-26z" />
+    <path android:fillColor="#22C3C9" android:fillAlpha="0.96" android:pathData="M38,34h26v20h-26z" />
+    <path android:fillColor="#FF8A2A" android:pathData="M68,34h26v20h-26z" />
+    <path android:fillColor="#3D7BEF" android:fillAlpha="0.94" android:pathData="M98,34h26v20h-26z" />
+
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.10" android:pathData="M8,60h26v20h-26z" />
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.14" android:pathData="M38,60h26v20h-26z" />
+    <path android:fillColor="#3D7BEF" android:fillAlpha="0.70" android:pathData="M68,60h26v20h-26z" />
+    <path android:fillColor="#3D7BEF" android:fillAlpha="0.92" android:pathData="M98,60h26v20h-26z" />
+
+    <!-- Route / pressure line across the contested cells. -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.78"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M20,44 L50,44 L80,44 L110,44" />
+    <path android:fillColor="#FFFFFF" android:pathData="M17,41h6v6h-6z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M47,41h6v6h-6z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M77,41h6v6h-6z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M107,41h6v6h-6z" />
+</vector>

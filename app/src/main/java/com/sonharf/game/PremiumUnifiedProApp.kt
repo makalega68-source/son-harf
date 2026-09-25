@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +39,31 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var lastLetterLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var letterPathLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var uiLanguageBeforeGame by rememberSaveable { mutableStateOf<String?>(null) }
+    val shellMascotTouches = remember { WordSiegeMascotTouchState() }
+    var shellProfile by remember { mutableStateOf<ProfileDto?>(null) }
+    var shellMascotAnnouncement by remember { mutableStateOf<Pair<Int, String>?>(null) }
+    val shellMascotVisited = remember { mutableSetOf<PremiumDestination>() }
+    val shellContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        if (!SupabaseProvider.configured) return@LaunchedEffect
+        // Owned mascots come from verified purchases on the server.
+        WordSiegeMascotOwnership.refresh(shellContext)
+        shellProfile = backend.currentUserId()?.let { id -> runCatching { backend.getProfile(id) }.getOrNull() }
+    }
+    // A short, page-appropriate remark on the first visit of a page in this session.
+    LaunchedEffect(destination) {
+        if (!shellMascotVisited.add(destination)) return@LaunchedEffect
+        val line = when (destination) {
+            PremiumDestination.SHOP -> sh("Alışveriş zamanı! 🛍️", "Shopping time! 🛍️")
+            PremiumDestination.PROFILE -> sh("Profilin çok havalı!", "Your profile looks great!")
+            PremiumDestination.SOCIAL -> sh("Arkadaşlarını çağır, birlikte oynayalım! 👋", "Invite your friends, let's play together! 👋")
+            PremiumDestination.COMPETE -> sh("Kupa bizim olacak! 🏆", "That cup will be ours! 🏆")
+            PremiumDestination.COLLECTION -> sh("Ne güzel bir koleksiyon ✨", "What a lovely collection ✨")
+            else -> null
+        } ?: return@LaunchedEffect
+        delay(900)
+        shellMascotAnnouncement = (shellMascotAnnouncement?.first ?: 0) + 1 to line
+    }
 
     fun openGame(target: PremiumDestination, language: String) {
         if (uiLanguageBeforeGame == null) uiLanguageBeforeGame = SonHarfUiState.language
@@ -126,11 +152,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         )
     }
 
-    MaterialTheme(
-        colorScheme = scheme,
-        typography = SonHarfTypography,
-        shapes = SonHarfShapes,
-    ) {
+    MaterialTheme(colorScheme = scheme) {
         Scaffold(
             containerColor = SonHarfTheme.Background,
             topBar = {
@@ -148,7 +170,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 }
             },
         ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding)) {
+            Box(Modifier.fillMaxSize().padding(padding).wordSiegeMascotTouchWatcher(shellMascotTouches)) {
                 if (!SonHarfTheme.IsDark) SonHarfLeafBackdrop(Modifier.matchParentSize())
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
@@ -227,6 +249,23 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         destination = PremiumDestination.PROFILE
                     }
                 }
+                // Outside the games the mascot keeps the player company from a bottom corner:
+                // it mostly watches, says a word on some pages and flies aside when touched.
+                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)) {
+                    WordSiegeMascotCompanion(
+                        anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
+                        mascotSize = 83.dp,
+                        moveId = null,
+                        lastMoveMine = false,
+                        playerTurn = false,
+                        modifier = Modifier.matchParentSize(),
+                        playerName = shellProfile?.displayName,
+                        playerGender = shellProfile?.gender,
+                        touches = shellMascotTouches,
+                        announcement = shellMascotAnnouncement,
+                        stageY = .5f,
+                    )
+                }
             }
         }
     }
@@ -253,11 +292,14 @@ private fun PremiumHomeScreen(
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
             modifier = Modifier.widthIn(max = 600.dp).fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onSocial)
+            }
+            item(key = "invite_friends") {
+                InviteFriendsCard(playerName = profile?.displayName)
             }
             item(key = "home_secondary_modes") {
                 PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)
@@ -287,27 +329,20 @@ private fun PremiumGameCenter(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    sh("OYUN MODLARI", "GAME MODES"),
-                    color = SonHarfTheme.TextPrimary,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Black,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
-                Text(
-                    sh(
-                        "Modunu seç, dilini ayarla ve doğrudan arenaya gir.",
-                        "Pick a mode, set your language, and enter the arena.",
-                    ),
-                    color = SonHarfTheme.TextSecondary,
-                    fontSize = 12.sp,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
-            }
+            Text(
+                sh("OYUN MODLARI", "GAME MODES"),
+                color = SonHarfTheme.TextPrimary,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Black,
+            )
+            Text(
+                sh(
+                    "Modunu seç, dilini ayarla ve doğrudan arenaya gir.",
+                    "Pick a mode, set your language, and enter the arena.",
+                ),
+                color = SonHarfTheme.TextSecondary,
+                fontSize = 12.sp,
+            )
             Spacer(Modifier.height(8.dp))
         }
         item {
@@ -370,7 +405,7 @@ private fun PremiumGameCard(
                     Text(
                         sh("ANA ARENA", "MAIN ARENA"),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        color = SonHarfTheme.PremiumGold,
+                        color = SonHarfTheme.TextPrimary,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
                     )
@@ -460,27 +495,36 @@ private fun PremiumBottomBar(
         Triple(PremiumDestination.SHOP, Icons.Rounded.Storefront, sh("MAĞAZA", "STORE")) to onShop,
         Triple(PremiumDestination.PROFILE, Icons.Rounded.Person, sh("PROFİL", "PROFILE")) to onProfile,
     )
-    NavigationBar(containerColor = SonHarfTheme.NavigationSurface, tonalElevation = 0.dp) {
-        items.forEach { (item, onClick) ->
-            NavigationBarItem(
-                selected = destination == item.first,
-                onClick = onClick,
-                icon = { Icon(item.second, null) },
-                label = {
-                    Text(
-                        item.third,
-                        fontSize = 8.sp,
-                        fontWeight = if (destination == item.first) FontWeight.Bold else FontWeight.Normal,
+    Surface(color = SonHarfTheme.NavigationSurface, shadowElevation = 8.dp) {
+        Column {
+            HorizontalDivider(thickness = 1.dp, color = SonHarfTheme.Border)
+            NavigationBar(containerColor = SonHarfTheme.NavigationSurface, tonalElevation = 0.dp) {
+                items.forEach { (item, onClick) ->
+                    val selected = destination == item.first
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = onClick,
+                        icon = { Icon(item.second, null, modifier = Modifier.size(24.dp)) },
+                        label = {
+                            Text(
+                                item.third,
+                                fontSize = 10.sp,
+                                fontWeight = if (selected) FontWeight.Black else FontWeight.SemiBold,
+                                maxLines = 1,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+                        },
+                        alwaysShowLabel = true,
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = SonHarfTheme.TextPrimary,
+                            selectedTextColor = SonHarfTheme.TextPrimary,
+                            indicatorColor = SonHarfTheme.PrimarySoft,
+                            unselectedIconColor = SonHarfTheme.TextSecondary,
+                            unselectedTextColor = SonHarfTheme.TextSecondary,
+                        ),
                     )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = SonHarfTheme.Primary,
-                    selectedTextColor = SonHarfTheme.Primary,
-                    indicatorColor = SonHarfTheme.Primary.copy(alpha = .12f),
-                    unselectedIconColor = SonHarfTheme.TextSecondary,
-                    unselectedTextColor = SonHarfTheme.TextSecondary,
-                ),
-            )
+                }
+            }
         }
     }
 }

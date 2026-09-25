@@ -45,24 +45,26 @@ jobs:
           git diff --exit-code
           test -z "$(git status --porcelain --untracked-files=no)"
 
-      - name: Verify Unified Pro source contract
+      - name: Verify professional production shell contract
         shell: bash
         run: |
           set -euo pipefail
           test ! -f app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
           test ! -f app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt
-          grep -q 'UnifiedProApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
+          grep -q 'ProfessionalUnifiedApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
           grep -q 'SonHarfCosmetics.restore(context)' app/src/main/java/com/sonharf/game/StableV1App.kt
-          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'GameTheme {' app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt
+          grep -q 'GameBottomNavigation(' app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt
+          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt
+          grep -q 'ProfessionalDestination.LAST_LETTER -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt
+          grep -q 'ProfessionalDestination.SIEGE -> WordSiegeEntryScreen' app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt
+          grep -q 'ProfessionalDestination.LETTER_PATH -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt
+          grep -q 'ProfessionalDestination.PRO -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt
+          grep -q 'val AppBackground = Color(0xFF101722)' app/src/main/java/com/sonharf/game/GameDesignSystem.kt
+          grep -q 'val PrimaryBlue = Color(0xFF3D8BFF)' app/src/main/java/com/sonharf/game/GameDesignSystem.kt
+          grep -q 'val TacticalTurquoise = Color(0xFF20B6B0)' app/src/main/java/com/sonharf/game/GameDesignSystem.kt
+          grep -q 'val PlayGreen = Color(0xFF38C970)' app/src/main/java/com/sonharf/game/GameDesignSystem.kt
           ! grep -RqiE 'ProfHammy|Prof\. Hammy|prof_hammy' app/src/main/java app/src/main/res
-          grep -q 'val Background: Color get() = SonHarfTheme.Background' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'lightColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'darkColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          ! grep -q 'MageCat' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.GAME -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.LETTER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.VIP -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
@@ -94,6 +96,15 @@ jobs:
 
       - name: Build debug APK with tests
         run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Upload UI screenshots (360x800, 390x844, 412x915)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: app/build/outputs/roborazzi/*.png
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Prepare test APK artifact
         run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Final-Test.apk

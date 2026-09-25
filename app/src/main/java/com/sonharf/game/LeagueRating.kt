@@ -7,7 +7,11 @@ data class RatingLeagueProgress(
     val nextAt: Int?,
     val progress: Float,
     val pointsToNext: Int,
-)
+) {
+    // Compatibility aliases used by the professional profile progress surface.
+    val nextLeague: String = nextLeagueName
+    val nextThreshold: Int? = nextAt
+}
 
 fun ratingLeagueProgress(rating: Int): RatingLeagueProgress {
     val safe = rating.coerceAtLeast(100)

@@ -20,10 +20,10 @@ class AssetIntegrationContractTest {
         val preview = read("src/main/java/com/sonharf/game/StoreProductPreview.kt")
         val frames = read("src/main/java/com/sonharf/game/PurchasedStyleUi.kt")
         val avatar = read("src/main/java/com/sonharf/game/FramedProfileAvatar.kt")
-        assertTrue(frames.contains("PROFILE_FRAMES_RETIRED = true"))
+        assertTrue(frames.contains("PROFILE_FRAMES_RETIRED = false"))
         assertTrue(frames.contains("if (PROFILE_FRAMES_RETIRED) return"))
         assertTrue(preview.contains("PurchasedProfileFrameOverlay("))
-        assertTrue(avatar.contains("val legacyFrameId = frameId"))
+        assertTrue(avatar.contains("object PlayerFrameResolver"))
         assertFalse(avatar.contains("PurchasedProfileFrameOverlay("))
     }
 
@@ -94,8 +94,8 @@ class AssetIntegrationContractTest {
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
         listOf(
-            "0xFF8EA697", "0xFFA8D5B5", "0xFFE4AEAA", "0xFF3F7C53", "0xFF9B4D4A",
-            "0xFFDCEAF2", "0xFFDCEAF2", "0xFFEAE2F0", "0xFFEAE2F0", "0xFFE7DDBB", "0xFFEAD59B",
+            "0xFF8EA697", "0xFF8BD8AA", "0xFFEDA09B", "0xFF2D7B4C", "0xFFA33F3B",
+            "0xFFEAF5F8", "0xFFDDEDF4", "0xFFF3EEF7", "0xFFECE4F2", "0xFFF6EEDC", "0xFFF8F0D6",
         ).forEach { assertTrue(online.contains(it)) }
         assertTrue(online.contains("border.copy(alpha = .92f)"))
         assertTrue(online.contains("val regionGap = 1.25.dp"))
@@ -103,8 +103,8 @@ class AssetIntegrationContractTest {
         assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFE5EAE5)"))
         assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFFAF7EF)"))
         assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFFAF7EF)"))
-        assertTrue(practice.contains("PracticeSiegeMine = Color(0xFFA8D5B5)"))
-        assertTrue(practice.contains("PracticeSiegeRival = Color(0xFFE4AEAA)"))
+        assertTrue(practice.contains("PracticeSiegeMine = Color(0xFF8BD8AA)"))
+        assertTrue(practice.contains("PracticeSiegeRival = Color(0xFFEDA09B)"))
         assertTrue(practice.contains("PracticeSiegeThreat = Color(0xFFD8903D)"))
         assertTrue(practice.contains("val regionGap = 1.25.dp"))
         assertTrue(practice.contains(".padding(regionGap)"))

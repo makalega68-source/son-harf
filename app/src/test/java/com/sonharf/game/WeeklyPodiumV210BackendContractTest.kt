@@ -32,24 +32,25 @@ class WeeklyPodiumV210BackendContractTest {
     }
 
     @Test
-    fun `weekly league shows RP and Monday reset copy`() {
-        val entry = projectFile("app/src/main/java/com/sonharf/game/LeaderboardExperience.kt").readText()
-        val screen = projectFile("app/src/main/java/com/sonharf/game/PremiumCompetitionSimple.kt").readText()
+    fun `professional home keeps weekly RP podium visible and linked to league`() {
+        val home = projectFile("app/src/main/java/com/sonharf/game/ProfessionalHomeScreen.kt").readText()
+        val shell = projectFile("app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt").readText()
         val podium = projectFile("app/src/main/java/com/sonharf/game/WeeklyPodiumV210.kt").readText()
 
-        assertTrue(entry.contains("PremiumCompetitionScreen(backend = backend)"))
-        assertTrue(screen.contains("HAFTALIK SIRALAMA"))
-        assertTrue(screen.contains("WEEKLY RANKING"))
-        assertTrue(screen.contains("Pazartesi yenilenir"))
-        assertTrue(screen.contains("Resets Monday"))
-        assertTrue(screen.contains("getMyWeeklyRpV210()"))
-        assertTrue(screen.contains("${'$'}{row.rating} RP"))
+        assertTrue(home.contains("backend.getWeeklyTopV210(limit = 3)"))
+        assertTrue(home.contains("Haftanın En İyi 3 Oyuncusu"))
+        assertTrue(home.contains("Weekly Top 3"))
+        assertTrue(home.contains("${'$'}{player.rating} RP"))
+        assertTrue(home.contains("2 to players.getOrNull(1)"))
+        assertTrue(home.contains("1 to players.getOrNull(0)"))
+        assertTrue(home.contains("3 to players.getOrNull(2)"))
+        assertTrue(home.contains("onAction = onLeague"))
+        assertTrue(shell.contains("onLeague = { destination = ProfessionalDestination.LEADERBOARD }"))
+
+        // Legacy podium remains a stable compatibility surface for older routes.
         assertTrue(podium.contains("sh(\"Haftanın Zirvesi\", \"Weekly podium\")"))
         assertTrue(podium.contains("Bu haftanın en güçlü oyuncuları"))
         assertTrue(podium.contains("sh(\"Tümü\", \"View all\")"))
-        assertTrue(podium.contains("player = players.getOrNull(1)"))
-        assertTrue(podium.contains("player = players.getOrNull(0)"))
-        assertTrue(podium.contains("player = players.getOrNull(2)"))
     }
 
     private fun projectFile(path: String): File =

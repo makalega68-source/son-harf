@@ -7,17 +7,25 @@ import org.junit.Test
 
 class UnifiedProRuntimeContractTest {
     @Test
-    fun startupRoutesOnlyToUnifiedProAndPrimaryKelimeKusatmasi() {
+    fun startupRoutesOnlyToProfessionalShellAndPrimaryKelimeKusatmasi() {
         val startup = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
-        val unified = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
+        val professional = File("src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt").readText()
+        val home = File("src/main/java/com/sonharf/game/ProfessionalHomeScreen.kt").readText()
         val integration = File("src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
-        assertTrue(startup.contains("UnifiedProApp("))
+
+        assertTrue(startup.contains("ProfessionalUnifiedApp("))
         assertFalse(startup.contains("LiveDuelRuntimeShell("))
         assertFalse(startup.contains("MonsterExperienceApp("))
-        assertTrue(unified.contains("KELİME KUŞATMASI"))
-        assertTrue(unified.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(unified.contains("SAVAŞA GİR"))
-        assertFalse(unified.contains("MageCat"))
+        assertFalse(startup.contains("\n    UnifiedProApp(onSignedOut"))
+        assertFalse(startup.contains("\n    PremiumUnifiedProApp(onSignedOut"))
+
+        assertTrue(home.contains("KELİME KUŞATMASI"))
+        assertTrue(home.contains("HEMEN OYNA"))
+        assertTrue(professional.contains("ProfessionalDestination.SIEGE -> WordSiegeEntryScreen"))
+        assertTrue(professional.contains("ProfessionalDestination.LAST_LETTER -> OnlineGameScreenV6()"))
+        assertTrue(professional.contains("ProfessionalDestination.LETTER_PATH -> LetterLadderGameScreen"))
+        assertFalse(professional.contains("MageCat"))
+
         assertTrue(integration.contains("PremierWordDuelScreen()"))
         assertFalse(integration.contains("ReactiveMageCatOverlay()"))
         assertFalse(integration.contains("PremierBoosterOverlay()"))

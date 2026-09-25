@@ -54,13 +54,23 @@ object SonHarfCosmetics {
         }
 
     val playerNameColor: Color
-        get() = when (nameStyleId) {
-            "name_cyan" -> Color(0xFF2B9CB5)
-            "name_sapphire" -> Color(0xFF2E6FB7)
-            "name_amethyst" -> Color(0xFF7D5CA8)
-            "name_aurelia" -> Color(0xFF9C742D)
-            else -> SonHarfText
-        }
+        get() = nameStyleColor ?: SonHarfText
+
+    /** Colour of the equipped name style, or null when none is equipped. */
+    val nameStyleColor: Color?
+        get() = nameStyleColorFor(nameStyleId)
+
+    /** Single source for name style colours: live profile, game cards and store previews. */
+    fun nameStyleColorFor(styleId: String?): Color? = when (styleId) {
+        "name_cyan" -> Color(0xFF2B9CB5)
+        "name_sapphire" -> Color(0xFF2E6FB7)
+        "name_amethyst" -> Color(0xFF7D5CA8)
+        "name_aurelia" -> Color(0xFF9C742D)
+        "name_emerald" -> Color(0xFF1E9E6A)
+        "name_ruby" -> Color(0xFFC8324B)
+        "name_sunset" -> Color(0xFFE0672A)
+        else -> null
+    }
 
     /** Product skins affect only letter-input presentation and never gameplay. */
     val keyboardPalette: WordKeyboardPalette
@@ -92,6 +102,26 @@ object SonHarfCosmetics {
             background = Color(0xFFF3F6FA), key = Color.White, keyAlt = Color(0xFFE8EEF5),
             text = Color(0xFF263238), action = Color(0xFF2A72E5), actionText = Color.White,
             border = Color(0xFFCFD9E6), secondaryBorder = Color(0xFF14B8B1),
+        )
+        "keyboard_sakura" -> WordKeyboardPalette(
+            background = Color(0xFFFFF0F5), key = Color.White, keyAlt = Color(0xFFFAD9E6),
+            text = Color(0xFF5A2340), action = Color(0xFFE0558C), actionText = Color.White,
+            border = Color(0xFFF0B6CC), secondaryBorder = Color(0xFFD94C85),
+        )
+        "keyboard_ocean" -> WordKeyboardPalette(
+            background = Color(0xFFE3F6FA), key = Color(0xFFF7FEFF), keyAlt = Color(0xFFC9EDF5),
+            text = Color(0xFF0E3C4F), action = Color(0xFF0FA3C2), actionText = Color.White,
+            border = Color(0xFF8DD3E3), secondaryBorder = Color(0xFF0B7FA0),
+        )
+        "keyboard_forest" -> WordKeyboardPalette(
+            background = Color(0xFFE6F2EA), key = Color(0xFFFAFFFB), keyAlt = Color(0xFFCFE6D7),
+            text = Color(0xFF1D3B2A), action = Color(0xFF2E8B57), actionText = Color.White,
+            border = Color(0xFFA3CDB2), secondaryBorder = Color(0xFF1F6E43),
+        )
+        "keyboard_royal_purple" -> WordKeyboardPalette(
+            background = Color(0xFF1C1433), key = Color(0xFF2A1F4A), keyAlt = Color(0xFF372A5E),
+            text = Color(0xFFF1ECFF), action = Color(0xFF8B6CF0), actionText = Color.White,
+            border = Color(0xFF4D3C7E), secondaryBorder = Color(0xFFC7B3FF),
         )
         else -> WordKeyboardPalette(
             background = Color(0xFFF0F5F1), key = Color(0xFFFFFEF8), keyAlt = Color(0xFFDDE9E1),

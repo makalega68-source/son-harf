@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -15,7 +16,21 @@ class PrivateRoomFairPlayContractTest {
         assertTrue(backend.contains("join_room_by_code"))
         assertTrue(backend.contains("cancel_private_room"))
         assertTrue(screen.contains("onRoomReady"))
+        assertTrue(screen.contains("service.create(SonHarfUiState.language)"))
+        assertTrue(screen.contains("service.join(code)"))
+        assertTrue(screen.contains("service.cancel("))
+        assertTrue(screen.contains("backend.getRoom(waiting.id)"))
+        assertTrue(screen.contains("GameTopBar("))
+        assertTrue(screen.contains("GameSurface("))
+        assertTrue(screen.contains("GameColors.PrimaryBlue"))
+        assertTrue(screen.contains("GameColors.TacticalTurquoise"))
+        assertTrue(screen.contains("verticalScroll(rememberScrollState())"))
+        assertTrue(screen.contains(".imePadding()"))
         assertTrue(screen.contains("ODA KODU"))
+        assertTrue(screen.contains("PRO Özel Oda"))
+        assertFalse(screen.contains("MainUi."))
+        assertFalse(screen.contains("SonHarfTheme."))
+        assertFalse(screen.contains("Monster"))
         assertTrue(migration.contains("'private','private'"))
         assertTrue(migration.contains("if r.room_mode='private' or r.room_type='private' then"))
         assertTrue(migration.contains("return query select v_won,0,0,0"))

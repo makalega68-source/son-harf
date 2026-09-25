@@ -12,7 +12,9 @@ class SeasonPassRuntimeContractTest {
         val season = projectFile("app/src/main/java/com/sonharf/game/SeasonCenterScreen.kt").readText()
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/SeasonStore.kt").readText()
 
-        assertTrue(shop.contains("if (tab == 1) SeasonCenterContent()"))
+        // The season store sits under KOLEKSİYON > Sezon.
+        assertTrue(shop.contains("if (tab == 2) StoreCollectionsTab("))
+        assertTrue(shop.contains("season = { SeasonCenterContent() }"))
         assertTrue(purchase.contains("ProductCatalog.SEASON_PASS_MONTHLY"))
         assertTrue(purchase.contains("PlayPurchaseVerification.verify(productId, purchase.purchaseToken)"))
         assertTrue(season.contains("SeasonPassPurchaseCard"))

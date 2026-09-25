@@ -1,0 +1,93 @@
+name: Final Gameplay Redesign
+
+on:
+  push:
+    branches:
+      - claude/kelime-tahti-home-redesign-7ojb7d
+    paths:
+      - '.github/workflows/final-gameplay-redesign.yml'
+      - 'tools/final_gameplay_visual_pass.py'
+      - 'tools/final_gameplay_contract_fix.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  redesign-test-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout redesign branch
+        uses: actions/checkout@v4
+        with:
+          ref: claude/kelime-tahti-home-redesign-7ojb7d
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+
+      - name: Apply gameplay visual redesign
+        run: |
+          python3 tools/final_gameplay_visual_pass.py
+          python3 tools/final_gameplay_contract_fix.py
+
+      - name: Unit tests and debug APK
+        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Prepare final APK
+        shell: bash
+        run: |
+          mkdir -p final-apk
+          cp app/build/outputs/apk/debug/app-debug.apk final-apk/Kelime-Tahti-Final-Redesign.apk
+          sha256sum final-apk/Kelime-Tahti-Final-Redesign.apk > final-apk/SHA256.txt
+
+      - name: Upload final APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kelime-tahti-final-redesign-apk
+          path: final-apk/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Commit verified redesign
+        shell: bash
+        run: |
+          git config user.name "kelime-tahti-ci"
+          git config user.email "actions@github.com"
+          git add app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt \
+                  app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt \
+                  app/src/main/java/com/sonharf/game/WordSiegePremiumPanel.kt \
+                  app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt \
+                  app/src/main/java/com/sonharf/game/LetterLadderGame.kt \
+                  app/src/main/java/com/sonharf/game/HarfYoluBackdrop.kt \
+                  app/src/test/java/com/sonharf/game/LetterLadderEngineTest.kt \
+                  app/src/test/java/com/sonharf/game/PremierDuelUxRegressionTest.kt \
+                  app/src/test/java/com/sonharf/game/UnifiedThemeSourceContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeEntryModesContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePanAreaContractTest.kt
+          if ! git diff --cached --quiet; then
+            git commit -m "Complete premium gameplay visual redesign"
+            for attempt in 1 2 3 4 5; do
+              if git push origin HEAD:claude/kelime-tahti-home-redesign-7ojb7d; then
+                exit 0
+              fi
+              echo "Push attempt ${attempt} failed; retrying..."
+              sleep 5
+            done
+            exit 1
+          fi

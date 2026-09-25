@@ -44,8 +44,9 @@ class StoreProfileFrameAssetsContractTest {
             assertTrue("UI provenance missing $id", ui.contains("\"$id\""))
             assertTrue("EconomyStore provenance missing $id", economy.contains("\"$id\""))
         }
-        assertTrue(ui.contains("PROFILE_FRAMES_RETIRED = true"))
-        assertTrue(ui.contains("if (PROFILE_FRAMES_RETIRED) return"))
+        // Frames are rendered again through the shared avatar resolver; sales stay closed on the server.
+        assertTrue(ui.contains("PROFILE_FRAMES_RETIRED = false"))
+        assertTrue(avatar.contains("object PlayerFrameResolver"))
         assertFalse(avatar.contains("PurchasedProfileFrameOverlay("))
     }
 
@@ -57,13 +58,12 @@ class StoreProfileFrameAssetsContractTest {
         assertTrue(ui.contains("b.equipShopItem(spec.id)"))
         assertTrue(economy.contains("rpc(\"purchase_shop_item\""))
         assertTrue(economy.contains("rpc(\"equip_shop_item\""))
-        assertTrue(ui.contains("if (PROFILE_FRAMES_RETIRED) return"))
     }
 
     @Test
     fun avatarDoesNotReserveDecorativeFrameClearanceAfterRetirement() {
         val avatar = File("src/main/java/com/sonharf/game/FramedProfileAvatar.kt").readText()
-        assertTrue(avatar.contains("val legacyFrameId = frameId"))
+        assertTrue(avatar.contains("PlayerFrameResolver.resolve") || avatar.contains("frameId = frameId"))
         assertFalse(avatar.contains("frameId?.startsWith(\"frame_wing_\")"))
         assertFalse(avatar.contains("frame_flower_pink_blossom"))
         assertFalse(avatar.contains("PurchasedProfileFrameOverlay("))

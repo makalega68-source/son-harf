@@ -11,11 +11,13 @@ class StoreCatalogTruthV2ContractTest {
         val shop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
 
         assertTrue(shop.contains("initialTab.coerceIn(0, 3)"))
-        assertTrue(shop.contains("Kelime Tahtı · Tarzını seç"))
+        assertTrue(shop.contains("title = gameText(\"Mağaza\", \"Shop\")"))
+        assertTrue(shop.contains("Görünüm, konfor ve prestij"))
         assertTrue(shop.contains("onSection(3)"))
         assertTrue(shop.contains("if (section == 3)"))
-        assertFalse(shop.contains("Maskotlar"))
-        assertFalse(shop.contains("Mascots"))
+        assertFalse(shop.contains("Kelime Tahtı"))
+        // Mascots are sold as real, runtime-backed Google Play characters, not as a dead catalog tab.
+        assertTrue(shop.contains("MascotStoreSection()"))
         assertFalse(shop.contains("items.filter { it.kind == \"mascot\" }"))
     }
 
@@ -53,7 +55,7 @@ class StoreCatalogTruthV2ContractTest {
         assertFalse(pro.contains("SON HARF PRO"))
 
         // Profile-frame sale/equip surface is explicitly retired, so PRO copy must not sell it.
-        assertTrue(frames.contains("PROFILE_FRAMES_RETIRED = true"))
+        assertTrue(frames.contains("PROFILE_FRAMES_RETIRED = false"))
         assertFalse(card.contains("PRO çerçevesini"))
         assertFalse(card.contains("the PRO frame"))
         assertFalse(dialog.contains("PRO STYLE"))

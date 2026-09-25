@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Palette
@@ -20,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.EquippedCosmeticsDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ShopItemDto
@@ -67,7 +65,6 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
                     val nextCollection = backend.getOwnedShopItems(nextOwned)
                     val nextEquipped = equippedRequest.await()
 
-                    // Publish one complete snapshot only. A failed request must not erase cached UI.
                     owned = nextOwned
                     collection = nextCollection
                     equipped = nextEquipped
@@ -76,6 +73,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
             }
         } catch (error: Exception) {
             if (error is CancellationException && error !is TimeoutCancellationException) throw error
+            // A failed request must not erase cached UI.
             notice = sh(
                 "Koleksiyon yenilenemedi. Mevcut görünümün korundu; tekrar deneyebilirsin.",
                 "Could not refresh your collection. Your current style is unchanged; you can retry.",
@@ -113,8 +111,6 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
 
     LaunchedEffect(backend) { reloadCollection() }
 
-    // Current Black Theme and the retired Night Arena id share the same supported dark-theme family.
-    // Prefer the current sellable id while preserving historical ownership/equipment.
     val activeDarkThemeId = SonHarfCosmetics.gameThemeId?.takeIf { it in DarkThemeIds }
     val ownedDarkThemeId = when {
         BlackThemeId in owned -> BlackThemeId
@@ -125,16 +121,40 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
     val darkActive = activeDarkThemeId != null
     val showBlackTheme = ownedDarkThemeId != null
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Palette, null, tint = MainUi.Blue, modifier = Modifier.size(19.dp))
-            Spacer(Modifier.width(7.dp))
-            Text(sh("KOLEKSİYONUM", "MY COLLECTION"), color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Surface(
+                shape = GameShapes.Small,
+                color = GameColors.PrimaryBlue.copy(alpha = .11f),
+            ) {
+                Icon(
+                    Icons.Rounded.Palette,
+                    contentDescription = null,
+                    tint = GameColors.PrimaryBlue,
+                    modifier = Modifier.padding(7.dp).size(18.dp),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                sh("KOLEKSİYONUM", "MY COLLECTION"),
+                color = GameColors.TextPrimary,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Black,
+            )
             Spacer(Modifier.weight(1f))
-            if (loading || busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp, color = MainUi.Blue)
+            if (loading || busy) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = GameColors.PrimaryBlue,
+                )
+            }
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             ProfileThemeCard(
                 title = sh("Ana Tema", "Main Theme"),
                 subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
@@ -158,23 +178,38 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
         }
 
         notice?.let {
-            Text(it, color = MainUi.Muted, fontSize = 13.sp)
-            TextButton(
-                onClick = { scope.launch { reloadCollection() } },
-                enabled = !busy && !loading,
+            Surface(
+                shape = GameShapes.Small,
+                color = GameColors.SecondarySurface,
+                border = BorderStroke(1.dp, GameColors.Border),
             ) {
-                Text(sh("YENİLE", "REFRESH"))
+                Column(Modifier.fillMaxWidth().padding(10.dp)) {
+                    Text(
+                        it,
+                        color = GameColors.TextSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    TextButton(
+                        onClick = { scope.launch { reloadCollection() } },
+                        enabled = !busy && !loading,
+                    ) {
+                        Text(
+                            sh("YENİLE", "REFRESH"),
+                            color = GameColors.PrimaryBlue,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
             }
         }
 
-        // Historical ownership stays safely on the server, but products with no live game
-        // integration must not occupy the player's visible profile collection. Theme aliases are
-        // represented by the single canonical theme card above to avoid duplicate equipped states.
         val styles = collection.filter { it.id !in DarkThemeIds && it.isSupportedOwnedStyle() }
+
         Text(
             sh("STYLE KOLEKSİYONUM", "MY STYLE COLLECTION"),
-            color = MainUi.Text,
-            fontSize = 14.sp,
+            color = GameColors.TextPrimary,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Black,
         )
         Text(
@@ -182,16 +217,21 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
                 "Satın aldıkların burada kalır; vitrin değişse de sahipliğin korunur.",
                 "Your purchases stay here; ownership is preserved when the storefront changes.",
             ),
-            color = MainUi.Muted,
-            fontSize = 13.sp,
+            color = GameColors.TextSecondary,
+            style = MaterialTheme.typography.bodySmall,
         )
+
         if (!loading && notice == null && styles.isEmpty()) {
             Text(
-                sh("Yeni Style ürünlerini mağazada keşfet.", "Discover new Style items in the store."),
-                color = MainUi.Muted,
-                fontSize = 13.sp,
+                sh(
+                    "Yeni Style ürünlerini mağazada keşfet.",
+                    "Discover new Style items in the store.",
+                ),
+                color = GameColors.TextTertiary,
+                style = MaterialTheme.typography.bodySmall,
             )
         }
+
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(styles, key = { it.id }) { item ->
                 OwnedStyleCard(
@@ -215,41 +255,82 @@ private fun ProfileThemeCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val border = if (active) MainUi.Green else MainUi.Border
+    val accent = if (blackVariant) GameColors.Lavender else GameColors.PrimaryBlue
+    val border = if (active) GameColors.PlayGreen else GameColors.Border
+
     Surface(
         modifier = modifier.clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = MainUi.Surface,
+        shape = GameShapes.Large,
+        color = GameColors.PrimarySurface,
         border = BorderStroke(if (active) 2.dp else 1.dp, border),
     ) {
-        Column(Modifier.padding(9.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Column(
+            modifier = Modifier.padding(9.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
             Box(
-                Modifier.fillMaxWidth().height(68.dp).background(
-                    brush = if (blackVariant) {
-                        Brush.linearGradient(listOf(Color(0xFF050608), Color(0xFF111318), Color(0xFF20242B)))
-                    } else {
-                        Brush.linearGradient(
-                            listOf(
-                                KelimeKusatmasiPalette.MonsterBlack,
-                                KelimeKusatmasiPalette.MonsterSurface,
-                                KelimeKusatmasiPalette.MonsterPink.copy(alpha = .72f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(68.dp)
+                    .background(
+                        brush = if (blackVariant) {
+                            Brush.linearGradient(
+                                listOf(
+                                    Color(0xFF080B10),
+                                    Color(0xFF151C27),
+                                    Color(0xFF263041),
+                                ),
                             )
-                        )
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                ),
+                        } else {
+                            Brush.linearGradient(
+                                listOf(
+                                    GameColors.HeroStart,
+                                    GameColors.HeroMiddle,
+                                    GameColors.HeroEnd,
+                                ),
+                            )
+                        },
+                        shape = GameShapes.Medium,
+                    ),
             ) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(7.dp),
+                    shape = GameShapes.Pill,
+                    color = accent.copy(alpha = .18f),
+                ) {
+                    Text(
+                        if (blackVariant) "BLACK" else "KELİME KUŞATMASI",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        color = GameColors.TextPrimary,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
                 if (active) {
                     Icon(
                         Icons.Rounded.CheckCircle,
-                        null,
-                        tint = if (blackVariant) SonHarfTheme.PremiumGold else SonHarfTheme.Primary,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(20.dp),
+                        contentDescription = null,
+                        tint = GameColors.PlayGreen,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(7.dp)
+                            .size(20.dp),
                     )
                 }
             }
-            Text(title, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            Text(subtitle, color = MainUi.Muted, fontSize = 12.sp)
+            Text(
+                title,
+                color = GameColors.TextPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Black,
+            )
+            Text(
+                subtitle,
+                color = GameColors.TextSecondary,
+                style = MaterialTheme.typography.labelSmall,
+            )
         }
     }
 }
@@ -262,45 +343,101 @@ private fun OwnedStyleCard(
     onEquip: () -> Unit,
 ) {
     val supported = item.isSupportedOwnedStyle()
+
     Card(
         modifier = Modifier.width(248.dp),
-        colors = CardDefaults.cardColors(containerColor = MainUi.Surface),
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) MainUi.Green else MainUi.Border),
+        colors = CardDefaults.cardColors(containerColor = GameColors.PrimarySurface),
+        shape = GameShapes.Large,
+        border = BorderStroke(
+            if (active) 2.dp else 1.dp,
+            if (active) GameColors.PlayGreen else GameColors.Border,
+        ),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.fillMaxWidth().height(76.dp), contentAlignment = Alignment.Center) {
-                if (item.kind == "profile_frame" && supported) {
-                    Icon(Icons.Rounded.Person, null, Modifier.size(36.dp), tint = MainUi.Blue)
-                    PurchasedProfileFrameOverlay(frameId = item.id, modifier = Modifier.size(76.dp))
-                } else {
-                    Icon(Icons.Rounded.Palette, null, Modifier.size(38.dp), tint = MainUi.Blue)
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(76.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Surface(
+                    shape = GameShapes.Medium,
+                    color = GameColors.SecondarySurface,
+                ) {
+                    Box(
+                        modifier = Modifier.size(76.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (item.kind == "profile_frame" && supported) {
+                            Icon(
+                                Icons.Rounded.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(36.dp),
+                                tint = GameColors.PrimaryBlue,
+                            )
+                            PurchasedProfileFrameOverlay(frameId = item.id, modifier = Modifier.size(76.dp))
+                        } else {
+                            Icon(
+                                Icons.Rounded.Palette,
+                                contentDescription = null,
+                                modifier = Modifier.size(38.dp),
+                                tint = GameColors.Lavender,
+                            )
+                        }
+                    }
                 }
             }
-            Text(sh(item.nameTr, item.nameEn), color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text(sh(item.descriptionTr, item.descriptionEn), color = MainUi.Muted, fontSize = 13.sp)
+
             Text(
-                if (item.active) sh("Koleksiyonunda", "In your collection")
-                else sh("Arşiv ürünü • Koleksiyonunda", "Retired item • In your collection"),
-                color = MainUi.Blue,
-                fontSize = 12.sp,
+                sh(item.nameTr, item.nameEn),
+                color = GameColors.TextPrimary,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
             )
+            Text(
+                sh(item.descriptionTr, item.descriptionEn),
+                color = GameColors.TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                if (item.active) {
+                    sh("Koleksiyonunda", "In your collection")
+                } else {
+                    sh("Arşiv ürünü • Koleksiyonunda", "Retired item • In your collection")
+                },
+                color = GameColors.PrimaryBlue,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+            )
+
             if (!supported) {
                 Text(
                     sh(
                         "Bu sürümde kullanılamıyor. Sahipliğin korunuyor.",
                         "Unavailable in this version. You still own this item.",
                     ),
-                    color = MainUi.Muted,
-                    fontSize = 13.sp,
+                    color = GameColors.TextTertiary,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
+
             Button(
                 onClick = onEquip,
                 enabled = enabled && supported && !active,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                shape = GameShapes.Medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = GameColors.PrimaryBlue,
+                    contentColor = GameColors.TextPrimary,
+                    disabledContainerColor = GameColors.Disabled,
+                    disabledContentColor = GameColors.DisabledContent,
+                ),
             ) {
-                Text(if (active) sh("AKTİF", "EQUIPPED") else sh("KULLAN", "EQUIP"))
+                Text(
+                    if (active) sh("AKTİF", "EQUIPPED") else sh("KULLAN", "EQUIP"),
+                    fontWeight = FontWeight.Black,
+                )
             }
         }
     }
