@@ -56,14 +56,14 @@ private val PanSiegeNeutralBorder = Color(0xFFDCD3BD)
 private val PanSiegeBonusBorder = Color(0xFFC9BFA5)
 private val PanSiegeMineBorder = Color(0xFF52B360)
 private val PanSiegeRivalBorder = Color(0xFFE57A73)
-private val PanSiegeBonus2H = Color(0xFF5DADE2)
-private val PanSiegeBonus3H = Color(0xFFE573A5)
-private val PanSiegeBonus2K = Color(0xFF7DC36B)
-private val PanSiegeBonus3K = Color(0xFFE0914A)
-private val PanSiegeBonus4K = Color(0xFF9B6FD1)
-private val PanSiegeBonusStar = Color(0xFFF2C14E)
+private val PanSiegeBonus2H = Color(0xFFCFE6F5)
+private val PanSiegeBonus3H = Color(0xFFF6D3E2)
+private val PanSiegeBonus2K = Color(0xFFD6ECCB)
+private val PanSiegeBonus3K = Color(0xFFF8DCC3)
+private val PanSiegeBonus4K = Color(0xFFE2D6F2)
+private val PanSiegeBonusStar = Color(0xFFFBEBB5)
 private val PanSiegeLastMove = Color(0xFFE0A82E)
-private val PanSiegeBonusLabel = Color(0xFFFFFFFF)
+private val PanSiegeBonusLabel = Color(0xFF3F4A5A)
 private val PanSiegeCellSize = 52.dp
 internal const val WORD_SIEGE_BOT_FALLBACK_DELAY_MS = 15_000L
 
@@ -898,7 +898,7 @@ private fun PanSiegeBoardCell(
             shape = RoundedCornerShape(7.dp),
             border = BorderStroke(
                 if (pending) maxOf(1.4.dp, borderWidth) else .45.dp,
-                if (pending) border.copy(alpha = .92f) else Color.White.copy(alpha = .95f),
+                if (pending) border.copy(alpha = .92f) else Color(0xFFCDBF9F),
             ),
         ) {
             Box(contentAlignment = Alignment.Center) {

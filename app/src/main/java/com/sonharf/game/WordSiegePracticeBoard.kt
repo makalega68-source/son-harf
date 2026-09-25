@@ -47,15 +47,15 @@ private val PracticeSiegeMineBorder = Color(0xFF52B360)
 private val PracticeSiegeRivalBorder = Color(0xFFE57A73)
 private val PracticeSiegeThreat = Color(0xFFD8903D)
 private val PracticeSiegeLightTileText = Color(0xFF4A3217)
-private val PracticeZoneWatch = Color(0xFF5DADE2)
-private val PracticeZoneCritical = Color(0xFFE573A5)
-private val PracticeZoneFort = Color(0xFF7DC36B)
-private val PracticeZoneSiege = Color(0xFFE0914A)
-private val PracticeZoneCrown = Color(0xFF9B6FD1)
-private val PracticeZoneReward = Color(0xFFF2C14E)
+private val PracticeZoneWatch = Color(0xFFCFE6F5)
+private val PracticeZoneCritical = Color(0xFFF6D3E2)
+private val PracticeZoneFort = Color(0xFFD6ECCB)
+private val PracticeZoneSiege = Color(0xFFF8DCC3)
+private val PracticeZoneCrown = Color(0xFFE2D6F2)
+private val PracticeZoneReward = Color(0xFFFBEBB5)
 private val PracticeLastMove = Color(0xFFE0A82E)
 private val PracticeDefinitionBadge = Color(0xFF5C8299)
-private val PracticeSiegeBonusLabel = Color(0xFFFFFFFF)
+private val PracticeSiegeBonusLabel = Color(0xFF3F4A5A)
 
 internal data class PracticeResolvedWord(
     val word: String,
@@ -416,7 +416,7 @@ private fun WordSiegePracticeBoardCell(
                 width = if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
                 color = if (lastMoveHighlight > 0f) {
                     PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
-                } else Color.White.copy(alpha = .95f),
+                } else Color(0xFFCDBF9F),
                 shape = RoundedCornerShape(8.dp),
             ),
         contentAlignment = Alignment.Center,

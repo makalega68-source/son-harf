@@ -20,7 +20,7 @@ class WordSiegeOnlineBoardVisualContractTest {
         assertTrue(source.contains("onChat = onChat"))
         assertTrue(source.contains("Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp)"))
         assertTrue(source.contains("Icon(Icons.Rounded.Chat, sh(\"Oyun içi sohbet\", \"In-game chat\")"))
-        assertTrue(source.contains("PanSiegeBonusLabel = Color(0xFFFFFFFF)"))
+        assertTrue(source.contains("PanSiegeBonusLabel = Color(0xFF3F4A5A)"))
         assertTrue(source.contains("SpanStyle(fontSize = 20.sp)"))
         assertTrue(source.contains("SpanStyle(fontSize = 10.sp)"))
         assertTrue(source.contains("fontWeight = if (overview) FontWeight.SemiBold else FontWeight.Medium"))

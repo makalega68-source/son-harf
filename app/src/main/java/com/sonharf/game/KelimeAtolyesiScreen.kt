@@ -305,16 +305,18 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     onExit = onExit,
                 )
                 else -> {
-                    AtelierPool(current, language) { tileId ->
-                        SonHarfSoundFx.puzzleTap()
-                        state = current.pick(tileId)
-                    }
+                    // Tasks and the word slot on top; the letter pool sits at the bottom right above
+                    // Temizle / Gönder, where the thumbs are.
                     AtelierTasks(current.tasks, language)
                     AtelierSlot(current, language, gain = gain, gainNonce = gainNonce) { index ->
                         SonHarfSoundFx.puzzleKey()
                         state = current.unpickAt(index)
                     }
                     AtelierFeedbackLine(feedback)
+                    AtelierPool(current, language) { tileId ->
+                        SonHarfSoundFx.puzzleTap()
+                        state = current.pick(tileId)
+                    }
                     AtelierActions(
                         canClear = current.picked.isNotEmpty(),
                         canSubmit = current.picked.isNotEmpty() && !busy,

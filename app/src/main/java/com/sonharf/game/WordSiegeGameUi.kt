@@ -2,6 +2,16 @@ package com.sonharf.game
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.drawBehind
@@ -129,16 +139,13 @@ internal fun WordSiegeScoreCard(
     ) {
         Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.padding(top = if (leading) 4.dp else 0.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (leading) WordSiegeLeaderHalo(Modifier.size(60.dp))
                     ProfilePhotoAvatarWithGender(
                         avatarPath = avatarPath, gender = gender, name = name,
                         size = 52.dp, accent = accent, visible = avatarVisible,
                     )
-                    if (leading) {
-                        Box(Modifier.align(Alignment.TopCenter).offset(y = (-7).dp)) {
-                            WordSiegeLeaderCrown()
-                        }
-                    }
+                    if (leading) WordSiegeLeaderBadge(Modifier.align(Alignment.BottomEnd).offset(x = 3.dp, y = 3.dp))
                 }
                 Spacer(Modifier.width(6.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
@@ -297,38 +304,35 @@ internal fun WordSiegeOwnershipLegend() {
     }
 }
 
+/** The leader's photo gets a slowly shimmering gold halo instead of a drawn crown. */
 @Composable
-private fun WordSiegeLeaderCrown() {
+private fun WordSiegeLeaderHalo(modifier: Modifier) {
     val description = sh("Lider", "Leader")
-    Canvas(
-        Modifier
-            .size(width = 23.dp, height = 17.dp)
-            .semantics { contentDescription = description },
-    ) {
-        val crown = Path().apply {
-            moveTo(size.width * .08f, size.height * .32f)
-            lineTo(size.width * .28f, size.height * .55f)
-            lineTo(size.width * .39f, size.height * .19f)
-            lineTo(size.width * .50f, size.height * .51f)
-            lineTo(size.width * .62f, size.height * .12f)
-            lineTo(size.width * .72f, size.height * .55f)
-            lineTo(size.width * .92f, size.height * .30f)
-            lineTo(size.width * .82f, size.height * .86f)
-            lineTo(size.width * .18f, size.height * .86f)
-            close()
+    val shimmer by rememberInfiniteTransition(label = "leader-halo")
+        .animateFloat(0f, 360f, infiniteRepeatable(tween(3_600, easing = LinearEasing)), label = "leader-shimmer")
+    Canvas(modifier.semantics { contentDescription = description }) {
+        val stroke = 3.dp.toPx()
+        val ring = Brush.sweepGradient(
+            listOf(Color(0xFFB07F1E), Color(0xFFF2C14E), Color(0xFFFFF4C4), Color(0xFFF2C14E), Color(0xFFB07F1E)),
+        )
+        rotate(shimmer) {
+            drawCircle(ring, radius = size.minDimension / 2f - stroke / 2f, style = Stroke(width = stroke))
         }
-        val gold = Brush.verticalGradient(
-            listOf(Color(0xFFFFF0A8), Color(0xFFF4C44F), Color(0xFFD69424)),
-        )
-        drawPath(crown, brush = gold)
-        drawPath(crown, color = Color(0xFF7A5218), style = Stroke(width = 1.05.dp.toPx()))
-        drawLine(
-            color = Color(0xFFFFF4C4),
-            start = Offset(size.width * .22f, size.height * .70f),
-            end = Offset(size.width * .78f, size.height * .70f),
-            strokeWidth = 1.2.dp.toPx(),
-        )
-        drawCircle(Color(0xFFE85D5D), 1.35.dp.toPx(), Offset(size.width * .39f, size.height * .61f))
-        drawCircle(Color(0xFF4E8FD4), 1.35.dp.toPx(), Offset(size.width * .62f, size.height * .59f))
+        drawCircle(Color(0x33F2C14E), radius = size.minDimension / 2f, style = Stroke(width = 1.dp.toPx()))
+    }
+}
+
+/** A small gold medal with a star in the photo's corner. */
+@Composable
+private fun WordSiegeLeaderBadge(modifier: Modifier) {
+    Box(
+        modifier
+            .size(20.dp)
+            .shadow(3.dp, CircleShape)
+            .background(Brush.verticalGradient(listOf(Color(0xFFFFE9A3), Color(0xFFE0A82E), Color(0xFFB07F1E))), CircleShape)
+            .border(1.5.dp, Color.White, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("★", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
     }
 }

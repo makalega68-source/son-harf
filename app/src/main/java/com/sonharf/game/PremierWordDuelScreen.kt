@@ -581,6 +581,7 @@ fun PremierWordDuelScreen() {
             )
             PremierStage.Searching -> PremierSearching(
                 language = language,
+                me = me,
                 onCancel = {
                     scope.launch {
                         stage = PremierStage.Lobby
@@ -832,6 +833,8 @@ private fun PremierLobby(
             }
         }
 
+        PremierHowToPlay(language)
+
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PremierFeatureTile(Icons.Rounded.Verified, pt(language, "ANA SÖZLÜK", "MASTER DICTIONARY"), pt(language, "TR + EN", "TR + EN"), Modifier.weight(1f))
             PremierFeatureTile(Icons.Rounded.Bolt, pt(language, "HIZLI", "FAST"), pt(language, "15 sn tur", "15 sec turn"), Modifier.weight(1f))
@@ -844,19 +847,87 @@ private fun PremierLobby(
                 Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = PremierUi.OceanDeep, fontSize = 12.sp, textAlign = TextAlign.Center)
             }
         }
-        Button(
-            onClick = onPlay,
-            enabled = !busy,
-            modifier = Modifier.fillMaxWidth().height(68.dp),
-            shape = RoundedCornerShape(21.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean, contentColor = PremierUi.Ink),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp),
+        val playPulse = rememberInfiniteTransition(label = "play").animateFloat(1f, 1.025f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "play-pulse")
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(66.dp)
+                .graphicsLayer { if (!busy) { scaleX = playPulse.value; scaleY = playPulse.value } }
+                .shadow(12.dp, RoundedCornerShape(22.dp), spotColor = PremierUi.Green)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Brush.verticalGradient(listOf(Color(0xFF52B360), PremierUi.Green, Color(0xFF2F8A3E))))
+                .border(1.dp, Color.White.copy(alpha = .35f), RoundedCornerShape(22.dp))
+                .clickable(enabled = !busy, onClick = onPlay),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(28.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(pt(language, "OYNA", "PLAY"), fontSize = 21.sp, fontWeight = FontWeight.Black, letterSpacing = .9.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.PlayArrow, null, tint = Color.White, modifier = Modifier.size(30.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(pt(language, "OYNA", "PLAY"), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+            }
         }
         Text(pt(language, "Rakip bulunamazsa seviye uyumlu bot devreye girer.", "If no rival is found, a level-appropriate bot takes over."), Modifier.fillMaxWidth(), color = PremierUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+    }
+}
+
+/** A tiny worked example of the rule: each word starts with the last letter of the previous one. */
+@Composable
+private fun PremierHowToPlay(language: String) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val owned = WordSiegeMascotOwnership.owned
+    val skin = remember { WordSiegeMascotBond(context).skinChoice?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } }
+    var waveKey by remember { mutableStateOf(0L) }
+    LaunchedEffect(Unit) { delay(600); waveKey = 1L }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = PremierUi.Surface,
+        border = BorderStroke(1.dp, PremierUi.Border),
+        shadowElevation = 4.dp,
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(pt(language, "NASIL OYNANIR", "HOW TO PLAY"), color = PremierUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                val chain = if (language == "en") listOf("APPLE", "EAGLE", "EARTH") else listOf("KALEM", "MASA", "ARI")
+                chain.forEachIndexed { index, word ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        word.forEachIndexed { i, ch ->
+                            val link = (i == 0 && index > 0) || (i == word.lastIndex && index < chain.lastIndex)
+                            Box(
+                                Modifier
+                                    .padding(end = 2.dp)
+                                    .size(22.dp)
+                                    .background(if (link) PremierBoard.Gold else PremierBoard.Tile, RoundedCornerShape(5.dp))
+                                    .border(1.dp, if (link) PremierBoard.GoldEdge else PremierBoard.TileEdge, RoundedCornerShape(5.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(ch.toString(), color = PremierBoard.TileInk, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                }
+                Text(
+                    pt(language, "Rakibinin kelimesinin son harfiyle yeni kelime yaz. Uzun kelime daha çok puan.", "Start your word with the last letter of your rival's word. Longer words score more."),
+                    color = PremierUi.Ink,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                )
+            }
+            if (skin != null) {
+                Spacer(Modifier.width(8.dp))
+                WordSiegeMascot(
+                    moveId = null,
+                    lastMoveMine = false,
+                    pendingCells = emptyList(),
+                    playerTurn = true,
+                    requestedEmotion = WordSiegeMascotEmotion.HAPPY,
+                    modifier = Modifier.size(92.dp),
+                    actionKey = waveKey,
+                    action = WordSiegeMascotAction.WAVE,
+                    skin = skin,
+                )
+            }
+        }
     }
 }
 
@@ -864,7 +935,7 @@ private fun PremierLobby(
 private fun PremierFeatureTile(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, detail: String, modifier: Modifier) {
     Surface(modifier, shape = RoundedCornerShape(17.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Border)) {
         Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, tint = PremierUi.Ocean, modifier = Modifier.size(21.dp))
+            Icon(icon, null, tint = PremierUi.Green, modifier = Modifier.size(21.dp))
             Spacer(Modifier.height(6.dp))
             Text(title, color = PremierUi.Ink, fontWeight = FontWeight.Black, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 1)
             Text(detail, color = PremierUi.Muted, fontSize = 9.sp, textAlign = TextAlign.Center)
@@ -882,7 +953,7 @@ private fun PremierLanguageSwitch(language: String, onLanguage: (String) -> Unit
                     shape = RoundedCornerShape(99.dp),
                     color = if (language == code) PremierUi.Ocean else Color.Transparent,
                 ) {
-                    Text(label, Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = if (language == code) PremierUi.Ink else PremierUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(label, Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = if (language == code) Color.White else PremierUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -899,60 +970,94 @@ private fun PremierLoading(language: String) {
 }
 
 @Composable
-private fun PremierSearching(language: String, onCancel: () -> Unit) {
+private fun PremierSearching(language: String, me: ProfileDto?, onCancel: () -> Unit) {
     val transition = rememberInfiniteTransition(label = "search")
-    val pulse by transition.animateFloat(0.92f, 1.06f, infiniteRepeatable(tween(850), RepeatMode.Reverse), label = "pulse")
+    // Radar ripples around the rival slot and a gentle wave through the brand tiles.
+    val ripple by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1_800, easing = LinearEasing)), label = "ripple")
+    val wave by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1_600, easing = LinearEasing)), label = "wave")
+    val dots by transition.animateFloat(0f, 3.99f, infiniteRepeatable(tween(1_500, easing = LinearEasing)), label = "dots")
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 24.dp),
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFFF4F7FA), Color(0xFFE3EAF1))))
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        HfTitleRule(sh("Kelime Tahtı", "Kelime Tahtı"), fontSize = 26.sp)
-        Spacer(Modifier.height(40.dp))
-        Text(pt(language, "Rakip aranıyor", "Finding a rival"), color = Hf.Text, fontSize = 34.sp, fontWeight = FontWeight.Black)
-        Spacer(Modifier.height(36.dp))
+        HfTitleRule(sh("Kelime Tahtı", "Kelime Tahtı"), fontSize = 24.sp)
+        Spacer(Modifier.height(28.dp))
+        Text(
+            pt(language, "Rakip aranıyor", "Finding a rival") + ".".repeat(dots.toInt()),
+            color = Hf.Text,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Black,
+        )
+        Spacer(Modifier.height(32.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            PremierSearchSide(pt(language, "SEN", "YOU"), Hf.Green, Hf.Green, Modifier.weight(1f))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(18.dp).height(2.dp).background(Hf.Gold))
-                Text("VS", Modifier.padding(horizontal = 8.dp), color = Hf.Gold, fontSize = 28.sp, fontWeight = FontWeight.Black)
-                Box(Modifier.width(18.dp).height(2.dp).background(Hf.Gold))
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    Modifier.size(104.dp).shadow(10.dp, CircleShape).background(Color.White, CircleShape).border(4.dp, Hf.Green, CircleShape).padding(6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ProfilePhotoAvatarWithGender(
+                        avatarPath = me?.avatarPath,
+                        gender = me?.gender,
+                        name = me?.displayName ?: pt(language, "Oyuncu", "Player"),
+                        size = 88.dp,
+                        accent = Hf.Green,
+                        visible = me?.avatarVisibility != "hidden",
+                        showGenderBadge = false,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(me?.displayName ?: pt(language, "Sen", "You"), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text("${me?.rating ?: 1000} RP", color = Hf.GoldDeep, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
-            PremierSearchSide(pt(language, "RAKİP", "RIVAL"), Color(0xFF9AA7B5), Color(0xFFE3E9EF), Modifier.weight(1f))
+            Text("VS", Modifier.padding(horizontal = 6.dp), color = Hf.GoldDeep, fontSize = 26.sp, fontWeight = FontWeight.Black)
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.size(104.dp), contentAlignment = Alignment.Center) {
+                    Canvas(Modifier.size(150.dp)) {
+                        val c = Offset(size.width / 2f, size.height / 2f)
+                        for (i in 0 until 3) {
+                            val t = (ripple + i / 3f) % 1f
+                            drawCircle(
+                                color = Hf.Green.copy(alpha = (1f - t) * .35f),
+                                radius = size.minDimension * (.34f + .16f * t),
+                                center = c,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()),
+                            )
+                        }
+                    }
+                    Box(
+                        Modifier.size(96.dp).shadow(6.dp, CircleShape).background(Color.White, CircleShape).border(3.dp, Hf.Border, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("?", color = Hf.Muted, fontSize = 40.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(pt(language, "Rakip", "Rival"), color = Hf.TextMuted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(pt(language, "aranıyor", "searching"), color = Hf.TextMuted, fontSize = 12.sp)
+            }
         }
         Spacer(Modifier.weight(1f))
-        Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
-            Canvas(Modifier.matchParentSize()) {
-                val c = Offset(size.width / 2f, size.height / 2f)
-                val stroke = 3.dp.toPx()
-                listOf(180f, 150f, 210f, 0f, 30f, -30f).forEach { deg ->
-                    val rad = Math.toRadians(deg.toDouble())
-                    val dir = Offset(kotlin.math.cos(rad).toFloat(), kotlin.math.sin(rad).toFloat())
-                    drawLine(Hf.Gold, c + dir * (size.width * .36f), c + dir * (size.width * .47f), strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        // Brand tiles with a soft travelling wave: the game's own material instead of line art.
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            val letters = pt(language, "SONHARF", "LETTER").toList()
+            letters.forEachIndexed { index, ch ->
+                val phase = ((wave * letters.size - index) / 2.2f).let { it - kotlin.math.floor(it) }
+                val lift = kotlin.math.sin(phase * Math.PI).toFloat().coerceAtLeast(0f)
+                Box(Modifier.graphicsLayer { translationY = -14.dp.toPx() * lift }) {
+                    HfLetterTile(ch.toString(), 38.dp, fontSize = 20.sp)
                 }
-                val chevron = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(c.x - size.width * .22f, size.height * .18f); lineTo(c.x, size.height * .02f); lineTo(c.x + size.width * .22f, size.height * .18f)
-                    moveTo(c.x - size.width * .22f, size.height * .82f); lineTo(c.x, size.height * .98f); lineTo(c.x + size.width * .22f, size.height * .82f)
-                }
-                drawPath(chevron, Hf.Gold, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 5.dp.toPx()))
             }
-            HfLetterTile("A", (64 * pulse).dp, fontSize = 36.sp)
         }
-        Spacer(Modifier.height(18.dp))
-        Text(pt(language, "Son Harf için eşleşme bekleniyor", "Waiting for a Last Letter match"), color = Hf.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-        Text(pt(language, "Rating ve dil eşleşmesi yapılıyor…", "Matching rating and language…"), color = Hf.TextMuted, fontSize = 12.sp)
+        Spacer(Modifier.height(22.dp))
+        Text(pt(language, "Seviyene uygun rakip bulunuyor", "Finding a rival at your level"), color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text(pt(language, "Bulunamazsa seviyene uygun bir bot oynar.", "If none is found, a bot at your level plays."), color = Hf.TextMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.weight(1f))
         HfSecondaryButton(pt(language, "Vazgeç", "Cancel"), onClick = onCancel, modifier = Modifier.fillMaxWidth(.8f))
-    }
-}
-
-@Composable
-private fun PremierSearchSide(label: String, ring: Color, pill: Color, modifier: Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(96.dp).border(6.dp, ring, CircleShape).padding(6.dp).background(Hf.Surface, CircleShape))
-        Spacer(Modifier.height(12.dp))
-        Surface(shape = Hf.PillShape, color = pill, border = BorderStroke(1.5.dp, Hf.Gold)) {
-            Text(label, Modifier.padding(horizontal = 26.dp, vertical = 6.dp), color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
-        }
     }
 }
 
@@ -2167,34 +2272,57 @@ private fun PremierTargetCard(
     suddenDeath: Boolean = false,
 ) {
     val transition = rememberInfiniteTransition(label = "target-tile")
-    val breath by transition.animateFloat(1f, 1.06f, infiniteRepeatable(tween(750), RepeatMode.Reverse), label = "target-breath")
-    // A new letter drops in.
+    // A soft halo pulses around the tile on your turn; the tile itself stays calm and solid.
+    val halo by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1_400), RepeatMode.Restart), label = "target-halo")
+    // A new letter settles in.
     val drop = remember(required) { Animatable(0f) }
-    LaunchedEffect(required) { drop.animateTo(1f, spring(dampingRatio = .5f, stiffness = 320f)) }
+    LaunchedEffect(required) { drop.animateTo(1f, spring(dampingRatio = .62f, stiffness = 300f)) }
+    val tile = size * .78f
+    val shape = RoundedCornerShape(tile * .24f)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            Modifier
-                .size(size)
-                .graphicsLayer {
-                    val s = (if (active) breath else 1f) * (.6f + .4f * drop.value)
-                    scaleX = s
-                    scaleY = s
-                    alpha = drop.value.coerceIn(0f, 1f)
-                }
-                .background(PremierBoard.GoldEdge, RoundedCornerShape(size * .22f))
-                .padding(bottom = size * .08f),
-            contentAlignment = Alignment.Center,
-        ) {
+        Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+            if (active) {
+                Box(
+                    Modifier
+                        .size(tile)
+                        .graphicsLayer {
+                            val grow = 1f + .32f * halo
+                            scaleX = grow
+                            scaleY = grow
+                            alpha = (1f - halo) * .55f
+                        }
+                        .border(3.dp, PremierBoard.Mine, shape),
+                )
+            }
             Box(
-                Modifier.fillMaxSize().background(PremierBoard.Gold, RoundedCornerShape(size * .22f)),
+                Modifier
+                    .size(tile)
+                    .graphicsLayer {
+                        val s = .7f + .3f * drop.value
+                        scaleX = s
+                        scaleY = s
+                        alpha = drop.value.coerceIn(0f, 1f)
+                    }
+                    .shadow(10.dp, shape, ambientColor = PremierBoard.GoldEdge, spotColor = PremierBoard.GoldEdge)
+                    .clip(shape)
+                    .background(Brush.verticalGradient(listOf(Color(0xFFFFF8E1), Color(0xFFF7E4AA), Color(0xFFECCB78))))
+                    .border(1.5.dp, Brush.verticalGradient(listOf(Color(0xFFFBEFC8), Color(0xFFB8913F))), shape),
                 contentAlignment = Alignment.Center,
             ) {
+                // Glossy top light, like a polished wooden tile.
+                Box(
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .fillMaxHeight(.42f)
+                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .55f), Color.Transparent))),
+                )
                 Text(
                     required,
                     color = PremierBoard.TileInk,
-                    fontSize = (size.value * if (required.length > 1) .28f else .41f).sp,
+                    fontSize = (tile.value * if (required.length > 1) .3f else .46f).sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 1.2.sp,
+                    letterSpacing = 1.sp,
                 )
             }
         }

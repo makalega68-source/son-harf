@@ -22,8 +22,8 @@ class WordSiegeReadabilityContractTest {
             assertTrue(practice.contains("WordSiegeBoardAccessibility.$token"))
         }
 
-        assertTrue(online.contains("PanSiegeBonusLabel = Color(0xFFFFFFFF)"))
-        assertTrue(practice.contains("PracticeSiegeBonusLabel = Color(0xFFFFFFFF)"))
+        assertTrue(online.contains("PanSiegeBonusLabel = Color(0xFF3F4A5A)"))
+        assertTrue(practice.contains("PracticeSiegeBonusLabel = Color(0xFF3F4A5A)"))
         listOf(online, practice).forEach { board ->
             assertTrue(board.contains("SpanStyle(fontSize = 20.sp)"))
             assertTrue(board.contains("SpanStyle(fontSize = 10.sp)"))
