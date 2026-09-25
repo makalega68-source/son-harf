@@ -460,17 +460,7 @@ private fun PremiumGameCard(
                 Spacer(Modifier.height(10.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = if (primary) SonHarfTheme.Primary.copy(alpha = .18f) else SonHarfTheme.Turquoise.copy(alpha = .12f),
-                ) {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        tint = if (primary) SonHarfTheme.Primary else SonHarfTheme.Turquoise,
-                        modifier = Modifier.padding(12.dp).size(26.dp),
-                    )
-                }
+                HfGameIconSlot(50.dp)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(title, color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, fontSize = 14.sp)

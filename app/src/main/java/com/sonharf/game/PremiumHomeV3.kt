@@ -367,14 +367,14 @@ internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Uni
             modifier = Modifier.weight(1f).fillMaxHeight(),
             title = "Son Harf",
             subtitle = sh("Son harfle yeni kelime bul", "Find a word from the last letter"),
-            art = { HomeLastLetterArt() },
+            art = { HfGameIconSlot(120.dp, 74.dp) },
             onPlay = onLastLetter,
         )
         PremiumHomeModeCard(
             modifier = Modifier.weight(1f).fillMaxHeight(),
             title = sh("Kelime Yolu", "Word Path"),
             subtitle = sh("Bağlantılı kelimelerle hedefe ulaş", "Reach the goal through linked words"),
-            art = { HomeWordPathArt() },
+            art = { HfGameIconSlot(150.dp, 74.dp) },
             onPlay = onLetterPath,
         )
     }
@@ -410,54 +410,6 @@ private fun PremiumHomeModeCard(
     }
 }
 
-@Composable
-private fun HomeLastLetterArt() {
-    Box(Modifier.size(width = 120.dp, height = 74.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.matchParentSize()) {
-            val c = Offset(size.width / 2f, size.height / 2f)
-            val stroke = 3.dp.toPx()
-            listOf(-150f, 180f, 150f, -30f, 0f, 30f).forEach { deg ->
-                val rad = Math.toRadians(deg.toDouble())
-                val dir = Offset(kotlin.math.cos(rad).toFloat(), kotlin.math.sin(rad).toFloat())
-                val start = c + dir * (size.height * .56f)
-                val end = c + dir * (size.height * .72f)
-                drawLine(Hf.Gold, start, end, strokeWidth = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-            }
-        }
-        HfLetterTile("A", 50.dp, modifier = Modifier.rotate(-7f), fontSize = 30.sp)
-    }
-}
-
-@Composable
-private fun HomeWordPathArt() {
-    Box(Modifier.size(width = 150.dp, height = 74.dp)) {
-        Canvas(Modifier.matchParentSize()) {
-            val gold = Hf.Gold
-            val w = 2.dp.toPx()
-            val path = androidx.compose.ui.graphics.Path().apply {
-                moveTo(size.width * .30f, size.height * .22f)
-                lineTo(size.width * .60f, size.height * .30f)
-                moveTo(size.width * .18f, size.height * .30f)
-                lineTo(size.width * .18f, size.height * .78f)
-                lineTo(size.width * .38f, size.height * .78f)
-                moveTo(size.width * .80f, size.height * .42f)
-                lineTo(size.width * .80f, size.height * .78f)
-                lineTo(size.width * .62f, size.height * .78f)
-            }
-            drawPath(path, gold, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w))
-        }
-        HomePathChip("TOHUM", Modifier.align(Alignment.TopStart))
-        HomePathChip("PARK", Modifier.align(Alignment.TopEnd).padding(top = 8.dp))
-        HomePathChip("ŞEHİR", Modifier.align(Alignment.BottomCenter))
-    }
-}
-
-@Composable
-private fun HomePathChip(text: String, modifier: Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(7.dp), color = Hf.Ivory, shadowElevation = 2.dp) {
-        Text(text, Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = Hf.Ink, fontSize = 10.sp, fontWeight = FontWeight.Black)
-    }
-}
 
 @Composable
 internal fun PremiumDailyObjective(onClick: () -> Unit) {

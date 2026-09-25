@@ -1038,12 +1038,7 @@ internal fun MonsterLetterLadderQuickCard(modifier: Modifier, onClick: () -> Uni
             Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(R.drawable.harf_yolu_logo),
-                contentDescription = sh("Harf Yolu logosu", "Letter Path logo"),
-                modifier = Modifier.size(106.dp),
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-            )
+            HfGameIconSlot(106.dp)
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(sh("3. OYUN", "GAME 3"), color = LetterLadderUi.Accent, fontSize = 9.sp, fontWeight = FontWeight.Black)

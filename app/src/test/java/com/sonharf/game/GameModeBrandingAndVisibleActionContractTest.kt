@@ -37,7 +37,7 @@ class GameModeBrandingAndVisibleActionContractTest {
     @Test
     fun letterPathUsesItsLogoAndTriggersVisibleSuccessVfxOnlyOnAcceptedMoves() {
         val ladder = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-        assertTrue(ladder.contains("R.drawable.harf_yolu_logo"))
+        assertTrue(ladder.contains("HfGameIconSlot("))
         assertTrue(projectFile("app/src/main/res/drawable-nodpi/harf_yolu_logo.webp").isFile)
         assertTrue(ladder.contains("successVfxNonce += 1"))
         assertTrue(ladder.contains("PurchasedVictoryVfx("))

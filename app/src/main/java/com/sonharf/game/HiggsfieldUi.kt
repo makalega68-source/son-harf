@@ -403,3 +403,9 @@ internal fun HfProgressBar(progress: Float, modifier: Modifier = Modifier, color
         if (w > 0f) drawRoundRect(color, size = androidx.compose.ui.geometry.Size(w, size.height), cornerRadius = r)
     }
 }
+
+/** Reserved space for a game icon; left empty until the new game artwork arrives. */
+@Composable
+internal fun HfGameIconSlot(width: Dp, height: Dp = width, modifier: Modifier = Modifier) {
+    Box(modifier.size(width, height))
+}
