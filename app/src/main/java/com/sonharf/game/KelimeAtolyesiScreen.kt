@@ -133,6 +133,11 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var happyUntil by remember { mutableStateOf(0L) }
     var best by remember(language) { mutableIntStateOf(AtelierRecords.best(context, language)) }
     var newBest by remember { mutableStateOf(false) }
+    // Mascot hints: three per round, only when the player taps the hint button.
+    var hintsLeft by remember { mutableIntStateOf(MascotHints.HINTS_PER_MATCH) }
+    var hintText by remember { mutableStateOf<String?>(null) }
+    var mascotAction by remember { mutableStateOf<WordSiegeMascotAction?>(null) }
+    var mascotActionKey by remember { mutableStateOf(0L) }
 
     BackHandler { onExit() }
 
@@ -154,6 +159,8 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             state = fresh
             feedback = null
             newBest = false
+            hintsLeft = MascotHints.HINTS_PER_MATCH
+            hintText = null
             secondsLeft = KelimeAtolyesiEngine.ROUND_SECONDS
             roundKey += 1
         }
@@ -208,6 +215,9 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                 AtelierReject.ROUND_OVER -> Unit
                 null -> {
                     state = result.state
+                    hintText = null
+                    mascotAction = if (result.completed.isNotEmpty()) WordSiegeMascotAction.CLAP else WordSiegeMascotAction.HOP
+                    mascotActionKey += 1
                     gain = result.gained
                     gainNonce += 1
                     val taskNote = if (result.completed.isNotEmpty()) {
@@ -225,6 +235,25 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                 }
             }
             SonHarfSoundFx.puzzleError()
+        }
+    }
+
+    fun askHint() {
+        val e = engine ?: return
+        val current = state ?: return
+        if (hintsLeft <= 0 || current.over) return
+        val open = current.tasks.filter { !it.done }
+        val options = e.formable(current.pool.map { it.letter }, current.words.toSet())
+        val word = open.firstNotNullOfOrNull { task -> options.filter { task.matches(it) }.minByOrNull { it.length } }
+        hintsLeft -= 1
+        mascotAction = WordSiegeMascotAction.POINT
+        mascotActionKey += 1
+        hintText = if (word == null) {
+            sh("Harflerini bir daha incele, bir kelime saklanıyor!", "Look at your letters again, a word is hiding!")
+        } else {
+            val shown = (word.length / 2).coerceAtLeast(1)
+            sh("Şunu dene: ${MascotHints.pattern(word, shown, language)} (${word.length} harf)",
+                "Try this: ${MascotHints.pattern(word, shown, language)} (${word.length} letters)")
         }
     }
 
@@ -249,11 +278,15 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             AtelierMascotRow(
                 skin = mascotSkin,
                 happy = happyUntil > System.currentTimeMillis() || current?.over == true && current.allTasksDone,
-                gainNonce = gainNonce,
+                actionKey = mascotActionKey,
+                action = mascotAction,
                 hint = when {
                     current?.over == true -> sh("Tur bitti.", "Round over.")
+                    hintText != null -> hintText!!
                     else -> sh("Harflere dokun, kelimeni kur.", "Tap letters to build your word.")
                 },
+                hintsLeft = if (current != null && !current.over) hintsLeft else 0,
+                onHint = { askHint() },
             )
             when {
                 loadFailed -> AtelierLoadError { loadNonce += 1 }
@@ -336,7 +369,15 @@ private fun AtelierChip(label: String, value: String, accent: Color) {
 }
 
 @Composable
-private fun AtelierMascotRow(skin: WordSiegeMascotSkin, happy: Boolean, gainNonce: Int, hint: String) {
+private fun AtelierMascotRow(
+    skin: WordSiegeMascotSkin,
+    happy: Boolean,
+    actionKey: Long,
+    action: WordSiegeMascotAction?,
+    hint: String,
+    hintsLeft: Int,
+    onHint: () -> Unit,
+) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         // Visual companion only: no speech bubble, no pop-ups.
         WordSiegeMascot(
@@ -346,11 +387,25 @@ private fun AtelierMascotRow(skin: WordSiegeMascotSkin, happy: Boolean, gainNonc
             playerTurn = true,
             requestedEmotion = if (happy) WordSiegeMascotEmotion.HAPPY else WordSiegeMascotEmotion.CALM,
             modifier = Modifier.size(56.dp),
-            actionKey = gainNonce.toLong(),
+            actionKey = actionKey,
+            action = action,
             skin = skin,
         )
         Spacer(Modifier.width(10.dp))
         Text(hint, color = AtelierUi.InkMuted, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        if (hintsLeft > 0) {
+            Spacer(Modifier.width(8.dp))
+            OutlinedButton(
+                onClick = onHint,
+                shape = RoundedCornerShape(99.dp),
+                border = BorderStroke(1.dp, AtelierUi.Gold),
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = AtelierUi.GoldSoft, contentColor = AtelierUi.Ink),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                modifier = Modifier.heightIn(min = 36.dp),
+            ) {
+                Text(sh("💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)"), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 

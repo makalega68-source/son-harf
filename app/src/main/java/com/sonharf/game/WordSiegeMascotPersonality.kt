@@ -3,7 +3,7 @@ package com.sonharf.game
 /** Moments the mascot has something to say about; each character says it in its own voice. */
 internal enum class WordSiegeMascotTopic {
     GREET_FIRST, GREET, HELLO, PRAISE, BIG_PRAISE, RARE_WORD, COMFORT, CRITICAL, BEHIND, RIVAL_STRONG, AHEAD,
-    STREAK, CHAT, TAP, POKED, TWIRL, FLIP, WIN, LOSS, DRAW,
+    STREAK, CHAT, TAP, POKED, DANCE, STRETCH, WIN, LOSS, DRAW,
 }
 
 /**
@@ -54,7 +54,7 @@ internal class WordSiegeMascotPersonality(
         private val PINKI = WordSiegeMascotPersonality(
             chattiness = 1.2f,
             playfulness = 1.05f,
-            idleBias = mapOf(WordSiegeMascotIdle.SPARKLE to 1.8f, WordSiegeMascotIdle.CHAT to 1.3f, WordSiegeMascotIdle.FLIP to .6f),
+            idleBias = mapOf(WordSiegeMascotIdle.SPARKLE to 1.8f, WordSiegeMascotIdle.CHAT to 1.3f, WordSiegeMascotIdle.STRETCH to .6f),
             lines = mapOf(
                 WordSiegeMascotTopic.GREET_FIRST to listOf(
                     "Selam tatlım! Ben Pinki 💖 Seninle oynamak çok güzel olacak!" to "Hi sweetie! I'm Pinky 💖 Playing with you will be lovely!",
@@ -205,7 +205,7 @@ internal class WordSiegeMascotPersonality(
         private val ZIPIR = WordSiegeMascotPersonality(
             chattiness = 1.35f,
             playfulness = 1.35f,
-            idleBias = mapOf(WordSiegeMascotIdle.HOP to 1.6f, WordSiegeMascotIdle.TWIRL to 1.3f, WordSiegeMascotIdle.WATCH to .75f),
+            idleBias = mapOf(WordSiegeMascotIdle.HOP to 1.6f, WordSiegeMascotIdle.DANCE to 1.3f, WordSiegeMascotIdle.WATCH to .75f),
             lines = mapOf(
                 WordSiegeMascotTopic.GREET_FIRST to listOf(
                     "Ben Zıpır! 🔥 Rakipleri yakmaya geldim, hazır mısın?!" to "I'm Blaze! 🔥 Here to burn the rivals, you ready?!",
@@ -285,7 +285,7 @@ internal class WordSiegeMascotPersonality(
                 WordSiegeMascotIdle.WATCH to 1.4f,
                 WordSiegeMascotIdle.CHASE to 3.2f,
                 WordSiegeMascotIdle.LOOK_AROUND to 1.3f,
-                WordSiegeMascotIdle.FLIP to .5f,
+                WordSiegeMascotIdle.STRETCH to .5f,
             ),
             lines = mapOf(
                 WordSiegeMascotTopic.GREET_FIRST to listOf(
@@ -359,7 +359,7 @@ internal class WordSiegeMascotPersonality(
         private val BIPBOP = WordSiegeMascotPersonality(
             chattiness = 1f,
             playfulness = .7f,
-            idleBias = mapOf(WordSiegeMascotIdle.NOD to 1.8f, WordSiegeMascotIdle.LOOK_AROUND to 1.6f, WordSiegeMascotIdle.TWIRL to .6f),
+            idleBias = mapOf(WordSiegeMascotIdle.NOD to 1.8f, WordSiegeMascotIdle.LOOK_AROUND to 1.6f, WordSiegeMascotIdle.DANCE to .6f),
             lines = mapOf(
                 WordSiegeMascotTopic.GREET_FIRST to listOf(
                     "Bip bop! Ben Bipbop. Kazanma olasılığımız hesaplanıyor… %100! 🤖" to "Beep boop! I'm Bipbop. Calculating our odds of winning… 100%! 🤖",
@@ -436,7 +436,7 @@ internal class WordSiegeMascotPersonality(
             chattiness = 1f,
             playfulness = 1.1f,
             idleBias = mapOf(
-                WordSiegeMascotIdle.FLIP to 2.2f,
+                WordSiegeMascotIdle.STRETCH to 2.2f,
                 WordSiegeMascotIdle.WANDER to 1.8f,
                 WordSiegeMascotIdle.LOOK_AROUND to 1.3f,
             ),
@@ -496,9 +496,9 @@ internal class WordSiegeMascotPersonality(
                     "Yeni koordinatlara uçuyorum! 🚀" to "Flying to new coordinates! 🚀",
                     "Kaskıma dokunma, buğulanıyor! 😄" to "Don't touch my helmet, it fogs up! 😄",
                 ),
-                WordSiegeMascotTopic.FLIP to listOf(
-                    "Uzayda aşağı yukarı yok! 🙃" to "There's no up or down in space! 🙃",
-                    "Sıfır yerçekimi taklası! 🌌" to "Zero-gravity flip! 🌌",
+                WordSiegeMascotTopic.STRETCH to listOf(
+                    "Uzayda gerinmek bambaşka! 🌌" to "Stretching in space feels different! 🌌",
+                    "Kaslarım yıldız tozu gibi! ✨" to "My muscles feel like stardust! ✨",
                 ),
                 WordSiegeMascotTopic.WIN to listOf(
                     "GÖREV BAŞARILI! Ay'a bayrak diktik! 🚩🌕" to "MISSION ACCOMPLISHED! Flag planted on the Moon! 🚩🌕",

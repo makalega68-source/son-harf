@@ -1106,6 +1106,24 @@ private fun PremierArena(
     val latestPlayedWord = latestMove?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
     val latestMoveMine = latestMove != null && latestMove.playerId == meId
 
+    // Mascot hints: three per match. Against a bot the mascot shows the start of a real word;
+    // against a real opponent it only gives strategy tips (fair play).
+    val hintContext = androidx.compose.ui.platform.LocalContext.current
+    var hintsLeft by remember(room.id) { mutableIntStateOf(MascotHints.HINTS_PER_MATCH) }
+    var hintRequest by remember(room.id) { mutableStateOf<Pair<Int, String>?>(null) }
+    fun askHint() {
+        if (hintsLeft <= 0) return
+        val next = (hintRequest?.first ?: 0) + 1
+        val text = if (room.isBot) {
+            val prefix = if (required == "★") "" else required.lowercase(premierLocale(language))
+            MascotHints.startWord(hintContext, room.language, prefix, words.map { it.normalizedWord.ifBlank { it.word } }.toSet())
+        } else {
+            MascotHints.tip(next + words.size)
+        }
+        hintsLeft -= 1
+        hintRequest = next to text
+    }
+
     // Real score changes from the server (streak and long-word bonuses included).
     var gainKey by remember(room.id) { mutableIntStateOf(0) }
     var myGain by remember(room.id) { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -1409,6 +1427,24 @@ private fun PremierArena(
             if (notice.isNotBlank()) {
                 Text(notice, color = PremierBoard.Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
             }
+            if (myTurn && !preparing && hintsLeft > 0) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.End) {
+                    Surface(
+                        onClick = { askHint() },
+                        shape = RoundedCornerShape(99.dp),
+                        color = PremierBoard.Gold.copy(alpha = .18f),
+                        border = BorderStroke(1.dp, PremierBoard.Gold.copy(alpha = .7f)),
+                    ) {
+                        Text(
+                            pt(language, "💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)"),
+                            Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                            color = PremierBoard.Ink,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
             // Keep the live input and custom keyboard outside the flexible arena body.
             PremierInputBar(
                 language,
@@ -1452,6 +1488,7 @@ private fun PremierArena(
             playerName = me?.displayName,
             touches = mascotTouches,
             playerGender = me?.gender,
+            hint = hintRequest,
         )
 
         if (myTurn && room.validWordCount > 0) {

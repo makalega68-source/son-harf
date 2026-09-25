@@ -102,6 +102,9 @@ private fun WordSiegePracticeContent(
     var showExchange by remember { mutableStateOf(false) }
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var shuffleSeed by remember { mutableIntStateOf(0) }
+    // Mascot hints against the practice bot: three per match.
+    var siegeHintsLeft by remember { mutableIntStateOf(MascotHints.HINTS_PER_MATCH) }
+    var siegeHint by remember { mutableStateOf<Pair<Int, String>?>(null) }
     var boardViewportMode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     var actionVfxEvent by remember { mutableIntStateOf(0) }
     // The result dialog waits a moment so the mascot's celebration on the board is seen first.
@@ -237,6 +240,8 @@ private fun WordSiegePracticeContent(
     }
 
     fun resetMatch(changeOpponent: Boolean) {
+        siegeHintsLeft = MascotHints.HINTS_PER_MATCH
+        siegeHint = null
         state = WordSiegePracticeEngine.newGame(state.language)
         if (changeOpponent) botProfile = WordSiegePracticeBots.random()
         botDecisionSalt = kotlin.random.Random.nextLong()
@@ -505,6 +510,7 @@ private fun WordSiegePracticeContent(
                     WordSiegePracticeBoard(
                         board = state.board,
                         rack = state.playerRack,
+                        hint = siegeHint,
                         placements = placements,
                         myOwner = 1,
                         enabled = canPlayerAct,
@@ -645,6 +651,11 @@ private fun WordSiegePracticeContent(
                         WordSiegeCompactAction(sh("DEĞİŞTİR", "EXCHANGE"), Icons.Rounded.SwapHoriz,
                             canPlayerAct && state.bag.isNotEmpty(), Modifier.weight(1f)) {
                             exchangeSelection = emptySet(); showExchange = true
+                        }
+                        WordSiegeCompactAction(sh("İPUCU $siegeHintsLeft", "HINT $siegeHintsLeft"), Icons.Rounded.Lightbulb,
+                            canPlayerAct && siegeHintsLeft > 0, Modifier.weight(1f)) {
+                            siegeHintsLeft -= 1
+                            siegeHint = ((siegeHint?.first ?: 0) + 1) to MascotHints.fromRack(context, state.language, state.playerRack)
                         }
                     }
                     Row(

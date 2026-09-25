@@ -83,6 +83,8 @@ internal fun WordSiegePracticeBoard(
     mascotOutcome: WordSiegeMascotOutcome? = null,
     playerName: String? = null,
     playerGender: String? = null,
+    /** A mascot hint to show now (key, text). */
+    hint: Pair<Int, String>? = null,
     onViewportModeChange: (WordSiegeBoardViewportMode) -> Unit = {},
     onCell: (Int) -> Unit,
 ) {
@@ -282,6 +284,7 @@ internal fun WordSiegePracticeBoard(
                 playerName = playerName,
                 playerGender = playerGender,
                 touches = mascotTouches,
+                hint = hint,
                 visit = when {
                     // Fresh territory after the player's own strong move.
                     moveEventKey != null && lastMoveMine && capturedCells >= 2 && moveCell != null ->

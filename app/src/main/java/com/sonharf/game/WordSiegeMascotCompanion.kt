@@ -326,13 +326,13 @@ internal object WordSiegeMascotLines {
         "Tamam tamam, gidiyorum!" to "Okay okay, I'm going!",
         "Hey! Başım döndü 😵" to "Hey! I'm dizzy 😵",
     )
-    val twirl = listOf(
+    val dance = listOf(
         "Tadaa! ✨" to "Ta-da! ✨",
-        "Bir tur daha mı? 💫" to "One more spin? 💫",
+        "Bir dans daha mı? 💃" to "One more dance? 💃",
     )
-    val flip = listOf(
-        "Dünya baş aşağı daha güzel!" to "The world looks better upside down!",
-        "Beni böyle de sevdin mi? 🙃" to "Do you like me this way too? 🙃",
+    val stretch = listOf(
+        "Ohh, iyi geldi bu gerinme!" to "Ahh, that stretch felt good!",
+        "Biraz esneyelim mi? 🙆" to "Shall we stretch a bit? 🙆",
     )
     val win = listOf(
         "KAZANDIK! 🎉" to "WE WON! 🎉",
@@ -420,7 +420,7 @@ internal object WordSiegeMascotLines {
     )
 }
 
-internal enum class WordSiegeMascotIdle { WATCH, LOOK_AROUND, NOD, HOP, SPARKLE, TWIRL, FLIP, CHAT, WANDER, PEEK, CHASE }
+internal enum class WordSiegeMascotIdle { WATCH, LOOK_AROUND, NOD, HOP, SPARKLE, DANCE, STRETCH, CHAT, WANDER, PEEK, CHASE, THINK, WAVE }
 
 /**
  * The mascot's decision making: weighted choices with cooldowns and a short memory of what it did
@@ -461,13 +461,15 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
                 WordSiegeMascotIdle.NOD to .7f,
                 WordSiegeMascotIdle.HOP to .8f * playfulness,
                 WordSiegeMascotIdle.SPARKLE to .8f,
-                WordSiegeMascotIdle.TWIRL to .5f * playfulness,
-                WordSiegeMascotIdle.FLIP to .28f * playfulness,
+                WordSiegeMascotIdle.DANCE to .5f * playfulness,
+                WordSiegeMascotIdle.STRETCH to .28f * playfulness,
                 WordSiegeMascotIdle.CHAT to (.55f + .25f * bondLevel) * playfulness,
                 WordSiegeMascotIdle.WANDER to .3f,
                 // Curious about the rival's move: stretches up to peek.
                 WordSiegeMascotIdle.PEEK to (if (rivalTurn) 1.3f else 0f),
                 WordSiegeMascotIdle.CHASE to .22f * playfulness,
+                WordSiegeMascotIdle.THINK to .6f,
+                WordSiegeMascotIdle.WAVE to .35f * playfulness,
             )
         }
         val weighted = options.map { (idle, baseWeight) ->
@@ -502,12 +504,14 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
         WordSiegeMascotIdle.NOD -> 30_000L
         WordSiegeMascotIdle.HOP -> 50_000L
         WordSiegeMascotIdle.SPARKLE -> 40_000L
-        WordSiegeMascotIdle.TWIRL -> 200_000L
-        WordSiegeMascotIdle.FLIP -> 360_000L
+        WordSiegeMascotIdle.DANCE -> 200_000L
+        WordSiegeMascotIdle.STRETCH -> 360_000L
         WordSiegeMascotIdle.CHAT -> 60_000L
         WordSiegeMascotIdle.WANDER -> 240_000L
         WordSiegeMascotIdle.PEEK -> 40_000L
         WordSiegeMascotIdle.CHASE -> 420_000L
+        WordSiegeMascotIdle.THINK -> 70_000L
+        WordSiegeMascotIdle.WAVE -> 180_000L
     }
 
     /** Picks a line it has not said recently. */
@@ -573,6 +577,8 @@ internal fun WordSiegeMascotCompanion(
     greeting: String? = null,
     /** Something to say right now with a little hop; a new key says it again. */
     announcement: Pair<Int, String>? = null,
+    /** A hint to give now: the mascot thinks, points and says it; a new key gives it again. */
+    hint: Pair<Int, String>? = null,
     /** Mascots are purchased characters: without one the companion stays hidden. */
     requireOwnership: Boolean = true,
     /** Always show this character (the first-run welcome uses the classic one). */
@@ -830,11 +836,11 @@ internal fun WordSiegeMascotCompanion(
             if (initialOutcome == null) startTrip { flyTo(0, 1_000) }.join()
             if (greeting != null && initialOutcome == null) {
                 delay(300L)
-                perform(WordSiegeMascotAction.HOP)
+                perform(WordSiegeMascotAction.WAVE)
                 say(greeting, holdExtraMillis = 2_500L)
-                // A little show for new players: a twirl and a sparkle.
+                // A little show for new players: a wave, a dance and a sparkle.
                 delay(2_600L)
-                perform(WordSiegeMascotAction.TWIRL)
+                perform(WordSiegeMascotAction.DANCE)
                 delay(2_200L)
                 perform(WordSiegeMascotAction.SPARKLE)
             } else if (greet && initialOutcome == null) {
@@ -897,20 +903,25 @@ internal fun WordSiegeMascotCompanion(
                         perform(WordSiegeMascotAction.HOP)
                     }
                     WordSiegeMascotIdle.SPARKLE -> perform(WordSiegeMascotAction.SPARKLE)
-                    WordSiegeMascotIdle.TWIRL -> {
+                    WordSiegeMascotIdle.THINK -> perform(WordSiegeMascotAction.THINK)
+                    WordSiegeMascotIdle.WAVE -> {
                         watching = false
-                        perform(WordSiegeMascotAction.TWIRL)
+                        perform(WordSiegeMascotAction.WAVE)
+                    }
+                    WordSiegeMascotIdle.DANCE -> {
+                        watching = false
+                        perform(WordSiegeMascotAction.DANCE)
                         if (mind.chance(.3f)) {
                             delay(900L)
-                            say(mind.line(lines(WordSiegeMascotTopic.TWIRL, WordSiegeMascotLines.twirl), currentName))
+                            say(mind.line(lines(WordSiegeMascotTopic.DANCE, WordSiegeMascotLines.dance), currentName))
                         }
                     }
-                    WordSiegeMascotIdle.FLIP -> {
+                    WordSiegeMascotIdle.STRETCH -> {
                         watching = false
-                        perform(WordSiegeMascotAction.FLIP)
+                        perform(WordSiegeMascotAction.STRETCH)
                         if (mind.chance(.4f)) {
                             delay(700L)
-                            say(mind.line(lines(WordSiegeMascotTopic.FLIP, WordSiegeMascotLines.flip), currentName))
+                            say(mind.line(lines(WordSiegeMascotTopic.STRETCH, WordSiegeMascotLines.stretch), currentName))
                         }
                     }
                     WordSiegeMascotIdle.CHAT -> {
@@ -971,6 +982,15 @@ internal fun WordSiegeMascotCompanion(
             lastInteractionAt = SystemClock.uptimeMillis()
             perform(WordSiegeMascotAction.HOP)
             say(text, holdExtraMillis = 800L)
+        }
+
+        LaunchedEffect(hint?.first) {
+            val text = hint?.second ?: return@LaunchedEffect
+            lastInteractionAt = SystemClock.uptimeMillis()
+            perform(WordSiegeMascotAction.THINK)
+            delay(1_300L)
+            perform(WordSiegeMascotAction.POINT)
+            say(text, holdExtraMillis = 3_500L)
         }
 
         // Game moments: support, praise and comfort, chosen with restraint.
@@ -1129,12 +1149,12 @@ internal fun WordSiegeMascotCompanion(
                             }
                             say(line, holdExtraMillis = 1_200L)
                             delay(1_700L)
-                            perform(WordSiegeMascotAction.TWIRL)
+                            perform(WordSiegeMascotAction.DANCE)
                             delay(2_000L)
-                            perform(WordSiegeMascotAction.HOP)
+                            perform(WordSiegeMascotAction.CLAP)
                             delay(1_000L)
                             if (mind.chance(.3f)) {
-                                perform(WordSiegeMascotAction.FLIP)
+                                perform(WordSiegeMascotAction.STRETCH)
                                 delay(3_100L)
                             } else {
                                 perform(WordSiegeMascotAction.SPARKLE)

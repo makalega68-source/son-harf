@@ -254,12 +254,15 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
             }
         }
 
+    /** Outlines are drawn soft: slightly thinner, lighter and feathered rather than inked. */
     private fun line(color: Long, width: Float) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = width
+        strokeWidth = width * .8f
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
-        this.color = color.toInt()
+        val alpha = ((color ushr 24) and 0xFF) * 3 / 4
+        this.color = ((alpha shl 24) or (color and 0xFFFFFF)).toInt()
+        maskFilter = android.graphics.BlurMaskFilter((width * .22f).coerceAtLeast(1f), android.graphics.BlurMaskFilter.Blur.NORMAL)
     }
 
     private fun cubic(x0: Float, y0: Float, x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) =

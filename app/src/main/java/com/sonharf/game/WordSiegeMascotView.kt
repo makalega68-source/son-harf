@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapShader
+import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -38,7 +40,15 @@ internal enum class WordSiegeMascotEmotion {
 
 /** Whole-body moves the companion brain can ask for; each one is rare and short. */
 internal enum class WordSiegeMascotAction {
-    HOP, TWIRL, FLIP, LOOK_AROUND, NOD, SPARKLE, CHEER, LAND, SHRUG, PEEK, FLINCH, YAWN,
+    HOP, DANCE, STRETCH, LOOK_AROUND, NOD, SPARKLE, CHEER, LAND, SHRUG, PEEK, FLINCH, YAWN,
+    /** Waves hello with the right hand. */
+    WAVE,
+    /** Hand to chin, eyes up: working something out (used before a hint). */
+    THINK,
+    /** Leans in and points: "look here" (used when giving a hint). */
+    POINT,
+    /** Claps along with a small bounce. */
+    CLAP,
 }
 
 /** Costume worn over the orb; purely cosmetic. */
@@ -100,10 +110,30 @@ private object WordSiegeMascotArt {
                 inScaled = false
                 inPreferredConfig = Bitmap.Config.ARGB_8888
             }
-            context.applicationContext.assets.open("word_siege_mascot/$name.webp").use { stream ->
+            val decoded = context.applicationContext.assets.open("word_siege_mascot/$name.webp").use { stream ->
                 BitmapFactory.decodeStream(stream, null, options)
-            }?.apply { setHasMipMap(true) } ?: error("Missing mascot layer: $name")
+            } ?: error("Missing mascot layer: $name")
+            (if (name == "orb_face_base") feathered(decoded) else decoded).apply { setHasMipMap(true) }
         }.also { cache = it }
+    }
+
+    /**
+     * Softens the orb's hard outer outline: the artwork fades out over a short band just outside
+     * the body instead of ending on a dark drawn line.
+     */
+    private fun feathered(source: Bitmap): Bitmap {
+        val out = source.copy(Bitmap.Config.ARGB_8888, true)
+        val k = out.width / WordSiegeMascotView.ART
+        val cx = WordSiegeMascotView.ORB_CX * k
+        val cy = WordSiegeMascotView.ORB_CY * k
+        val r = WordSiegeMascotView.ORB_RY * k * 1.07f
+        val mask = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = RadialGradient(cx, cy, r, intArrayOf(0xFF000000.toInt(), 0xFF000000.toInt(), 0x00000000),
+                floatArrayOf(0f, .9f, 1f), Shader.TileMode.CLAMP)
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        }
+        Canvas(out).drawRect(0f, 0f, out.width.toFloat(), out.height.toFloat(), mask)
+        return out
     }
 }
 
@@ -132,9 +162,11 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     }
     private val featureMatrix = Matrix()
     private val skinMatrix = Matrix()
+    // A soft glowing rim instead of a hard outline.
     private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 5f
+        strokeWidth = 7f
+        maskFilter = BlurMaskFilter(9f, BlurMaskFilter.Blur.NORMAL)
         shader = SweepGradient(ORB_CX, ORB_CY, intArrayOf(
             0xFFFFAD72.toInt(), 0xFF56E4F7.toInt(), 0xFF307AF1.toInt(),
             0xFFB266F5.toInt(), 0xFFFFAD72.toInt(),
@@ -198,9 +230,32 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { setShadowLayer(14f, 0f, 8f, 0x400C061E) }
     private val handLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 8f
-        color = 0xFF140A2A.toInt()
+        strokeWidth = 5f
+        color = 0x80140A2A.toInt()
+        maskFilter = BlurMaskFilter(3f, BlurMaskFilter.Blur.NORMAL)
     }
+
+    // ---- 3D lighting: a soft key light from the upper left, a floor shadow and a bounce rim ----
+    private val floorShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = RadialGradient(ORB_CX, ORB_BOTTOM + 14f, ORB_RX * .92f,
+            intArrayOf(0x5A0A0F1C, 0x2A0A0F1C, 0x000A0F1C), floatArrayOf(0f, .55f, 1f), Shader.TileMode.CLAMP)
+    }
+    private val bodyShadePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = RadialGradient(ORB_CX - ORB_RX * .30f, ORB_CY - ORB_RY * .36f, ORB_RX * 1.42f,
+            intArrayOf(0x00000000, 0x00000000, 0x2A060414, 0x5C060414), floatArrayOf(0f, .48f, .82f, 1f), Shader.TileMode.CLAMP)
+    }
+    private val keyLightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = RadialGradient(0f, 0f, ORB_RX * .55f,
+            intArrayOf(0x4DFFFFFF, 0x1AFFFFFF, 0x00FFFFFF), floatArrayOf(0f, .45f, 1f), Shader.TileMode.CLAMP)
+    }
+    private val glintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = RadialGradient(0f, 0f, 44f, intArrayOf(0xE6FFFFFF.toInt(), 0x00FFFFFF), null, Shader.TileMode.CLAMP)
+    }
+    private val rimLightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = RadialGradient(ORB_CX - ORB_RX * .08f, ORB_CY - ORB_RY * .1f, ORB_RX * 1.04f,
+            intArrayOf(0x00FFFFFF, 0x00FFFFFF, 0x30FFFFFF, 0x00FFFFFF), floatArrayOf(0f, .84f, .95f, 1f), Shader.TileMode.CLAMP)
+    }
+    private val lightMatrix = Matrix()
     private val handCoverPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val padPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFF9FC0.toInt() }
     private val girlLashPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -401,8 +456,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private fun perform(action: WordSiegeMascotAction, now: Long) {
         val duration = when (action) {
             WordSiegeMascotAction.HOP -> 850L
-            WordSiegeMascotAction.TWIRL -> 1_800L
-            WordSiegeMascotAction.FLIP -> 3_000L
+            WordSiegeMascotAction.DANCE -> 1_800L
+            WordSiegeMascotAction.STRETCH -> 2_300L
             WordSiegeMascotAction.LOOK_AROUND -> 2_100L
             WordSiegeMascotAction.NOD -> 800L
             WordSiegeMascotAction.SPARKLE -> 1_300L
@@ -412,14 +467,21 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             WordSiegeMascotAction.PEEK -> 1_600L
             WordSiegeMascotAction.FLINCH -> 520L
             WordSiegeMascotAction.YAWN -> 2_300L
+            WordSiegeMascotAction.WAVE -> 1_700L
+            WordSiegeMascotAction.THINK -> 2_200L
+            WordSiegeMascotAction.POINT -> 1_900L
+            WordSiegeMascotAction.CLAP -> 1_500L
         }
         actionKind = action
         actionStartedAt = now
         actionUntil = now + duration
         // The face follows the move unless a stronger game reaction is already showing.
         val face = when (action) {
-            WordSiegeMascotAction.HOP, WordSiegeMascotAction.TWIRL -> WordSiegeMascotEmotion.HAPPY
-            WordSiegeMascotAction.FLIP -> WordSiegeMascotEmotion.LAUGH
+            WordSiegeMascotAction.HOP, WordSiegeMascotAction.DANCE -> WordSiegeMascotEmotion.HAPPY
+            WordSiegeMascotAction.STRETCH, WordSiegeMascotAction.WAVE -> WordSiegeMascotEmotion.HAPPY
+            WordSiegeMascotAction.THINK -> WordSiegeMascotEmotion.FOCUS
+            WordSiegeMascotAction.POINT -> WordSiegeMascotEmotion.PROUD
+            WordSiegeMascotAction.CLAP -> WordSiegeMascotEmotion.LAUGH
             WordSiegeMascotAction.SPARKLE -> WordSiegeMascotEmotion.PROUD
             WordSiegeMascotAction.CHEER -> WordSiegeMascotEmotion.EXCITED
             WordSiegeMascotAction.FLINCH -> WordSiegeMascotEmotion.SURPRISED
@@ -431,8 +493,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             reactionStartedAt = now
             reactionUntil = now + duration
         }
-        if (action == WordSiegeMascotAction.TWIRL || action == WordSiegeMascotAction.SPARKLE ||
-            action == WordSiegeMascotAction.CHEER || action == WordSiegeMascotAction.FLIP
+        if (action == WordSiegeMascotAction.DANCE || action == WordSiegeMascotAction.SPARKLE ||
+            action == WordSiegeMascotAction.CHEER || action == WordSiegeMascotAction.STRETCH
         ) sparklesStartedAt = now
         invalidate()
     }
@@ -651,6 +713,13 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             }
         }
         if (mood == WordSiegeMascotEmotion.PROUD) targetY = min(targetY, -.25f)
+        // Thinking looks up and aside; pointing looks where the hand points.
+        if (now < actionUntil) when (actionKind) {
+            WordSiegeMascotAction.THINK -> { targetX = .45f; targetY = -.6f }
+            WordSiegeMascotAction.POINT -> { targetX = .8f; targetY = .1f }
+            WordSiegeMascotAction.WAVE -> { targetX = 0f; targetY = .05f }
+            else -> Unit
+        }
         targetY = max(targetY, bow * .95f)
         val gazeK = 520f
         val gazeC = 2f * sqrt(gazeK) * .9f
@@ -746,18 +815,40 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.save()
         canvas.translate((width - size) / 2f, (height - size) / 2f)
         canvas.scale(size / ART, size / ART)
+        // Floor shadow: stays on the ground and shrinks and fades as the body lifts off.
+        val lift = ((-dy).coerceAtLeast(0f) / 150f).coerceIn(0f, 1f)
+        if (wing < .5f) {
+            canvas.save()
+            canvas.translate(dx * .8f, 0f)
+            canvas.scale(sx * (1f - .35f * lift), .2f * (1f - .25f * lift), ORB_CX, ORB_BOTTOM + 14f)
+            floorShadowPaint.alpha = (255 * (1f - .6f * lift)).toInt()
+            canvas.drawCircle(ORB_CX, ORB_BOTTOM + 14f, ORB_RX * .92f, floorShadowPaint)
+            canvas.restore()
+        }
         canvas.translate(dx, dy)
         canvas.rotate(rotation, ORB_CX, ORB_BOTTOM)
         canvas.scale(sx, sy, ORB_CX, ORB_BOTTOM)
-        if (spin != 0f) canvas.rotate(spin, ORB_CX, ORB_CY)
 
         if (wing > .01f) drawWings(canvas, now)
         decor.drawBehind(canvas)
         drawLayer(canvas, "orb_face_base")
         val sparkling = actionKind == WordSiegeMascotAction.SPARKLE && now < actionUntil
         val glow = if (mood == WordSiegeMascotEmotion.PROUD || mood == WordSiegeMascotEmotion.EXCITED || sparkling) 45f else 0f
-        edgePaint.alpha = (180f + 25f * sin(now / 950f) + glow).toInt().coerceIn(0, 255)
         ovalRect.set(ORB_CX - ORB_RX, ORB_CY - ORB_RY, ORB_CX + ORB_RX, ORB_CY + ORB_RY)
+        // Sphere shading: darker away from the light, a soft key light and a small glint that
+        // slide opposite to where the head turns, and a thin bounce light on the lower rim.
+        canvas.drawOval(ovalRect, bodyShadePaint)
+        val lightX = ORB_CX - ORB_RX * .36f - headX * 26f
+        val lightY = ORB_CY - ORB_RY * .44f - headY * 14f
+        lightMatrix.setTranslate(lightX, lightY)
+        keyLightPaint.shader.setLocalMatrix(lightMatrix)
+        canvas.drawOval(ovalRect, keyLightPaint)
+        lightMatrix.setScale(1.5f, .8f)
+        lightMatrix.postTranslate(lightX - ORB_RX * .08f, lightY - ORB_RY * .1f)
+        glintPaint.shader.setLocalMatrix(lightMatrix)
+        canvas.drawCircle(lightX - ORB_RX * .08f, lightY - ORB_RY * .1f, 66f, glintPaint)
+        canvas.drawOval(ovalRect, rimLightPaint)
+        edgePaint.alpha = (120f + 20f * sin(now / 950f) + glow).toInt().coerceIn(0, 255)
         canvas.drawOval(ovalRect, edgePaint)
 
         // Face features ride slightly ahead of the orb: they follow the gaze and fold downward when
@@ -935,47 +1026,71 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
                 jump(t, height = 88f, crouch = .12f, spin = 0f)
                 motion[4] += 3f * sin(t * 2f * pi) * (1f - t)
             }
-            WordSiegeMascotAction.TWIRL -> {
-                // A playful pirouette around its own centre with a little lift and a landing squash.
-                val e = easeInOut(t)
-                motion[5] = 360f * e
-                motion[1] = -36f * sin(t * pi)
-                val land = if (t > .82f) sin((t - .82f) / .18f * pi) else 0f
-                motion[2] = 1f + .07f * land
-                motion[3] = 1f - .08f * land
+            WordSiegeMascotAction.DANCE -> {
+                // A happy side-step dance: weight shifts left and right with a small hop on each
+                // step and a squash on every landing. The body never spins.
+                val beat = sin(t * 4f * pi)
+                val hop = abs(beat)
+                val fade = 1f - easeIn(max(0f, t - .8f) / .2f)
+                motion[0] = 24f * beat * fade
+                motion[1] = -16f * hop * fade
+                motion[4] = 6f * beat * fade
+                motion[2] = 1f + .035f * (1f - hop) * fade
+                motion[3] = 1f - .045f * (1f - hop) * fade
             }
-            WordSiegeMascotAction.FLIP -> {
-                // Hops up, turns upside down, wiggles there giggling, then rolls back upright.
+            WordSiegeMascotAction.STRETCH -> {
+                // Rises onto tiptoe with the arms up, holds with a small quiver, then lets go
+                // with a soft squash and settles.
                 when {
-                    t < .1f -> {
-                        val e = easeOut(t / .1f)
-                        motion[1] = 16f * e
-                        motion[3] = 1f - .1f * e
-                        motion[2] = 1f + .07f * e
+                    t < .35f -> {
+                        val e = easeInOut(t / .35f)
+                        motion[1] = -22f * e
+                        motion[2] = 1f - .05f * e
+                        motion[3] = 1f + .12f * e
                     }
-                    t < .3f -> {
-                        val u = (t - .1f) / .2f
-                        motion[5] = 180f * easeInOut(u)
-                        motion[1] = -60f * easeOut(u)
-                    }
-                    t < .72f -> {
-                        val u = (t - .3f) / .42f
-                        motion[5] = 180f + 5f * sin(u * 2f * pi) * (1f - u * .5f)
-                        motion[1] = -60f + 6f * sin(u * 2f * pi)
-                    }
-                    t < .9f -> {
-                        val u = (t - .72f) / .18f
-                        motion[5] = 180f + 180f * easeInOut(u)
-                        motion[1] = -60f * (1f - easeIn(u))
+                    t < .7f -> {
+                        val u = (t - .35f) / .35f
+                        motion[1] = -22f + 1.5f * sin(u * 8f * pi)
+                        motion[2] = .95f
+                        motion[3] = 1.12f + .008f * sin(u * 8f * pi)
                     }
                     else -> {
-                        val e = sin((t - .9f) / .1f * pi)
-                        motion[5] = 360f
-                        motion[1] = 10f * e
-                        motion[2] = 1f + .07f * e
-                        motion[3] = 1f - .09f * e
+                        val u = (t - .7f) / .3f
+                        val drop = easeIn(min(1f, u * 1.6f))
+                        val squash = sin(min(1f, u * 1.4f) * pi) * (1f - u)
+                        motion[1] = -22f * (1f - drop) + 10f * squash
+                        motion[2] = .95f + .05f * drop + .06f * squash
+                        motion[3] = 1.12f - .12f * drop - .08f * squash
                     }
                 }
+            }
+            WordSiegeMascotAction.WAVE -> {
+                // A friendly lean towards the waving hand with a gentle bob.
+                val lean = sin(min(1f, t / .2f) * pi / 2f) * (1f - easeIn(max(0f, t - .8f) / .2f))
+                motion[4] = 5f * lean
+                motion[1] = -8f * lean + 3f * sin(t * 6f * pi) * lean
+            }
+            WordSiegeMascotAction.THINK -> {
+                // Slow weight shift, a small tilt of the head and a thoughtful rise.
+                val hold = sin(min(1f, t / .3f) * pi / 2f) * (1f - easeIn(max(0f, t - .82f) / .18f))
+                motion[4] = -7f * hold + 1.2f * sin(t * 3f * pi) * hold
+                motion[1] = -6f * hold
+                motion[0] = -6f * hold
+            }
+            WordSiegeMascotAction.POINT -> {
+                // Anticipation back, then a decisive lean and step towards the hint.
+                val back = if (t < .18f) sin(t / .18f * pi) else 0f
+                val lean = if (t < .18f) 0f else sin(min(1f, (t - .18f) / .25f) * pi / 2f) * (1f - easeIn(max(0f, t - .8f) / .2f))
+                motion[0] = -8f * back + 18f * lean
+                motion[4] = -3f * back + 9f * lean
+                motion[1] = -10f * lean
+                motion[3] = 1f + .03f * lean
+            }
+            WordSiegeMascotAction.CLAP -> {
+                val clap = abs(sin(t * 5f * pi)) * (1f - t * .4f)
+                motion[1] = -10f * clap
+                motion[3] = 1f + .03f * clap
+                motion[2] = 1f - .02f * clap
             }
             WordSiegeMascotAction.NOD -> {
                 val dip = abs(sin(t * 2f * pi))
@@ -1342,6 +1457,38 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             handTarget[3] = 700f + sin(now / 180f) * 30f
             handTarget[2] = ORB_CX + out + sin(now / 260f) * 14f
         }
+        // Hand choreography for the expressive moves.
+        val act = actionKind?.takeIf { now < actionUntil }
+        when (act) {
+            WordSiegeMascotAction.WAVE -> {
+                handTarget[2] = ORB_CX + 470f + sin(now / 85f) * 55f
+                handTarget[3] = 360f + cos(now / 85f) * 14f
+            }
+            WordSiegeMascotAction.THINK -> {
+                handTarget[2] = ORB_CX + 170f
+                handTarget[3] = 935f + sin(now / 400f) * 6f
+                handTarget[0] = ORB_CX - HAND_OUT
+                handTarget[1] = 820f
+            }
+            WordSiegeMascotAction.POINT -> {
+                handTarget[2] = ORB_CX + 610f
+                handTarget[3] = 560f + sin(now / 160f) * 6f
+            }
+            WordSiegeMascotAction.CLAP -> {
+                val open = abs(sin(now / 95f))
+                handTarget[0] = ORB_CX - 110f - 150f * open
+                handTarget[2] = ORB_CX + 110f + 150f * open
+                handTarget[1] = 720f
+                handTarget[3] = 720f
+            }
+            WordSiegeMascotAction.STRETCH -> {
+                handTarget[0] = ORB_CX - 430f
+                handTarget[2] = ORB_CX + 430f
+                handTarget[1] = 250f
+                handTarget[3] = 250f
+            }
+            else -> Unit
+        }
         val k = 70f
         val c = 2f * sqrt(k) * .8f
         for (i in 0 until 4) {
@@ -1508,7 +1655,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.restore()
     }
 
-    private companion object {
+    companion object {
         const val ART = 1_254f
         const val ORB_CX = 660f
         const val ORB_CY = 641f
