@@ -34,6 +34,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -776,9 +778,13 @@ private fun PremierLobby(
     onPlay: () -> Unit,
     onHome: () -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val owned = WordSiegeMascotOwnership.owned
+    val skin = remember { WordSiegeMascotBond(context).skinChoice?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } }
+    var waveKey by remember { mutableStateOf(0L) }
+    LaunchedEffect(Unit) { delay(600); waveKey = 1L }
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onHome) { Icon(Icons.Rounded.ArrowBack, null, tint = PremierUi.Ink) }
@@ -788,75 +794,87 @@ private fun PremierLobby(
             }
             PremierLanguageSwitch(language, onLanguage)
         }
-
-        Surface(
-            modifier = Modifier.fillMaxWidth().shadow(16.dp, RoundedCornerShape(28.dp)),
-            shape = RoundedCornerShape(28.dp),
-            color = Color.Transparent,
+        Spacer(Modifier.height(12.dp))
+        // Everything above the play button scrolls if the phone is short; the button never moves.
+        Column(
+            Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Column(
-                Modifier.background(
-                    Brush.linearGradient(listOf(Color(0xFF2C3E55), PremierUi.OceanDeep))
-                ).padding(22.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
+            Surface(
+                modifier = Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(26.dp)),
+                shape = RoundedCornerShape(26.dp),
+                color = Color.Transparent,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    ProfilePhotoAvatarRectWithGender(
-                        avatarPath = if (profile?.avatarVisibility == "hidden") null else profile?.avatarPath,
-                        gender = profile?.gender,
-                        name = profile?.displayName ?: pt(language, "Oyuncu", "Player"),
-                        width = 76.dp,
-                        height = 58.dp,
-                        accent = Color.White,
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(profile?.displayName ?: pt(language, "Oyuncu", "Player"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                        Text("🏆 ${profile?.rating ?: 1000} RP  •  ${profileWinRate(profile)}%", color = Color.White.copy(alpha = .82f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    Modifier
+                        .background(Brush.linearGradient(listOf(Color(0xFF2C3E55), PremierUi.OceanDeep)))
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ProfilePhotoAvatarWithGender(
+                                avatarPath = if (profile?.avatarVisibility == "hidden") null else profile?.avatarPath,
+                                gender = profile?.gender,
+                                name = profile?.displayName ?: pt(language, "Oyuncu", "Player"),
+                                size = 48.dp,
+                                accent = Color.White,
+                                showGenderBadge = false,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text(profile?.displayName ?: pt(language, "Oyuncu", "Player"), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                                Text("🏆 ${profile?.rating ?: 1000} RP  •  %${profileWinRate(profile)}", color = Color.White.copy(alpha = .85f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Text(
+                            pt(language, "Kelimeyi sürdür,\nrakibini geç.", "Keep the chain alive,\noutplay your rival."),
+                            color = Color.White,
+                            fontSize = 21.sp,
+                            lineHeight = 26.sp,
+                            fontWeight = FontWeight.Black,
+                        )
                     }
-                    Surface(shape = RoundedCornerShape(99.dp), color = Color.White.copy(alpha = .16f)) {
-                        Text("V4", Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                    if (skin != null) {
+                        WordSiegeMascot(
+                            moveId = null,
+                            lastMoveMine = false,
+                            pendingCells = emptyList(),
+                            playerTurn = true,
+                            requestedEmotion = WordSiegeMascotEmotion.HAPPY,
+                            modifier = Modifier.size(92.dp),
+                            actionKey = waveKey,
+                            action = WordSiegeMascotAction.WAVE,
+                            skin = skin,
+                        )
                     }
                 }
-                Text(
-                    pt(language, "Kelimeyi sürdür, rakibini geç.", "Keep the word chain alive. Outplay your rival."),
-                    color = Color.White,
-                    fontSize = 24.sp,
-                    lineHeight = 29.sp,
-                    fontWeight = FontWeight.Black,
-                )
-                Text(
-                    pt(language, "Sunucu doğrulamalı ana sözlük • 3 round • canlı skor • rövanş", "Server-verified master dictionary • 3 rounds • live score • rematch"),
-                    color = Color.White.copy(alpha = .78f),
-                    fontSize = 12.sp,
-                )
+            }
+
+            PremierHowToPlay(language)
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PremierFeatureTile(Icons.Rounded.Verified, pt(language, "ANA SÖZLÜK", "MASTER DICTIONARY"), pt(language, "TR + EN", "TR + EN"), Modifier.weight(1f))
+                PremierFeatureTile(Icons.Rounded.Bolt, pt(language, "HIZLI", "FAST"), pt(language, "15 sn tur", "15 sec turn"), Modifier.weight(1f))
+                PremierFeatureTile(Icons.Rounded.Groups, pt(language, "CANLI", "LIVE"), "1v1", Modifier.weight(1f))
+            }
+            if (notice.isNotBlank()) {
+                Surface(shape = RoundedCornerShape(15.dp), color = PremierUi.Ice, border = BorderStroke(1.dp, PremierUi.Border)) {
+                    Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = PremierUi.OceanDeep, fontSize = 12.sp, textAlign = TextAlign.Center)
+                }
             }
         }
-
-        PremierHowToPlay(language)
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PremierFeatureTile(Icons.Rounded.Verified, pt(language, "ANA SÖZLÜK", "MASTER DICTIONARY"), pt(language, "TR + EN", "TR + EN"), Modifier.weight(1f))
-            PremierFeatureTile(Icons.Rounded.Bolt, pt(language, "HIZLI", "FAST"), pt(language, "15 sn tur", "15 sec turn"), Modifier.weight(1f))
-            PremierFeatureTile(Icons.Rounded.Groups, pt(language, "CANLI", "LIVE"), "1v1", Modifier.weight(1f))
-        }
-
-        Spacer(Modifier.weight(1f))
-        if (notice.isNotBlank()) {
-            Surface(shape = RoundedCornerShape(15.dp), color = PremierUi.Ice, border = BorderStroke(1.dp, PremierUi.Border)) {
-                Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = PremierUi.OceanDeep, fontSize = 12.sp, textAlign = TextAlign.Center)
-            }
-        }
+        Spacer(Modifier.height(12.dp))
         val playPulse = rememberInfiniteTransition(label = "play").animateFloat(1f, 1.025f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "play-pulse")
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(66.dp)
+                .height(62.dp)
                 .graphicsLayer { if (!busy) { scaleX = playPulse.value; scaleY = playPulse.value } }
-                .shadow(12.dp, RoundedCornerShape(22.dp), spotColor = PremierUi.Green)
-                .clip(RoundedCornerShape(22.dp))
+                .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = PremierUi.Green)
+                .clip(RoundedCornerShape(20.dp))
                 .background(Brush.verticalGradient(listOf(Color(0xFF52B360), PremierUi.Green, Color(0xFF2F8A3E))))
-                .border(1.dp, Color.White.copy(alpha = .35f), RoundedCornerShape(22.dp))
+                .border(1.dp, Color.White.copy(alpha = .35f), RoundedCornerShape(20.dp))
                 .clickable(enabled = !busy, onClick = onPlay),
             contentAlignment = Alignment.Center,
         ) {
@@ -866,67 +884,67 @@ private fun PremierLobby(
                 Text(pt(language, "OYNA", "PLAY"), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
             }
         }
+        Spacer(Modifier.height(6.dp))
         Text(pt(language, "Rakip bulunamazsa seviye uyumlu bot devreye girer.", "If no rival is found, a level-appropriate bot takes over."), Modifier.fillMaxWidth(), color = PremierUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
     }
 }
 
-/** A tiny worked example of the rule: each word starts with the last letter of the previous one. */
+/**
+ * The rule as a staircase: each word starts right under the last letter of the previous one, and
+ * the shared letters are gold. Centred and symmetric.
+ */
 @Composable
 private fun PremierHowToPlay(language: String) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val owned = WordSiegeMascotOwnership.owned
-    val skin = remember { WordSiegeMascotBond(context).skinChoice?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } }
-    var waveKey by remember { mutableStateOf(0L) }
-    LaunchedEffect(Unit) { delay(600); waveKey = 1L }
+    val chain = if (language == "en") listOf("APPLE", "EAGLE", "EARTH") else listOf("KALEM", "MASA", "ARI")
+    val starts = chain.runningFold(0) { at, word -> at + word.length - 1 }.dropLast(1)
+    val columns = starts.last() + chain.last().length
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         color = PremierUi.Surface,
         border = BorderStroke(1.dp, PremierUi.Border),
-        shadowElevation = 4.dp,
+        shadowElevation = 3.dp,
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(pt(language, "NASIL OYNANIR", "HOW TO PLAY"), color = PremierUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-                val chain = if (language == "en") listOf("APPLE", "EAGLE", "EARTH") else listOf("KALEM", "MASA", "ARI")
-                chain.forEachIndexed { index, word ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        word.forEachIndexed { i, ch ->
-                            val link = (i == 0 && index > 0) || (i == word.lastIndex && index < chain.lastIndex)
-                            Box(
-                                Modifier
-                                    .padding(end = 2.dp)
-                                    .size(22.dp)
-                                    .background(if (link) PremierBoard.Gold else PremierBoard.Tile, RoundedCornerShape(5.dp))
-                                    .border(1.dp, if (link) PremierBoard.GoldEdge else PremierBoard.TileEdge, RoundedCornerShape(5.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(ch.toString(), color = PremierBoard.TileInk, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        Column(Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(pt(language, "NASIL OYNANIR", "HOW TO PLAY"), color = PremierUi.Muted, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp)
+            Spacer(Modifier.height(10.dp))
+            BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val cell = minOf(26.dp, (maxWidth - 8.dp) / columns)
+                Column(Modifier.width(cell * columns), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    chain.forEachIndexed { index, word ->
+                        Row {
+                            Spacer(Modifier.width(cell * starts[index]))
+                            word.forEachIndexed { i, ch ->
+                                val link = (i == 0 && index > 0) || (i == word.lastIndex && index < chain.lastIndex)
+                                Box(
+                                    Modifier
+                                        .padding(1.5.dp)
+                                        .size(cell - 3.dp)
+                                        .shadow(2.dp, RoundedCornerShape(6.dp))
+                                        .background(
+                                            Brush.verticalGradient(
+                                                if (link) listOf(Color(0xFFF7D774), PremierBoard.Gold) else listOf(Color(0xFFFFF8E1), PremierBoard.Tile),
+                                            ),
+                                            RoundedCornerShape(6.dp),
+                                        )
+                                        .border(1.dp, if (link) PremierBoard.GoldEdge else PremierBoard.TileEdge, RoundedCornerShape(6.dp)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(ch.toString(), color = PremierBoard.TileInk, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                                }
                             }
                         }
                     }
                 }
-                Text(
-                    pt(language, "Rakibinin kelimesinin son harfiyle yeni kelime yaz. Uzun kelime daha çok puan.", "Start your word with the last letter of your rival's word. Longer words score more."),
-                    color = PremierUi.Ink,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                )
             }
-            if (skin != null) {
-                Spacer(Modifier.width(8.dp))
-                WordSiegeMascot(
-                    moveId = null,
-                    lastMoveMine = false,
-                    pendingCells = emptyList(),
-                    playerTurn = true,
-                    requestedEmotion = WordSiegeMascotEmotion.HAPPY,
-                    modifier = Modifier.size(92.dp),
-                    actionKey = waveKey,
-                    action = WordSiegeMascotAction.WAVE,
-                    skin = skin,
-                )
-            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                pt(language, "Rakibinin kelimesinin son harfiyle yeni kelime yaz.\nUzun kelime daha çok puan.", "Start with the last letter of your rival's word.\nLonger words score more."),
+                color = PremierUi.Ink,
+                fontSize = 12.sp,
+                lineHeight = 17.sp,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

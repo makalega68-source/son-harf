@@ -24,6 +24,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -144,6 +147,11 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var hintsLeft by remember { mutableIntStateOf(MascotHints.HINTS_PER_MATCH) }
     // Action: quick words chain into a combo, finished tasks add time.
     var combo by remember { mutableIntStateOf(0) }
+    var comboNonce by remember { mutableIntStateOf(0) }
+    var timeBonusNonce by remember { mutableIntStateOf(0) }
+    var lastTimeBonus by remember { mutableIntStateOf(0) }
+    var confettiNonce by remember { mutableIntStateOf(0) }
+    var shakeNonce by remember { mutableIntStateOf(0) }
     var lastWordAt by remember { mutableStateOf(0L) }
     var hintText by remember { mutableStateOf<String?>(null) }
     var mascotAction by remember { mutableStateOf<WordSiegeMascotAction?>(null) }
@@ -231,7 +239,13 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     lastWordAt = now
                     val comboBonus = if (combo >= 2) (COMBO_STEP_POINTS * (combo - 1)).coerceAtMost(COMBO_MAX_BONUS) else 0
                     val timeBonus = result.completed.size * TASK_TIME_BONUS_SECONDS
-                    if (timeBonus > 0) secondsLeft += timeBonus
+                    if (timeBonus > 0) {
+                        secondsLeft += timeBonus
+                        lastTimeBonus = timeBonus
+                        timeBonusNonce += 1
+                        confettiNonce += 1
+                    }
+                    if (comboBonus > 0) comboNonce += 1
                     state = result.state.copy(score = result.state.score + comboBonus)
                     hintText = null
                     mascotAction = if (result.completed.isNotEmpty()) WordSiegeMascotAction.CLAP else WordSiegeMascotAction.HOP
@@ -256,6 +270,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     return@launch
                 }
             }
+            shakeNonce += 1
             SonHarfSoundFx.puzzleError()
         }
     }
@@ -287,9 +302,11 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         Column(
             Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             val current = state
             AtelierTopBar(
@@ -335,26 +352,11 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     // Tasks and the word slot on top; the letter pool sits at the bottom right above
                     // Temizle / Gönder, where the thumbs are.
                     AtelierTasks(current.tasks, language)
-                    AtelierSlot(current, language, gain = gain, gainNonce = gainNonce) { index ->
+                    AtelierSlot(current, language, gain = gain, gainNonce = gainNonce, shakeNonce = shakeNonce) { index ->
                         SonHarfSoundFx.puzzleKey()
                         state = current.unpickAt(index)
                     }
                     AtelierFeedbackLine(feedback)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        OutlinedButton(
-                            onClick = {
-                                SonHarfSoundFx.puzzleTap()
-                                state = current.copy(pool = current.pool.shuffled())
-                            },
-                            shape = RoundedCornerShape(99.dp),
-                            border = BorderStroke(1.dp, AtelierUi.TileEdge),
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = AtelierUi.Cream, contentColor = AtelierUi.Ink),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 2.dp),
-                            modifier = Modifier.heightIn(min = 32.dp),
-                        ) {
-                            Text(sh("⟲ Karıştır", "⟲ Shuffle"), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
                     AtelierPool(current, language) { tileId ->
                         SonHarfSoundFx.puzzleTap()
                         state = current.pick(tileId)
@@ -363,11 +365,92 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                         canClear = current.picked.isNotEmpty(),
                         canSubmit = current.picked.isNotEmpty() && !busy,
                         onClear = { state = current.clearPicks() },
+                        onShuffle = {
+                            SonHarfSoundFx.puzzleTap()
+                            state = current.copy(pool = current.pool.shuffled())
+                        },
                         onSubmit = { submit() },
                     )
                 }
             }
             Spacer(Modifier.height(8.dp))
+        }
+        AtelierConfetti(confettiNonce, Modifier.fillMaxSize())
+        AtelierComboBanner(comboNonce, combo, Modifier.align(Alignment.Center))
+        AtelierTimeBonus(timeBonusNonce, lastTimeBonus, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 64.dp, end = 90.dp))
+    }
+}
+
+/** "KOMBO x3!" pops in the middle of the table and fades; never takes touches. */
+@Composable
+private fun AtelierComboBanner(nonce: Int, combo: Int, modifier: Modifier) {
+    if (nonce == 0) return
+    val t = remember(nonce) { Animatable(0f) }
+    LaunchedEffect(nonce) { t.animateTo(1f, tween(1_100, easing = LinearEasing)) }
+    val v = t.value
+    if (v >= 1f) return
+    val scale = if (v < .2f) .4f + .9f * (v / .2f) else 1.3f - .3f * ((v - .2f) / .8f)
+    Text(
+        sh("KOMBO x$combo!", "COMBO x$combo!"),
+        modifier = modifier.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+            alpha = if (v < .7f) 1f else 1f - (v - .7f) / .3f
+            rotationZ = -4f
+        },
+        color = AtelierUi.Gold,
+        fontSize = 40.sp,
+        fontWeight = FontWeight.Black,
+        style = androidx.compose.ui.text.TextStyle(
+            shadow = androidx.compose.ui.graphics.Shadow(Color(0x66000000), androidx.compose.ui.geometry.Offset(0f, 4f), 8f),
+        ),
+    )
+}
+
+/** "+5 sn" floats up next to the timer when a task adds time. */
+@Composable
+private fun AtelierTimeBonus(nonce: Int, seconds: Int, modifier: Modifier) {
+    if (nonce == 0) return
+    val t = remember(nonce) { Animatable(0f) }
+    LaunchedEffect(nonce) { t.animateTo(1f, tween(1_000, easing = FastOutSlowInEasing)) }
+    if (t.value >= 1f) return
+    Text(
+        sh("+$seconds sn", "+$seconds s"),
+        modifier = modifier.graphicsLayer {
+            translationY = -40f * t.value
+            alpha = 1f - t.value
+        },
+        color = AtelierUi.Green,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Black,
+    )
+}
+
+/** A short burst of gold, green and cream confetti from the centre when a task is done. */
+@Composable
+private fun AtelierConfetti(nonce: Int, modifier: Modifier) {
+    if (nonce == 0) return
+    val t = remember(nonce) { Animatable(0f) }
+    LaunchedEffect(nonce) { t.animateTo(1f, tween(1_200, easing = LinearEasing)) }
+    if (t.value >= 1f) return
+    val pieces = remember(nonce) {
+        val r = kotlin.random.Random(nonce)
+        List(28) { Triple(r.nextFloat() * 6.283f, .5f + r.nextFloat(), r.nextInt(3)) }
+    }
+    val colors = listOf(AtelierUi.Gold, AtelierUi.Green, Color(0xFFE57A73))
+    androidx.compose.foundation.Canvas(modifier) {
+        val v = t.value
+        val origin = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height * .42f)
+        pieces.forEach { (angle, speed, color) ->
+            val d = size.minDimension * .45f * speed * v
+            val x = origin.x + kotlin.math.cos(angle) * d
+            val y = origin.y + kotlin.math.sin(angle) * d + size.height * .25f * v * v
+            drawRoundRect(
+                color = colors[color].copy(alpha = (1f - v).coerceIn(0f, 1f)),
+                topLeft = androidx.compose.ui.geometry.Offset(x, y),
+                size = androidx.compose.ui.geometry.Size(14f, 8f),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(3f, 3f),
+            )
         }
     }
 }
@@ -434,7 +517,7 @@ private fun AtelierMascotRow(
             pendingCells = emptyList(),
             playerTurn = true,
             requestedEmotion = mood,
-            modifier = Modifier.size(96.dp),
+            modifier = Modifier.size(76.dp),
             actionKey = actionKey,
             action = action,
             skin = skin,
@@ -461,7 +544,7 @@ private fun AtelierMascotRow(
 private fun AtelierPool(state: AtelierState, language: String, onPick: (Long) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val gap = 10.dp
-        val tile = min(68.dp, (maxWidth - gap * 3) / 4)
+        val tile = min(60.dp, (maxWidth - gap * 3) / 4)
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(gap)) {
             listOf(state.pool.take(4), state.pool.drop(4)).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
@@ -483,8 +566,8 @@ private fun AtelierPool(state: AtelierState, language: String, onPick: (Long) ->
 @Composable
 private fun AtelierPoolTile(letter: String, tileId: Long, size: Dp, used: Boolean, onClick: () -> Unit) {
     // Each new tile (a fresh round or a refill) settles in with a short pop.
-    val appear = remember(tileId) { Animatable(.55f) }
-    LaunchedEffect(tileId) { appear.animateTo(1f, tween(260, easing = FastOutSlowInEasing)) }
+    val appear = remember(tileId) { Animatable(0f) }
+    LaunchedEffect(tileId) { appear.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = .5f, stiffness = 380f)) }
     val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by press.collectIsPressedAsState()
     val squeeze by androidx.compose.animation.core.animateFloatAsState(if (pressed) .88f else 1f, tween(90), label = "tile-press")
@@ -492,9 +575,10 @@ private fun AtelierPoolTile(letter: String, tileId: Long, size: Dp, used: Boolea
         Modifier
             .size(size)
             .graphicsLayer {
-                scaleX = appear.value * squeeze
-                scaleY = appear.value * squeeze
-                alpha = if (used) .38f else appear.value
+                scaleX = (.7f + .3f * appear.value) * squeeze
+                scaleY = (.7f + .3f * appear.value) * squeeze
+                translationY = (1f - appear.value) * -60f
+                alpha = if (used) .38f else appear.value.coerceIn(0f, 1f)
             }
             .shadow(if (used) 0.dp else 3.dp, RoundedCornerShape(12.dp))
             .clip(RoundedCornerShape(12.dp))
@@ -510,12 +594,12 @@ private fun AtelierPoolTile(letter: String, tileId: Long, size: Dp, used: Boolea
 
 @Composable
 private fun AtelierTasks(tasks: List<AtelierTask>, language: String) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         tasks.forEachIndexed { index, task -> AtelierTaskCard(index, task, language) }
         Text(
             sh("Bir kelime, uyduğu tüm görevleri aynı anda tamamlar.", "One word completes every task it fits at once."),
             color = AtelierUi.InkMuted,
-            fontSize = 11.sp,
+            fontSize = 10.sp,
         )
     }
 }
@@ -533,16 +617,16 @@ private fun AtelierTaskCard(index: Int, task: AtelierTask, language: String) {
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
+            .heightIn(min = 40.dp)
             .graphicsLayer { scaleX = pulse.value; scaleY = pulse.value }
             .clip(RoundedCornerShape(14.dp))
             .background(background)
             .border(1.dp, if (task.done) AtelierUi.Green.copy(alpha = .7f) else AtelierUi.TileEdge.copy(alpha = .7f), RoundedCornerShape(14.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            Modifier.size(26.dp).clip(CircleShape).background(if (task.done) AtelierUi.Green else AtelierUi.GoldSoft),
+            Modifier.size(24.dp).clip(CircleShape).background(if (task.done) AtelierUi.Green else AtelierUi.GoldSoft),
             contentAlignment = Alignment.Center,
         ) {
             if (task.done) {
@@ -556,7 +640,7 @@ private fun AtelierTaskCard(index: Int, task: AtelierTask, language: String) {
             atelierTaskText(task, language),
             modifier = Modifier.weight(1f),
             color = if (task.done) AtelierUi.Green else AtelierUi.Ink,
-            fontSize = 15.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
         )
         Text(
@@ -569,9 +653,13 @@ private fun AtelierTaskCard(index: Int, task: AtelierTask, language: String) {
 }
 
 @Composable
-private fun AtelierSlot(state: AtelierState, language: String, gain: Int, gainNonce: Int, onUnpick: (Int) -> Unit) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(sh("Kelimen", "Your word"), color = AtelierUi.InkMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+private fun AtelierSlot(state: AtelierState, language: String, gain: Int, gainNonce: Int, shakeNonce: Int, onUnpick: (Int) -> Unit) {
+    // A wrong word shakes the slot left and right; the letters stay where they are.
+    val shake = remember { Animatable(0f) }
+    LaunchedEffect(shakeNonce) {
+        if (shakeNonce > 0) for (x in listOf(16f, -14f, 10f, -7f, 4f, 0f)) shake.animateTo(x, tween(45))
+    }
+    Column(Modifier.fillMaxWidth().graphicsLayer { translationX = shake.value }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val gap = 6.dp
             val cell = min(46.dp, (maxWidth - gap * 6) / 7)
@@ -641,8 +729,8 @@ private fun AtelierFeedbackLine(feedback: AtelierFeedback?) {
 }
 
 @Composable
-private fun AtelierActions(canClear: Boolean, canSubmit: Boolean, onClear: () -> Unit, onSubmit: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun AtelierActions(canClear: Boolean, canSubmit: Boolean, onClear: () -> Unit, onShuffle: () -> Unit, onSubmit: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedButton(
             onClick = onClear,
             enabled = canClear,
@@ -652,6 +740,16 @@ private fun AtelierActions(canClear: Boolean, canSubmit: Boolean, onClear: () ->
             colors = ButtonDefaults.outlinedButtonColors(containerColor = AtelierUi.Cream, contentColor = AtelierUi.Ink),
         ) {
             Text(sh("Temizle", "Clear"), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+        OutlinedButton(
+            onClick = onShuffle,
+            modifier = Modifier.size(52.dp),
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, AtelierUi.TileEdge),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = AtelierUi.GoldSoft, contentColor = AtelierUi.Ink),
+        ) {
+            Text("⟲", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         }
         Button(
             onClick = onSubmit,
