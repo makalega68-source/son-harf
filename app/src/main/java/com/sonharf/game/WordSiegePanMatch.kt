@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
 
 private val PanSiegeTile = Color(0xFFF0EDE3)
 private val PanSiegeTileBorder = Color(0xFFD8D1C0)
-private val PanSiegeBoardSurface = Color(0xFFD6CFBE)
+private val PanSiegeBoardSurface = Color(0xFFF1EBDD)
 private val PanSiegeFrameNavy = Color(0xFF102C4C)
 private val PanSiegeFrameEdge = Color(0xFF9EC7D8)
 private val PanSiegeFrameInner = Color(0xFFD7E7ED)
@@ -629,9 +629,9 @@ private fun PanSiegeBoard(
 
     Surface(
         modifier = modifier,
-        color = Color(0xFF171C1B),
+        color = Color(0xFFECE1CA),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(2.dp, Color(0xFFC5AA73)),
+        border = BorderStroke(1.5.dp, Color(0xFFB49D70)),
         shadowElevation = 14.dp,
     ) {
         Box(
@@ -641,10 +641,10 @@ private fun PanSiegeBoard(
                 .clip(RoundedCornerShape(14.dp))
                 .background(
                     Brush.linearGradient(
-                        listOf(Color(0xFF222827), Color(0xFF1D2322), Color(0xFF222827), Color(0xFF1A201F))
+                        listOf(Color(0xFFF2EBDD), Color(0xFFEAE1D1), Color(0xFFF4EDDF), Color(0xFFECE3D3))
                     )
                 )
-                .border(1.dp, Color(0xFFC5AA73), RoundedCornerShape(14.dp))
+                .border(.75.dp, Color(0xFFC7B592), RoundedCornerShape(14.dp))
                 .clipToBounds()
                 .onGloballyPositioned {
                     viewport = it.size
@@ -727,7 +727,7 @@ private fun PanSiegeBoard(
             // for the centre and chat buttons.
             WordSiegeMascotCompanion(
                 anchors = WordSiegeBoardMascotPerches,
-                mascotSize = 76.dp,
+                mascotSize = 86.dp,
                 moveId = lastMove?.id,
                 lastMoveMine = lastMoveMine,
                 playerTurn = playerTurn,
@@ -848,7 +848,7 @@ private fun PanSiegeBoardCell(
         activeBonus != null -> PanSiegeBonusBorder
         else -> PanSiegeNeutralBorder
     }
-    val regionGap = 1.25.dp
+    val regionGap = 1.dp
     val boardInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
 
     Box(
@@ -898,7 +898,7 @@ private fun PanSiegeBoardCell(
             shape = RoundedCornerShape(7.dp),
             border = BorderStroke(
                 if (pending) maxOf(1.4.dp, borderWidth) else .45.dp,
-                if (pending) border.copy(alpha = .92f) else Color.Black.copy(alpha = .52f),
+                if (pending) border.copy(alpha = .92f) else Color(0xFF786E5E).copy(alpha = .32f),
             ),
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -1083,8 +1083,8 @@ private fun PanSiegeResultSide(label: String, score: Int, accent: Color, modifie
 @Composable
 private fun PanSiegeResultRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f), color = Hf.Ivory, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-        Text(value, color = Hf.Ivory, fontSize = 24.sp, fontWeight = FontWeight.Black)
+        Text(label, Modifier.weight(1f), color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(value, color = Hf.Text, fontSize = 24.sp, fontWeight = FontWeight.Black)
     }
 }
 

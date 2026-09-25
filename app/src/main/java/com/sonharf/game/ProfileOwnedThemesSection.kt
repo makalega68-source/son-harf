@@ -136,7 +136,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Palette, null, tint = Hf.Gold, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(sh("Koleksiyonum", "My collection"), color = Hf.Ivory, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(sh("Koleksiyonum", "My collection"), color = Hf.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
                 if (loading || busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp, color = Hf.Gold)
             }
@@ -247,7 +247,7 @@ private fun ProfileThemeCard(
                     )
                 }
             }
-            Text(title, color = Hf.Ivory, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             Text(subtitle, color = Hf.TextMuted, fontSize = 12.sp)
             Spacer(Modifier.weight(1f))
             ProfileUseButton(active = active, enabled = enabled, onClick = onClick)
@@ -302,7 +302,7 @@ private fun OwnedStyleCard(
                         StoreProductPreview(item, Modifier.fillMaxSize())
                     }
                 }
-                Text(sh(item.nameTr, item.nameEn), color = Hf.Ivory, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(sh(item.nameTr, item.nameEn), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 if (!item.active) {
                     Text(sh("Arşiv ürünü • Koleksiyonunda", "Retired item • In your collection"), color = Hf.TextMuted, fontSize = 11.sp)
                 }

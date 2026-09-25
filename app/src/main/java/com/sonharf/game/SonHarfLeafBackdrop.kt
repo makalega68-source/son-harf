@@ -24,10 +24,10 @@ internal fun SonHarfLeafBackdrop(modifier: Modifier = Modifier) {
         drawRect(
             brush = Brush.verticalGradient(
                 colorStops = arrayOf(
-                    0.00f to Color(0xFFF9FCFF),
-                    0.45f to Color(0xFFF4F9FF),
-                    0.78f to Color(0xFFEDF7FF),
-                    1.00f to Color(0xFFE6F5F7),
+                    0.00f to Color(0xFFFFFCF6),
+                    0.45f to Color(0xFFF9F4EA),
+                    0.78f to Color(0xFFF5EDE0),
+                    1.00f to Color(0xFFF0E6D5),
                 ),
             ),
         )
@@ -47,7 +47,7 @@ internal fun SonHarfLeafBackdrop(modifier: Modifier = Modifier) {
         drawPath(
             rearBand,
             brush = Brush.verticalGradient(
-                listOf(Color(0x101559D6), Color(0x2815C7C4)),
+                listOf(Color(0x12246C4C), Color(0x1F95651C)),
                 startY = size.height * .62f,
                 endY = size.height,
             ),
@@ -67,7 +67,7 @@ internal fun SonHarfLeafBackdrop(modifier: Modifier = Modifier) {
         drawPath(
             frontBand,
             brush = Brush.verticalGradient(
-                listOf(Color(0x1215C7C4), Color(0x211559D6)),
+                listOf(Color(0x14246C4C), Color(0x1D95651C)),
                 startY = size.height * .75f,
                 endY = size.height,
             ),
@@ -78,8 +78,8 @@ internal fun SonHarfLeafBackdrop(modifier: Modifier = Modifier) {
             val start = Offset(-size.width * .04f, size.height * y)
             val end = Offset(size.width * .33f, size.height * (y - .055f))
             drawLine(
-                color = if (index == 1) Color(0xFF15C7C4).copy(alpha = .075f)
-                else Color(0xFF1559D6).copy(alpha = .055f),
+                color = if (index == 1) Color(0xFF246C4C).copy(alpha = .075f)
+                else Color(0xFF95651C).copy(alpha = .055f),
                 start = start,
                 end = end,
                 strokeWidth = 2.2f,
@@ -88,14 +88,14 @@ internal fun SonHarfLeafBackdrop(modifier: Modifier = Modifier) {
 
         data class Marker(val x: Float, val y: Float, val side: Float, val color: Color, val alpha: Float)
         val markers = listOf(
-            Marker(.035f, .11f, 10f, Color(0xFF1559D6), .18f),
-            Marker(.075f, .19f, 7f, Color(0xFF15C7C4), .18f),
-            Marker(.955f, .08f, 9f, Color(0xFFFF8A24), .17f),
-            Marker(.905f, .23f, 6f, Color(0xFF1559D6), .13f),
-            Marker(.025f, .48f, 7f, Color(0xFFFF8A24), .12f),
-            Marker(.965f, .54f, 8f, Color(0xFF15C7C4), .14f),
-            Marker(.070f, .76f, 6f, Color(0xFF1559D6), .12f),
-            Marker(.915f, .73f, 7f, Color(0xFFFF8A24), .11f),
+            Marker(.035f, .11f, 10f, Color(0xFF95651C), .18f),
+            Marker(.075f, .19f, 7f, Color(0xFF246C4C), .18f),
+            Marker(.955f, .08f, 9f, Color(0xFFB27338), .17f),
+            Marker(.905f, .23f, 6f, Color(0xFF95651C), .13f),
+            Marker(.025f, .48f, 7f, Color(0xFFB27338), .12f),
+            Marker(.965f, .54f, 8f, Color(0xFF246C4C), .14f),
+            Marker(.070f, .76f, 6f, Color(0xFF95651C), .12f),
+            Marker(.915f, .73f, 7f, Color(0xFFB27338), .11f),
         )
         markers.forEach { marker ->
             val side = marker.side
@@ -109,10 +109,10 @@ internal fun SonHarfLeafBackdrop(modifier: Modifier = Modifier) {
 
         // Small turquoise/orange status dots echo the purchased kit's data-rich sports cards.
         listOf(
-            Triple(.13f, .31f, Color(0xFF15C7C4)),
-            Triple(.86f, .36f, Color(0xFFFF8A24)),
-            Triple(.18f, .91f, Color(0xFFFF8A24)),
-            Triple(.78f, .88f, Color(0xFF15C7C4)),
+            Triple(.13f, .31f, Color(0xFF246C4C)),
+            Triple(.86f, .36f, Color(0xFFB27338)),
+            Triple(.18f, .91f, Color(0xFFB27338)),
+            Triple(.78f, .88f, Color(0xFF246C4C)),
         ).forEach { (x, y, color) ->
             drawCircle(
                 color = color.copy(alpha = .11f),

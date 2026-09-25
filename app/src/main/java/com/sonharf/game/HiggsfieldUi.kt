@@ -42,21 +42,22 @@ import androidx.compose.ui.unit.sp
 
 /** Higgsfield theme components; sizes and colours follow the package's SVG components. */
 internal object Hf {
-    val Ground = Color(0xFF171C1B)
-    val Surface = Color(0xFF222827)
+    val Ground: Color get() = if (SonHarfTheme.IsDark) Color(0xFF171C1B) else Color(0xFFF8F3E9)
+    val Surface: Color get() = if (SonHarfTheme.IsDark) Color(0xFF222827) else Color(0xFFFFFDF8)
     val Ivory = Color(0xFFF0EDE3)
-    val Gold = Color(0xFFC5AA73)
+    val Text: Color get() = if (SonHarfTheme.IsDark) Ivory else Color(0xFF202C27)
+    val Gold: Color get() = if (SonHarfTheme.IsDark) Color(0xFFC5AA73) else Color(0xFF805B20)
     val GoldLight = Color(0xFFE0CC9E)
     val GoldDeep = Color(0xFF8F764A)
-    val Green = Color(0xFF32845E)
+    val Green = Color(0xFF246C4C)
     val GreenLight = Color(0xFF40A878)
     val GreenPressed = Color(0xFF286B4D)
-    val Red = Color(0xFFC85A54)
+    val Red = Color(0xFFAD4242)
     val RedLight = Color(0xFFE47770)
     val Muted = Color(0xFF68716D)
     val Disabled = Color(0xFF59605D)
-    val TextMuted = Color(0xFFA9AFAB)
-    val Ink = Color(0xFF171C1B)
+    val TextMuted: Color get() = if (SonHarfTheme.IsDark) Color(0xFFA9AFAB) else Color(0xFF52645A)
+    val Ink = Color(0xFF202C27)
     val PlayerPanel = Color(0xFF173B30)
     val RivalPanel = Color(0xFF442624)
     val TileBorder = Color(0xFFD8D1C0)
@@ -74,7 +75,7 @@ internal fun HfTitleRule(
     title: String,
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 26.sp,
-    color: Color = Hf.Ivory,
+    color: Color = Hf.Text,
 ) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         HfRule(Modifier.weight(1f))
@@ -199,7 +200,7 @@ internal fun HfSecondaryButton(
                 Icon(icon, null, tint = Hf.Gold, modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(10.dp))
             }
-            Text(text, color = Hf.Ivory, fontSize = fontSize, fontWeight = FontWeight.Black, letterSpacing = .6.sp, maxLines = 1)
+            Text(text, color = Hf.Text, fontSize = fontSize, fontWeight = FontWeight.Black, letterSpacing = .6.sp, maxLines = 1)
             if (trailingChevron) {
                 Spacer(Modifier.width(8.dp))
                 Icon(Icons.Rounded.ChevronRight, null, tint = Hf.Gold, modifier = Modifier.size(24.dp))
@@ -348,8 +349,8 @@ internal fun HfSegmentedTabs(
             ) {
                 Text(
                     label,
-                    color = Hf.Ivory,
-                    fontSize = 14.sp,
+                    color = if (isSelected) Hf.Ivory else Hf.Text,
+                    fontSize = 12.sp,
                     fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -370,7 +371,7 @@ internal fun HfChip(label: String, selected: Boolean, onClick: () -> Unit, modif
         border = BorderStroke(1.5.dp, if (selected) Hf.GreenLight else Hf.Gold),
     ) {
         Box(Modifier.padding(horizontal = 18.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
-            Text(label, color = Hf.Ivory, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(label, color = if (selected) Hf.Ivory else Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
 }

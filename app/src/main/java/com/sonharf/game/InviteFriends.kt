@@ -171,7 +171,7 @@ internal fun InviteFriendsCard(playerName: String?, modifier: Modifier = Modifie
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh("Arkadaşını davet et", "Invite a friend"), color = Hf.Ivory, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text(sh("Arkadaşını davet et", "Invite a friend"), color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 Text(
                     sh("WhatsApp, Telegram, SMS ve daha fazlasıyla paylaş", "Share via WhatsApp, Telegram, SMS and more"),
                     color = Hf.TextMuted,
@@ -192,7 +192,7 @@ private fun InviteFriendsSheet(playerName: String?, onDismiss: () -> Unit) {
     val context = LocalContext.current
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Hf.Surface) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
-            Text(sh("Arkadaşını davet et", "Invite a friend"), fontSize = 20.sp, fontWeight = FontWeight.Black, color = Hf.Ivory)
+            Text(sh("Arkadaşını davet et", "Invite a friend"), fontSize = 20.sp, fontWeight = FontWeight.Black, color = Hf.Text)
             Text(
                 sh("Bir kanal seç; davet mesajı hazır gelir.", "Pick a channel; the invite message is ready to send."),
                 fontSize = 12.sp,
@@ -228,7 +228,7 @@ private fun InviteFriendsSheet(playerName: String?, onDismiss: () -> Unit) {
                                 },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Hf.Ivory,
+                                color = Hf.Text,
                                 textAlign = TextAlign.Center,
                                 maxLines = 1,
                             )
