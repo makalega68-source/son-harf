@@ -247,38 +247,6 @@ internal fun PremiumHomeDailyTasks(onClick: () -> Unit) {
     }
 }
 
-/** Opens the mascot chat for players who own a mascot. */
-@Composable
-internal fun PremiumHomeMascotCard(skin: WordSiegeMascotSkin, onClick: () -> Unit) {
-    HfCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            WordSiegeMascot(
-                moveId = null,
-                lastMoveMine = false,
-                pendingCells = emptyList(),
-                playerTurn = true,
-                requestedEmotion = WordSiegeMascotEmotion.HAPPY,
-                modifier = Modifier.size(54.dp),
-                skin = skin,
-                onTap = onClick,
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    sh("${skin.titleTr} ile sohbet et", "Chat with ${skin.titleEn}"),
-                    color = Hf.Ivory,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(sh("Yazarak ya da sesli konuş", "Talk by text or voice"), color = Hf.TextMuted, fontSize = 12.sp, maxLines = 1)
-            }
-            Icon(painterResource(R.drawable.hf_ic_chat), null, tint = Hf.Gold, modifier = Modifier.size(28.dp))
-        }
-    }
-}
-
 @Composable
 internal fun PremiumWeeklyPodium(
     players: List<HomePodiumEntry>,

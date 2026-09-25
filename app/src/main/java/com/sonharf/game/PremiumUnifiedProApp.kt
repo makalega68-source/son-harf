@@ -205,8 +205,6 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onSettings = { destination = PremiumDestination.SETTINGS },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
-                        mascotSkin = if (WordSiegeMascotOwnership.hasAny) chatMascotSkin(shellContext) else null,
-                        onMascot = { destination = PremiumDestination.MASCOT_CHAT },
                     )
                     PremiumDestination.GAMES -> PremiumGameCenter(
                         siegeLanguage = siegeLanguage,
@@ -319,8 +317,6 @@ private fun PremiumHomeScreen(
     onSettings: () -> Unit,
     onLastLetter: () -> Unit,
     onLetterPath: () -> Unit,
-    mascotSkin: WordSiegeMascotSkin?,
-    onMascot: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
 
@@ -344,11 +340,6 @@ private fun PremiumHomeScreen(
             }
             item(key = "home_daily_tasks") {
                 PremiumHomeDailyTasks(onClick = onCompete)
-            }
-            if (mascotSkin != null) {
-                item(key = "home_mascot_chat") {
-                    PremiumHomeMascotCard(skin = mascotSkin, onClick = onMascot)
-                }
             }
             item(key = "invite_friends") {
                 InviteFriendsCard(playerName = profile?.displayName)
