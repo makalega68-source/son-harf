@@ -28,8 +28,8 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-internal const val WORD_SIEGE_CAPTURE_FLIGHT_MS = 720
-internal const val WORD_SIEGE_CAPTURE_STAGGER_MS = 95L
+internal const val WORD_SIEGE_CAPTURE_FLIGHT_MS = 600
+internal const val WORD_SIEGE_CAPTURE_STAGGER_MS = 50L
 
 internal data class WordSiegeCaptureEffect(
     val batch: WordSiegeCaptureBatch,
@@ -185,6 +185,25 @@ internal fun WordSiegeCaptureFlightOverlay(
                         center = center,
                     )
                 }
+                // Package motion spec: capture glow 0.7 → 1.1 scale, alpha 1 → 0 over the first 180 ms.
+                val glowPhase = (progress * WORD_SIEGE_CAPTURE_FLIGHT_MS / 180f).coerceIn(0f, 1f)
+                if (glowPhase < 1f) {
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(R.drawable.hf_fx_capture_glow),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            val scale = .7f + .4f * glowPhase
+                            scaleX = scale
+                            scaleY = scale
+                            alpha = 1f - glowPhase
+                        },
+                    )
+                }
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.hf_fx_sparkle),
+                    contentDescription = null,
+                    modifier = Modifier.size(44.dp).graphicsLayer { alpha = .85f },
+                )
                 Text(
                     text = "+$WORD_SIEGE_CAPTURE_POINTS_PER_CUBE",
                     color = effect.accent,
