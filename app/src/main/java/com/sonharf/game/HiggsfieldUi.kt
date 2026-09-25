@@ -409,3 +409,46 @@ internal fun HfProgressBar(progress: Float, modifier: Modifier = Modifier, color
 internal fun HfGameIconSlot(width: Dp, height: Dp = width, modifier: Modifier = Modifier) {
     Box(modifier.size(width, height))
 }
+
+/**
+ * Ivory confirmation window from the 20-ayril-onayi preview: dark title and text, a green button that
+ * keeps the player where they are and a (red when destructive) button for the action.
+ */
+@Composable
+internal fun HfConfirmDialog(
+    title: String,
+    message: String,
+    confirmText: String,
+    dismissText: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    destructive: Boolean = true,
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = Hf.WindowShape,
+            color = Hf.Ivory,
+            border = BorderStroke(2.dp, Hf.Gold),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                Modifier.padding(horizontal = 20.dp, vertical = 22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(title, color = Hf.Ink, fontSize = 21.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                Text(message, color = Color(0xFF4A504D), fontSize = 14.sp, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(4.dp))
+                HfPrimaryButton(dismissText, onClick = onDismiss, trailingChevron = false, height = 50.dp, fontSize = 16.sp)
+                HfPrimaryButton(
+                    confirmText,
+                    onClick = onConfirm,
+                    danger = destructive,
+                    trailingChevron = false,
+                    height = 50.dp,
+                    fontSize = 16.sp,
+                )
+            }
+        }
+    }
+}

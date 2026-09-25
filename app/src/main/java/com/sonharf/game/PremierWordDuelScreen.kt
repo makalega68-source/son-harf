@@ -724,28 +724,25 @@ fun PremierWordDuelScreen() {
     }
 
     if (showForfeit) {
-        AlertDialog(
-            onDismissRequest = { showForfeit = false },
-            icon = { Icon(Icons.Rounded.Flag, null, tint = PremierUi.Red) },
-            title = { Text(pt(language, "Pes etmek istiyor musun?", "Surrender this match?"), fontWeight = FontWeight.Black) },
-            text = { Text(pt(language, "Pes edersen maç hemen rakibin lehine biter. Bu işlem geri alınamaz.", "Surrendering ends the match immediately in your opponent's favor. This cannot be undone.")) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showForfeit = false
-                        val active = room ?: return@Button
-                        scope.launch {
-                            busy = true
-                            runCatching { backend.forfeit(active.id) }
-                                .onSuccess { room = it; stage = PremierStage.Finished }
-                                .onFailure { notice = premierError(language, it.message.orEmpty()) }
-                            busy = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Red),
-                ) { Text(pt(language, "EVET, PES ET", "YES, SURRENDER"), fontWeight = FontWeight.Black) }
+        HfConfirmDialog(
+            title = pt(language, "Pes etmek istiyor musun?", "Surrender this match?"),
+            message = pt(language, "Pes edersen maç hemen rakibin lehine biter. Bu işlem geri alınamaz.", "Surrendering ends the match immediately in your opponent's favor. This cannot be undone."),
+            confirmText = pt(language, "EVET, PES ET", "YES, SURRENDER"),
+            dismissText = pt(language, "OYUNDA KAL", "KEEP PLAYING"),
+            onDismiss = { showForfeit = false },
+            onConfirm = {
+                showForfeit = false
+                val active = room
+                if (active != null) {
+                    scope.launch {
+                        busy = true
+                        runCatching { backend.forfeit(active.id) }
+                            .onSuccess { room = it; stage = PremierStage.Finished }
+                            .onFailure { notice = premierError(language, it.message.orEmpty()) }
+                        busy = false
+                    }
+                }
             },
-            dismissButton = { TextButton(onClick = { showForfeit = false }) { Text(pt(language, "VAZGEÇ", "CANCEL")) } },
         )
     }
 

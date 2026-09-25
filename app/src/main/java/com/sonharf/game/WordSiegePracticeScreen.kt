@@ -741,66 +741,49 @@ private fun WordSiegePracticeContent(
     }
 
     if (showRestart) {
-        AlertDialog(
-            onDismissRequest = { showRestart = false },
-            title = { Text(sh("Yeni oyun başlat?", "Start a new game?"), fontWeight = FontWeight.Black) },
-            text = {
-                Text(
-                    if (matchmakingFallback) {
-                        sh("Bot maçı sıfırlanacak. Gerçek rakip araması devam edecek.", "The bot match will reset. Real matchmaking will continue.")
-                    } else {
-                        sh("Mevcut alıştırmadaki ilerleme sıfırlanacak.", "Current practice progress will be reset.")
-                    },
-                    color = WordSiegeGameUi.Muted,
-                )
+        HfConfirmDialog(
+            title = sh("Yeni oyun başlat?", "Start a new game?"),
+            message = if (matchmakingFallback) {
+                sh("Bot maçı sıfırlanacak. Gerçek rakip araması devam edecek.", "The bot match will reset. Real matchmaking will continue.")
+            } else {
+                sh("Mevcut alıştırmadaki ilerleme sıfırlanacak.", "Current practice progress will be reset.")
             },
-            confirmButton = {
-                TextButton(onClick = { showRestart = false; startAgain() }) {
-                    Text(sh("YENİ OYUN", "NEW GAME"), color = WordSiegeGameUi.Blue, fontWeight = FontWeight.Black)
-                }
-            },
-            dismissButton = { TextButton(onClick = { showRestart = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
+            confirmText = sh("YENİ OYUN", "NEW GAME"),
+            dismissText = sh("VAZGEÇ", "CANCEL"),
+            onDismiss = { showRestart = false },
+            onConfirm = { showRestart = false; startAgain() },
+            destructive = false,
         )
     }
 
     if (showPass) {
-        AlertDialog(
-            onDismissRequest = { showPass = false },
-            title = { Text(sh("Turu geç?", "Pass this turn?"), fontWeight = FontWeight.Black) },
-            text = {
-                Text(
-                    sh("Torbada 20’den az harf varken art arda 4 pas ve/veya değişim maçı bitirir.", "When fewer than 20 tiles remain, 4 consecutive passes and/or exchanges end the match."),
-                    color = WordSiegeGameUi.Muted,
-                )
+        HfConfirmDialog(
+            title = sh("Turu geç?", "Pass this turn?"),
+            message = sh("Torbada 20’den az harf varken art arda 4 pas ve/veya değişim maçı bitirir.", "When fewer than 20 tiles remain, 4 consecutive passes and/or exchanges end the match."),
+            confirmText = sh("PAS VER", "PASS"),
+            dismissText = sh("VAZGEÇ", "CANCEL"),
+            onDismiss = { showPass = false },
+            onConfirm = {
+                showPass = false
+                state = WordSiegePracticeEngine.pass(state, 1)
+                clearSelection()
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    showPass = false
-                    state = WordSiegePracticeEngine.pass(state, 1)
-                    clearSelection()
-                }) {
-                    Text(sh("PAS VER", "PASS"), color = WordSiegeGameUi.Gold, fontWeight = FontWeight.Black)
-                }
-            },
-            dismissButton = { TextButton(onClick = { showPass = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
+            destructive = false,
         )
     }
 
     if (showForfeit) {
-        AlertDialog(
-            onDismissRequest = { showForfeit = false },
-            title = { Text(sh("Pes etmek istiyor musun?", "Do you want to forfeit?"), fontWeight = FontWeight.Black) },
-            text = { Text(sh("Bu maçı rakibin kazanır.", "Your rival wins this match."), color = WordSiegeGameUi.Muted) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showForfeit = false
-                    state = WordSiegePracticeEngine.forfeit(state, 1)
-                    clearSelection()
-                }) {
-                    Text(sh("PES ET", "FORFEIT"), color = WordSiegeGameUi.Red, fontWeight = FontWeight.Black)
-                }
+        HfConfirmDialog(
+            title = sh("Pes etmek istiyor musun?", "Do you want to forfeit?"),
+            message = sh("Bu maçı rakibin kazanır.", "Your rival wins this match."),
+            confirmText = sh("PES ET", "FORFEIT"),
+            dismissText = sh("OYUNDA KAL", "KEEP PLAYING"),
+            onDismiss = { showForfeit = false },
+            onConfirm = {
+                showForfeit = false
+                state = WordSiegePracticeEngine.forfeit(state, 1)
+                clearSelection()
             },
-            dismissButton = { TextButton(onClick = { showForfeit = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
         )
     }
 
