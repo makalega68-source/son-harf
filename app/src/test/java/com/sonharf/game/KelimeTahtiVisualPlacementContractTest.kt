@@ -39,7 +39,7 @@ class KelimeKusatmasiVisualPlacementContractTest {
     @Test
     fun wordSiegeHubResourceResolvesToVectorAlias() {
         val screen = File("src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
-        assertTrue(screen.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
+        assertTrue(screen.contains("HfGameIconSlot("))
         assertTrue(File("src/main/res/drawable/kelime_kusatma_logo_hd.xml").isFile)
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.png").exists())
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.webp").exists())
