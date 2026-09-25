@@ -100,17 +100,17 @@ fun EconomyShopScreen(
 
 @Composable
 private fun StoreTitleBar(balance: Int?, onBack: (() -> Unit)?) {
-    Box(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) {
-            IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).size(48.dp)) {
+            IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
                 Icon(painterResource(R.drawable.hf_ic_back), sh("Geri", "Back"), tint = Hf.Gold, modifier = Modifier.size(30.dp))
             }
         }
-        Text(sh("Mağaza", "Store"), color = Hf.Text, fontSize = 28.sp, fontWeight = FontWeight.Black)
-        HfPill(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 6.dp)) {
+        Text(sh("Mağaza", "Store"), modifier = Modifier.weight(1f), color = Hf.Text, fontSize = 25.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        HfPill(modifier = Modifier.padding(end = 2.dp)) {
             HfCoin(20.dp)
-            Spacer(Modifier.width(8.dp))
-            Text(balance?.let { storeGrouped(it) } ?: "—", color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.width(5.dp))
+            Text(balance?.let { storeGrouped(it) } ?: "—", color = Hf.Text, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
 }
@@ -406,7 +406,7 @@ private fun VerifiedStoreProductCard(
         enabled = !busy && !equipped && !lockedByPro,
         modifier = modifier.heightIn(min = 198.dp),
         shape = Hf.CardShape,
-        color = Hf.Text,
+        color = Hf.Surface,
         border = BorderStroke(if (equipped) 3.dp else 1.5.dp, if (equipped) Hf.Green else Hf.Gold),
         shadowElevation = 3.dp,
     ) {
@@ -429,7 +429,7 @@ private fun VerifiedStoreProductCard(
                                     owned -> sh("SAHİPSİN", "OWNED")
                                     else -> ""
                                 },
-                                color = Hf.Text,
+                                color = Hf.Ivory,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                             )

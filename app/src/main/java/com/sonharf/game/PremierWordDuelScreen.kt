@@ -85,42 +85,42 @@ private const val PREMIER_ROUND_PREP_SECONDS = 20
 
 /** Yetişkin, yüksek okunabilirlikli Son Harf oyun paleti. */
 private object PremierUi {
-    val Background = Color(0xFF171C1B)
-    val Surface = Color(0xFF222827)
-    val Ink = Color(0xFFF0EDE3)
-    val Muted = Color(0xFFA9AFAB)
+    val Background = Color(0xFFF8F3E9)
+    val Surface = Color(0xFFFFFDF8)
+    val Ink = Color(0xFF202C27)
+    val Muted = Color(0xFF52645A)
     val Ocean = Color(0xFFC5AA73)
     val OceanDeep = Color(0xFF32845E)
     val Sky = Color(0xFFC5AA73)
-    val Ice = Color(0xFF1D2322)
-    val Border = Color(0xFF5C5239)
+    val Ice = Color(0xFFF1E9DB)
+    val Border = Color(0xFFD6C9B6)
     val Green = Color(0xFF32845E)
-    val GreenSoft = Color(0xFF173B30)
+    val GreenSoft = Color(0xFFDDEDE1)
     val Red = Color(0xFFC85A54)
-    val RedSoft = Color(0xFF442624)
+    val RedSoft = Color(0xFFF3DDDA)
     val Gold = Color(0xFFC5AA73)
-    val GoldSoft = Color(0xFF3A3326)
+    val GoldSoft = Color(0xFFF3E7CD)
 }
 
 private object PremierArenaSky {
-    val BackgroundTop = Color(0xFF171C1B)
-    val BackgroundMid = Color(0xFF1A201F)
-    val BackgroundBottom = Color(0xFF151A19)
-    val Surface = Color(0xFF222827)
-    val SurfaceBlue = Color(0xFF1D2322)
-    val Ink = Color(0xFFF0EDE3)
-    val Muted = Color(0xFFA9AFAB)
+    val BackgroundTop = Color(0xFFFFFCF6)
+    val BackgroundMid = Color(0xFFF8F3E9)
+    val BackgroundBottom = Color(0xFFF0E7D9)
+    val Surface = Color(0xFFFFFDF8)
+    val SurfaceBlue = Color(0xFFF1E9DB)
+    val Ink = Color(0xFF202C27)
+    val Muted = Color(0xFF52645A)
     val Ocean = Color(0xFFC5AA73)
     val OceanDeep = Color(0xFF8F764A)
-    val Border = Color(0xFF5C5239)
+    val Border = Color(0xFFD6C9B6)
     val Rival = Color(0xFFC85A54)
-    val RivalSoft = Color(0xFF442624)
+    val RivalSoft = Color(0xFFF3DDDA)
     val Green = Color(0xFF32845E)
-    val GreenSoft = Color(0xFF173B30)
+    val GreenSoft = Color(0xFFDDEDE1)
     val Gold = Color(0xFFC5AA73)
-    val GoldSoft = Color(0xFF3A3326)
+    val GoldSoft = Color(0xFFF3E7CD)
     val Red = Color(0xFFC85A54)
-    val RedSoft = Color(0xFF442624)
+    val RedSoft = Color(0xFFF3DDDA)
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr
@@ -1014,8 +1014,8 @@ private fun PremierStatPill(text: String, accent: Color) {
 
 /** Word-game palette: a calm teal board, cream letter tiles, one soft colour per player. */
 private object PremierBoard {
-    val BoardTop = Color(0xFF222827)
-    val BoardBottom = Color(0xFF171C1B)
+    val BoardTop = Color(0xFFF6EFE3)
+    val BoardBottom = Color(0xFFEDE3D5)
     val Tile = Color(0xFFF0EDE3)
     val TileEdge = Color(0xFFD8D1C0)
     val TileInk = Color(0xFF171C1B)
@@ -1264,7 +1264,7 @@ private fun PremierArena(
         val compact = maxHeight < 700.dp
         val tall = maxHeight > 820.dp
         val targetSize = if (veryCompact) 74.dp else if (compact) 86.dp else if (tall) 112.dp else 100.dp
-        val mascotSize = if (veryCompact) 64.dp else if (compact) 72.dp else if (tall) 94.dp else 84.dp
+        val mascotSize = if (veryCompact) 70.dp else if (compact) 80.dp else if (tall) 102.dp else 92.dp
         val keyHeight = if (veryCompact) 36.dp else if (compact) 39.dp else if (tall) 48.dp else 44.dp
         val primaryGap = if (veryCompact) 4.dp else if (compact) 6.dp else 10.dp
 
@@ -1374,7 +1374,7 @@ private fun PremierArena(
                             )
                         }
                     }
-                    Text("▼", color = Color.White.copy(alpha = .45f), fontSize = 12.sp)
+                    Text("▼", color = PremierBoard.Muted, fontSize = 12.sp)
                     // The letter to play, flanked by the round's word counts (mirrored).
                     Box(
                         modifier = Modifier.fillMaxWidth().height((if (targetSize > mascotSize) targetSize else mascotSize) + 6.dp),
@@ -1942,12 +1942,12 @@ private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String, 
     }
     Surface(
         shape = RoundedCornerShape(99.dp),
-        color = if (myTurn) PremierBoard.Gold.copy(alpha = pulse) else Color.White.copy(alpha = .14f),
+        color = if (myTurn) PremierBoard.Gold.copy(alpha = pulse) else PremierUi.Surface,
     ) {
         Text(
             label,
             Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
-            color = if (myTurn) PremierBoard.TileInk else Color.White,
+            color = if (myTurn) PremierBoard.TileInk else PremierBoard.Ink,
             fontSize = 11.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = .6.sp,
@@ -2152,7 +2152,7 @@ private fun PremierTargetCard(
                 gameMode == "expert" -> pt(language, "HEDEF • x${round.coerceIn(1, 3)}", "TARGET • x${round.coerceIn(1, 3)}")
                 else -> pt(language, "HEDEF HARF", "TARGET LETTER")
             },
-            color = if (suddenDeath) PremierBoard.Danger else Color.White.copy(alpha = .7f),
+            color = if (suddenDeath) PremierBoard.Danger else PremierBoard.Muted,
             fontSize = 9.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = 1.4.sp,
@@ -2174,7 +2174,7 @@ private fun PremierLastWordCard(
     if (latestPlayedWord.isBlank()) {
         Text(
             latestPlayedWord.ifBlank { pt(language, "İLK KELİME SERBEST", "FREE OPENING WORD") },
-            color = Color.White.copy(alpha = .8f),
+            color = PremierBoard.Ink,
             fontSize = if (veryCompact) 14.sp else 16.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = 1.sp,
@@ -2222,7 +2222,7 @@ private fun PremierLastWordCard(
 @Composable
 private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: Boolean = false, meId: String? = null) {
     if (words.isEmpty()) {
-        Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = Color.White.copy(alpha = .6f), fontSize = 10.sp)
+        Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierBoard.Muted, fontSize = 10.sp)
         return
     }
     // Pro users see the full played-word history so they can avoid repeats;
@@ -2232,7 +2232,7 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
         if (isPro) {
             Text(
                 pt(language, "PRO • Tüm oynanan kelimeler (${words.size})", "PRO • All played words (${words.size})"),
-                color = Color.White.copy(alpha = .55f),
+                color = PremierBoard.Muted,
                 fontSize = 8.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 6.dp),
@@ -2247,13 +2247,13 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
                 val mine = entry.playerId != null && entry.playerId == meId
                 Surface(
                     shape = RoundedCornerShape(9.dp),
-                    color = Color.White.copy(alpha = .12f),
+                    color = PremierUi.Surface,
                     border = BorderStroke(1.dp, (if (mine) PremierBoard.Mine else PremierBoard.Rival).copy(alpha = .8f)),
                 ) {
                     Text(
                         premierUpper(entry.normalizedWord.ifBlank { entry.word }, language),
                         Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        color = Color.White.copy(alpha = .9f),
+                        color = PremierBoard.Ink,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -2678,7 +2678,7 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
     // The mascot flies in to celebrate a win (or to comfort after a loss), then perches above.
     WordSiegeMascotCompanion(
         anchors = listOf(Offset(.84f, .14f), Offset(.16f, .14f)),
-        mascotSize = 84.dp,
+        mascotSize = 92.dp,
         moveId = null,
         lastMoveMine = false,
         playerTurn = false,

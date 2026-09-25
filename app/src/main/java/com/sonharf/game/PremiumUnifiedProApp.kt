@@ -291,7 +291,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH, PremiumDestination.MASCOT_CHAT)) {
                     WordSiegeMascotCompanion(
                         anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
-                        mascotSize = 83.dp,
+                        mascotSize = 94.dp,
                         moveId = null,
                         lastMoveMine = false,
                         playerTurn = false,

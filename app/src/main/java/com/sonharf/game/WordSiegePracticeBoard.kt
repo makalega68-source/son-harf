@@ -38,7 +38,7 @@ import kotlinx.coroutines.delay
 private val PracticeSiegeCellSize = 52.dp
 private val PracticeSiegeTile = Color(0xFFF0EDE3)
 private val PracticeSiegeTileBorder = Color(0xFFD8D1C0)
-internal val PracticeSiegeBoardSurface = Color(0xFFD5CEBD)
+internal val PracticeSiegeBoardSurface = Color(0xFFF1EBDD)
 internal val PracticeSiegeNeutral = Color(0xFFF0EDE3)
 private val PracticeSiegeEmpty = Color(0xFFF0EDE3)
 private val PracticeSiegeMine = Color(0xFF32845E)
@@ -170,9 +170,9 @@ internal fun WordSiegePracticeBoard(
 
     Surface(
         modifier = modifier,
-        color = Color(0xFF171C1B),
+        color = Color(0xFFECE1CA),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(2.dp, Color(0xFFC5AA73)),
+        border = BorderStroke(1.5.dp, Color(0xFFB49D70)),
         shadowElevation = 12.dp,
     ) {
         Box(
@@ -180,7 +180,7 @@ internal fun WordSiegePracticeBoard(
                 .fillMaxSize()
                 .padding(4.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF222827), Color(0xFF1D2322), Color(0xFF222827), Color(0xFF1A201F))))
+                .background(Brush.linearGradient(listOf(Color(0xFFF2EBDD), Color(0xFFEAE1D1), Color(0xFFF4EDDF), Color(0xFFECE3D3))))
                 .clipToBounds()
                 .onGloballyPositioned {
                     viewport = it.size
@@ -267,7 +267,7 @@ internal fun WordSiegePracticeBoard(
             }
             WordSiegeMascotCompanion(
                 anchors = WordSiegeBoardMascotPerches,
-                mascotSize = 76.dp,
+                mascotSize = 86.dp,
                 moveId = moveEventKey?.toLong(),
                 lastMoveMine = lastMoveMine,
                 playerTurn = enabled,
@@ -372,7 +372,7 @@ private fun WordSiegePracticeBoardCell(
         activeZone != null -> WordSiegeGameUi.Border.copy(alpha = .8f)
         else -> WordSiegeGameUi.Border.copy(alpha = .45f)
     }
-    val regionGap = 1.25.dp
+    val regionGap = 1.dp
     val cellInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
 
     Box(
@@ -413,7 +413,7 @@ private fun WordSiegePracticeBoardCell(
                 width = if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
                 color = if (lastMoveHighlight > 0f) {
                     PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
-                } else Color.Black.copy(alpha = .52f),
+                } else Color(0xFF786E5E).copy(alpha = .32f),
                 shape = RoundedCornerShape(8.dp),
             ),
         contentAlignment = Alignment.Center,

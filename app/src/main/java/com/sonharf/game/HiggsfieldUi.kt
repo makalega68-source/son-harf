@@ -350,7 +350,7 @@ internal fun HfSegmentedTabs(
                 Text(
                     label,
                     color = if (isSelected) Hf.Ivory else Hf.Text,
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

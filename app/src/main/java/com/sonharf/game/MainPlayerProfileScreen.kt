@@ -225,7 +225,7 @@ internal fun MainPlayerProfileScreen(
                 }
                 if (p?.isVip != true) {
                     Surface(shape = Hf.PillShape, color = Hf.Gold) {
-                        Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 3.dp), color = Hf.Ink, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 3.dp), color = Hf.Ivory, fontWeight = FontWeight.Black, fontSize = 11.sp)
                     }
                     Spacer(Modifier.width(6.dp))
                 }
@@ -248,7 +248,7 @@ private fun ProfileStatTile(icon: androidx.compose.ui.graphics.vector.ImageVecto
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
-        color = Hf.Text,
+        color = Hf.Surface,
         border = BorderStroke(1.5.dp, Hf.Gold),
         shadowElevation = 2.dp,
     ) {

@@ -3,7 +3,7 @@ package com.sonharf.game
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,13 +12,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -121,7 +121,7 @@ internal fun WordSiegeScoreCard(
         }
     }
     Surface(
-        modifier = modifier.height(92.dp),
+        modifier = modifier.height(110.dp),
         color = lerp(WordSiegeGameUi.Background, accent, if (active) .30f else .20f),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(if (active) 2.dp else 1.dp, accent.copy(alpha = if (active) 1f else .55f)),
@@ -129,13 +129,15 @@ internal fun WordSiegeScoreCard(
     ) {
         Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.padding(top = if (leading) 4.dp else 0.dp)) {
-                    ProfilePhotoAvatarWithGender(
-                        avatarPath = avatarPath, gender = gender, name = name,
-                        size = 52.dp, accent = accent, visible = avatarVisible,
-                    )
+                Box(Modifier.width(52.dp).height(60.dp)) {
+                    Box(Modifier.align(Alignment.BottomCenter)) {
+                        ProfilePhotoAvatarWithGender(
+                            avatarPath = avatarPath, gender = gender, name = name,
+                            size = 48.dp, accent = accent, visible = avatarVisible,
+                        )
+                    }
                     if (leading) {
-                        Box(Modifier.align(Alignment.TopCenter).offset(y = (-7).dp)) {
+                        Box(Modifier.align(Alignment.TopCenter)) {
                             WordSiegeLeaderCrown()
                         }
                     }
@@ -299,36 +301,10 @@ internal fun WordSiegeOwnershipLegend() {
 
 @Composable
 private fun WordSiegeLeaderCrown() {
-    val description = sh("Lider", "Leader")
-    Canvas(
-        Modifier
-            .size(width = 23.dp, height = 17.dp)
-            .semantics { contentDescription = description },
-    ) {
-        val crown = Path().apply {
-            moveTo(size.width * .08f, size.height * .32f)
-            lineTo(size.width * .28f, size.height * .55f)
-            lineTo(size.width * .39f, size.height * .19f)
-            lineTo(size.width * .50f, size.height * .51f)
-            lineTo(size.width * .62f, size.height * .12f)
-            lineTo(size.width * .72f, size.height * .55f)
-            lineTo(size.width * .92f, size.height * .30f)
-            lineTo(size.width * .82f, size.height * .86f)
-            lineTo(size.width * .18f, size.height * .86f)
-            close()
-        }
-        val gold = Brush.verticalGradient(
-            listOf(Color(0xFFFFF0A8), Color(0xFFF4C44F), Color(0xFFD69424)),
-        )
-        drawPath(crown, brush = gold)
-        drawPath(crown, color = Color(0xFF7A5218), style = Stroke(width = 1.05.dp.toPx()))
-        drawLine(
-            color = Color(0xFFFFF4C4),
-            start = Offset(size.width * .22f, size.height * .70f),
-            end = Offset(size.width * .78f, size.height * .70f),
-            strokeWidth = 1.2.dp.toPx(),
-        )
-        drawCircle(Color(0xFFE85D5D), 1.35.dp.toPx(), Offset(size.width * .39f, size.height * .61f))
-        drawCircle(Color(0xFF4E8FD4), 1.35.dp.toPx(), Offset(size.width * .62f, size.height * .59f))
-    }
+    Image(
+        painter = painterResource(R.drawable.store_art_victory_crown),
+        contentDescription = sh("Lider tacı", "Leader crown"),
+        modifier = Modifier.size(30.dp),
+        colorFilter = ColorFilter.tint(Color(0xFFAF7821)),
+    )
 }
