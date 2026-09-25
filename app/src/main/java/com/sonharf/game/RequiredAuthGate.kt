@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,7 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -633,47 +636,15 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     }
 }
 
-/** Brand block: the name spelled on letter tiles, the English name and the tagline. */
+/** The same approved brand artwork used on the home screen. */
 @Composable
 private fun AuthBrandHeader() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            "KELİME".forEachIndexed { index, letter ->
-                Surface(
-                    shape = RoundedCornerShape(9.dp),
-                    color = AuthUi.Ivory,
-                    border = BorderStroke(1.dp, AuthUi.Sand.copy(alpha = .55f)),
-                    shadowElevation = 3.dp,
-                ) {
-                    Text(letter.toString(), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = AuthUi.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "KELİME TAHTI",
-            color = AuthUi.Text,
-            fontSize = 27.sp,
-            fontWeight = FontWeight.Black,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            "WORD BOARD",
-            color = AuthUi.Sand,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.5.sp,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            sh("Kelime oyunu • taktik alan savaşı • sosyal rekabet", "Word game • tactical territory battle • social competition"),
-            color = AuthUi.Primary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-    }
+    Image(
+        painter = painterResource(R.drawable.kelime_tahti_brand_logo),
+        contentDescription = sh("Kelime Tahtı", "Kelime Tahtı"),
+        modifier = Modifier.fillMaxWidth().height(155.dp),
+        contentScale = ContentScale.Fit,
+    )
 }
 
 @Composable

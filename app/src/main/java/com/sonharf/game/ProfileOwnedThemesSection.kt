@@ -71,7 +71,8 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                     owned = nextOwned
                     collection = nextCollection
                     equipped = nextEquipped
-                    SonHarfCosmetics.applyAndPersist(context, nextEquipped)
+                    // A missing server row must not silently reset an already equipped theme.
+                    if (nextEquipped != null) SonHarfCosmetics.applyAndPersist(context, nextEquipped)
                 }
             }
         } catch (error: Exception) {
@@ -96,6 +97,10 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                     else backend.equipShopItem(itemId)
                     backend.getEquippedCosmetics()
                 }
+                val confirmedThemeId = nextEquipped?.gameThemeId
+                val confirmed = if (itemId == null) confirmedThemeId.isNullOrBlank() && nextEquipped != null
+                    else confirmedThemeId == itemId || (itemId in DarkThemeIds && confirmedThemeId != null && confirmedThemeId in DarkThemeIds)
+                check(confirmed) { "Theme change was not confirmed by the server" }
                 equipped = nextEquipped
                 SonHarfCosmetics.applyAndPersist(context, nextEquipped)
                 notice = sh("Görünüm uygulandı.", "Style applied.")

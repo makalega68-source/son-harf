@@ -433,7 +433,12 @@ private fun WordSiegeGamesList(
 
         item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                HfGameIconSlot(96.dp)
+                Image(
+                    painter = painterResource(R.drawable.kelime_kusatmasi_app_icon),
+                    contentDescription = sh("Kelime Kuşatması", "Word Siege"),
+                    modifier = Modifier.size(96.dp),
+                    contentScale = ContentScale.Fit,
+                )
             }
         }
 

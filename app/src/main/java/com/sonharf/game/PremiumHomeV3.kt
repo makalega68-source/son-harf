@@ -48,7 +48,6 @@ internal fun PremiumHomeCommandDeck(
     onSettings: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        HfTitleRule(sh("Kelime Tahtı", "Kelime Tahtı"), fontSize = 28.sp)
         HomeStatusRow(profile, onProfile, onShop, onPro, onSettings)
         HomeSiegeHero(onSiege)
     }
@@ -184,9 +183,13 @@ internal fun HomeKelimeTileLogo(modifier: Modifier = Modifier) {
 
 @Composable
 private fun HomeSiegeHero(onSiege: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        HomeKelimeTileLogo()
-        HfTitleRule("Kuşatma", fontSize = 40.sp)
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Image(
+            painter = painterResource(R.drawable.kelime_tahti_brand_logo),
+            contentDescription = sh("Kelime Tahtı", "Kelime Tahtı"),
+            modifier = Modifier.fillMaxWidth().height(174.dp),
+            contentScale = ContentScale.Fit,
+        )
         HfPrimaryButton(
             sh("OYNA", "PLAY"),
             onClick = onSiege,
@@ -367,14 +370,18 @@ internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Uni
             modifier = Modifier.weight(1f).fillMaxHeight(),
             title = "Son Harf",
             subtitle = sh("Son harfle yeni kelime bul", "Find a word from the last letter"),
-            art = { HfGameIconSlot(120.dp, 74.dp) },
+            art = {
+                Image(painterResource(R.drawable.son_harf_game_icon), null, Modifier.size(82.dp), contentScale = ContentScale.Fit)
+            },
             onPlay = onLastLetter,
         )
         PremiumHomeModeCard(
             modifier = Modifier.weight(1f).fillMaxHeight(),
             title = sh("Kelime Yolu", "Word Path"),
             subtitle = sh("Bağlantılı kelimelerle hedefe ulaş", "Reach the goal through linked words"),
-            art = { HfGameIconSlot(150.dp, 74.dp) },
+            art = {
+                Image(painterResource(R.drawable.harf_yolu_logo), null, Modifier.size(82.dp), contentScale = ContentScale.Fit)
+            },
             onPlay = onLetterPath,
         )
     }
@@ -388,24 +395,31 @@ private fun PremiumHomeModeCard(
     art: @Composable () -> Unit,
     onPlay: () -> Unit,
 ) {
-    HfCard(onClick = onPlay, modifier = modifier.heightIn(min = 176.dp)) {
-        Column(Modifier.fillMaxSize().padding(start = 14.dp, end = 10.dp, top = 12.dp, bottom = 14.dp)) {
-            Box(Modifier.fillMaxWidth().height(78.dp), contentAlignment = Alignment.Center) { art() }
+    Surface(
+        onClick = onPlay,
+        modifier = modifier.heightIn(min = 180.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = Hf.Surface,
+        border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .55f)),
+        shadowElevation = 3.dp,
+    ) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 12.dp)) {
+            Box(Modifier.fillMaxWidth().height(82.dp), contentAlignment = Alignment.Center) { art() }
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     title,
                     modifier = Modifier.weight(1f),
                     color = Hf.Text,
-                    fontSize = 20.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Icon(Icons.Rounded.ChevronRight, null, tint = Hf.Gold, modifier = Modifier.size(24.dp))
             }
             Spacer(Modifier.height(4.dp))
-            Text(subtitle, color = Hf.TextMuted, fontSize = 12.sp, lineHeight = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(subtitle, color = Hf.TextMuted, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -437,7 +451,8 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
         onClick = onClick,
         shape = HomeCardShape,
         color = SonHarfTheme.Surface,
-        border = BorderStroke(1.dp, SonHarfTheme.Border),
+        border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .6f)),
+        shadowElevation = 2.dp,
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -450,18 +465,18 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        sh("HAFTANIN İLK 3 OYUNCUSU", "WEEKLY TOP 3"),
+                        sh("Haftanın Zirvesi", "Weekly Leaders"),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = SonHarfTheme.TextPrimary,
-                        fontSize = 11.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = .3.sp,
                     )
                     Text(
                         sh("Haftalık rekabet sıralaması", "Weekly competitive ranking"),
                         color = SonHarfTheme.TextSecondary,
-                        fontSize = 9.sp,
+                        fontSize = 11.sp,
                         maxLines = 1,
                     )
                 }
@@ -498,7 +513,14 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
                     }
                 }
                 else -> Column(Modifier.fillMaxWidth()) {
-                    listOf(1 to players.getOrNull(0), 2 to players.getOrNull(1), 3 to players.getOrNull(2)).forEachIndexed { index, (place, player) ->
+                    if (players.isEmpty()) Text(
+                        sh("İlk sırayı alan sen ol.", "Be the first on the board."),
+                        color = SonHarfTheme.TextSecondary,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(vertical = 10.dp),
+                    )
+                    players.take(3).forEachIndexed { index, player ->
+                        val place = index + 1
                         if (index > 0) HorizontalDivider(color = HomeHairline)
                         Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                             Surface(
@@ -516,32 +538,28 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
                                 }
                             }
                             Spacer(Modifier.width(9.dp))
-                            if (player != null) {
-                                ProfilePhotoAvatarWithGender(
-                                    avatarPath = player.avatarUrl,
-                                    gender = null,
-                                    name = player.username,
-                                    size = 34.dp,
-                                    accent = if (place == 1) SonHarfTheme.ActionOrange else SonHarfTheme.Primary,
-                                    visible = true,
-                                )
-                            } else {
-                                Surface(Modifier.size(34.dp), shape = CircleShape, color = SonHarfTheme.SurfaceSecondary) {}
-                            }
+                            ProfilePhotoAvatarWithGender(
+                                avatarPath = player.avatarUrl,
+                                gender = null,
+                                name = player.username,
+                                size = 34.dp,
+                                accent = if (place == 1) SonHarfTheme.ActionOrange else SonHarfTheme.Primary,
+                                visible = true,
+                            )
                             Spacer(Modifier.width(9.dp))
                             Text(
-                                player?.username?.ifBlank { sh("Oyuncu", "Player") } ?: "—",
+                                player.username.ifBlank { sh("Oyuncu", "Player") },
                                 modifier = Modifier.weight(1f),
                                 color = SonHarfTheme.TextPrimary,
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
-                                player?.let { "${it.rp} RP" } ?: "— RP",
+                                "${player.rp} RP",
                                 color = SonHarfTheme.TextSecondary,
-                                fontSize = 9.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Black,
                             )
                         }

@@ -43,30 +43,11 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var lastLetterLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var letterPathLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var uiLanguageBeforeGame by rememberSaveable { mutableStateOf<String?>(null) }
-    val shellMascotTouches = remember { WordSiegeMascotTouchState() }
-    var shellProfile by remember { mutableStateOf<ProfileDto?>(null) }
-    var shellMascotAnnouncement by remember { mutableStateOf<Pair<Int, String>?>(null) }
-    val shellMascotVisited = remember { mutableSetOf<PremiumDestination>() }
     val shellContext = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
         // Owned mascots come from verified purchases on the server.
         WordSiegeMascotOwnership.refresh(shellContext)
-        shellProfile = backend.currentUserId()?.let { id -> runCatching { backend.getProfile(id) }.getOrNull() }
-    }
-    // A short, page-appropriate remark on the first visit of a page in this session.
-    LaunchedEffect(destination) {
-        if (!shellMascotVisited.add(destination)) return@LaunchedEffect
-        val line = when (destination) {
-            PremiumDestination.SHOP -> sh("Alışveriş zamanı! 🛍️", "Shopping time! 🛍️")
-            PremiumDestination.PROFILE -> sh("Profilin çok havalı!", "Your profile looks great!")
-            PremiumDestination.SOCIAL -> sh("Arkadaşlarını çağır, birlikte oynayalım! 👋", "Invite your friends, let's play together! 👋")
-            PremiumDestination.COMPETE -> sh("Kupa bizim olacak! 🏆", "That cup will be ours! 🏆")
-            PremiumDestination.COLLECTION -> sh("Ne güzel bir koleksiyon ✨", "What a lovely collection ✨")
-            else -> null
-        } ?: return@LaunchedEffect
-        delay(900)
-        shellMascotAnnouncement = (shellMascotAnnouncement?.first ?: 0) + 1 to line
     }
 
     fun openGame(target: PremiumDestination, language: String) {
@@ -201,7 +182,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 }
             },
         ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding).wordSiegeMascotTouchWatcher(shellMascotTouches)) {
+            Box(Modifier.fillMaxSize().padding(padding)) {
                 if (!SonHarfTheme.IsDark) SonHarfLeafBackdrop(Modifier.matchParentSize())
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
@@ -284,23 +265,6 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.MASCOT_CHAT -> MascotChatScreen(
                         onBack = { destination = PremiumDestination.HOME },
                         mascotSkin = chatMascotSkin(shellContext),
-                    )
-                }
-                // Outside the games the mascot keeps the player company from a bottom corner:
-                // it mostly watches, says a word on some pages and flies aside when touched.
-                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH, PremiumDestination.MASCOT_CHAT)) {
-                    WordSiegeMascotCompanion(
-                        anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
-                        mascotSize = 94.dp,
-                        moveId = null,
-                        lastMoveMine = false,
-                        playerTurn = false,
-                        modifier = Modifier.matchParentSize(),
-                        playerName = shellProfile?.displayName,
-                        playerGender = shellProfile?.gender,
-                        touches = shellMascotTouches,
-                        announcement = shellMascotAnnouncement,
-                        stageY = .5f,
                     )
                 }
             }

@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.GroupAdd
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
@@ -156,31 +157,31 @@ internal fun InviteFriendsCard(playerName: String?, modifier: Modifier = Modifie
         onClick = { open = true },
         modifier = modifier.fillMaxWidth(),
         shape = Hf.CardShape,
-        color = Hf.Ground,
-        border = BorderStroke(1.5.dp, Hf.Gold.copy(alpha = .75f)),
+        color = Hf.Surface,
+        border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .55f)),
+        shadowElevation = 2.dp,
     ) {
         Row(
-            Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                Modifier.size(48.dp).border(1.5.dp, Hf.Gold, CircleShape),
+                Modifier.size(42.dp).background(Hf.Gold.copy(alpha = .12f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Rounded.GroupAdd, null, tint = Hf.Gold, modifier = Modifier.size(26.dp))
+                Icon(Icons.Rounded.GroupAdd, null, tint = Hf.Gold, modifier = Modifier.size(24.dp))
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh("Arkadaşını davet et", "Invite a friend"), color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text(sh("Arkadaşını davet et", "Invite a friend"), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(
-                    sh("WhatsApp, Telegram, SMS ve daha fazlasıyla paylaş", "Share via WhatsApp, Telegram, SMS and more"),
+                    sh("Birlikte oynamaya çağır", "Invite them to play"),
                     color = Hf.TextMuted,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
+                    maxLines = 1,
                 )
             }
-            Surface(shape = RoundedCornerShape(99.dp), color = Hf.Gold) {
-                Text(sh("DAVET", "INVITE"), Modifier.padding(horizontal = 12.dp, vertical = 7.dp), color = Hf.Ink, fontSize = 12.sp, fontWeight = FontWeight.Black)
-            }
+            Icon(Icons.Rounded.ChevronRight, null, tint = Hf.Gold, modifier = Modifier.size(24.dp))
         }
     }
     if (open) InviteFriendsSheet(playerName = playerName, onDismiss = { open = false })
