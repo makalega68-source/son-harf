@@ -679,28 +679,26 @@ private fun WeeklyTournamentTab() {
         val t = tournament
         if (t != null) {
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                    shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .42f)),
-                ) {
+                HfGamePanel(HfPanel.NavySet, Modifier.fillMaxWidth(), corner = 24.dp) {
                     Column(
-                        Modifier.fillMaxWidth().background(
-                            Brush.linearGradient(listOf(SonHarfGold.copy(alpha = .15f), SonHarfSurface, SonHarfBlue.copy(alpha = .09f)))
-                        ).padding(16.dp),
+                        Modifier.fillMaxWidth().padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text("🏆", fontSize = 42.sp)
-                        Text(t.name.uppercase(), color = SonHarfText, fontSize = 20.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-                        Text(
-                            sh("Katılım ücretsiz • PvP galibiyet +3 • mağlubiyet +1", "Free entry • PvP win +3 • loss +1"),
-                            color = SonHarfGreen,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
+                        androidx.compose.foundation.Image(
+                            androidx.compose.ui.res.painterResource(R.drawable.style_icon_trophy),
+                            null,
+                            Modifier.size(64.dp),
                         )
-                        Text("${t.weekStart} • ${t.playerCount} ${sh("oyuncu", "players")}", color = SonHarfMuted, fontSize = 9.sp)
+                        Text(t.name.uppercase(), color = Hf.GoldLight, fontSize = 22.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, letterSpacing = .6.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(sh("Ücretsiz", "Free"), sh("Galibiyet +3", "Win +3"), sh("Mağlubiyet +1", "Loss +1")).forEach { tag ->
+                                Surface(shape = Hf.PillShape, color = Color.White.copy(alpha = .14f)) {
+                                    Text(tag, Modifier.padding(horizontal = 10.dp, vertical = 4.dp), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        Text("${t.weekStart} • ${t.playerCount} ${sh("oyuncu", "players")}", color = Color.White.copy(alpha = .7f), fontSize = 12.sp)
                         if (!t.joined) {
                             Button(
                                 onClick = {
@@ -734,17 +732,32 @@ private fun WeeklyTournamentTab() {
             }
 
             item {
-                Surface(shape = RoundedCornerShape(14.dp), color = SonHarfSurface, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .14f))) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(sh("KUPA ÖDÜLLERİ", "CUP REWARDS"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 11.sp)
-                        Text("🥇 1.000 SC   •   🥈 600 SC   •   🥉 400 SC", color = SonHarfText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Surface(shape = RoundedCornerShape(18.dp), color = SonHarfSurface, border = BorderStroke(1.5.dp, SonHarfGold.copy(alpha = .5f))) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(sh("KUPA ÖDÜLLERİ", "CUP REWARDS"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 15.sp, letterSpacing = .8.sp)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(
+                                Triple("🥇", "1.000", HfPanel.GoldSet),
+                                Triple("🥈", "600", listOf(Color(0xFFE3E8EE), Color(0xFFAEB8C4), Color(0xFF7D8894))),
+                                Triple("🥉", "400", listOf(Color(0xFFF0B27A), Color(0xFFC77B3C), Color(0xFF8E5222))),
+                            ).forEach { (medal, amount, set) ->
+                                HfGamePanel(set, Modifier.weight(1f), corner = 14.dp, lip = 4.dp) {
+                                    Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(medal, fontSize = 26.sp)
+                                        Text(amount, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                                        Text("SC", color = Color.White.copy(alpha = .85f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
                         Text(
                             sh(
                                 "4–10: 150 SC • En az 1 maç oynayan diğer oyuncular: 50 SC",
                                 "4–10: 150 SC • Other players with at least 1 match: 50 SC",
                             ),
                             color = SonHarfMuted,
-                            fontSize = 9.sp,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center,
                         )
                         Text(
                             sh(
@@ -752,13 +765,14 @@ private fun WeeklyTournamentTab() {
                                 "No ranking or reward is earned without playing a match.",
                             ),
                             color = SonHarfMuted,
-                            fontSize = 8.sp,
+                            fontSize = 11.sp,
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
             }
 
-            item {
+            if (history.any { it.rewardEligible }) item {
                 OutlinedButton(
                     onClick = {
                         scope.launch {
@@ -1413,8 +1427,8 @@ private fun CompetitionMetric(value: String, label: String, modifier: Modifier) 
         border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .13f)),
     ) {
         Column(Modifier.padding(horizontal = 6.dp, vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 14.sp, maxLines = 1)
-            Text(label, color = SonHarfMuted, fontSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(value, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 20.sp, maxLines = 1)
+            Text(label, color = SonHarfMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
 }

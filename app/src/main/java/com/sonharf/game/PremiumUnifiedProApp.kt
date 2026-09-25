@@ -131,7 +131,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         PremiumDestination.COMPETE,
         PremiumDestination.PROFILE,
     )
-    val scheme = if (SonHarfTheme.IsDark) {
+    val scheme = if (SonHarfTheme.IsDark || SonHarfCosmetics.darkArenaTheme) {
         darkColorScheme(
             primary = SonHarfTheme.Primary,
             secondary = SonHarfTheme.PremiumGold,
@@ -193,7 +193,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             },
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding).wordSiegeMascotTouchWatcher(shellMascotTouches)) {
-                if (!SonHarfTheme.IsDark) SonHarfLeafBackdrop(Modifier.matchParentSize())
+                if (!SonHarfTheme.IsDark && !SonHarfCosmetics.darkArenaTheme) SonHarfLeafBackdrop(Modifier.matchParentSize())
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
                         backend = backend,

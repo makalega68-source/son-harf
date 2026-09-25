@@ -43,16 +43,16 @@ import androidx.compose.ui.unit.sp
 /** Higgsfield theme components; sizes and colours follow the package's SVG components. */
 internal object Hf {
     // "Kelimelik tarzı" light board-game palette (theme D).
-    val Ground = Color(0xFFE6ECF2)
-    val Surface = Color(0xFFFFFFFF)
+    val Ground: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else Color(0xFFE6ECF2)
+    val Surface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else Color(0xFFFFFFFF)
     val Navy = Color(0xFF2C3E55)
-    val Border = Color(0xFFD2DBE5)
+    val Border: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else Color(0xFFD2DBE5)
     /** Primary text on the ground and on white cards. */
-    val Text = Color(0xFF243142)
+    val Text: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else Color(0xFF243142)
     /** Text and icons on green, red and navy fills. */
     val OnAccent = Color(0xFFFFFFFF)
     /** Card and window fill (was the ivory surface of the dark theme). */
-    val Ivory = Color(0xFFFFFDF7)
+    val Ivory: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else Color(0xFFFFFDF7)
     val Gold = Color(0xFFE0A82E)
     val GoldLight = Color(0xFFF2C14E)
     val GoldDeep = Color(0xFFB07F1E)
@@ -63,10 +63,10 @@ internal object Hf {
     val RedLight = Color(0xFFE57A73)
     val Muted = Color(0xFF9AA7B5)
     val Disabled = Color(0xFFB5C0CC)
-    val TextMuted = Color(0xFF6B7A8C)
+    val TextMuted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else Color(0xFF6B7A8C)
     val Ink = Color(0xFF243142)
-    val PlayerPanel = Color(0xFFE1F2E3)
-    val RivalPanel = Color(0xFFFBE4E2)
+    val PlayerPanel: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F3525) else Color(0xFFE1F2E3)
+    val RivalPanel: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else Color(0xFFFBE4E2)
     /** Letter tiles: warm cream with brown letters, like a word-board game. */
     val Tile = Color(0xFFF7E3A6)
     val TileInk = Color(0xFF4A3217)
@@ -477,5 +477,73 @@ internal fun HfConfirmDialog(
                 )
             }
         }
+    }
+}
+
+/** Game-style panel colour sets: a bright top, a deeper bottom and a darker "lip" beneath. */
+internal object HfPanel {
+    val GreenSet = listOf(Color(0xFF5CC46B), Color(0xFF379746), Color(0xFF256E31))
+    val BlueSet = listOf(Color(0xFF5B9BEA), Color(0xFF3868C8), Color(0xFF26489A))
+    val GoldSet = listOf(Color(0xFFFFD36B), Color(0xFFE9A92C), Color(0xFFB37A15))
+    val CoralSet = listOf(Color(0xFFF4897A), Color(0xFFD9574B), Color(0xFFA63A31))
+    val NavySet = listOf(Color(0xFF3F5878), Color(0xFF2C3E55), Color(0xFF1B2838))
+    val PurpleSet = listOf(Color(0xFF9B7BEA), Color(0xFF6B4FC8), Color(0xFF4A3496))
+}
+
+/**
+ * A raised, glossy game panel: vertical gradient, a soft top highlight and a darker bottom lip
+ * that gives it depth. Pressing it sinks the panel into its lip like a physical button.
+ */
+@Composable
+internal fun HfGamePanel(
+    colors: List<Color>,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    corner: Dp = 18.dp,
+    lip: Dp = 5.dp,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val sink by animateFloatAsState(if (pressed) 1f else 0f, tween(90), label = "hf-panel-sink")
+    val shape = RoundedCornerShape(corner)
+    Box(
+        modifier
+            .shadow(6.dp, shape, ambientColor = colors[2].copy(alpha = .45f), spotColor = colors[2].copy(alpha = .45f))
+            .background(colors[2], shape)
+            .then(if (onClick != null) Modifier.clickable(interaction, null, onClick = onClick) else Modifier),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = lip * sink, bottom = lip * (1f - sink))
+                .background(Brush.verticalGradient(listOf(colors[0], colors[1])), shape)
+                .drawBehind {
+                    val r = corner.toPx()
+                    drawRoundRect(
+                        Brush.verticalGradient(listOf(Color.White.copy(alpha = .30f), Color.Transparent), endY = size.height * .5f),
+                        topLeft = Offset(3.dp.toPx(), 3.dp.toPx()),
+                        size = androidx.compose.ui.geometry.Size(size.width - 6.dp.toPx(), size.height * .5f),
+                        cornerRadius = CornerRadius(r * .8f, r * .8f),
+                    )
+                },
+            content = content,
+        )
+    }
+}
+
+/** A white "OYNA ▶" style pill for coloured panels. */
+@Composable
+internal fun HfPanelPill(label: String, ink: Color, modifier: Modifier = Modifier) {
+    Surface(modifier = modifier, shape = Hf.PillShape, color = Color.White, shadowElevation = 2.dp) {
+        Text(
+            label,
+            Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            color = ink,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = .6.sp,
+            maxLines = 1,
+        )
     }
 }

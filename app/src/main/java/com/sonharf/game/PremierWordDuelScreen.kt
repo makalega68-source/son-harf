@@ -788,6 +788,8 @@ private fun PremierLobby(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onHome) { Icon(Icons.Rounded.ArrowBack, null, tint = PremierUi.Ink) }
+            HfGameArt(R.drawable.son_harf_game_icon, 48.dp, 48.dp, description = "Son Harf")
+            Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text("SON HARF", color = PremierUi.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)
                 Text(pt(language, "PREMIER 1v1 DÜELLO", "PREMIER 1v1 DUEL"), color = PremierUi.Ocean, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)

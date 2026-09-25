@@ -152,35 +152,28 @@ internal object SonHarfInvite {
 @Composable
 internal fun InviteFriendsCard(playerName: String?, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
-    Surface(
-        onClick = { open = true },
-        modifier = modifier.fillMaxWidth(),
-        shape = Hf.CardShape,
-        color = Hf.Ground,
-        border = BorderStroke(1.5.dp, Hf.Gold.copy(alpha = .75f)),
-    ) {
+    HfGamePanel(HfPanel.CoralSet, modifier.fillMaxWidth(), onClick = { open = true }) {
         Row(
             Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                Modifier.size(48.dp).border(1.5.dp, Hf.Gold, CircleShape),
+                Modifier.size(50.dp).background(Color.White.copy(alpha = .9f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Rounded.GroupAdd, null, tint = Hf.Gold, modifier = Modifier.size(26.dp))
+                Icon(Icons.Rounded.GroupAdd, null, tint = HfPanel.CoralSet[2], modifier = Modifier.size(28.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh("Arkadaşını davet et", "Invite a friend"), color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text(sh("Arkadaşını davet et", "Invite a friend"), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
                 Text(
-                    sh("WhatsApp, Telegram, SMS ve daha fazlasıyla paylaş", "Share via WhatsApp, Telegram, SMS and more"),
-                    color = Hf.TextMuted,
-                    fontSize = 12.sp,
+                    sh("Birlikte oynayın, rekabet başlasın!", "Play together, let the rivalry begin!"),
+                    color = Color.White.copy(alpha = .9f),
+                    fontSize = 13.sp,
                 )
             }
-            Surface(shape = RoundedCornerShape(99.dp), color = Hf.Gold) {
-                Text(sh("DAVET", "INVITE"), Modifier.padding(horizontal = 12.dp, vertical = 7.dp), color = Hf.Ink, fontSize = 12.sp, fontWeight = FontWeight.Black)
-            }
+            Spacer(Modifier.width(8.dp))
+            HfPanelPill(sh("DAVET", "INVITE"), ink = HfPanel.CoralSet[2])
         }
     }
     if (open) InviteFriendsSheet(playerName = playerName, onDismiss = { open = false })

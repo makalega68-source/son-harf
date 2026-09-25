@@ -461,8 +461,10 @@ private fun AtelierTopBar(seconds: Int, score: Int, onBack: () -> Unit) {
         IconButton(onClick = onBack) {
             Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = AtelierUi.Ink)
         }
+        HfGameArt(R.drawable.kelime_atolyesi_game_icon, 40.dp, 40.dp, description = "Kelime Atölyesi")
+        Spacer(Modifier.width(6.dp))
         Text(
-            sh("Kelime Atölyesi", "Word Workshop"),
+            sh("Atölye", "Workshop"),
             modifier = Modifier.weight(1f),
             color = AtelierUi.Ink,
             fontSize = 20.sp,

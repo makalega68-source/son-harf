@@ -14,7 +14,7 @@ class KelimeKusatmasiFinalBrandingContractTest {
 
         assertTrue(home.contains("onClick = onSiege"))
         assertTrue(home.contains("sh(\"OYNA\", \"PLAY\")"))
-        assertTrue(home.contains("HfTitleRule(sh(\"Ana Oyun\", \"Main Game\")"))
+        assertFalse(home.contains("HfTitleRule(sh(\"Ana Oyun\", \"Main Game\")"))
         assertTrue(state.contains("OYNA • Harflerini yerleştir, kelimeni oluştur"))
         assertTrue(state.contains("PLAY • Place your tiles, build your word"))
         assertTrue(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))

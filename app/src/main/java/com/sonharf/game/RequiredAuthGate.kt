@@ -633,47 +633,15 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     }
 }
 
-/** Brand block: the name spelled on letter tiles, the English name and the tagline. */
+/** Brand block: the Kelime Tahtı logo. */
 @Composable
 private fun AuthBrandHeader() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            "KELİME".forEachIndexed { index, letter ->
-                Surface(
-                    shape = RoundedCornerShape(9.dp),
-                    color = Color(0xFFF7E3A6),
-                    border = BorderStroke(1.dp, AuthUi.Sand.copy(alpha = .55f)),
-                    shadowElevation = 3.dp,
-                ) {
-                    Text(letter.toString(), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = AuthUi.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "KELİME TAHTI",
-            color = AuthUi.Text,
-            fontSize = 27.sp,
-            fontWeight = FontWeight.Black,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            "WORD BOARD",
-            color = AuthUi.Sand,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.5.sp,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            sh("Kelime oyunu • taktik alan savaşı • sosyal rekabet", "Word game • tactical territory battle • social competition"),
-            color = AuthUi.Primary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-    }
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(R.drawable.kelime_tahti_brand_logo),
+        contentDescription = "KELİME TAHTI",
+        modifier = Modifier.widthIn(max = 300.dp).fillMaxWidth().height(160.dp),
+        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+    )
 }
 
 @Composable
