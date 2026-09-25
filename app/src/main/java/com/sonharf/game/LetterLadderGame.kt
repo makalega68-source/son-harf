@@ -72,6 +72,10 @@ private object LetterLadderUi {
     val Purple = Color(0xFFC85A54)
     val PurpleSoft = Color(0xFF442624)
     val AccentText = Color(0xFFF0EDE3)
+    val Live = Accent
+    val Coral = Orange
+    val Green = Accent
+    val Gold = Orange
 }
 
 internal data class LetterLadderPuzzle(
