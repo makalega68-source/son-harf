@@ -28,7 +28,7 @@ import kotlinx.coroutines.delay
 
 private enum class PremiumDestination {
     HOME, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
-    LAST_LETTER, SIEGE, LETTER_PATH,
+    LAST_LETTER, SIEGE, WORD_WORKSHOP,
     SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP, PRO, PRIVATE_ROOM, MASCOT_CHAT
 }
 
@@ -41,7 +41,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     val defaultGameLanguage = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
     var siegeLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var lastLetterLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
-    var letterPathLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
+    var workshopLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var uiLanguageBeforeGame by rememberSaveable { mutableStateOf<String?>(null) }
     val shellMascotTouches = remember { WordSiegeMascotTouchState() }
     var shellProfile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -98,7 +98,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         if (destination !in setOf(
                 PremiumDestination.LAST_LETTER,
                 PremiumDestination.SIEGE,
-                PremiumDestination.LETTER_PATH,
+                PremiumDestination.WORD_WORKSHOP,
             )
         ) {
             while (true) {
@@ -114,7 +114,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             PremiumDestination.PRIVATE_ROOM -> PremiumDestination.PRO
             PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.HOME
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
-            PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
+            PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
                 uiLanguageBeforeGame = null
                 PremiumDestination.HOME
@@ -177,7 +177,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         Scaffold(
             containerColor = SonHarfTheme.Background,
             topBar = {
-                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)) SonHarfTopAdBanner(isPremium = isPro)
+                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
             },
             bottomBar = {
                 if (topLevel) {
@@ -204,18 +204,18 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onPro = { destination = PremiumDestination.PRO },
                         onSettings = { destination = PremiumDestination.SETTINGS },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
-                        onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
+                        onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
                     )
                     PremiumDestination.GAMES -> PremiumGameCenter(
                         siegeLanguage = siegeLanguage,
                         lastLetterLanguage = lastLetterLanguage,
-                        letterPathLanguage = letterPathLanguage,
+                        workshopLanguage = workshopLanguage,
                         onSiegeLanguage = { siegeLanguage = it },
                         onLastLetterLanguage = { lastLetterLanguage = it },
-                        onLetterPathLanguage = { letterPathLanguage = it },
+                        onWorkshopLanguage = { workshopLanguage = it },
                         onSiege = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
-                        onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
+                        onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
                     )
                     PremiumDestination.COMPETE -> CompetitionHubScreen(
                         onBack = { destination = PremiumDestination.HOME },
@@ -252,7 +252,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onExit = { leaveGame() },
                         onOpenStore = { leaveGame(PremiumDestination.SHOP) },
                     )
-                    PremiumDestination.LETTER_PATH -> LetterLadderGameScreen {
+                    PremiumDestination.WORD_WORKSHOP -> KelimeAtolyesiScreen {
                         leaveGame()
                     }
                     PremiumDestination.SOCIAL -> MainSocialScreen(
@@ -279,7 +279,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 }
                 // Outside the games the mascot keeps the player company from a bottom corner:
                 // it mostly watches, says a word on some pages and flies aside when touched.
-                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH, PremiumDestination.MASCOT_CHAT)) {
+                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP, PremiumDestination.MASCOT_CHAT)) {
                     WordSiegeMascotCompanion(
                         anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
                         mascotSize = 83.dp,
@@ -316,7 +316,7 @@ private fun PremiumHomeScreen(
     onPro: () -> Unit,
     onSettings: () -> Unit,
     onLastLetter: () -> Unit,
-    onLetterPath: () -> Unit,
+    onWorkshop: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
 
@@ -336,7 +336,7 @@ private fun PremiumHomeScreen(
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onPro, onSettings)
             }
             item(key = "home_secondary_modes") {
-                PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)
+                PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
             }
             item(key = "home_daily_tasks") {
                 PremiumHomeDailyTasks(onClick = onCompete)
@@ -355,13 +355,13 @@ private fun PremiumHomeScreen(
 private fun PremiumGameCenter(
     siegeLanguage: String,
     lastLetterLanguage: String,
-    letterPathLanguage: String,
+    workshopLanguage: String,
     onSiegeLanguage: (String) -> Unit,
     onLastLetterLanguage: (String) -> Unit,
-    onLetterPathLanguage: (String) -> Unit,
+    onWorkshopLanguage: (String) -> Unit,
     onSiege: () -> Unit,
     onLastLetter: () -> Unit,
-    onLetterPath: () -> Unit,
+    onWorkshop: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -416,11 +416,11 @@ private fun PremiumGameCenter(
         item {
             PremiumGameCard(
                 icon = Icons.Rounded.Route,
-                title = sh("HARF YOLU", "LETTER PATH"),
-                subtitle = sh("Kelime rotanı tamamla", "Complete your word path"),
-                language = letterPathLanguage,
-                onLanguageChange = onLetterPathLanguage,
-                onClick = onLetterPath,
+                title = sh("KELİME ATÖLYESİ", "WORD WORKSHOP"),
+                subtitle = sh("7 harf, 3 görev, 60 saniye", "7 letters, 3 tasks, 60 seconds"),
+                language = workshopLanguage,
+                onLanguageChange = onWorkshopLanguage,
+                onClick = onWorkshop,
             )
         }
     }

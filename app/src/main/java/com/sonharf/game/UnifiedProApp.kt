@@ -190,7 +190,7 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
                     )
                     UnifiedDestination.GAME -> OnlineGameScreenV6()
                     UnifiedDestination.SIEGE -> WordSiegeExperienceScreen { destination = UnifiedDestination.HOME }
-                    UnifiedDestination.LETTER -> LetterLadderGameScreen { destination = UnifiedDestination.HOME }
+                    UnifiedDestination.LETTER -> KelimeAtolyesiScreen { destination = UnifiedDestination.HOME }
                     UnifiedDestination.LEAGUE -> LeaderboardExperienceScreen { destination = UnifiedDestination.HOME }
                     UnifiedDestination.COMPETITION -> CompetitionHubScreen(
                         onBack = { destination = UnifiedDestination.HOME },

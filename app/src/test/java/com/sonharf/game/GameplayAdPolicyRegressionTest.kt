@@ -12,8 +12,8 @@ class GameplayAdPolicyRegressionTest {
 
         assertTrue(shell.contains("PremiumDestination.LAST_LETTER"))
         assertTrue(shell.contains("PremiumDestination.SIEGE"))
-        assertTrue(shell.contains("PremiumDestination.LETTER_PATH"))
-        assertTrue(shell.contains("destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)"))
+        assertTrue(shell.contains("PremiumDestination.WORD_WORKSHOP"))
+        assertTrue(shell.contains("destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)"))
         assertTrue(shell.contains("SonHarfTopAdBanner(isPremium = isPro)"))
         assertTrue(rewarded.contains("verificationUserId.isNullOrBlank()"))
         assertTrue(rewarded.contains("verificationData.isNullOrBlank()"))

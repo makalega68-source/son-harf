@@ -361,7 +361,7 @@ internal fun PremiumLeagueProgress(profile: ProfileDto?, onLeague: () -> Unit) {
 }
 
 @Composable
-internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Unit) {
+internal fun PremiumOtherGames(onLastLetter: () -> Unit, onWorkshop: () -> Unit) {
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         PremiumHomeModeCard(
             modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -372,10 +372,10 @@ internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Uni
         )
         PremiumHomeModeCard(
             modifier = Modifier.weight(1f).fillMaxHeight(),
-            title = sh("Kelime Yolu", "Word Path"),
-            subtitle = sh("Bağlantılı kelimelerle hedefe ulaş", "Reach the goal through linked words"),
+            title = sh("Kelime Atölyesi", "Word Workshop"),
+            subtitle = sh("7 harfle 3 görevi tamamla", "Finish 3 tasks with 7 letters"),
             art = { HfGameIconSlot(150.dp, 74.dp) },
-            onPlay = onLetterPath,
+            onPlay = onWorkshop,
         )
     }
 }

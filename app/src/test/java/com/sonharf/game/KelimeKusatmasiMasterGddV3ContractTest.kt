@@ -35,7 +35,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
 
         assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
-        assertTrue(shell.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
+        assertTrue(shell.contains("title = sh(\"KELİME ATÖLYESİ\", \"WORD WORKSHOP\")"))
         assertTrue(firstRun.contains("selected == \"tr\""))
         assertTrue(firstRun.contains("selected == \"en\""))
         assertFalse(firstRun.contains("selected == \"es\""))
@@ -88,7 +88,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
 
         assertTrue(shell.contains("fun leaveGame(target: PremiumDestination = PremiumDestination.HOME)"))
-        assertTrue(shell.contains("PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH ->"))
+        assertTrue(shell.contains("PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP ->"))
         assertTrue(shell.contains("PremiumDestination.HOME\n            }"))
         assertTrue(practice.contains("Modifier.fillMaxWidth().height(16.dp)"))
         assertTrue(practice.contains("readyFeedback.message"))
