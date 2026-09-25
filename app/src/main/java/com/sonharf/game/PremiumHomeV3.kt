@@ -48,7 +48,7 @@ internal fun PremiumHomeCommandDeck(
     onSettings: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        HfTitleRule("Kelime Tahtı", fontSize = 30.sp)
+        HfTitleRule(sh("Kelime Tahtı", "Kelime Tahtı"), fontSize = 28.sp)
         HomeStatusRow(profile, onProfile, onShop, onPro, onSettings)
         HomeSiegeHero(onSiege)
     }
@@ -136,7 +136,13 @@ internal fun HomeKelimeTileLogo(modifier: Modifier = Modifier) {
     val tile = 42.dp
     val gap = 3.dp
     val word = listOf("K", "E", "L", "İ", "M", "E")
-    Box(modifier.fillMaxWidth().height(tile * 3 + gap * 2 + 10.dp), contentAlignment = Alignment.Center) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(tile * 3 + gap * 2 + 10.dp)
+            .clearAndSetSemantics { contentDescription = "KELİME KUŞATMASI" },
+        contentAlignment = Alignment.Center,
+    ) {
         Canvas(Modifier.matchParentSize()) {
             val cx = size.width / 2f
             val cy = size.height / 2f

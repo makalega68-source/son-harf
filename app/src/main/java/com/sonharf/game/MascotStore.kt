@@ -94,7 +94,7 @@ private fun WordSiegeMascotSkin.cardBrush(): Brush {
     val decor = WordSiegeMascotDecor.of(this)
     val light = Color(decor.handColors[0])
     val dark = Color(decor.handColors[1])
-    return Brush.linearGradient(listOf(Color(0xFF14102A), dark.copy(alpha = .85f), light.copy(alpha = .55f)))
+    return Brush.linearGradient(listOf(Hf.Ground, dark.copy(alpha = .55f), light.copy(alpha = .30f)))
 }
 
 /** The mascot shop: every character shown alive, sold as a permanent Google Play product. */
@@ -204,20 +204,20 @@ private fun MascotStoreHero() {
     Surface(
         shape = RoundedCornerShape(26.dp),
         color = Color.Transparent,
-        border = BorderStroke(1.dp, Color(0x33FFFFFF)),
+        border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .55f)),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Box(
             Modifier
-                .background(Brush.linearGradient(listOf(Color(0xFF1B0F3B), Color(0xFF3A1A78), Color(0xFF0E4C7A))))
+                .background(Brush.linearGradient(listOf(Hf.Ground, Hf.Surface, Color(0xFF2A2A20))))
                 .padding(16.dp),
         ) {
             Column(Modifier.fillMaxWidth()) {
-                Text(sh("MASKOTLAR", "MASCOTS"), color = Color(0xFFFFE08A), fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                Text(sh("MASKOTLAR", "MASCOTS"), color = Hf.Gold, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     sh("Seni tanıyan, sevinen, üzülen ve konuşan canlı bir oyun arkadaşı.", "A living game buddy that knows you, cheers, frets and talks."),
-                    color = Color(0xFFE6E2FF),
+                    color = Hf.TextMuted,
                     fontSize = 12.sp,
                     lineHeight = 16.sp,
                 )
@@ -253,7 +253,7 @@ private fun MascotStoreCard(
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = Color.Transparent,
-        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) Color(0xFFFFE08A) else Color(0x33FFFFFF)),
+        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) Hf.Gold else Hf.Gold.copy(alpha = .55f)),
         shadowElevation = 4.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -262,7 +262,7 @@ private fun MascotStoreCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                Modifier.size(156.dp).clip(RoundedCornerShape(22.dp)).background(Color(0x22FFFFFF)),
+                Modifier.size(156.dp).clip(RoundedCornerShape(22.dp)).background(Hf.Ivory.copy(alpha = .08f)),
                 contentAlignment = Alignment.Center,
             ) {
                 WordSiegeMascot(
@@ -276,14 +276,14 @@ private fun MascotStoreCard(
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh(skin.titleTr, skin.titleEn), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                Text(sh(skin.kindTr, skin.kindEn), color = Color(0xFFFFE08A), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(sh(skin.titleTr, skin.titleEn), color = Hf.Ivory, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                Text(sh(skin.kindTr, skin.kindEn), color = Hf.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 Spacer(Modifier.height(3.dp))
-                Text(skin.pitch(), color = Color(0xE6FFFFFF), fontSize = 11.sp, lineHeight = 15.sp)
+                Text(skin.pitch(), color = Hf.Ivory.copy(alpha = .9f), fontSize = 11.sp, lineHeight = 15.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     sh("Uçar • konuşur • seni hatırlar", "Flies • talks • remembers you"),
-                    color = Color(0xFFFFE08A),
+                    color = Hf.Gold,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -294,10 +294,10 @@ private fun MascotStoreCard(
                         enabled = !active,
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFFE08A),
-                            contentColor = Color(0xFF1B0F3B),
-                            disabledContainerColor = Color(0x55FFFFFF),
-                            disabledContentColor = Color.White,
+                            containerColor = Hf.Gold,
+                            contentColor = Hf.Ink,
+                            disabledContainerColor = Hf.Disabled,
+                            disabledContentColor = Hf.Ivory,
                         ),
                     ) {
                         Text(if (active) sh("SEÇİLİ", "SELECTED") else sh("SAHİPSİN • SEÇ", "OWNED • USE"), fontWeight = FontWeight.Black, fontSize = 12.sp)
@@ -306,14 +306,14 @@ private fun MascotStoreCard(
                         onClick = onBuy,
                         enabled = !busy,
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF1B0F3B)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Hf.Ivory, contentColor = Hf.Ink),
                     ) {
                         Text(sh("SATIN AL • ", "BUY • ") + offer.formattedPrice, fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }
                     else -> Text(
                         // The list price is shown for information only until Google Play offers the product.
                         sh("${ProductCatalog.MASCOT_LIST_PRICE_TRY} • Google Play'de yakında", "${ProductCatalog.MASCOT_LIST_PRICE_TRY} • Coming soon on Google Play"),
-                        color = Color.White,
+                        color = Hf.Ivory,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Black,
                     )

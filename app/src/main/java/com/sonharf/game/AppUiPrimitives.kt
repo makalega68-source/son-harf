@@ -132,17 +132,20 @@ internal fun MainScreenHeader(
             Text(
                 text = title,
                 color = MainUi.Text,
-                fontSize = 22.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Black,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 1,
             )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                color = MainUi.Muted,
-                fontSize = 10.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
+            if (subtitle.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    color = MainUi.Muted,
+                    fontSize = 12.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
         }
         if (actionIcon != null && onAction != null) {
             IconButton(
