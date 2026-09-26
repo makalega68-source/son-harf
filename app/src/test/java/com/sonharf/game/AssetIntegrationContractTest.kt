@@ -102,8 +102,8 @@ class AssetIntegrationContractTest {
         assertTrue(online.contains("val regionGap = 1.25.dp"))
 
         assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFD5CEBD)"))
-        assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFF3EEDF)"))
-        assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFF3EEDF)"))
+        assertTrue(practice.contains("PracticeSiegeNeutral = WordSiegeWalnutIvory.empty"))
+        assertTrue(practice.contains("PracticeSiegeEmpty = WordSiegeWalnutIvory.empty"))
         assertTrue(practice.contains("PracticeSiegeMine = WordSiegeWalnutIvory.mine"))
         assertTrue(practice.contains("PracticeSiegeRival = WordSiegeWalnutIvory.rival"))
         assertTrue(practice.contains("PracticeSiegeThreat = Color(0xFFD8903D)"))

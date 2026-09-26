@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -41,8 +42,8 @@ private val PracticeSiegeCellSize = 52.dp
 private val PracticeSiegeTile = WordSiegeWalnutIvory.ivory
 private val PracticeSiegeTileBorder = WordSiegeWalnutIvory.bevel
 internal val PracticeSiegeBoardSurface = Color(0xFFD5CEBD)
-internal val PracticeSiegeNeutral = Color(0xFFF3EEDF)
-private val PracticeSiegeEmpty = Color(0xFFF3EEDF)
+internal val PracticeSiegeNeutral = WordSiegeWalnutIvory.empty
+private val PracticeSiegeEmpty = WordSiegeWalnutIvory.empty
 private val PracticeSiegeMine = WordSiegeWalnutIvory.mine
 private val PracticeSiegeRival = WordSiegeWalnutIvory.rival
 private val PracticeSiegeMineBorder = WordSiegeWalnutIvory.mine
@@ -362,7 +363,7 @@ private fun WordSiegePracticeBoardCell(
 
     // Territory is the primary visual layer. Strategic-zone tint is only dominant on neutral cells.
     val cellColor = when {
-        pending -> PracticeSiegeTile
+        pending -> territory
         letter != null -> territory
         zoneSurface != null -> zoneSurface
         else -> PracticeSiegeEmpty
@@ -421,7 +422,7 @@ private fun WordSiegePracticeBoardCell(
                 width = if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
                 color = if (lastMoveHighlight > 0f) {
                     PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
-                } else Color(0xFFCDBF9F),
+                } else WordSiegeWalnutIvory.emptyEdge,
                 shape = RoundedCornerShape(8.dp),
             ),
         contentAlignment = Alignment.Center,
@@ -429,7 +430,8 @@ private fun WordSiegePracticeBoardCell(
         if (letter != null) {
             Box(
                 Modifier.matchParentSize()
-                    .padding(if (owner != 0 && !pending) 2.5.dp else .75.dp)
+                    .padding(if (owner != 0) 4.dp else .75.dp)
+                    .shadow(1.5.dp, RoundedCornerShape(7.dp))
                     .clip(RoundedCornerShape(7.dp))
                     .background(WordSiegeWalnutIvory.tile)
                     .border(
@@ -446,10 +448,10 @@ private fun WordSiegePracticeBoardCell(
         if (owner != 0 && !pending) {
             Box(
                 Modifier
-                    .align(Alignment.TopStart)
-                    .padding(4.dp)
-                    .size(6.dp)
-                    .clip(CircleShape)
+                    .align(if (owner == myOwner) Alignment.TopStart else Alignment.TopEnd)
+                    .padding(3.dp)
+                    .size(7.dp)
+                    .clip(if (owner == myOwner) CircleShape else RoundedCornerShape(1.dp))
                     .background(if (owner == myOwner) PracticeSiegeMineBorder else PracticeSiegeRivalBorder),
             )
         }

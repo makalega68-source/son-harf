@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -51,10 +52,10 @@ private val PanSiegeBoardSurface = Color(0xFFEFE7D2)
 private val PanSiegeFrameNavy = WordSiegeWalnutIvory.frame
 private val PanSiegeFrameEdge = WordSiegeWalnutIvory.frameEdge
 private val PanSiegeFrameInner = WordSiegeWalnutIvory.frameShade
-private val PanSiegeNeutral = WordSiegeWalnutIvory.ivory
+private val PanSiegeNeutral = WordSiegeWalnutIvory.empty
 private val PanSiegeMine = WordSiegeWalnutIvory.mine
 private val PanSiegeRival = WordSiegeWalnutIvory.rival
-private val PanSiegeNeutralBorder = Color(0xFFDCD3BD)
+private val PanSiegeNeutralBorder = WordSiegeWalnutIvory.emptyEdge
 private val PanSiegeBonusBorder = Color(0xFFC9BFA5)
 private val PanSiegeMineBorder = WordSiegeWalnutIvory.mine
 private val PanSiegeRivalBorder = WordSiegeWalnutIvory.rival
@@ -832,7 +833,7 @@ private fun PanSiegeBoardCell(
         else -> null
     }
     val baseColor = when {
-        pending -> PanSiegeTile
+        pending -> territoryColor
         letter != null -> territoryColor
         bonusSurface != null -> bonusSurface
         else -> PanSiegeNeutral
@@ -894,7 +895,8 @@ private fun PanSiegeBoardCell(
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize().padding(if (letter != null && owner != 0 && !pending) 2.5.dp else .75.dp),
+            modifier = Modifier.fillMaxSize().padding(if (letter != null && owner != 0) 4.dp else .75.dp)
+                .shadow(if (letter != null) 1.5.dp else 0.dp, RoundedCornerShape(7.dp)),
             color = Color.Transparent,
             shape = RoundedCornerShape(7.dp),
             border = BorderStroke(
@@ -907,6 +909,14 @@ private fun PanSiegeBoardCell(
                 contentAlignment = Alignment.Center,
             ) {
                 if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(PanSiegeLastMove.copy(alpha = .045f * lastMoveHighlight)))
+                if (owner != 0 && !pending) {
+                    Box(
+                        Modifier.align(if (owner == myOwner) Alignment.TopStart else Alignment.TopEnd)
+                            .padding(3.dp).size(7.dp)
+                            .clip(if (owner == myOwner) CircleShape else RoundedCornerShape(1.dp))
+                            .background(if (owner == myOwner) PanSiegeMine else PanSiegeRival),
+                    )
+                }
                 if (letter != null) {
                     Text(
                         letter,

@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -958,7 +959,8 @@ private fun WordSiegeBoardCell(
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize().padding(if (letter != null && owner != 0 && !pending) 2.dp else .5.dp),
+            modifier = Modifier.fillMaxSize().padding(if (letter != null && owner != 0) 3.dp else .5.dp)
+                .shadow(if (letter != null) 1.5.dp else 0.dp, RoundedCornerShape(4.dp)),
             color = Color.Transparent,
             shape = RoundedCornerShape(4.dp),
             border = BorderStroke(if (pending) 1.5.dp else .7.dp, if (pending) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel),
