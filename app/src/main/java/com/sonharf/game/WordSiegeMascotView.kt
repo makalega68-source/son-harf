@@ -1078,13 +1078,13 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val mouthOpen = if (speaking && actionKind != WordSiegeMascotAction.EAT) {
             max(.14f, .16f + .46f * abs(sin(now / 88f) * sin(now / 231f + 1.3f)))
         } else {
-            poseValue[P_OPEN].coerceIn(0f, 1f)
+            pose[P_OPEN].coerceIn(0f, 1f)
         }
-        val mouthWidth = if (speaking) min(poseValue[P_WIDTH], 1.08f) else poseValue[P_WIDTH]
-        mouthTarget[0] = poseValue[P_SMILE] * (1f - yawn) - .1f * yawn + (.1f - poseValue[P_SMILE]) * shrug * .7f
+        val mouthWidth = if (speaking) min(pose[P_WIDTH], 1.08f) else pose[P_WIDTH]
+        mouthTarget[0] = pose[P_SMILE] * (1f - yawn) - .1f * yawn + (.1f - pose[P_SMILE]) * shrug * .7f
         mouthTarget[1] = max(mouthOpen, yawn)
         mouthTarget[2] = mouthWidth + (.62f - mouthWidth) * yawn
-        // ~95% response in 200 ms, independent of frame rate; speech and yawns blend too.
+        // Raw mouth targets avoid stacking two filters: ~95% response in 200 ms, including speech/yawns.
         val mouthBlend = 1f - kotlin.math.exp(-dt * 15f)
         for (i in 0 until 3) mouthValue[i] += (mouthTarget[i] - mouthValue[i]) * mouthBlend
         drawMouth(canvas, mouthValue[0], mouthValue[1], mouthValue[2])
