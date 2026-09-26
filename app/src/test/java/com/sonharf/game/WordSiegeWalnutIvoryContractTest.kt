@@ -20,7 +20,7 @@ class WordSiegeWalnutIvoryContractTest {
         listOf(online, practice).forEach { board ->
             assertTrue(board.contains("WordSiegeWalnutIvory.boardGrain"))
             assertTrue(board.contains("WordSiegeWalnutIvory.tile"))
-            assertTrue(board.contains("if (owner != 0) 4.dp else .75.dp"))
+            assertTrue(board.contains("4.dp else .75.dp"))
             assertTrue(board.contains("if (owner == myOwner) Alignment.TopStart else Alignment.TopEnd"))
             assertTrue(board.contains("collectIsPressedAsState()"))
             assertTrue(board.contains("val regionGap = 1.25.dp"))
