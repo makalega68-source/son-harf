@@ -56,8 +56,7 @@ jobs:
             adb install -r Kelime-Tahti-Guncel.apk
             adb shell am start -n com.sonharf.game/.UiScreenshotActivity --ez walnut_ivory_board true
             sleep 8
-            adb shell screencap -p /sdcard/ceviz-fildisi.png
-            adb pull /sdcard/ceviz-fildisi.png Ceviz-Fildisi-Android.png
+            adb exec-out screencap -p > Ceviz-Fildisi-Android.png
       - name: Validate frame and APK were produced by this checkout
         run: |
           test -s Ceviz-Fildisi-Android.png
