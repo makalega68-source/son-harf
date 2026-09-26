@@ -363,11 +363,18 @@ private fun PremiumHomeModeCard(
                 Modifier.size(96.dp).background(Brush.radialGradient(listOf(Color.White.copy(alpha = .55f), Color.Transparent)), CircleShape),
                 contentAlignment = Alignment.Center,
             ) { art() }
-            BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                // One line for every title: long names shrink to fit so both cards stay symmetric.
-                val fit = (maxWidth.value / (title.length * .6f)).coerceIn(13f, 20f)
-                Text(title, color = Color.White, fontSize = fit.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, maxLines = 1, softWrap = false)
-            }
+            // One line for every title: long names get a smaller size so both cards stay symmetric.
+            // (No BoxWithConstraints here: the card row measures intrinsics, which subcompose can't answer.)
+            Text(
+                title,
+                color = Color.White,
+                fontSize = if (title.length > 10) 16.sp else 20.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+            )
             Spacer(Modifier.height(2.dp))
             Text(
                 subtitle,
