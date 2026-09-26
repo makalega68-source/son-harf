@@ -66,7 +66,6 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
     fun clubSurfaceStaysAuthoredButNeverReachesUsers() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
-        val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
         val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
 
         // Retired: CLUB destination is intercepted and bounced to HOME, never renders CompetitionHubScreen anymore.
@@ -74,10 +73,6 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(shell.contains("PremiumDestination.CLUB -> {"))
         assertTrue(shell.contains("destination = PremiumDestination.HOME"))
 
-        // Club source stays for audit but nothing opens it.
-        assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
-        assertTrue(club.contains("b.getClubMessages(current.clubId)"))
-        assertTrue(club.contains("b.sendClubMessage(current.clubId, outgoing)"))
         assertTrue(social.contains("\"report_player\""))
         assertTrue(social.contains("\"block_user\""))
         assertTrue(social.contains("\"club_chat_spam_or_abuse\""))

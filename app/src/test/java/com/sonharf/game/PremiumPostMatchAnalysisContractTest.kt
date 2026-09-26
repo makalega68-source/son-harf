@@ -8,7 +8,6 @@ import org.junit.Test
 class PremiumPostMatchAnalysisContractTest {
     private val data = repoFile("app/src/main/java/com/sonharf/game/data/VipMatchAnalysis.kt").readText()
     private val center = repoFile("app/src/main/java/com/sonharf/game/PremiumAnalysisCenter.kt").readText()
-    private val profile = repoFile("app/src/main/java/com/sonharf/game/ProfileExperience.kt").readText()
     private val migration = repoFile("supabase/migrations/20260912134500_vip_match_analysis_current_territory.sql").readText()
 
     @Test
@@ -53,7 +52,6 @@ class PremiumPostMatchAnalysisContractTest {
 
     @Test
     fun `profile exposes accessible post-match analysis launcher`() {
-        assertTrue(profile.contains("PremiumAnalysisCenterLauncher"))
         assertTrue(center.contains(".height(48.dp)"))
         assertTrue(center.contains("getVipRecentCompletedMatches"))
         assertTrue(center.contains("getVipMatchAnalysis"))

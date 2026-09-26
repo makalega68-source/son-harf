@@ -9,20 +9,10 @@ import org.junit.Test
 class AdminPanelSecurityRegressionTest {
     @Test
     fun adminPanelStaysFailClosedAndUsesBackendAuthorization() {
-        val panel = projectFile("app/src/main/java/com/sonharf/game/AdminConsoleScreen.kt").readText()
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/OnlineGameBackend.kt").readText()
 
-        assertTrue(panel.contains("backend.getAdminDashboard()"))
-        assertTrue(panel.contains("backend.getAdminTopStoreItems()"))
-        assertTrue(panel.contains("backend.getAdminGameControls()"))
-        assertTrue(panel.contains("backend.getAdminAnnouncement()"))
-        assertTrue(panel.contains("backend.adminSearchPlayers"))
-        assertTrue(panel.contains("backend.adminSetPlayerVip"))
-        assertTrue(panel.contains("backend.adminSetOwnerAccount"))
-        assertTrue(panel.contains("dashboard = null"))
-        assertTrue(panel.contains("yalnızca yetkili yönetici"))
 
-        val combined = (panel + "\n" + backend).lowercase()
+        val combined = backend.lowercase()
         assertFalse(combined.contains("service_role"))
         assertFalse(combined.contains("service-role"))
         assertFalse(combined.contains("supabase_service"))

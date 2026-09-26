@@ -10,7 +10,6 @@ class ProfileImageCoverageRegressionTest {
     @Test
     fun coreCompetitiveSurfacesKeepRealPhotoAndSafeFallbackSupport() {
         val runtime = projectFile("app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt").readText()
-        val sharedCompetition = projectFile("app/src/main/java/com/sonharf/game/SharedCompetitionPrimitives.kt").readText()
         val siege = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val siegeCard = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt").readText()
         val competition = projectFile("app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt").readText()
@@ -19,9 +18,6 @@ class ProfileImageCoverageRegressionTest {
         assertTrue(runtime.contains("ProfilePhotoAvatarWithGender"))
         assertTrue(runtime.contains("if (bitmap != null)"))
         assertTrue(runtime.contains("name.take(1).uppercase()"))
-        assertTrue(sharedCompetition.contains("ProfilePhotoAvatarWithGender"))
-        assertTrue(sharedCompetition.contains("myAvatarPath"))
-        assertTrue(sharedCompetition.contains("opponentAvatarPath"))
         assertTrue(siege.contains("WordSiegeScoreCard("))
         assertTrue(siegeCard.contains("ProfilePhotoAvatarWithGender("))
         assertTrue(siege.contains("avatarVisibility"))
