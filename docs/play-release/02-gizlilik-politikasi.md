@@ -29,7 +29,7 @@ veritabanı), Google Play (ödemeler), Google AdMob (reklamlar). Yasal zorunlulu
 makamlarla paylaşılabilir.
 
 ## 4. Saklama ve silme
-Veriler hesabınız açık kaldığı sürece saklanır. Uygulamada **Ayarlar > Hesabı sil** ile
+Veriler hesabınız açık kaldığı sürece saklanır. Uygulamada **Ayarlar > Hesap** bölümündeki "Hesabı kalıcı olarak sil" ile
 hesabınızı ve ilişkili verilerinizi silebilirsiniz. Yasal olarak saklanması gereken satın alma
 kayıtları mevzuatın öngördüğü süre boyunca tutulabilir.
 
