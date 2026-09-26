@@ -2,6 +2,8 @@ package com.sonharf.game
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import android.os.SystemClock
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.RepeatMode
@@ -97,38 +99,77 @@ internal fun MascotRoomDialog(onDismiss: () -> Unit) {
     // Moves are chained into short scenes (e.g. clap, then a happy hop) so the mascot acts, not twitches.
     var scene by remember { mutableStateOf<List<WordSiegeMascotAction>>(emptyList()) }
     var sceneKey by remember { mutableLongStateOf(0L) }
-    var lastTouch by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var lastTouch by remember { mutableLongStateOf(SystemClock.uptimeMillis()) }
+    var sceneRunning by remember { mutableStateOf(false) }
+    var sceneEmoji by remember { mutableStateOf("") }
+    var lastIdle by remember { mutableStateOf<WordSiegeMascotAction?>(null) }
+    val fruitTravel = remember { Animatable(0f) }
 
     fun react(emotion: WordSiegeMascotEmotion, moves: List<WordSiegeMascotAction>, text: String, emoji: String) {
         mood = emotion
+        sceneRunning = true
         scene = moves
+        sceneEmoji = emoji
         sceneKey += 1
-        lastTouch = System.currentTimeMillis()
+        lastTouch = SystemClock.uptimeMillis()
         lineSeed += 1
         line = MascotVoice.style(text, skin, lineSeed)
-        repeat(4) { floats += RoomFloat(++floatId, emoji, Random.nextFloat()) }
+
     }
 
     LaunchedEffect(sceneKey) {
-        for (move in scene) {
-            action = move
-            actionKey += 1
-            delay(roomMoveMillis(move))
+        if (scene.isEmpty()) return@LaunchedEffect
+        sceneRunning = true
+        try {
+            for ((index, move) in scene.withIndex()) {
+                action = move
+                actionKey += 1
+                // Stage effects after anticipation, not before the mascot responds.
+                val effectDelay = when (move) {
+                    WordSiegeMascotAction.NUZZLE -> 1_000L
+                    WordSiegeMascotAction.SPARKLE -> 400L
+                    WordSiegeMascotAction.HOP -> 500L
+                    else -> 0L
+                }
+                delay(effectDelay)
+                if (sceneEmoji.isNotEmpty() && (move == WordSiegeMascotAction.NUZZLE ||
+                        move == WordSiegeMascotAction.SPARKLE || move == WordSiegeMascotAction.HOP ||
+                        (index == 0 && scene.size == 1))) {
+                    repeat(4) { floats += RoomFloat(++floatId, sceneEmoji, Random.nextFloat()) }
+                }
+                delay(roomMoveMillis(move) - effectDelay)
+            }
+        } finally {
+            sceneRunning = false
         }
     }
 
-    // Idle life: when nobody touches it, it looks around, stretches, peeks, dozes when tired.
+    LaunchedEffect(actionKey) {
+        if (action == WordSiegeMascotAction.FOOD_LOOK) fruitTravel.snapTo(0f)
+        if (action == WordSiegeMascotAction.EAT) {
+            fruitTravel.snapTo(0f)
+            fruitTravel.animateTo(1f, tween(1_150, easing = FastOutSlowInEasing))
+        }
+    }
+
+    // Long quiet gestures (2–6 s), layered over breathing, blinks and stable eye fixation.
+    // A scene owns the rig until its last move completes; backend latency cannot release that lock.
     LaunchedEffect(Unit) {
+        val awakeMoves = listOf(WordSiegeMascotAction.LOOK_AROUND, WordSiegeMascotAction.STRETCH,
+            WordSiegeMascotAction.PEEK, WordSiegeMascotAction.SWAY, WordSiegeMascotAction.THINK)
         while (true) {
-            delay(Random.nextLong(5_500L, 9_000L))
-            if (System.currentTimeMillis() - lastTouch < 5_000L) continue
-            val idle = if (energy < 30) {
-                listOf(WordSiegeMascotAction.YAWN, WordSiegeMascotAction.STRETCH)
+            delay(Random.nextLong(2_000L, 4_000L))
+            if (busy || sceneRunning || SystemClock.uptimeMillis() - lastTouch < 2_000L) continue
+            mood = WordSiegeMascotEmotion.CALM
+            sceneEmoji = ""
+            if (energy < 30) {
+                scene = listOf(WordSiegeMascotAction.YAWN, WordSiegeMascotAction.DOZE)
             } else {
-                listOf(WordSiegeMascotAction.LOOK_AROUND, WordSiegeMascotAction.STRETCH, WordSiegeMascotAction.PEEK, WordSiegeMascotAction.NOD, WordSiegeMascotAction.SPARKLE, WordSiegeMascotAction.THINK)
+                val next = awakeMoves.filter { it != lastIdle }.random()
+                lastIdle = next
+                scene = listOf(next)
             }
-            mood = if (energy < 30) WordSiegeMascotEmotion.CALM else WordSiegeMascotEmotion.HAPPY
-            scene = listOf(idle.random())
+            sceneRunning = true
             sceneKey += 1
         }
     }
@@ -149,9 +190,9 @@ internal fun MascotRoomDialog(onDismiss: () -> Unit) {
         if (busy) return
         busy = true
         when (kind) {
-            "love" -> react(WordSiegeMascotEmotion.HAPPY, listOf(WordSiegeMascotAction.CLAP, WordSiegeMascotAction.HOP), sh("Sen en iyi dostumsun!", "You're my best friend!"), "💖")
-            "play" -> react(WordSiegeMascotEmotion.EXCITED, listOf(WordSiegeMascotAction.DANCE, WordSiegeMascotAction.CHEER), sh("Yaşasın, oyun zamanı!", "Yay, playtime!"), "⚽")
-            else -> react(WordSiegeMascotEmotion.PROUD, listOf(WordSiegeMascotAction.STRETCH, WordSiegeMascotAction.SPARKLE), sh("Pırıl pırıl oldum!", "All sparkly now!"), "✨")
+            "love" -> react(WordSiegeMascotEmotion.HAPPY, listOf(WordSiegeMascotAction.NUZZLE, WordSiegeMascotAction.SWAY), sh("Sen en iyi dostumsun!", "You're my best friend!"), "💖")
+            "play" -> react(WordSiegeMascotEmotion.EXCITED, listOf(WordSiegeMascotAction.HOP, WordSiegeMascotAction.CLAP, WordSiegeMascotAction.SWAY), sh("Yaşasın, oyun zamanı!", "Yay, playtime!"), "⚽")
+            else -> react(WordSiegeMascotEmotion.PROUD, listOf(WordSiegeMascotAction.GROOM, WordSiegeMascotAction.SPARKLE, WordSiegeMascotAction.SWAY), sh("Pırıl pırıl oldum!", "All sparkly now!"), "✨")
         }
         scope.launch {
             val cared = runCatching { MascotRoomBackend.care(mascotId, kind) }.getOrNull()
@@ -164,7 +205,7 @@ internal fun MascotRoomDialog(onDismiss: () -> Unit) {
                 when (kind) { "love" -> loved = true; "play" -> played = true; else -> groomed = true }
 
                 if (it.dailyBonusAwarded) {
-                    delay(900)
+                    while (sceneRunning) delay(100L)
                     react(WordSiegeMascotEmotion.LAUGH, listOf(WordSiegeMascotAction.CHEER, WordSiegeMascotAction.DANCE), sh("Bugünkü bağımız tamam! Sana bir anı parçası!", "Today's bond is complete! A memory shard for you!"), "🌟")
                 }
             }
@@ -190,7 +231,7 @@ internal fun MascotRoomDialog(onDismiss: () -> Unit) {
                 if (fruit.price == 0) applesLeft = (3 - result.normalFruitUsedToday).coerceAtLeast(0)
                 react(
                     WordSiegeMascotEmotion.LAUGH,
-                    listOf(WordSiegeMascotAction.HOP, WordSiegeMascotAction.CLAP),
+                    listOf(WordSiegeMascotAction.FOOD_LOOK, WordSiegeMascotAction.EAT, WordSiegeMascotAction.HOP, WordSiegeMascotAction.SWAY),
                     if (fruit.price > 0) sh("Sihirli lezzet! Güç doldum!", "Magic flavour! Power up!") else sh("Nam nam, çok lezzetli!", "Nom nom, so tasty!"),
                     fruit.emoji,
                 )
@@ -246,6 +287,18 @@ internal fun MascotRoomDialog(onDismiss: () -> Unit) {
                         skin = skin,
                         onTap = { if (!loved) care("love") else react(WordSiegeMascotEmotion.HAPPY, listOf(WordSiegeMascotAction.NOD, WordSiegeMascotAction.HOP), sh("Hihi, gıdıklanıyorum!", "Hehe, that tickles!"), "💕") },
                     )
+                    if (sceneRunning && (action == WordSiegeMascotAction.FOOD_LOOK || action == WordSiegeMascotAction.EAT)) {
+                        Text(sceneEmoji, fontSize = 28.sp,
+                            modifier = Modifier.align(Alignment.BottomCenter).offset(x = 48.dp, y = (-60).dp)
+                                .graphicsLayer {
+                                    val travel = fruitTravel.value
+                                    translationX = -travel * 24.dp.toPx()
+                                    translationY = -travel * 16.dp.toPx()
+                                    scaleX = 1f - travel * .65f
+                                    scaleY = scaleX
+                                    alpha = 1f - travel
+                                })
+                    }
                     Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
                         floats.toList().forEach { f -> key(f.id) { RoomFloatingEmoji(f) { floats.remove(f) } } }
                     }
@@ -313,14 +366,7 @@ internal fun MascotRoomDialog(onDismiss: () -> Unit) {
 }
 
 /** How long a room move plays before the next one in a scene starts. */
-private fun roomMoveMillis(move: WordSiegeMascotAction): Long = when (move) {
-    WordSiegeMascotAction.HOP -> 1_150L
-    WordSiegeMascotAction.NOD -> 1_100L
-    WordSiegeMascotAction.SHRUG -> 1_600L
-    WordSiegeMascotAction.CLAP, WordSiegeMascotAction.CHEER -> 2_450L
-    WordSiegeMascotAction.SPARKLE -> 2_150L
-    else -> 3_000L
-}
+private fun roomMoveMillis(move: WordSiegeMascotAction): Long = mascotActionMillis(move)
 
 @Composable
 private fun RoomGlass(content: @Composable () -> Unit) {
