@@ -256,8 +256,8 @@ private fun ProfileStatTile(icon: androidx.compose.ui.graphics.vector.ImageVecto
             Icon(icon, null, tint = Hf.Gold, modifier = Modifier.size(26.dp))
             Spacer(Modifier.width(6.dp))
             Column {
-                Text(label, color = Hf.Ink, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(value, color = Hf.Ink, fontSize = 20.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text(label, color = Hf.TextMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(value, color = Hf.Text, fontSize = 20.sp, fontWeight = FontWeight.Black, maxLines = 1)
             }
         }
     }

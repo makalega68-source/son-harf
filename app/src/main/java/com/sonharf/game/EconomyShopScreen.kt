@@ -408,7 +408,7 @@ private fun VerifiedStoreProductCard(
             Column(Modifier.fillMaxWidth().padding(12.dp)) {
                 StoreProductPreview(item, Modifier.fillMaxWidth().height(104.dp))
                 Spacer(Modifier.height(10.dp))
-                Text(name, color = Hf.Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(name, color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(8.dp))
                 Box(Modifier.fillMaxWidth().height(1.dp).background(Hf.Gold.copy(alpha = .45f)))
                 Spacer(Modifier.height(10.dp))
@@ -435,11 +435,11 @@ private fun VerifiedStoreProductCard(
                             if (lockedByPro) {
                                 Icon(Icons.Rounded.WorkspacePremium, null, tint = Hf.GoldDeep, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("PRO", color = Hf.Ink, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                                Text("PRO", color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Black)
                             } else {
                                 HfCoin(20.dp)
                                 Spacer(Modifier.width(8.dp))
-                                Text(storeGrouped(item.diamondPrice), color = Hf.Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Text(storeGrouped(item.diamondPrice), color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }

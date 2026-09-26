@@ -1075,7 +1075,7 @@ private fun PanSiegeResultSide(label: String, score: Int, accent: Color, modifie
             Text(label, Modifier.fillMaxWidth().padding(vertical = 6.dp), color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
         }
         Surface(shape = RoundedCornerShape(14.dp), color = Hf.Ivory) {
-            Text("$score", Modifier.fillMaxWidth().padding(vertical = 8.dp), color = Hf.Ink, fontSize = 34.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+            Text("$score", Modifier.fillMaxWidth().padding(vertical = 8.dp), color = Hf.Text, fontSize = 34.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
         }
     }
 }

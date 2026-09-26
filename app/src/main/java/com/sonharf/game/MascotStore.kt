@@ -306,7 +306,7 @@ private fun MascotStoreCard(
                         onClick = onBuy,
                         enabled = !busy,
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Hf.Ivory, contentColor = Hf.Ink),
+                        colors = ButtonDefaults.buttonColors(containerColor = Hf.Ivory, contentColor = Hf.Text),
                     ) {
                         Text(sh("SATIN AL • ", "BUY • ") + offer.formattedPrice, fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }

@@ -1567,13 +1567,26 @@ private fun PremierArena(
                     if (!veryCompact) PremierWordTrail(words, language, isPro, meId)
                 }
             }
-            if (notice.isNotBlank()) {
-                Text(notice, color = PremierBoard.Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
-            }
-            if (myTurn && !preparing && (hintsLeft > 0 || room.isBot)) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.End) {
+            // One fixed-height strip for the notice and the hint chip: showing or hiding either never
+            // resizes the arena above, so the centre card stays still between turns.
+            val hintVisible = myTurn && !preparing && (hintsLeft > 0 || room.isBot)
+            Box(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+                if (notice.isNotBlank()) {
+                    Text(
+                        notice,
+                        color = PremierBoard.Muted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth(if (hintVisible) .6f else 1f),
+                    )
+                }
+                if (hintVisible) {
                     Surface(
                         onClick = { if (hintsLeft > 0) askHint() else buyHint() },
+                        modifier = Modifier.align(Alignment.CenterEnd),
                         shape = RoundedCornerShape(99.dp),
                         color = PremierBoard.Gold.copy(alpha = .18f),
                         border = BorderStroke(1.dp, PremierBoard.Gold.copy(alpha = .7f)),

@@ -447,58 +447,73 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
                         Text(sh("YENİLE", "RETRY"), color = Hf.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
                     }
                 }
-                else -> listOf(players.getOrNull(0), players.getOrNull(1), players.getOrNull(2)).forEachIndexed { index, player ->
-                    val medal = HomeMedals[index]
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(Color.White.copy(alpha = if (index == 0) .16f else .08f), RoundedCornerShape(14.dp))
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            Modifier.size(32.dp).background(Brush.verticalGradient(listOf(medal.first, medal.second)), CircleShape),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text("${index + 1}", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        if (player != null) {
-                            ProfilePhotoAvatarWithGender(
-                                avatarPath = player.avatarUrl,
-                                gender = null,
-                                name = player.username,
-                                size = 38.dp,
-                                accent = medal.first,
-                                visible = true,
-                            )
-                        } else {
-                            Box(Modifier.size(38.dp).background(Color.White.copy(alpha = .12f), CircleShape))
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            player?.username?.ifBlank { sh("Oyuncu", "Player") } ?: sh("Boş sıra", "Open spot"),
-                            modifier = Modifier.weight(1f),
-                            color = if (player != null) Color.White else Color.White.copy(alpha = .55f),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (player != null) {
-                            Surface(shape = Hf.PillShape, color = Hf.Gold) {
-                                Text(
-                                    "${player.rp} RP",
-                                    Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                    color = Hf.Ink,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Black,
-                                )
-                            }
-                        }
+                // Podium side by side: 2nd, 1st (raised, bigger), 3rd.
+                else -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(1, 0, 2).forEach { index ->
+                        HomePodiumSpot(index, players.getOrNull(index), Modifier.weight(1f))
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HomePodiumSpot(index: Int, player: WeeklyTopPlayerV210?, modifier: Modifier) {
+    val medal = HomeMedals[index]
+    val first = index == 0
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(contentAlignment = Alignment.BottomEnd) {
+            Box(
+                Modifier
+                    .size(if (first) 76.dp else 60.dp)
+                    .background(Brush.verticalGradient(listOf(medal.first, medal.second)), CircleShape)
+                    .padding(3.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (player != null) {
+                    ProfilePhotoAvatarWithGender(
+                        avatarPath = player.avatarUrl,
+                        gender = null,
+                        name = player.username,
+                        size = if (first) 70.dp else 54.dp,
+                        accent = medal.first,
+                        visible = true,
+                    )
+                } else {
+                    Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = .15f), CircleShape))
+                }
+            }
+            Box(
+                Modifier.size(24.dp).background(Brush.verticalGradient(listOf(medal.first, medal.second)), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("${index + 1}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            player?.username?.ifBlank { sh("Oyuncu", "Player") } ?: sh("Boş", "Open"),
+            color = if (player != null) Color.White else Color.White.copy(alpha = .5f),
+            fontSize = if (first) 15.sp else 13.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(4.dp))
+        // The step of the podium: tallest for the winner.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(if (first) 54.dp else if (index == 1) 40.dp else 30.dp)
+                .background(
+                    Brush.verticalGradient(listOf(medal.first.copy(alpha = .55f), medal.second.copy(alpha = .25f))),
+                    RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(player?.let { "${it.rp} RP" } ?: "—", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
         }
     }
 }

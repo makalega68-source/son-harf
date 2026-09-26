@@ -454,23 +454,24 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     }
 
     private fun perform(action: WordSiegeMascotAction, now: Long) {
+        // Moves play long and smooth, like animation, not short twitches.
         val duration = when (action) {
-            WordSiegeMascotAction.HOP -> 850L
-            WordSiegeMascotAction.DANCE -> 1_800L
-            WordSiegeMascotAction.STRETCH -> 2_300L
-            WordSiegeMascotAction.LOOK_AROUND -> 2_100L
-            WordSiegeMascotAction.NOD -> 800L
-            WordSiegeMascotAction.SPARKLE -> 1_300L
-            WordSiegeMascotAction.CHEER -> 1_500L
+            WordSiegeMascotAction.HOP -> 1_100L
+            WordSiegeMascotAction.DANCE -> 2_880L
+            WordSiegeMascotAction.STRETCH -> 3_680L
+            WordSiegeMascotAction.LOOK_AROUND -> 3_360L
+            WordSiegeMascotAction.NOD -> 1_050L
+            WordSiegeMascotAction.SPARKLE -> 2_080L
+            WordSiegeMascotAction.CHEER -> 2_400L
             WordSiegeMascotAction.LAND -> 520L
-            WordSiegeMascotAction.SHRUG -> 950L
-            WordSiegeMascotAction.PEEK -> 1_600L
+            WordSiegeMascotAction.SHRUG -> 1_520L
+            WordSiegeMascotAction.PEEK -> 2_560L
             WordSiegeMascotAction.FLINCH -> 520L
-            WordSiegeMascotAction.YAWN -> 2_300L
-            WordSiegeMascotAction.WAVE -> 1_700L
-            WordSiegeMascotAction.THINK -> 2_200L
-            WordSiegeMascotAction.POINT -> 1_900L
-            WordSiegeMascotAction.CLAP -> 1_500L
+            WordSiegeMascotAction.YAWN -> 3_680L
+            WordSiegeMascotAction.WAVE -> 2_720L
+            WordSiegeMascotAction.THINK -> 3_520L
+            WordSiegeMascotAction.POINT -> 3_040L
+            WordSiegeMascotAction.CLAP -> 2_400L
         }
         actionKind = action
         actionStartedAt = now

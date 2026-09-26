@@ -252,9 +252,9 @@ internal fun HfIvoryCard(
 ) {
     val border = if (selected) BorderStroke(3.dp, Hf.Green) else BorderStroke(1.5.dp, Hf.Gold)
     if (onClick != null) {
-        Surface(onClick = onClick, modifier = modifier, shape = shape, color = Hf.Ivory, contentColor = Hf.Ink, border = border, content = content)
+        Surface(onClick = onClick, modifier = modifier, shape = shape, color = Hf.Ivory, contentColor = Hf.Text, border = border, content = content)
     } else {
-        Surface(modifier = modifier, shape = shape, color = Hf.Ivory, contentColor = Hf.Ink, border = border, content = content)
+        Surface(modifier = modifier, shape = shape, color = Hf.Ivory, contentColor = Hf.Text, border = border, content = content)
     }
 }
 
@@ -463,7 +463,7 @@ internal fun HfConfirmDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(title, color = Hf.Ink, fontSize = 21.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                Text(title, color = Hf.Text, fontSize = 21.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                 Text(message, color = Color(0xFF56657A), fontSize = 14.sp, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(4.dp))
                 HfPrimaryButton(dismissText, onClick = onDismiss, trailingChevron = false, height = 50.dp, fontSize = 16.sp)

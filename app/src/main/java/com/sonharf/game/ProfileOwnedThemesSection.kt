@@ -269,7 +269,7 @@ private fun ProfileUseButton(active: Boolean, enabled: Boolean, onClick: () -> U
         Box(contentAlignment = Alignment.Center) {
             Text(
                 if (active) sh("Kullanılıyor", "Equipped") else sh("Kullan", "Equip"),
-                color = if (active) Hf.OnAccent else Hf.Ink,
+                color = if (active) Hf.OnAccent else Hf.Text,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -324,7 +324,7 @@ private fun OwnedStyleCard(
                     shape = Hf.PillShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Hf.Ivory,
-                        contentColor = Hf.Ink,
+                        contentColor = Hf.Text,
                         disabledContainerColor = if (active) Hf.Green else Hf.Disabled,
                         disabledContentColor = Hf.Text,
                     ),
