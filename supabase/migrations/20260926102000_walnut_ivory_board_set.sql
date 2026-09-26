@@ -20,19 +20,6 @@ as $function$
   end
 $function$;
 
-alter table public.shop_items drop constraint if exists shop_items_runtime_sale_guard_v1;
-alter table public.shop_items add constraint shop_items_runtime_sale_guard_v1
-check (
-  active = false
-  or (kind = 'game_theme' and id in ('theme_black','theme_walnut_ivory'))
-  or (kind = 'keyboard_theme' and id in (
-    'keyboard_crystal','keyboard_obsidian','keyboard_midnight','keyboard_black_gold','keyboard_premium_white'
-  ))
-  or (kind = 'name_style' and id in (
-    'name_cyan','name_sapphire','name_amethyst','name_aurelia'
-  ))
-);
-
 insert into public.shop_items (
   id, kind, name_tr, name_en, description_tr, description_en,
   diamond_price, vip_only, active, sort_order
