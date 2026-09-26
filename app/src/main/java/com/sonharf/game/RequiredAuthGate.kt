@@ -10,6 +10,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MarkEmailUnread
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Email
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +34,10 @@ import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.status.SessionStatus
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
+import android.content.Context
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
@@ -37,6 +48,28 @@ import kotlinx.serialization.json.put
 
 fun hasVerifiedMembershipSession(): Boolean =
     runCatching { SupabaseProvider.client.auth.currentUserOrNull()?.email?.isNotBlank() == true }.getOrDefault(false)
+
+/**
+ * Restores the player's session at startup so a signed-in player goes straight into the game.
+ * The stored session loads asynchronously, so this waits for it first; a session that could not
+ * be refreshed (e.g. offline) still counts, and remembered credentials allow a silent re-login.
+ */
+suspend fun restoreMembershipSession(context: Context): Boolean {
+    if (!SupabaseProvider.configured) return false
+    val auth = SupabaseProvider.client.auth
+    withTimeoutOrNull(5_000L) { auth.sessionStatus.first { it !is SessionStatus.Initializing } }
+    if (hasVerifiedMembershipSession()) return true
+    if (auth.currentSessionOrNull()?.user?.email?.isNotBlank() == true) return true
+    if (!SonHarfPreferences.rememberLogin(context)) return false
+    val saved = RememberedCredentialVault.load(context) ?: return false
+    return runCatching {
+        auth.signInWith(Email) {
+            this.email = saved.email
+            this.password = saved.password
+        }
+        hasVerifiedMembershipSession()
+    }.getOrDefault(false)
+}
 
 @Serializable
 private data class AuthIdentityProfile(
@@ -53,27 +86,29 @@ private data class AuthIdentityProfile(
  * Profil teması yüklenmeden önce sabit token kullanılması ilk karede renk sıçramasını önler.
  */
 private object AuthUi {
-    val Background = Color(0xFF071714)
-    val BackgroundTop = Color(0xFF0B211C)
-    val Surface = Color(0xFF0E2521)
-    val SurfaceSoft = Color(0xFF14312B)
-    val SurfaceRaised = Color(0xFF1B3B33)
-    val Modal = Color(0xFF102923)
-    val Primary = Color(0xFF3FC486)
-    val PrimarySoft = Color(0xFF173C31)
-    val SoftBlue = Color(0xFFC9A552)
-    val Turquoise = Color(0xFF55CC91)
-    val Lavender = Color(0xFFB99445)
-    val Sand = Color(0xFFD1AD58)
-    val Text = Color(0xFFF4F7F4)
-    val Muted = Color(0xFF9DB0A9)
-    val Border = Color(0xFF315148)
-    val BorderSoft = Color(0xFF29473F)
-    val Success = Color(0xFF45C98B)
-    val SuccessSoft = Color(0xFF173C31)
-    val Warning = Color(0xFFD5A34F)
-    val WarningSoft = Color(0xFF3A321F)
-    val Error = Color(0xFFC94C4C)
+    val Background = Color(0xFFE6ECF2)
+    val BackgroundTop = Color(0xFFF3F6F9)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceSoft = Color(0xFFF3F6F9)
+    val SurfaceRaised = Color(0xFFEAF0F5)
+    val Modal = Color(0xFFFFFFFF)
+    val Primary = Color(0xFF3E9F4D)
+    val PrimarySoft = Color(0xFFE1F2E3)
+    val SoftBlue = Color(0xFF5DADE2)
+    val Turquoise = Color(0xFF52B360)
+    val Lavender = Color(0xFFE0A82E)
+    val Sand = Color(0xFFF7E3A6)
+    val Text = Color(0xFF243142)
+    val Muted = Color(0xFF6B7A8C)
+    val Border = Color(0xFFD2DBE5)
+    val BorderSoft = Color(0xFFE3E9EF)
+    val Success = Color(0xFF3E9F4D)
+    val SuccessSoft = Color(0xFFE1F2E3)
+    val Warning = Color(0xFFE0A82E)
+    val WarningSoft = Color(0xFFFFF3D6)
+    val Error = Color(0xFFD0514A)
+    val Ivory = Color(0xFFFFFFFF)
+    val Ink = Color(0xFF4A3217)
 }
 
 private suspend fun currentIdentityProfile(): AuthIdentityProfile? {
@@ -95,7 +130,9 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     val rememberedCredential = remember {
         if (SonHarfPreferences.rememberLogin(context)) RememberedCredentialVault.load(context) else null
     }
-    var register by remember { mutableStateOf(true) }
+    // A device that has signed in before starts on "sign in"; new players start on "register".
+    var register by remember { mutableStateOf(rememberedCredential == null && SonHarfPreferences.rememberedEmail(context).isBlank()) }
+    var uiLanguage by remember { mutableStateOf(SonHarfUiState.language) }
     var displayName by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
     var email by remember {
@@ -105,13 +142,11 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     var password2 by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var showPassword2 by remember { mutableStateOf(false) }
-    var rememberMe by remember {
-        mutableStateOf(SonHarfPreferences.rememberLogin(context) || rememberedCredential != null)
-    }
+    // Staying signed in is the default: one login, then the app icon opens the game directly.
+    var rememberMe by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var success by remember { mutableStateOf(false) }
-    var showForm by remember { mutableStateOf(false) }
     var pendingVerificationEmail by remember { mutableStateOf<String?>(null) }
     var otpCode by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
@@ -155,6 +190,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 }
                 SonHarfPreferences.clearPendingRegistration(context, targetEmail)
                 SonHarfPreferences.setRememberLogin(context, true, targetEmail)
+                if (password.length >= 6) RememberedCredentialVault.save(context, targetEmail, password)
             }.onSuccess {
                 success = true
                 notice = sh("E-posta doğrulandı. Hoş geldin!", "Email verified. Welcome!")
@@ -193,15 +229,15 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
 
     val authColors = lightColorScheme(
         primary = AuthUi.Primary,
-        onPrimary = Color.White,
+        onPrimary = AuthUi.Ivory,
         primaryContainer = AuthUi.PrimarySoft,
         onPrimaryContainer = AuthUi.Text,
         secondary = AuthUi.Turquoise,
-        onSecondary = Color.White,
+        onSecondary = AuthUi.Ivory,
         secondaryContainer = AuthUi.SurfaceSoft,
         onSecondaryContainer = AuthUi.Primary,
         tertiary = AuthUi.Lavender,
-        onTertiary = Color.White,
+        onTertiary = AuthUi.Ivory,
         background = AuthUi.Background,
         surface = AuthUi.Surface,
         surfaceVariant = AuthUi.SurfaceSoft,
@@ -212,6 +248,115 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         outlineVariant = AuthUi.BorderSoft,
         error = AuthUi.Error,
     )
+
+    fun submit() {
+        if (busy) return
+        if (!email.contains("@") || password.length < 6) { notice = sh("Geçerli e-posta ve en az 6 karakterli şifre gir.", "Enter a valid email and a password of at least 6 characters."); return }
+        if (register && displayName.trim().length < 2) { notice = sh("Oyuncu adı en az 2 karakter olmalı.", "Player name must be at least 2 characters."); return }
+        if (register && gender.isBlank()) { notice = sh("Kadın, Erkek veya Diğer seçeneklerinden birini seç.", "Select Female, Male, or Other."); return }
+        if (register && password != password2) { notice = sh("Şifreler aynı değil.", "Passwords do not match."); return }
+        scope.launch {
+            busy = true; notice = ""; success = false
+            if (register) {
+                val targetEmail = email.trim()
+
+                // First try the credentials. This prevents Supabase's
+                // repeated-signup privacy response from being mistaken
+                // for a newly sent verification email.
+                val existingLogin = runCatching {
+                    SupabaseProvider.client.auth.signOut()
+                    SupabaseProvider.client.auth.signInWith(Email) {
+                        this.email = targetEmail
+                        this.password = password
+                    }
+                    check(hasVerifiedMembershipSession()) { "Email not confirmed" }
+                }
+
+                if (existingLogin.isSuccess) {
+                    val profile = currentIdentityProfile()
+                    if (profile != null && !profile.identityLocked) {
+                        val pendingName = SonHarfPreferences.pendingRegistrationName(context, targetEmail)
+                        val pendingGender = SonHarfPreferences.pendingRegistrationGender(context, targetEmail)
+                        if (pendingName != null && pendingGender != null) lockIdentity(pendingName, pendingGender)
+                    }
+                    SonHarfPreferences.clearPendingRegistration(context, targetEmail)
+                    SonHarfPreferences.setRememberLogin(context, true, targetEmail)
+                    RememberedCredentialVault.save(context, targetEmail, password)
+                    success = true
+                    notice = sh("Hesabın zaten vardı; giriş yapıldı.", "Your account already existed; you were signed in.")
+                    busy = false
+                    onAuthenticated()
+                    return@launch
+                }
+
+                val existingError = existingLogin.exceptionOrNull()?.message.orEmpty()
+                if ("Email not confirmed" in existingError || "email_not_confirmed" in existingError) {
+                    runCatching {
+                        SupabaseProvider.client.auth.signOut()
+                        SupabaseProvider.client.auth.resendEmail(
+                            type = OtpType.Email.SIGNUP,
+                            email = targetEmail,
+                            redirectUrl = "sonharf://auth",
+                        )
+                    }.onSuccess {
+                        SonHarfPreferences.rememberPendingRegistration(context, targetEmail, displayName, gender)
+                        success = true
+                        pendingVerificationEmail = targetEmail
+                        otpCode = ""
+                        notice = sh("Doğrulama e-postası yeniden gönderildi. Gelen kutusu ve spam klasörünü kontrol et.", "The verification email was sent again. Check your inbox and spam folder.")
+                    }.onFailure {
+                        notice = friendly(it.message.orEmpty())
+                    }
+                } else {
+                    runCatching {
+                        SupabaseProvider.client.auth.signOut()
+                        SupabaseProvider.client.auth.signUpWith(Email, redirectUrl = "sonharf://auth") {
+                            this.email = targetEmail
+                            this.password = password
+                            data = buildJsonObject {
+                                put("display_name", displayName.trim())
+                                put("gender", gender)
+                            }
+                        }
+                    }.onSuccess { newUser ->
+                        if (newUser == null || newUser.identities.isNullOrEmpty()) {
+                            success = false
+                            notice = friendly("existing_confirmed_account")
+                            register = false
+                        } else {
+                            SonHarfPreferences.rememberPendingRegistration(context, targetEmail, displayName, gender)
+                            success = true
+                            pendingVerificationEmail = targetEmail
+                            otpCode = ""
+                            notice = sh("Doğrulama e-postası gönderildi. Maildeki doğrulama bağlantısına dokun veya 6 haneli kodu buraya gir.", "Verification email sent. Tap the verification link or enter the 6-digit code here.")
+                        }
+                    }.onFailure {
+                        notice = friendly(it.message.orEmpty())
+                    }
+                }
+            } else {
+                runCatching {
+                    SupabaseProvider.client.auth.signOut()
+                    SupabaseProvider.client.auth.signInWith(Email) { this.email = email.trim(); this.password = password }
+                    check(hasVerifiedMembershipSession()) { "Email not confirmed" }
+                    val profile = currentIdentityProfile()
+                    if (profile != null && !profile.identityLocked) {
+                        val pendingName = SonHarfPreferences.pendingRegistrationName(context, email)
+                        val pendingGender = SonHarfPreferences.pendingRegistrationGender(context, email)
+                        if (pendingName != null && pendingGender != null) lockIdentity(pendingName, pendingGender)
+                    }
+                    SonHarfPreferences.clearPendingRegistration(context, email)
+                    SonHarfPreferences.setRememberLogin(context, rememberMe, email)
+                    if (rememberMe) {
+                        RememberedCredentialVault.save(context, email, password)
+                    } else {
+                        RememberedCredentialVault.clear(context)
+                    }
+                }.onSuccess { onAuthenticated() }.onFailure { notice = friendly(it.message.orEmpty()) }
+            }
+            busy = false
+        }
+    }
 
     MaterialTheme(colorScheme = authColors) {
         Box(
@@ -240,260 +385,178 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 Modifier
                     .size(360.dp)
                     .offset(x = 170.dp, y = (-105).dp)
-                    .background(
-                        Brush.radialGradient(
-                            listOf(
-                                AuthUi.Primary.copy(alpha = .13f),
-                                Color.Transparent,
-                            )
-                        ),
-                        CircleShape,
-                    )
+                    .background(Brush.radialGradient(listOf(AuthUi.Primary.copy(alpha = .16f), Color.Transparent)), CircleShape)
             )
             Box(
                 Modifier
                     .size(310.dp)
                     .offset(x = (-155).dp, y = 355.dp)
-                    .background(
-                        Brush.radialGradient(
-                            listOf(
-                                AuthUi.Lavender.copy(alpha = .09f),
-                                Color.Transparent,
-                            )
-                        ),
-                        CircleShape,
-                    )
+                    .background(Brush.radialGradient(listOf(AuthUi.Lavender.copy(alpha = .12f), Color.Transparent)), CircleShape)
             )
-            Box(
-                Modifier
-                    .fillMaxWidth(.78f)
-                    .height(120.dp)
-                    .align(Alignment.Center)
-                    .offset(y = (-75).dp)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                AuthUi.SoftBlue.copy(alpha = .045f),
-                                AuthUi.Lavender.copy(alpha = .035f),
-                                Color.Transparent,
-                            )
-                        ),
-                        RoundedCornerShape(42.dp),
-                    )
-            )
-            if (!showForm) {
-                Column(
-                    Modifier.fillMaxSize().padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Spacer(Modifier.weight(.42f))
-                    Text(
-                        "KELİME TAHTI",
-                        color = AuthUi.Text,
-                        fontSize = 27.sp,
-                        fontWeight = FontWeight.Black,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(5.dp))
-                    Text(
-                        "WORD BOARD",
-                        color = AuthUi.Sand,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.5.sp,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Text(
-                        sh("Kelime oyunu • taktik alan savaşı • sosyal rekabet", "Word game • tactical territory battle • social competition"),
-                        color = AuthUi.Primary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(58.dp))
-                    Button(
-                        onClick = { register = false; notice = ""; showForm = true },
-                        modifier = Modifier.fillMaxWidth(.90f).height(70.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = AuthUi.Primary,
-                            contentColor = Color.White,
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
-                    ) {
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Text(sh("Giriş Yap", "Sign In"), fontWeight = FontWeight.Bold, fontSize = 23.sp)
-                            Icon(Icons.Rounded.ChevronRight, null, Modifier.align(Alignment.CenterEnd).size(32.dp))
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedButton(
-                        onClick = { register = true; notice = ""; showForm = true },
-                        modifier = Modifier.fillMaxWidth(.90f).height(68.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        border = BorderStroke(1.dp, AuthUi.Border),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = AuthUi.Surface.copy(alpha = .94f),
-                            contentColor = AuthUi.SoftBlue,
-                        ),
-                    ) {
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Text(sh("Kayıt Ol", "Register"), fontWeight = FontWeight.Bold, fontSize = 23.sp)
-                            Icon(Icons.Rounded.ChevronRight, null, Modifier.align(Alignment.CenterEnd).size(32.dp))
-                        }
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Spacer(Modifier.height(28.dp))
+            Column(
+                Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                // Language can still be switched here; the email screen is the only step.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    AuthLanguagePill(language = uiLanguage, onLanguage = { next ->
+                        uiLanguage = next
+                        SonHarfUiState.language = next
+                        SonHarfPreferences.setLanguage(context, next)
+                    })
                 }
-            } else {
-                Column(
-                    Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 18.dp, vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Spacer(Modifier.height(24.dp))
-                    TextButton(
-                        onClick = { showForm = false; notice = ""; success = false },
-                        modifier = Modifier.align(Alignment.Start),
+                AuthBrandHeader()
+                if (pendingVerificationEmail != null) {
+                    EmailVerificationCard(
+                        email = pendingVerificationEmail.orEmpty(),
+                        otpCode = otpCode,
+                        onOtpChange = { otpCode = it.filter(Char::isDigit).take(6) },
+                        busy = busy,
+                        notice = notice,
+                        success = success,
+                        onVerify = ::verifyPendingEmail,
+                        onResend = ::resendPendingCode,
+                        onChangeEmail = {
+                            pendingVerificationEmail = null
+                            otpCode = ""
+                            notice = ""
+                            success = false
+                            register = true
+                        },
+                    )
+                } else {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = AuthUi.Surface.copy(alpha = .97f)),
+                        shape = RoundedCornerShape(28.dp),
+                        border = BorderStroke(1.dp, AuthUi.Border),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                     ) {
-                        Text("‹ " + sh("Giriş ekranına dön", "Back to login"), color = AuthUi.Primary, fontWeight = FontWeight.Bold)
-                    }
-                    if (pendingVerificationEmail != null) {
-                        EmailVerificationCard(
-                            email = pendingVerificationEmail.orEmpty(),
-                            otpCode = otpCode,
-                            onOtpChange = { otpCode = it.filter(Char::isDigit).take(6) },
-                            busy = busy,
-                            notice = notice,
-                            success = success,
-                            onVerify = ::verifyPendingEmail,
-                            onResend = ::resendPendingCode,
-                            onChangeEmail = {
-                                pendingVerificationEmail = null
-                                otpCode = ""
-                                notice = ""
-                                success = false
-                                register = true
-                            },
-                        )
-                    } else {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = AuthUi.Surface.copy(alpha = .97f)),
-                            shape = RoundedCornerShape(24.dp),
-                            border = BorderStroke(1.dp, AuthUi.Border),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
-                        ) {
-                            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    FilterChip(
-                                        selected = register,
-                                        onClick = { register = true; notice = "" },
-                                        label = { Text(sh("ÜYE OL", "REGISTER"), fontSize = 15.sp) },
-                                        modifier = Modifier.weight(1f),
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            containerColor = AuthUi.Surface,
-                                            labelColor = AuthUi.Muted,
-                                            selectedContainerColor = AuthUi.PrimarySoft,
-                                            selectedLabelColor = AuthUi.Primary,
-                                        ),
-                                        border = FilterChipDefaults.filterChipBorder(
-                                            enabled = true,
-                                            selected = register,
-                                            borderColor = AuthUi.Border,
-                                            selectedBorderColor = AuthUi.Primary.copy(alpha = .45f),
-                                        ),
-                                    )
-                                    FilterChip(
-                                        selected = !register,
-                                        onClick = { register = false; notice = "" },
-                                        label = { Text(sh("GİRİŞ YAP", "SIGN IN"), fontSize = 15.sp) },
-                                        modifier = Modifier.weight(1f),
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            containerColor = AuthUi.Surface,
-                                            labelColor = AuthUi.Muted,
-                                            selectedContainerColor = AuthUi.SurfaceSoft,
-                                            selectedLabelColor = AuthUi.Turquoise,
-                                        ),
-                                        border = FilterChipDefaults.filterChipBorder(
-                                            enabled = true,
-                                            selected = !register,
-                                            borderColor = AuthUi.Border,
-                                            selectedBorderColor = AuthUi.Turquoise.copy(alpha = .45f),
-                                        ),
-                                    )
-                                }
-                                if (register) {
-                                    OutlinedTextField(displayName, { displayName = it.take(24) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(sh("Oyuncu adı", "Player name")) })
-                                    Text(sh("Bu ad oyuncu profilinde kalıcı olarak görünür.", "This name will remain on your player profile."), color = authColors.onSurfaceVariant, fontSize = 12.sp)
-                                    Text(sh("Profil seçimi", "Profile selection"), color = authColors.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        listOf("erkek" to sh("Erkek", "Male"), "kadın" to sh("Kadın", "Female"), "diğer" to sh("Diğer", "Other")).forEach { (value, label) ->
-                                            val selected = gender == value
-                                            FilterChip(
-                                                selected = selected,
-                                                onClick = { gender = value },
-                                                label = { Text(label, fontSize = 14.sp) },
-                                                modifier = Modifier.weight(1f),
-                                                colors = FilterChipDefaults.filterChipColors(
-                                                    containerColor = AuthUi.Surface,
-                                                    labelColor = AuthUi.Muted,
-                                                    selectedContainerColor = AuthUi.PrimarySoft,
-                                                    selectedLabelColor = AuthUi.Primary,
-                                                ),
-                                                border = FilterChipDefaults.filterChipBorder(
-                                                    enabled = true,
-                                                    selected = selected,
-                                                    borderColor = AuthUi.Border,
-                                                    selectedBorderColor = AuthUi.Primary.copy(alpha = .45f),
-                                                ),
-                                            )
+                        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            // Segmented switch between signing in and registering.
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(AuthUi.SurfaceSoft, RoundedCornerShape(18.dp))
+                                    .padding(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                listOf(false to sh("GİRİŞ YAP", "SIGN IN"), true to sh("ÜYE OL", "REGISTER")).forEach { (isRegister, label) ->
+                                    val selected = register == isRegister
+                                    Surface(
+                                        onClick = { register = isRegister; notice = "" },
+                                        modifier = Modifier.weight(1f).height(44.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = if (selected) AuthUi.Surface else Color.Transparent,
+                                        shadowElevation = if (selected) 3.dp else 0.dp,
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(label, color = if (selected) AuthUi.Primary else AuthUi.Muted, fontWeight = FontWeight.Black, fontSize = 15.sp)
                                         }
                                     }
                                 }
-                                OutlinedTextField(email, { email = it.trim().take(120) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(sh("E-posta", "Email")) })
+                            }
+                            Text(
+                                if (register) sh("Yeni hesabını oluştur; bir kez gir, hep hatırlansın.", "Create your account; sign in once and stay signed in.")
+                                else sh("Tekrar hoş geldin! Bir kez giriş yap, uygulama seni hatırlar.", "Welcome back! Sign in once and the app remembers you."),
+                                color = AuthUi.Muted,
+                                fontSize = 13.sp,
+                            )
+                            if (register) {
                                 OutlinedTextField(
-                                    password,
-                                    { password = it.take(64) },
+                                    displayName,
+                                    { displayName = it.take(24) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
-                                    label = { Text(sh("Şifre", "Password")) },
-                                    visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    leadingIcon = { Icon(Icons.Rounded.Person, null, tint = AuthUi.Primary) },
+                                    label = { Text(sh("Oyuncu adı", "Player name")) },
+                                )
+                                Text(sh("Bu ad oyuncu profilinde kalıcı olarak görünür.", "This name will remain on your player profile."), color = authColors.onSurfaceVariant, fontSize = 12.sp)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    listOf("erkek" to sh("Erkek", "Male"), "kadın" to sh("Kadın", "Female"), "diğer" to sh("Diğer", "Other")).forEach { (value, label) ->
+                                        val selected = gender == value
+                                        FilterChip(
+                                            selected = selected,
+                                            onClick = { gender = value },
+                                            label = { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold) } },
+                                            modifier = Modifier.weight(1f).height(44.dp),
+                                            shape = RoundedCornerShape(14.dp),
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                containerColor = AuthUi.Surface,
+                                                labelColor = AuthUi.Muted,
+                                                selectedContainerColor = AuthUi.PrimarySoft,
+                                                selectedLabelColor = AuthUi.Primary,
+                                            ),
+                                            border = FilterChipDefaults.filterChipBorder(
+                                                enabled = true,
+                                                selected = selected,
+                                                borderColor = AuthUi.Border,
+                                                selectedBorderColor = AuthUi.Primary.copy(alpha = .45f),
+                                            ),
+                                        )
+                                    }
+                                }
+                            }
+                            OutlinedTextField(
+                                email,
+                                { email = it.trim().take(120) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                shape = RoundedCornerShape(16.dp),
+                                leadingIcon = { Icon(Icons.Rounded.Email, null, tint = AuthUi.Primary) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                                label = { Text(sh("E-posta", "Email")) },
+                            )
+                            OutlinedTextField(
+                                password,
+                                { password = it.take(64) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                shape = RoundedCornerShape(16.dp),
+                                leadingIcon = { Icon(Icons.Rounded.Lock, null, tint = AuthUi.Primary) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = if (register) ImeAction.Next else ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { submit() }),
+                                label = { Text(sh("Şifre", "Password")) },
+                                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                                trailingIcon = {
+                                    TextButton(onClick = { showPassword = !showPassword }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                                        Text(if (showPassword) sh("GİZLE", "HIDE") else sh("GÖSTER", "SHOW"), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                    }
+                                },
+                            )
+                            if (register) {
+                                OutlinedTextField(
+                                    password2,
+                                    { password2 = it.take(64) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(16.dp),
+                                    leadingIcon = { Icon(Icons.Rounded.Lock, null, tint = AuthUi.Primary) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                                    keyboardActions = KeyboardActions(onDone = { submit() }),
+                                    label = { Text(sh("Şifre tekrar", "Confirm password")) },
+                                    visualTransformation = if (showPassword2) VisualTransformation.None else PasswordVisualTransformation(),
                                     trailingIcon = {
-                                        TextButton(onClick = { showPassword = !showPassword }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                            Text(if (showPassword) sh("GİZLE", "HIDE") else sh("GÖSTER", "SHOW"), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                        TextButton(onClick = { showPassword2 = !showPassword2 }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                                            Text(if (showPassword2) sh("GİZLE", "HIDE") else sh("GÖSTER", "SHOW"), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                                         }
                                     },
                                 )
-                                if (register) {
-                                    OutlinedTextField(
-                                        password2,
-                                        { password2 = it.take(64) },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        singleLine = true,
-                                        label = { Text(sh("Şifre tekrar", "Confirm password")) },
-                                        visualTransformation = if (showPassword2) VisualTransformation.None else PasswordVisualTransformation(),
-                                        trailingIcon = {
-                                            TextButton(onClick = { showPassword2 = !showPassword2 }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                                Text(if (showPassword2) sh("GİZLE", "HIDE") else sh("GÖSTER", "SHOW"), fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                                            }
-                                        },
-                                    )
-                                } else {
-                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Checkbox(
-                                                checked = rememberMe,
-                                                onCheckedChange = {
-                                                    rememberMe = it
-                                                    if (!it) {
-                                                        RememberedCredentialVault.clear(context)
-                                                        SonHarfPreferences.setRememberLogin(context, false)
-                                                    }
-                                                },
-                                            )
-                                            Text(sh("Bu cihazda beni hatırla", "Remember me on this device"), color = authColors.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                                        }
+                            } else {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                        Checkbox(
+                                            checked = rememberMe,
+                                            onCheckedChange = {
+                                                rememberMe = it
+                                                if (!it) {
+                                                    RememberedCredentialVault.clear(context)
+                                                    SonHarfPreferences.setRememberLogin(context, false)
+                                                }
+                                            },
+                                        )
+                                        Text(sh("Beni hatırla", "Remember me"), color = authColors.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                     }
                                     TextButton(
                                         onClick = {
@@ -522,143 +585,78 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                             }
                                         },
                                         enabled = !busy,
-                                        modifier = Modifier.align(Alignment.End),
                                     ) {
-                                        Text(sh("Şifremi unuttum", "Forgot password"), color = AuthUi.Primary, fontWeight = FontWeight.Bold)
+                                        Text(sh("Şifremi unuttum", "Forgot password"), color = AuthUi.Primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                     }
                                 }
-                                Button(
-                                    onClick = {
-                                        if (busy) return@Button
-                                        if (!email.contains("@") || password.length < 6) { notice = sh("Geçerli e-posta ve en az 6 karakterli şifre gir.", "Enter a valid email and a password of at least 6 characters."); return@Button }
-                                        if (register && displayName.trim().length < 2) { notice = sh("Oyuncu adı en az 2 karakter olmalı.", "Player name must be at least 2 characters."); return@Button }
-                                        if (register && gender.isBlank()) { notice = sh("Kadın, Erkek veya Diğer seçeneklerinden birini seç.", "Select Female, Male, or Other."); return@Button }
-                                        if (register && password != password2) { notice = sh("Şifreler aynı değil.", "Passwords do not match."); return@Button }
-                                        scope.launch {
-                                            busy = true; notice = ""; success = false
-                                            if (register) {
-                                                val targetEmail = email.trim()
-
-                                                // First try the credentials. This prevents Supabase's
-                                                // repeated-signup privacy response from being mistaken
-                                                // for a newly sent verification email.
-                                                val existingLogin = runCatching {
-                                                    SupabaseProvider.client.auth.signOut()
-                                                    SupabaseProvider.client.auth.signInWith(Email) {
-                                                        this.email = targetEmail
-                                                        this.password = password
-                                                    }
-                                                    check(hasVerifiedMembershipSession()) { "Email not confirmed" }
-                                                }
-
-                                                if (existingLogin.isSuccess) {
-                                                    val profile = currentIdentityProfile()
-                                                    if (profile != null && !profile.identityLocked) {
-                                                        val pendingName = SonHarfPreferences.pendingRegistrationName(context, targetEmail)
-                                                        val pendingGender = SonHarfPreferences.pendingRegistrationGender(context, targetEmail)
-                                                        if (pendingName != null && pendingGender != null) lockIdentity(pendingName, pendingGender)
-                                                    }
-                                                    SonHarfPreferences.clearPendingRegistration(context, targetEmail)
-                                                    SonHarfPreferences.setRememberLogin(context, true, targetEmail)
-                                                    success = true
-                                                    notice = sh("Hesabın zaten vardı; giriş yapıldı.", "Your account already existed; you were signed in.")
-                                                    busy = false
-                                                    onAuthenticated()
-                                                    return@launch
-                                                }
-
-                                                val existingError = existingLogin.exceptionOrNull()?.message.orEmpty()
-                                                if ("Email not confirmed" in existingError || "email_not_confirmed" in existingError) {
-                                                    runCatching {
-                                                        SupabaseProvider.client.auth.signOut()
-                                                        SupabaseProvider.client.auth.resendEmail(
-                                                            type = OtpType.Email.SIGNUP,
-                                                            email = targetEmail,
-                                                            redirectUrl = "sonharf://auth",
-                                                        )
-                                                    }.onSuccess {
-                                                        SonHarfPreferences.rememberPendingRegistration(context, targetEmail, displayName, gender)
-                                                        success = true
-                                                        pendingVerificationEmail = targetEmail
-                                                        otpCode = ""
-                                                        notice = sh("Doğrulama e-postası yeniden gönderildi. Gelen kutusu ve spam klasörünü kontrol et.", "The verification email was sent again. Check your inbox and spam folder.")
-                                                    }.onFailure {
-                                                        notice = friendly(it.message.orEmpty())
-                                                    }
-                                                } else {
-                                                    runCatching {
-                                                        SupabaseProvider.client.auth.signOut()
-                                                        SupabaseProvider.client.auth.signUpWith(Email, redirectUrl = "sonharf://auth") {
-                                                            this.email = targetEmail
-                                                            this.password = password
-                                                            data = buildJsonObject {
-                                                                put("display_name", displayName.trim())
-                                                                put("gender", gender)
-                                                            }
-                                                        }
-                                                    }.onSuccess { newUser ->
-                                                        if (newUser == null || newUser.identities.isNullOrEmpty()) {
-                                                            success = false
-                                                            notice = friendly("existing_confirmed_account")
-                                                            register = false
-                                                        } else {
-                                                            SonHarfPreferences.rememberPendingRegistration(context, targetEmail, displayName, gender)
-                                                            success = true
-                                                            pendingVerificationEmail = targetEmail
-                                                            otpCode = ""
-                                                            notice = sh("Doğrulama e-postası gönderildi. Maildeki doğrulama bağlantısına dokun veya 6 haneli kodu buraya gir.", "Verification email sent. Tap the verification link or enter the 6-digit code here.")
-                                                        }
-                                                    }.onFailure {
-                                                        notice = friendly(it.message.orEmpty())
-                                                    }
-                                                }
-                                            } else {
-                                                runCatching {
-                                                    SupabaseProvider.client.auth.signOut()
-                                                    SupabaseProvider.client.auth.signInWith(Email) { this.email = email.trim(); this.password = password }
-                                                    check(hasVerifiedMembershipSession()) { "Email not confirmed" }
-                                                    val profile = currentIdentityProfile()
-                                                    if (profile != null && !profile.identityLocked) {
-                                                        val pendingName = SonHarfPreferences.pendingRegistrationName(context, email)
-                                                        val pendingGender = SonHarfPreferences.pendingRegistrationGender(context, email)
-                                                        if (pendingName != null && pendingGender != null) lockIdentity(pendingName, pendingGender)
-                                                    }
-                                                    SonHarfPreferences.clearPendingRegistration(context, email)
-                                                    SonHarfPreferences.setRememberLogin(context, rememberMe, email)
-                                                    if (rememberMe) {
-                                                        RememberedCredentialVault.save(context, email, password)
-                                                    } else {
-                                                        RememberedCredentialVault.clear(context)
-                                                    }
-                                                }.onSuccess { onAuthenticated() }.onFailure { notice = friendly(it.message.orEmpty()) }
-                                            }
-                                            busy = false
-                                        }
-                                    },
-                                    enabled = !busy,
-                                    modifier = Modifier.fillMaxWidth().height(58.dp),
-                                    shape = RoundedCornerShape(18.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (register) AuthUi.Turquoise else AuthUi.Primary,
-                                        contentColor = Color.White,
-                                    ),
-                                ) {
+                            }
+                            Button(
+                                onClick = { submit() },
+                                enabled = !busy,
+                                modifier = Modifier.fillMaxWidth().height(58.dp),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (register) AuthUi.Turquoise else AuthUi.Primary,
+                                    contentColor = AuthUi.Ivory,
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
+                            ) {
+                                if (busy) {
+                                    CircularProgressIndicator(Modifier.size(22.dp), color = AuthUi.Ivory, strokeWidth = 2.5.dp)
+                                } else {
                                     Text(
-                                        if (busy) "…" else if (register) sh("KAYIT OL", "REGISTER") else sh("GİRİŞ YAP", "SIGN IN"),
+                                        if (register) sh("KAYIT OL", "REGISTER") else sh("GİRİŞ YAP", "SIGN IN"),
                                         fontWeight = FontWeight.Black,
                                         fontSize = 17.sp,
                                     )
+                                    Spacer(Modifier.width(6.dp))
+                                    Icon(Icons.Rounded.ChevronRight, null, Modifier.size(24.dp))
                                 }
-                                if (notice.isNotBlank()) {
-                                    Surface(color = if (success) AuthUi.SuccessSoft else AuthUi.WarningSoft, shape = RoundedCornerShape(14.dp)) {
-                                        Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = authColors.onSurface, fontSize = 14.sp, textAlign = TextAlign.Center)
-                                    }
+                            }
+                            if (notice.isNotBlank()) {
+                                Surface(color = if (success) AuthUi.SuccessSoft else AuthUi.WarningSoft, shape = RoundedCornerShape(14.dp)) {
+                                    Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = authColors.onSurface, fontSize = 14.sp, textAlign = TextAlign.Center)
                                 }
                             }
                         }
                     }
-                    Spacer(Modifier.height(24.dp))
+                    Text(
+                        sh("Bir kez giriş yaptıktan sonra uygulama simgesine dokunman yeterli.", "After signing in once, just tap the app icon to play."),
+                        color = AuthUi.Muted,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                    )
                 }
+                Spacer(Modifier.height(20.dp))
+            }
+        }
+    }
+}
+
+/** Brand block: the Kelime Tahtı logo. */
+@Composable
+private fun AuthBrandHeader() {
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(R.drawable.kelime_tahti_brand_logo),
+        contentDescription = "KELİME TAHTI",
+        modifier = Modifier.widthIn(max = 300.dp).fillMaxWidth().height(160.dp),
+        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+    )
+}
+
+@Composable
+private fun AuthLanguagePill(language: String, onLanguage: (String) -> Unit) {
+    Row(
+        Modifier.background(AuthUi.Surface.copy(alpha = .9f), RoundedCornerShape(99.dp)).padding(3.dp),
+    ) {
+        listOf("tr" to "🇹🇷 TR", "en" to "🇬🇧 EN").forEach { (code, label) ->
+            val selected = language == code
+            Surface(
+                onClick = { onLanguage(code) },
+                shape = RoundedCornerShape(99.dp),
+                color = if (selected) AuthUi.Primary else Color.Transparent,
+            ) {
+                Text(label, Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = if (selected) Color.White else AuthUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Black)
             }
         }
     }
@@ -716,8 +714,8 @@ private fun EmailVerificationCard(
             )
             Text(
                 sh(
-                    "Maildeki doğrulama bağlantısına dokunduğunda Kelime Kuşatması otomatik açılır. Bağlantı çalışmazsa e-postadaki 6 haneli kodu gir.",
-                    "Tap the verification link in the email to reopen Word Siege. If the link does not work, enter the 6-digit code from the email.",
+                    "Maildeki doğrulama bağlantısına dokunduğunda Kelime Tahtı otomatik açılır. Bağlantı çalışmazsa e-postadaki 6 haneli kodu gir.",
+                    "Tap the verification link in the email to reopen Word Throne. If the link does not work, enter the 6-digit code from the email.",
                 ),
                 color = AuthUi.Muted,
                 fontSize = 13.sp,
@@ -742,7 +740,7 @@ private fun EmailVerificationCard(
                 enabled = !busy && otpCode.length == 6,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AuthUi.Primary, contentColor = Color.White),
+                colors = ButtonDefaults.buttonColors(containerColor = AuthUi.Primary, contentColor = AuthUi.Ivory),
             ) {
                 Text(if (busy) "…" else sh("KODU DOĞRULA", "VERIFY CODE"), fontWeight = FontWeight.Black)
             }

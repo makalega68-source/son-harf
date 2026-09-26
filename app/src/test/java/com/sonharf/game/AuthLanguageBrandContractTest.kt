@@ -12,8 +12,7 @@ class AuthLanguageBrandContractTest {
         val startup = projectFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
 
         assertTrue(auth.contains("\"KELİME TAHTI\""))
-        assertTrue(auth.contains("\"WORD BOARD\""))
-        assertTrue(auth.contains("tactical territory battle"))
+        assertTrue(auth.contains("R.drawable.kelime_tahti_brand_logo"))
         assertFalse(auth.contains("R.drawable.son_harf_gold_teal_logo"))
         assertFalse(auth.contains("Continue the Word, Beat Your Rival"))
 
@@ -29,7 +28,7 @@ class AuthLanguageBrandContractTest {
         assertTrue(auth.contains("Verification email sent"))
 
         assertTrue(auth.contains("sh(\"E-postanı doğrula\", \"Verify your email\")"))
-        assertTrue(auth.contains("Word Siege. If the link does not work"))
+        assertTrue(auth.contains("Word Throne. If the link does not work"))
         assertTrue(auth.contains("sh(\"6 haneli doğrulama kodu\", \"6-digit verification code\")"))
         assertTrue(auth.contains("sh(\"KODU DOĞRULA\", \"VERIFY CODE\")"))
         assertTrue(auth.contains("sh(\"KODU YENİDEN GÖNDER\", \"RESEND CODE\")"))

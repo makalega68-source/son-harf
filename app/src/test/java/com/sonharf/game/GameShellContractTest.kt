@@ -15,7 +15,7 @@ class GameShellContractTest {
         assertTrue(shell.contains("WordSiegeEntryScreen"))
         assertTrue(siegeEntry.contains("WordSiegeExperienceScreen"))
         assertTrue(siegeEntry.contains("WordSiegeSeriesScreen"))
-        assertTrue(shell.contains("LetterLadderGameScreen"))
+        assertTrue(shell.contains("KelimeAtolyesiScreen"))
     }
 
     private fun projectFile(path: String): File {

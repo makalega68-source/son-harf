@@ -1,10 +1,13 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,7 +20,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,12 +41,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 internal val SiegePurple = MainUi.Purple
-internal val SiegePurpleSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) MainUi.SurfaceSoft else Color(0xFFF0ECFF)
+internal val SiegePurpleSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) MainUi.SurfaceSoft else MainUi.SurfaceSoft
 internal val SiegeBlueSoft = MainUi.BlueSoft
-private val SiegeTile = Color(0xFFFFE3A5)
-private val SiegeTileBorder = Color(0xFFD99818)
-private val SiegeLightTileText = Color(0xFF2F2A1F)
-private val SiegeLightTileMuted = Color(0xFF5D4B20)
+private val SiegeTile = WordSiegeWalnutIvory.ivory
+private val SiegeTileBorder = WordSiegeWalnutIvory.bevel
+private val SiegeLightTileText = WordSiegeWalnutIvory.ink
+private val SiegeLightTileMuted = WordSiegeWalnutIvory.secondaryInk
 
 private enum class SiegeListSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FINISHED }
 
@@ -418,7 +424,7 @@ private fun WordSiegeGamesList(
                     Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                    Text(sh("KELİME TAHTI", "WORD THRONE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh("Süre yok • 1v1 • En fazla 10 devam eden oyun", "No timer • 1v1 • Up to 10 ongoing games"),
                         color = MainUi.Muted,
@@ -433,12 +439,7 @@ private fun WordSiegeGamesList(
 
         item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Image(
-                    painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
-                    contentDescription = sh("Kelime Kuşatması logosu", "Word Siege logo"),
-                    modifier = Modifier.size(96.dp),
-                    contentScale = ContentScale.Fit,
-                )
+                HfGameArt(R.drawable.kelime_tahti_brand_logo, 240.dp, 120.dp, description = "Kelime Tahtı")
             }
         }
 
@@ -545,13 +546,13 @@ private fun WordSiegeModeCard(
     ) {
         Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                val contentColor = if (color == MainUi.BlueSoft) MainUi.Blue else Color.White
+                val contentColor = if (color == MainUi.BlueSoft) MainUi.Blue else MainUi.Text
                 Icon(icon, null, tint = contentColor, modifier = Modifier.size(24.dp))
                 if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = contentColor, strokeWidth = 2.dp)
                 else Icon(Icons.Rounded.ArrowForward, null, tint = contentColor.copy(alpha = .82f), modifier = Modifier.size(18.dp))
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                val contentColor = if (color == MainUi.BlueSoft) MainUi.Text else Color.White
+                val contentColor = MainUi.Text
                 Text(title, color = contentColor, fontWeight = FontWeight.Black, fontSize = 13.sp, lineHeight = 15.sp)
                 Text(subtitle, color = contentColor.copy(alpha = .72f), fontWeight = FontWeight.SemiBold, fontSize = 9.sp)
             }
@@ -800,13 +801,13 @@ private fun WordSiegeMatch(
                         modifier = Modifier.weight(1.45f).height(46.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MainUi.Blue,
-                            contentColor = Color.White,
+                            contentColor = MainUi.Text,
                             disabledContainerColor = SonHarfTheme.DisabledBackground,
                             disabledContentColor = SonHarfTheme.DisabledContent,
                         ),
                         contentPadding = PaddingValues(horizontal = 5.dp),
                     ) {
-                        if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = MainUi.Text, strokeWidth = 2.dp)
                         else Text(sh("OYNA", "PLAY"), fontSize = 12.sp, fontWeight = FontWeight.Black)
                     }
                 }
@@ -893,9 +894,9 @@ internal fun WordSiegeBoard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFFE7EDF5),
+        color = WordSiegeWalnutIvory.frame,
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, MainUi.Border),
+        border = BorderStroke(2.dp, WordSiegeWalnutIvory.frameEdge),
     ) {
         BoxWithConstraints(Modifier.fillMaxWidth().padding(3.dp)) {
             val cellSize = maxWidth / 9
@@ -933,9 +934,9 @@ private fun WordSiegeBoardCell(
 ) {
     val owner = if (pending) myOwner else cell.owner
     val territory = when {
-        owner == 0 -> MainUi.Surface
-        owner == myOwner -> Color(0xFF35C878)
-        else -> Color(0xFFFF5F57)
+        owner == 0 -> WordSiegeWalnutIvory.board
+        owner == myOwner -> WordSiegeWalnutIvory.mine
+        else -> WordSiegeWalnutIvory.rival
     }
     val border = when {
         pending -> SiegeTileBorder
@@ -944,25 +945,30 @@ private fun WordSiegeBoardCell(
         else -> MainUi.Border
     }
     val letter = pendingLetter?.toString() ?: cell.letter
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) .94f else 1f, tween(if (pressed) 65 else 150), label = "classic cell press")
     Box(
         Modifier
             .size(size)
             .padding(1.dp)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .clip(RoundedCornerShape(4.dp))
-            .background(if (letter != null) territory else MainUi.Surface)
-            .clickable(enabled = enabled && (cell.letter == null || pending), onClick = onClick),
+            .background(if (letter != null) territory else WordSiegeWalnutIvory.board)
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled && (cell.letter == null || pending), onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = if (pending) SiegeTile.copy(alpha = .92f) else Color.Transparent,
+            modifier = Modifier.fillMaxSize().padding(if (letter != null && owner != 0) 3.dp else .5.dp)
+                .shadow(if (letter != null) 1.5.dp else 0.dp, RoundedCornerShape(4.dp)),
+            color = Color.Transparent,
             shape = RoundedCornerShape(4.dp),
-            border = BorderStroke(if (pending) 1.5.dp else .7.dp, border),
+            border = BorderStroke(if (pending) 1.5.dp else .7.dp, if (pending) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel),
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Box(if (letter != null) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier, contentAlignment = Alignment.Center) {
                 if (letter != null) {
-                    val contentColor = if (pending) SiegeLightTileText else MainUi.Text
-                    val pointColor = if (pending) SiegeLightTileMuted else MainUi.Muted
+                    val contentColor = SiegeLightTileText
+                    val pointColor = SiegeLightTileMuted
                     Text(letter, color = contentColor, fontSize = 14.sp, fontWeight = FontWeight.Black)
                     Text(
                         wordSiegeLetterValue(letter),
@@ -1000,7 +1006,7 @@ internal fun WordSiegeRackTile(
         color = when {
             used -> MainUi.SurfaceSoft
             selected -> SiegeTile
-            else -> Color(0xFFFFF1C9)
+            else -> Color(0xFFE3D6B0)
         },
         shape = RoundedCornerShape(9.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MainUi.Blue else SiegeTileBorder.copy(alpha = .7f)),
@@ -1037,7 +1043,7 @@ private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
         ) {
             Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
+                    when { draw -> sh("BERABERE", "DRAW"); won -> sh("TAHT SENİN!", "THE THRONE IS YOURS!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
                     color = accent,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Black,
@@ -1109,8 +1115,16 @@ private fun WordSiegeChatDialog(
                         Text(sh("Henüz mesaj yok.", "No messages yet."), color = MainUi.Muted, fontSize = 12.sp)
                     }
                 } else {
-                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(messages.takeLast(40), key = { it.id }) { message ->
+                    // Newest at the bottom above the input and follows new messages; older ones move up.
+                    val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
+                    LaunchedEffect(messages.size) { chatListState.animateScrollToItem(0) }
+                    LazyColumn(
+                        Modifier.weight(1f),
+                        state = chatListState,
+                        reverseLayout = true,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        items(messages.takeLast(40).asReversed(), key = { it.id }) { message ->
                             Row(
                                 Modifier.fillMaxWidth(),
                                 horizontalArrangement = if (message.senderId == me) Arrangement.End else Arrangement.Start,

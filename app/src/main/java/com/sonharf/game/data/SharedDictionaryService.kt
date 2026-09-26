@@ -133,6 +133,9 @@ object SharedDictionaryService {
         return botSnapshots[lang]?.contains(normalized) == true
     }
 
+    /** The loaded dictionary for [language], if any (read-only; used for mascot hints). */
+    fun snapshot(language: String): Set<String>? = snapshots[canonicalLanguage(language)]
+
     fun hasSnapshot(language: String): Boolean =
         snapshots[canonicalLanguage(language)]?.isNotEmpty() == true
 

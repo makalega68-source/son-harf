@@ -13,16 +13,16 @@ class KelimeKusatmasiFinalBrandingContractTest {
         val home = source("src/main/java/com/sonharf/game/PremiumHomeV3.kt")
 
         assertTrue(home.contains("onClick = onSiege"))
-        assertTrue(home.contains("sh(\"HEMEN OYNA\", \"PLAY NOW\")"))
-        assertTrue(home.contains("Kelimeyi kur. Alanı ele geçir. Rakibini geç."))
+        assertTrue(home.contains("sh(\"OYNA\", \"PLAY\")"))
+        assertFalse(home.contains("HfTitleRule(sh(\"Ana Oyun\", \"Main Game\")"))
         assertTrue(state.contains("OYNA • Harflerini yerleştir, kelimeni oluştur"))
         assertTrue(state.contains("PLAY • Place your tiles, build your word"))
-        assertTrue(state.contains(".replace(\"KELİME TAHTI\", \"KELİME KUŞATMASI\")"))
-        assertTrue(state.contains(".replace(\"Kelime Tahtı\", \"Kelime Kuşatması\")"))
-        assertFalse(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))
-        assertFalse(state.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
+        assertTrue(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))
+        assertTrue(state.contains(".replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
+        assertFalse(state.contains(".replace(\"KELİME TAHTI\", \"KELİME KUŞATMASI\")"))
+        assertTrue(state.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
         assertTrue(
-            home.contains("\"KELİME KUŞATMASI\"") ||
+            home.contains("\"KELİME TAHTI\"") ||
                 home.contains("\"KELİME\\nKUŞATMASI\"")
         )
     }
@@ -36,21 +36,22 @@ class KelimeKusatmasiFinalBrandingContractTest {
         assertFalse(state.contains("Regex(\"Bölge \\\\+(\\\\d+)\")"))
         assertFalse(state.contains("KUŞATMA +${'$'}territoryScore"))
         assertFalse(state.contains("SIEGE +${'$'}territoryScore"))
-        assertFalse(state.contains(".replace(\"KUŞATMA SENİN!\", \"TAHT SENİN!\")"))
-        assertFalse(state.contains(".replace(\"SIEGE WON!\", \"THE THRONE IS YOURS!\")"))
-        assertTrue(online.contains("KUŞATMA SENİN!"))
-        assertTrue(online.contains("SIEGE WON!"))
-        assertTrue(online.contains("WordSiegeFinalRules.currentTerritoryScore"))
-        assertTrue(online.contains("WordSiegeFinalRules.cubeTransfer"))
+        assertFalse(state.contains(".replace(\"TAHT SENİN!\", \"KUŞATMA SENİN!\")"))
+        assertFalse(state.contains(".replace(\"THE THRONE IS YOURS!\", \"SIEGE WON!\")"))
+        assertTrue(online.contains("TAHT SENİN!"))
+        assertTrue(online.contains("THE THRONE IS YOURS!"))
+        assertTrue(online.contains("WordSiegeFinalRules.scoreWithTerritoryLedger"))
+        assertTrue(online.contains("playerOneAreaScore"))
+        assertTrue(online.contains("playerTwoAreaScore"))
     }
 
     @Test fun onlineBoardKeepsTerritoryOwnershipAndStrategicZonePresentation() {
         val online = source("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
 
-        assertTrue(online.contains("PanSiegeMine = Color(0xFFA8D5B5)"))
-        assertTrue(online.contains("PanSiegeRival = Color(0xFFE4AEAA)"))
-        assertTrue(online.contains("PanSiegeMineBorder = Color(0xFF3F7C53)"))
-        assertTrue(online.contains("PanSiegeRivalBorder = Color(0xFF9B4D4A)"))
+        assertTrue(online.contains("PanSiegeMine = WordSiegeWalnutIvory.mine"))
+        assertTrue(online.contains("PanSiegeRival = WordSiegeWalnutIvory.rival"))
+        assertTrue(online.contains("PanSiegeMineBorder = WordSiegeWalnutIvory.mine"))
+        assertTrue(online.contains("PanSiegeRivalBorder = WordSiegeWalnutIvory.rival"))
         assertTrue(online.contains("WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)"))
         assertTrue(online.contains("val regionGap = 1.25.dp"))
         assertTrue(online.contains("HAMLEYİ ONAYLA"))

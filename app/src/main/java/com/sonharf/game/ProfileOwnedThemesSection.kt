@@ -46,7 +46,7 @@ private val DarkThemeIds = setOf(BlackThemeId, LegacyDarkArenaThemeId)
  * available to their owner. Network failures never publish a partial result over the cached look.
  */
 @Composable
-internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
+internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: String? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -125,81 +125,87 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
     val darkActive = activeDarkThemeId != null
     val showBlackTheme = ownedDarkThemeId != null
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Palette, null, tint = MainUi.Blue, modifier = Modifier.size(19.dp))
-            Spacer(Modifier.width(7.dp))
-            Text(sh("KOLEKSİYONUM", "MY COLLECTION"), color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.weight(1f))
-            if (loading || busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp, color = MainUi.Blue)
+    // Historical ownership stays safely on the server, but products with no live game
+    // integration must not occupy the player's visible profile collection. Theme aliases are
+    // represented by the single canonical theme card to avoid duplicate equipped states.
+    val styles = collection.filter { it.id !in DarkThemeIds && it.isSupportedOwnedStyle() }
+    val shown = if (category == null) styles else styles.filter { it.kind == category }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (category == null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Palette, null, tint = Hf.Gold, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(sh("Koleksiyonum", "My collection"), color = Hf.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                if (loading || busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp, color = Hf.Gold)
+            }
+        } else if (loading || busy) {
+            LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Gold, trackColor = Hf.Surface)
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ProfileThemeCard(
-                title = sh("Ana Tema", "Main Theme"),
-                subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
-                active = !darkActive,
-                enabled = !busy && !loading,
-                blackVariant = false,
-                modifier = Modifier.weight(1f),
-                onClick = { equipStyle(null) },
-            )
-            if (showBlackTheme) {
+        if (category == null || category == "game_theme") {
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ProfileThemeCard(
-                    title = "Black Theme",
-                    subtitle = sh("Koleksiyonunda", "In your collection"),
-                    active = darkActive,
+                    title = sh("Ana Tema", "Main Theme"),
+                    subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
+                    active = !darkActive,
                     enabled = !busy && !loading,
-                    blackVariant = true,
-                    modifier = Modifier.weight(1f),
-                    onClick = { equipStyle(ownedDarkThemeId ?: BlackThemeId) },
+                    blackVariant = false,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    onClick = { equipStyle(null) },
                 )
+                if (showBlackTheme) {
+                    ProfileThemeCard(
+                        title = "Black Theme",
+                        subtitle = sh("Koleksiyonunda", "In your collection"),
+                        active = darkActive,
+                        enabled = !busy && !loading,
+                        blackVariant = true,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        onClick = { equipStyle(ownedDarkThemeId ?: BlackThemeId) },
+                    )
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
             }
         }
 
         notice?.let {
-            Text(it, color = MainUi.Muted, fontSize = 13.sp)
+            Text(it, color = Hf.TextMuted, fontSize = 13.sp)
             TextButton(
                 onClick = { scope.launch { reloadCollection() } },
                 enabled = !busy && !loading,
             ) {
-                Text(sh("YENİLE", "REFRESH"))
+                Text(sh("YENİLE", "REFRESH"), color = Hf.Gold)
             }
         }
 
-        // Historical ownership stays safely on the server, but products with no live game
-        // integration must not occupy the player's visible profile collection. Theme aliases are
-        // represented by the single canonical theme card above to avoid duplicate equipped states.
-        val styles = collection.filter { it.id !in DarkThemeIds && it.isSupportedOwnedStyle() }
-        Text(
-            sh("STYLE KOLEKSİYONUM", "MY STYLE COLLECTION"),
-            color = MainUi.Text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Black,
-        )
-        Text(
-            sh(
-                "Satın aldıkların burada kalır; vitrin değişse de sahipliğin korunur.",
-                "Your purchases stay here; ownership is preserved when the storefront changes.",
-            ),
-            color = MainUi.Muted,
-            fontSize = 13.sp,
-        )
-        if (!loading && notice == null && styles.isEmpty()) {
-            Text(
-                sh("Yeni Style ürünlerini mağazada keşfet.", "Discover new Style items in the store."),
-                color = MainUi.Muted,
-                fontSize = 13.sp,
-            )
-        }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(styles, key = { it.id }) { item ->
-                OwnedStyleCard(
-                    item = item,
-                    active = equipped.isEquipped(item),
-                    enabled = !loading && !busy,
-                    onEquip = { equipStyle(item.id) },
-                )
+        if (category != "game_theme") {
+            if (!loading && notice == null && shown.isEmpty()) {
+                HfCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        sh("Bu kategoride ürünün yok. Yenilerini mağazada keşfet.", "Nothing here yet. Discover new items in the store."),
+                        Modifier.fillMaxWidth().padding(18.dp),
+                        color = Hf.TextMuted,
+                        fontSize = 13.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
+            }
+            shown.chunked(2).forEach { row ->
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    row.forEach { item ->
+                        OwnedStyleCard(
+                            item = item,
+                            active = equipped.isEquipped(item),
+                            enabled = !loading && !busy,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            onEquip = { equipStyle(item.id) },
+                        )
+                    }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                }
             }
         }
     }
@@ -215,26 +221,19 @@ private fun ProfileThemeCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val border = if (active) MainUi.Green else MainUi.Border
     Surface(
-        modifier = modifier.clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = MainUi.Surface,
-        border = BorderStroke(if (active) 2.dp else 1.dp, border),
+        modifier = modifier.clickable(enabled = enabled && !active, onClick = onClick),
+        shape = Hf.CardShape,
+        color = Hf.Ground,
+        border = BorderStroke(if (active) 2.dp else 1.5.dp, if (active) Hf.Green else Hf.Gold.copy(alpha = .75f)),
     ) {
-        Column(Modifier.padding(9.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
-                Modifier.fillMaxWidth().height(68.dp).background(
+                Modifier.fillMaxWidth().height(84.dp).background(
                     brush = if (blackVariant) {
                         Brush.linearGradient(listOf(Color(0xFF050608), Color(0xFF111318), Color(0xFF20242B)))
                     } else {
-                        Brush.linearGradient(
-                            listOf(
-                                KelimeKusatmasiPalette.MonsterBlack,
-                                KelimeKusatmasiPalette.MonsterSurface,
-                                KelimeKusatmasiPalette.MonsterPink.copy(alpha = .72f),
-                            )
-                        )
+                        Brush.linearGradient(listOf(Hf.Ground, Hf.Surface, Hf.Gold.copy(alpha = .45f)))
                     },
                     shape = RoundedCornerShape(12.dp),
                 ),
@@ -243,13 +242,37 @@ private fun ProfileThemeCard(
                     Icon(
                         Icons.Rounded.CheckCircle,
                         null,
-                        tint = if (blackVariant) SonHarfTheme.PremiumGold else SonHarfTheme.Primary,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(20.dp),
+                        tint = Hf.GreenLight,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(22.dp),
                     )
                 }
             }
-            Text(title, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            Text(subtitle, color = MainUi.Muted, fontSize = 12.sp)
+            Text(title, color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = Hf.TextMuted, fontSize = 12.sp)
+            Spacer(Modifier.weight(1f))
+            ProfileUseButton(active = active, enabled = enabled, onClick = onClick)
+        }
+    }
+}
+
+/** Kullan / Kullanılıyor pill from the 06 preview. */
+@Composable
+private fun ProfileUseButton(active: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled && !active,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
+        shape = Hf.PillShape,
+        color = if (active) Hf.Green else Hf.Ivory,
+        border = if (active) BorderStroke(1.5.dp, Hf.GreenLight) else null,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                if (active) sh("Kullanılıyor", "Equipped") else sh("Kullan", "Equip"),
+                color = if (active) Hf.OnAccent else Hf.Text,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
@@ -259,48 +282,60 @@ private fun OwnedStyleCard(
     item: ShopItemDto,
     active: Boolean,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
     onEquip: () -> Unit,
 ) {
     val supported = item.isSupportedOwnedStyle()
-    Card(
-        modifier = Modifier.width(248.dp),
-        colors = CardDefaults.cardColors(containerColor = MainUi.Surface),
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) MainUi.Green else MainUi.Border),
+    Surface(
+        modifier = modifier,
+        shape = Hf.CardShape,
+        color = Hf.Ground,
+        border = BorderStroke(if (active) 2.dp else 1.5.dp, if (active) Hf.Green else Hf.Gold.copy(alpha = .75f)),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.fillMaxWidth().height(76.dp), contentAlignment = Alignment.Center) {
-                if (item.kind == "profile_frame" && supported) {
-                    Icon(Icons.Rounded.Person, null, Modifier.size(36.dp), tint = MainUi.Blue)
-                    PurchasedProfileFrameOverlay(frameId = item.id, modifier = Modifier.size(76.dp))
-                } else {
-                    Icon(Icons.Rounded.Palette, null, Modifier.size(38.dp), tint = MainUi.Blue)
+        Box {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.Center) {
+                    if (item.kind == "profile_frame" && supported) {
+                        Icon(Icons.Rounded.Person, null, Modifier.size(40.dp), tint = Hf.TextMuted)
+                        PurchasedProfileFrameOverlay(frameId = item.id, modifier = Modifier.size(104.dp))
+                    } else {
+                        StoreProductPreview(item, Modifier.fillMaxSize())
+                    }
+                }
+                Text(sh(item.nameTr, item.nameEn), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                if (!item.active) {
+                    Text(sh("Arşiv ürünü • Koleksiyonunda", "Retired item • In your collection"), color = Hf.TextMuted, fontSize = 11.sp)
+                }
+                if (!supported) {
+                    Text(
+                        sh(
+                            "Bu sürümde kullanılamıyor. Sahipliğin korunuyor.",
+                            "Unavailable in this version. You still own this item.",
+                        ),
+                        color = Hf.TextMuted,
+                        fontSize = 12.sp,
+                    )
+                }
+                Spacer(Modifier.weight(1f, fill = false))
+                Button(
+                    onClick = onEquip,
+                    enabled = enabled && supported && !active,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
+                    shape = Hf.PillShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Hf.Ivory,
+                        contentColor = Hf.Text,
+                        disabledContainerColor = if (active) Hf.Green else Hf.Disabled,
+                        disabledContentColor = Hf.Text,
+                    ),
+                ) {
+                    Text(if (active) sh("Kullanılıyor", "Equipped") else sh("Kullan", "Equip"), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Text(sh(item.nameTr, item.nameEn), color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text(sh(item.descriptionTr, item.descriptionEn), color = MainUi.Muted, fontSize = 13.sp)
-            Text(
-                if (item.active) sh("Koleksiyonunda", "In your collection")
-                else sh("Arşiv ürünü • Koleksiyonunda", "Retired item • In your collection"),
-                color = MainUi.Blue,
-                fontSize = 12.sp,
-            )
-            if (!supported) {
-                Text(
-                    sh(
-                        "Bu sürümde kullanılamıyor. Sahipliğin korunuyor.",
-                        "Unavailable in this version. You still own this item.",
-                    ),
-                    color = MainUi.Muted,
-                    fontSize = 13.sp,
-                )
-            }
-            Button(
-                onClick = onEquip,
-                enabled = enabled && supported && !active,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            ) {
-                Text(if (active) sh("AKTİF", "EQUIPPED") else sh("KULLAN", "EQUIP"))
+            if (active) {
+                Surface(Modifier.align(Alignment.TopEnd).padding(8.dp).size(28.dp), shape = androidx.compose.foundation.shape.CircleShape, color = Hf.Green, border = BorderStroke(1.5.dp, Hf.GreenLight)) {
+                    Icon(Icons.Rounded.CheckCircle, null, tint = Hf.OnAccent, modifier = Modifier.padding(3.dp))
+                }
             }
         }
     }

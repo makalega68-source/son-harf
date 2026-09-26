@@ -22,13 +22,13 @@ class WordSiegeReadabilityContractTest {
             assertTrue(practice.contains("WordSiegeBoardAccessibility.$token"))
         }
 
-        assertTrue(online.contains("PanSiegeBonusLabel = Color(0xFF68716D)"))
-        assertTrue(practice.contains("PracticeSiegeBonusLabel = Color(0xFF68716D)"))
+        assertTrue(online.contains("PanSiegeBonusLabel = Color(0xFF3F4A5A)"))
+        assertTrue(practice.contains("PracticeSiegeBonusLabel = Color(0xFF3F4A5A)"))
         listOf(online, practice).forEach { board ->
             assertTrue(board.contains("SpanStyle(fontSize = 20.sp)"))
             assertTrue(board.contains("SpanStyle(fontSize = 10.sp)"))
             assertTrue(board.contains("lineHeight = 17.sp"))
-            assertTrue(board.contains("fontWeight = FontWeight.Light"))
+            assertTrue(board.contains("fontWeight = if (overview) FontWeight.SemiBold else FontWeight.Medium"))
         }
     }
 }

@@ -122,10 +122,13 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         bestEffortStartup("background music") { SonHarfBackgroundMusic.start(this) }
+        bestEffortStartup("mascot icon") { MascotLauncherIcon.onAppOpened(this) }
     }
 
     override fun onStop() {
         runCatching { SonHarfBackgroundMusic.pause() }
+        // Not while rotating or finishing into another screen of ours: only a real trip away.
+        if (!isChangingConfigurations) runCatching { MascotLauncherIcon.onAppBackground(this) }
         super.onStop()
     }
 
@@ -263,7 +266,7 @@ private fun StartupLoading() {
             Spacer(Modifier.height(24.dp))
             CircularProgressIndicator(color = SonHarfBlue, strokeWidth = 3.dp)
             Spacer(Modifier.height(14.dp))
-            Text(sh("Kelime Kuşatması hazırlanıyor…", "Preparing Word Siege…"), color = SonHarfText, fontWeight = FontWeight.Bold)
+            Text(sh("Kelime Tahtı hazırlanıyor…", "Preparing Word Throne…"), color = SonHarfText, fontWeight = FontWeight.Bold)
             Text(sh("Oturum ve ayarlar güvenli biçimde yükleniyor.", "Loading session and settings safely."), color = SonHarfMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
         }
     }

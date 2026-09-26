@@ -43,15 +43,17 @@ class WordSiegePracticeUxAndBotRegressionTest {
         val screen = source("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt")
         val guidance = source("src/main/java/com/sonharf/game/WordSiegePracticeGuidance.kt")
 
-        assertTrue(screen.contains("WordSiegePracticeTutorialPrefs.isCompleted(context)"))
+        assertFalse(screen.contains("WordSiegePracticeTutorialPrefs.isCompleted(context)"))
         assertTrue(screen.contains("Icons.Rounded.HelpOutline"))
+        assertTrue(screen.contains("SOHBET"))
+        assertTrue(screen.contains("WordSiegePracticeResultDialog("))
         assertTrue(screen.contains("WordSiegePracticeTutorialCard("))
         assertTrue(screen.contains("if (selecting && tutorialStep == 1) tutorialStep = 2"))
         assertTrue(screen.contains("if (tutorialStep == 2) tutorialStep = 3"))
         assertTrue(screen.contains("if (tutorialStep == 3) tutorialStep = 4"))
         assertTrue(guidance.contains("Harf seç, tahtaya yerleştir ve kelimeni onayla."))
-        assertTrue(guidance.contains("sahip olduğun hücre başına 2 puan"))
-        assertTrue(guidance.contains("kelime puanı kalıcıdır"))
+        assertTrue(guidance.contains("Kazandığın her küp +2 bölge puanı"))
+        assertTrue(guidance.contains("Kelime puanı kalıcıdır"))
     }
 
     @Test

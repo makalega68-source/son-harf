@@ -14,35 +14,43 @@ class GameModeBrandingAndVisibleActionContractTest {
         val siegeDrawable = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")
 
         assertTrue(
-            home.contains("\"KELİME KUŞATMASI\"") ||
+            home.contains("\"KELİME TAHTI\"") ||
                 home.contains("\"KELİME\\nKUŞATMASI\"")
         )
         assertTrue(home.contains("onClick = onSiege"))
-        assertTrue(home.contains("sh(\"HEMEN OYNA\", \"PLAY NOW\")"))
+        assertTrue(home.contains("sh(\"OYNA\", \"PLAY\")"))
         assertTrue(home.contains("onClick = onPlay"))
         assertTrue(brand.contains("R.drawable.kelime_kusatma_logo_hd"))
         assertTrue(siegeDrawable.isFile)
         assertTrue(siegeDrawable.readText().contains("<vector"))
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.png")?.exists() == true)
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.webp")?.exists() == true)
-        assertTrue(games.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
+        assertTrue(games.contains("title = sh(\"KELİME TAHTI\", \"KELİME TAHTI\")"))
         assertTrue(games.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
-        assertTrue(games.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
-        assertTrue(games.contains("PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)"))
+        assertTrue(games.contains("title = sh(\"KELİME ATÖLYESİ\", \"WORD WORKSHOP\")"))
+        assertTrue(games.contains("PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)"))
         assertTrue(games.contains("onClick = onSiege"))
         assertTrue(games.contains("onClick = onLastLetter"))
-        assertTrue(games.contains("onClick = onLetterPath"))
+        assertTrue(games.contains("onClick = onWorkshop"))
     }
 
     @Test
-    fun letterPathUsesItsLogoAndTriggersVisibleSuccessVfxOnlyOnAcceptedMoves() {
-        val ladder = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-        assertTrue(ladder.contains("R.drawable.harf_yolu_logo"))
-        assertTrue(projectFile("app/src/main/res/drawable-nodpi/harf_yolu_logo.webp").isFile)
-        assertTrue(ladder.contains("successVfxNonce += 1"))
-        assertTrue(ladder.contains("PurchasedVictoryVfx("))
-        assertTrue(ladder.contains("eventKey = \"letter:${'$'}{puzzle?.id}:${'$'}successVfxNonce\""))
-        assertFalse(ladder.contains("rememberInfiniteTransition"))
+    fun wordWorkshopReplacesLetterPathWithTapOnlyLettersAndACompanionMascot() {
+        assertFalse(projectFileOrNull("app/src/main/java/com/sonharf/game/LetterLadderGame.kt")?.exists() == true)
+        assertFalse(projectFileOrNull("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt")?.exists() == true)
+        val screen = projectFile("app/src/main/java/com/sonharf/game/KelimeAtolyesiScreen.kt").readText()
+        // Letters are tapped from the pool: no system keyboard and no drawn keyboard.
+        assertFalse(screen.contains("TextField"))
+        assertFalse(screen.contains("Keyboard"))
+        assertTrue(screen.contains("state = current.pick(tileId)"))
+        assertTrue(screen.contains("state = current.unpickAt(index)"))
+        assertTrue(screen.contains("sh(\"Temizle\", \"Clear\")"))
+        assertTrue(screen.contains("sh(\"Gönder\", \"Submit\")"))
+        // The existing mascot, as a visual companion only.
+        assertTrue(screen.contains("WordSiegeMascot("))
+        assertFalse(screen.contains("speaking = true"))
+        // No level system in this game.
+        assertFalse(screen.contains("level", ignoreCase = true))
     }
 
     @Test

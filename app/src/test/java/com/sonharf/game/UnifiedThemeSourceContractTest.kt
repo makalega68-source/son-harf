@@ -8,7 +8,7 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeUnifiedShellUsesMonsterThemeAndPremierKeepsHighLegibilityArenaPalette() {
+    fun activeUnifiedShellKeepsMetaThemeAndPremierUsesSkyMascotArena()  {
         val unified = source("UnifiedProApp.kt")
         val premier = source("PremierWordDuelScreen.kt")
         val startup = source("StableV1App.kt")
@@ -23,23 +23,24 @@ class UnifiedThemeSourceContractTest {
         assertFalse(unified.contains("MageCatDirector.onLobbyGreet()"))
         assertFalse(unified.contains("com.sonharf.game.mascot"))
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
-        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
         assertTrue(theme.contains("val SecondaryAccent: Color get()"))
         assertTrue(theme.contains("val NavigationSurface: Color get()"))
         assertTrue(theme.contains("val GameSurface: Color get()"))
         assertTrue(theme.contains("val GameTile: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
-        assertTrue(theme.contains("Color(0xFF3FC486)"))
-        assertTrue(theme.contains("Color(0xFFC9A552)"))
+        assertTrue(theme.contains("Color(0xFF3E9F4D)"))
+        assertTrue(theme.contains("Color(0xFFE0A82E)"))
 
-        // Premier remains a deliberately fixed high-legibility gameplay surface. The application
-        // shell and meta screens use Monster; competitive text entry retains its proven palette.
-        assertTrue(premier.contains("val Background = Color(0xFF071714)"))
-        assertTrue(premier.contains("val Surface = Color(0xFF0E2521)"))
-        assertTrue(premier.contains("val Ocean = Color(0xFF3FC486)"))
-        assertTrue(premier.contains("val Sky = Color(0xFFC9A552)"))
-        assertTrue(premier.contains("Brush.verticalGradient(listOf(PremierUi.Surface, PremierUi.Background))"))
-        assertFalse(premier.contains("val Ocean = Color(0xFF2563EB)"))
+        // The shell uses the light word-board theme; Son Harf keeps its own scoped arena palette
+        // with the shared in-game mascot while preserving the application theme elsewhere.
+        assertTrue(premier.contains("private object PremierArenaSky"))
+        assertTrue(premier.contains("Color(0xFFE6ECF2)"))
+        assertTrue(premier.contains("Color(0xFFE9EEF3)"))
+        assertTrue(premier.contains("Color(0xFFEDF1F5)"))
+        assertTrue(premier.contains("Brush.verticalGradient("))
+        assertTrue(premier.contains("WordSiegeMascotCompanion("))
+        assertTrue(premier.contains("PremierKeyboard(language, input"))
         assertFalse(premier.contains("MageCatCompanion("))
         assertFalse(unified.contains("MonsterUi"))
         assertFalse(unified.contains("MonsterExperienceApp"))

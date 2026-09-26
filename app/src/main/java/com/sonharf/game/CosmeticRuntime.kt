@@ -93,10 +93,11 @@ object SonHarfCosmetics {
             text = Color(0xFF263238), action = Color(0xFF2A72E5), actionText = Color.White,
             border = Color(0xFFCFD9E6), secondaryBorder = Color(0xFF14B8B1),
         )
+        // Default keyboard: cream letter keys, light grey special keys, green enter on a light tray.
         else -> WordKeyboardPalette(
-            background = Color(0xFFF0F5F1), key = Color(0xFFFFFEF8), keyAlt = Color(0xFFDDE9E1),
-            text = Color(0xFF213C31), action = Color(0xFF4F7964), actionText = Color.White,
-            border = Color(0xFFC4D5CA), secondaryBorder = Color(0xFF6D9080),
+            background = Color(0xFFDDE4EC), key = Color(0xFFF7E3A6), keyAlt = Color(0xFFC3CCD6),
+            text = Color(0xFF4A3217), action = Color(0xFF3E9F4D), actionText = Color(0xFFFFFFFF),
+            border = Color(0xFFC9A560), secondaryBorder = Color(0xFF9AA7B5),
         )
     }
 

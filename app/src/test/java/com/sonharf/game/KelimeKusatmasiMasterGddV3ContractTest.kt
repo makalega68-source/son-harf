@@ -11,18 +11,16 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF071714", // Deep emerald black
-            "0xFF0E2521", // Emerald surface
-            "0xFF14312B", // Secondary surface
-            "0xFF3FC486", // Player/action green
-            "0xFFC94C4C", // Rival red
-            "0xFFC9A552", // Premium gold
-            "0xFFF4F7F4", // Primary text
-            "0xFF9DB0A9", // Muted text
-            "0xFF315148", // Border
+            "0xFFE6ECF2", // Light blue-grey ground
+            "0xFFFFFFFF", // White surface
+            "0xFFF7E3A6", // Cream letter tiles
+            "0xFFE0A82E", // Gold
+            "0xFF3E9F4D", // Player green
+            "0xFFD0514A", // Rival red
+            "0xFF6B7A8C", // Muted
         ).forEach { token -> assertTrue("Missing current theme palette token $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
         assertTrue(theme.contains("val ActionOrange: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
         assertTrue(theme.contains("val HeroMiddle: Color get()"))
@@ -35,17 +33,18 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val firstRun = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
 
-        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
+        assertTrue(shell.contains("title = sh(\"KELİME TAHTI\", \"KELİME TAHTI\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
-        assertTrue(shell.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
+        assertTrue(shell.contains("title = sh(\"KELİME ATÖLYESİ\", \"WORD WORKSHOP\")"))
         assertTrue(firstRun.contains("selected == \"tr\""))
         assertTrue(firstRun.contains("selected == \"en\""))
         assertFalse(firstRun.contains("selected == \"es\""))
         assertFalse(firstRun.contains("selected == \"fr\""))
         assertFalse(firstRun.contains("selected == \"de\""))
-        assertTrue(localization.contains(".replace(\"WORD THRONE\", \"KELİME KUŞATMASI\")"))
-        assertTrue(localization.contains(".replace(\"TAHT SENİN!\", \"KUŞATMA SENİN!\")"))
-        assertTrue(localization.contains(".replace(\"THE THRONE IS YOURS!\", \"SIEGE WON!\")"))
+        // The brand is Kelime Tahtı again: legacy Kuşatma names map to it.
+        assertTrue(localization.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
+        assertTrue(localization.contains(".replace(\"KUŞATMA SENİN!\", \"TAHT SENİN!\")"))
+        assertTrue(localization.contains(".replace(\"SIEGE WON!\", \"THE THRONE IS YOURS!\")"))
     }
 
     @Test
@@ -54,20 +53,19 @@ class KelimeKusatmasiMasterGddV3ContractTest {
 
         assertTrue(home.contains("FramedProfilePhotoAvatar("))
         assertTrue(home.contains("profile?.diamonds"))
-        assertTrue(home.contains("} Coin"))
+        assertTrue(home.contains("HfCoin("))
         assertTrue(home.contains("\"PRO\""))
         assertTrue(home.contains("profile?.isVip == true"))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
         assertTrue(home.contains("\"${'$'}{it.rating} RP\""))
-        assertTrue(home.contains("Icons.Rounded.Notifications"))
-        assertTrue(home.contains("onClick = onSocial"))
-        assertTrue(home.contains("Bildirimler ve davetler"))
+        assertTrue(home.contains("R.drawable.hf_ic_settings"))
+        assertTrue(home.contains("onClick = onSettings"))
+        assertTrue(home.contains("sh(\"Ayarlar\", \"Settings\")"))
     }
 
     @Test
     fun clubSurfaceStaysAuthoredButNeverReachesUsers() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
-        val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
         val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
 
         // Retired: CLUB destination is intercepted and bounced to HOME, never renders CompetitionHubScreen anymore.
@@ -75,10 +73,6 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(shell.contains("PremiumDestination.CLUB -> {"))
         assertTrue(shell.contains("destination = PremiumDestination.HOME"))
 
-        // Club source stays for audit but nothing opens it.
-        assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
-        assertTrue(club.contains("b.getClubMessages(current.clubId)"))
-        assertTrue(club.contains("b.sendClubMessage(current.clubId, outgoing)"))
         assertTrue(social.contains("\"report_player\""))
         assertTrue(social.contains("\"block_user\""))
         assertTrue(social.contains("\"club_chat_spam_or_abuse\""))
@@ -90,7 +84,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
 
         assertTrue(shell.contains("fun leaveGame(target: PremiumDestination = PremiumDestination.HOME)"))
-        assertTrue(shell.contains("PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH ->"))
+        assertTrue(shell.contains("PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP ->"))
         assertTrue(shell.contains("PremiumDestination.HOME\n            }"))
         assertTrue(practice.contains("Modifier.fillMaxWidth().height(16.dp)"))
         assertTrue(practice.contains("readyFeedback.message"))

@@ -63,6 +63,11 @@ data class GameRoomDto(
     @SerialName("round_word_count") val roundWordCount: Int = 0,
     @SerialName("host_rounds") val hostRounds: Int = 0,
     @SerialName("guest_rounds") val guestRounds: Int = 0,
+    // Current-round standing: the round is decided by these, not by the match totals.
+    @SerialName("host_round_score") val hostRoundScore: Int = 0,
+    @SerialName("guest_round_score") val guestRoundScore: Int = 0,
+    @SerialName("host_round_words") val hostRoundWords: Int = 0,
+    @SerialName("guest_round_words") val guestRoundWords: Int = 0,
     @SerialName("rematch_of") val rematchOf: String? = null,
     @SerialName("host_rematch") val hostRematch: Boolean = false,
     @SerialName("guest_rematch") val guestRematch: Boolean = false,

@@ -4,7 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Shared app-shell palette, resolved from the single Kelime Kuşatması theme source. */
+/** Shared app-shell palette, resolved from the single Kelime Tahtı theme source. */
 internal object MainUi {
     // Default pages stay slightly translucent so the purchased-kit-inspired vector backdrop can
     // provide depth without becoming a full-screen image layer.
@@ -45,9 +45,9 @@ internal object MainUi {
 
 /** Bütün ekranlarda aynı simetrik köşe ve kontrol ölçüleri kullanılır. */
 internal object MainUiShape {
-    val Control = RoundedCornerShape(14.dp)
-    val Card = RoundedCornerShape(20.dp)
-    val Hero = RoundedCornerShape(28.dp)
+    val Control = RoundedCornerShape(16.dp)
+    val Card = RoundedCornerShape(16.dp)
+    val Hero = RoundedCornerShape(20.dp)
     val Pill = RoundedCornerShape(99.dp)
 }
 
@@ -113,19 +113,15 @@ internal fun MainScreenHeader(
         contentAlignment = Alignment.Center,
     ) {
         if (onBack != null) {
-            Surface(
+            IconButton(
                 onClick = onBack,
-                modifier = Modifier.align(Alignment.CenterStart),
-                shape = MainUiShape.Control,
-                color = MainUi.Surface,
-                border = BorderStroke(1.dp, MainUi.Border),
-                shadowElevation = 1.dp,
+                modifier = Modifier.align(Alignment.CenterStart).size(48.dp),
             ) {
                 Icon(
-                    Icons.Rounded.ArrowBack,
+                    Icons.Rounded.ChevronLeft,
                     contentDescription = sh("Geri", "Back"),
-                    tint = MainUi.Blue,
-                    modifier = Modifier.padding(14.dp).size(20.dp),
+                    tint = MainUi.Gold,
+                    modifier = Modifier.size(32.dp),
                 )
             }
         }
@@ -136,32 +132,31 @@ internal fun MainScreenHeader(
             Text(
                 text = title,
                 color = MainUi.Text,
-                fontSize = 22.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Black,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 1,
             )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                color = MainUi.Muted,
-                fontSize = 10.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
+            if (subtitle.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    color = MainUi.Muted,
+                    fontSize = 12.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
         }
         if (actionIcon != null && onAction != null) {
-            Surface(
+            IconButton(
                 onClick = onAction,
-                modifier = Modifier.align(Alignment.CenterEnd),
-                shape = MainUiShape.Control,
-                color = MainUi.SurfaceSoft,
-                border = BorderStroke(1.dp, MainUi.Border),
-                shadowElevation = 1.dp,
+                modifier = Modifier.align(Alignment.CenterEnd).size(48.dp),
             ) {
                 Icon(
                     actionIcon,
                     contentDescription = actionDescription,
-                    tint = MainUi.Blue,
-                    modifier = Modifier.padding(14.dp).size(20.dp),
+                    tint = MainUi.Gold,
+                    modifier = Modifier.size(26.dp),
                 )
             }
         }

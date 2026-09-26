@@ -10,9 +10,9 @@ class UnifiedHomeWeeklyPodiumContractTest {
     fun homeKeepsKelimeKusatmasiPrimaryEntryWithoutWeeklyPodium() {
         val source = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
-        // Kelime Kuşatması is the primary play entry; Son Harf remains a secondary quick mode.
+        // Kelime Tahtı is the primary play entry; Son Harf remains a secondary quick mode.
         assertTrue(source.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(source.contains("KELİME KUŞATMASI"))
+        assertTrue(source.contains("KELİME TAHTI"))
         assertTrue(source.contains("SAVAŞA GİR"))
         assertFalse(source.contains("title = sh(\"PREMIER 1v1\", \"PREMIER 1v1\")"))
         assertFalse(source.contains("ARENANI SEÇ"))

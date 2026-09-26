@@ -97,7 +97,7 @@ internal fun MainSocialScreen(
         item {
             MainScreenHeader(
                 title = sh("Sosyal", "Social"),
-                subtitle = sh("Arkadaşların, Kuşatma davetlerin ve ezeli rakiplerin", "Friends, Siege invitations and rivals"),
+                subtitle = sh("Arkadaşların, oyun davetlerin ve ezeli rakiplerin", "Friends, game invitations and rivals"),
             )
         }
 
@@ -123,7 +123,7 @@ internal fun MainSocialScreen(
                 ) {
                     Icon(Icons.Rounded.Shield, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(sh("KUŞATMA OYNA", "PLAY SIEGE"), fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 10.sp)
                 }
                 OutlinedButton(
                     onClick = { tab = 0 },
@@ -159,7 +159,7 @@ internal fun MainSocialScreen(
                                 if (index == 1 && incomingCount > 0) {
                                     Spacer(Modifier.width(5.dp))
                                     Surface(shape = CircleShape, color = MainUi.Red) {
-                                        Text(incomingCount.toString(), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                                        Text(incomingCount.toString(), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = MainUi.Text, fontSize = 7.sp, fontWeight = FontWeight.Black)
                                     }
                                 }
                             }
@@ -195,10 +195,10 @@ internal fun MainSocialScreen(
                                 busyKey = friend.id
                                 runCatching { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
                                     .onSuccess {
-                                        notice = sh("${friend.displayName} Kelime Kuşatması'na davet edildi.", "${friend.displayName} was invited to Word Siege.")
+                                        notice = sh("${friend.displayName} Kelime Tahtı'na davet edildi.", "${friend.displayName} was invited to Word Throne.")
                                         SonHarfSoundFx.softNotify()
                                     }
-                                    .onFailure { notice = sh("Kuşatma daveti gönderilemedi veya bekleyen bir davet var.", "Siege invite could not be sent or one is already pending.") }
+                                    .onFailure { notice = sh("Oyun daveti gönderilemedi veya bekleyen bir davet var.", "Game invite could not be sent or one is already pending.") }
                                 busyKey = null
                             }
                         },
@@ -358,7 +358,7 @@ internal fun MainSocialScreen(
                                 ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = Color(0xFF567A64))
                                 Spacer(Modifier.width(9.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text(sender?.displayName ?: sh("Kuşatma daveti", "Siege invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
+                                    Text(sender?.displayName ?: sh("Oyun daveti", "Game invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
                                     Text(sh("Kelime Tahtı • ", "Kelime Tahtı • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
                                 }
                             }
@@ -383,11 +383,11 @@ internal fun MainSocialScreen(
                                             runCatching { backend.respondWordSiegeInvite(invite.id, true) }
                                                 .onSuccess { game ->
                                                     if (game != null) {
-                                                        notice = sh("Kuşatma maçı hazır.", "Siege match is ready.")
+                                                        notice = sh("Maç hazır.", "Match is ready.")
                                                         onSiege()
                                                     }
                                                 }
-                                                .onFailure { notice = sh("Kuşatma daveti artık kullanılamıyor.", "The Siege invite is no longer available."); reload() }
+                                                .onFailure { notice = sh("Oyun daveti artık kullanılamıyor.", "The game invite is no longer available."); reload() }
                                             busyKey = null
                                         }
                                     },
@@ -543,7 +543,7 @@ internal fun MainSocialScreen(
                             icon = Icons.Rounded.SportsKabaddi,
                             title = sh("Rakip geçmişin henüz yok", "No rival history yet"),
                             body = sh("İlk gerçek oyuncu maçından sonra rakiplerin burada görünür.", "Rivals appear here after your first real-player match."),
-                            action = sh("KUŞATMA OYNA", "PLAY SIEGE"),
+                            action = sh("OYNA", "PLAY"),
                             onAction = onSiege,
                         )
                     }
@@ -604,9 +604,9 @@ private fun ProFriendListLock(onUpgrade: () -> Unit) {
                 shape = RoundedCornerShape(15.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold),
             ) {
-                Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(18.dp), tint = Color.White)
+                Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(18.dp), tint = MainUi.Text)
                 Spacer(Modifier.width(8.dp))
-                Text(sh("PRO'YA GEÇ", "GO PRO"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Text(sh("PRO'YA GEÇ", "GO PRO"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
             }
         }
     }
@@ -650,7 +650,7 @@ private fun MainFriendCard(
                 enabled = !busy,
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp),
-            ) { Text(if (busy) "…" else sh("KUŞAT", "SIEGE"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
+            ) { Text(if (busy) "…" else sh("DAVET", "INVITE"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, sh("Daha fazla", "More"), tint = MainUi.Muted) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

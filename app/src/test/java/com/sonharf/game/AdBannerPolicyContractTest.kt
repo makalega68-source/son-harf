@@ -47,12 +47,12 @@ class AdBannerPolicyContractTest {
     fun premiumShellNeverMountsBannerOnGameplayRoutes() {
         val app = source("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt")
         val bannerGuard =
-            "if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)) SonHarfTopAdBanner(isPremium = isPro)"
+            "if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)"
 
         assertTrue(app.contains(bannerGuard))
         assertTrue(app.contains("PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()"))
         assertTrue(app.contains("PremiumDestination.SIEGE -> WordSiegeEntryScreen("))
-        assertTrue(app.contains("PremiumDestination.LETTER_PATH -> LetterLadderGameScreen"))
+        assertTrue(app.contains("PremiumDestination.WORD_WORKSHOP -> KelimeAtolyesiScreen"))
     }
 
     @Test

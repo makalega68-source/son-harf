@@ -1,12 +1,14 @@
 package com.sonharf.game
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -19,13 +21,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -41,24 +46,27 @@ import com.sonharf.game.data.WordSiegeMoveDto
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val PanSiegeTile = Color(0xFFF4F7F5)
-private val PanSiegeTileBorder = Color(0xFF8EA697)
-private val PanSiegeBoardSurface = Color(0xFFE8ECE8)
-private val PanSiegeNeutral = Color(0xFFFAF7EF)
-private val PanSiegeMine = Color(0xFFA8D5B5)
-private val PanSiegeRival = Color(0xFFE4AEAA)
-private val PanSiegeNeutralBorder = Color(0xFFB8C3BC)
-private val PanSiegeBonusBorder = Color(0xFFA79BB2)
-private val PanSiegeMineBorder = Color(0xFF3F7C53)
-private val PanSiegeRivalBorder = Color(0xFF9B4D4A)
-private val PanSiegeBonus2H = Color(0xFFDCEAF2)
-private val PanSiegeBonus3H = Color(0xFFDCEAF2)
-private val PanSiegeBonus2K = Color(0xFFEAE2F0)
-private val PanSiegeBonus3K = Color(0xFFEAE2F0)
-private val PanSiegeBonus4K = Color(0xFFE7DDBB)
-private val PanSiegeBonusStar = Color(0xFFEAD59B)
-private val PanSiegeLastMove = Color(0xFFE7B95E)
-private val PanSiegeBonusLabel = Color(0xFF68716D)
+private val PanSiegeTile = WordSiegeWalnutIvory.ivory
+private val PanSiegeTileBorder = WordSiegeWalnutIvory.bevel
+private val PanSiegeBoardSurface = Color(0xFFEFE7D2)
+private val PanSiegeFrameNavy = WordSiegeWalnutIvory.frame
+private val PanSiegeFrameEdge = WordSiegeWalnutIvory.frameEdge
+private val PanSiegeFrameInner = WordSiegeWalnutIvory.frameShade
+private val PanSiegeNeutral = WordSiegeWalnutIvory.empty
+private val PanSiegeMine = WordSiegeWalnutIvory.mine
+private val PanSiegeRival = WordSiegeWalnutIvory.rival
+private val PanSiegeNeutralBorder = WordSiegeWalnutIvory.emptyEdge
+private val PanSiegeBonusBorder = Color(0xFFC9BFA5)
+private val PanSiegeMineBorder = WordSiegeWalnutIvory.mine
+private val PanSiegeRivalBorder = WordSiegeWalnutIvory.rival
+private val PanSiegeBonus2H = Color(0xFFCFE6F5)
+private val PanSiegeBonus3H = Color(0xFFF6D3E2)
+private val PanSiegeBonus2K = Color(0xFFD6ECCB)
+private val PanSiegeBonus3K = Color(0xFFF8DCC3)
+private val PanSiegeBonus4K = Color(0xFFE2D6F2)
+private val PanSiegeBonusStar = Color(0xFFFBEBB5)
+private val PanSiegeLastMove = Color(0xFFE0A82E)
+private val PanSiegeBonusLabel = Color(0xFF3F4A5A)
 private val PanSiegeCellSize = 52.dp
 internal const val WORD_SIEGE_BOT_FALLBACK_DELAY_MS = 15_000L
 
@@ -95,17 +103,122 @@ internal fun WordSiegePanMatch(
     val rivalAreaCount = panSiegeAreaCount(game, rivalOwner)
     val myWordPoints = panSiegeWordScore(game, myOwner)
     val rivalWordPoints = panSiegeWordScore(game, rivalOwner)
-    val myTerritoryPoints = WordSiegeFinalRules.cubeTransfer(myAreaCount)
-    val rivalTerritoryPoints = WordSiegeFinalRules.cubeTransfer(rivalAreaCount)
-    val myTargetScore = WordSiegeFinalRules.currentTerritoryScore(myWordPoints, myAreaCount)
-    val rivalTargetScore = WordSiegeFinalRules.currentTerritoryScore(rivalWordPoints, rivalAreaCount)
-    val displayedMyScore by animateIntAsState(myTargetScore, tween(260), label = "siege-my-score")
-    val displayedRivalScore by animateIntAsState(rivalTargetScore, tween(260), label = "siege-rival-score")
+    val myTerritoryPoints = if (myOwner == 1) game.playerOneAreaScore else game.playerTwoAreaScore
+    val rivalTerritoryPoints = if (rivalOwner == 1) game.playerOneAreaScore else game.playerTwoAreaScore
+    val myTargetScore = WordSiegeFinalRules.scoreWithTerritoryLedger(myWordPoints, myTerritoryPoints)
+    val rivalTargetScore = WordSiegeFinalRules.scoreWithTerritoryLedger(rivalWordPoints, rivalTerritoryPoints)
+    val boardOwners = game.board.map { it.owner }
+    val captureTracker = remember(game.id) {
+        WordSiegeCaptureTracker(
+            initialUpdateKey = lastMove?.id?.toString(),
+            initialOwners = boardOwners,
+        )
+    }
+    var captureQueue by remember(game.id) { mutableStateOf<List<WordSiegeCaptureBatch>>(emptyList()) }
+    var pendingMyCapturePoints by remember(game.id) { mutableIntStateOf(0) }
+    var pendingRivalCapturePoints by remember(game.id) { mutableIntStateOf(0) }
+    var pendingMyLossPoints by remember(game.id) { mutableIntStateOf(0) }
+    var pendingRivalLossPoints by remember(game.id) { mutableIntStateOf(0) }
+    var myScoreArrivalTick by remember(game.id) { mutableIntStateOf(0) }
+    var rivalScoreArrivalTick by remember(game.id) { mutableIntStateOf(0) }
+    var myScoreLossTick by remember(game.id) { mutableIntStateOf(0) }
+    var rivalScoreLossTick by remember(game.id) { mutableIntStateOf(0) }
+    var myScoreTargetInWindow by remember(game.id) { mutableStateOf(Offset.Unspecified) }
+    var rivalScoreTargetInWindow by remember(game.id) { mutableStateOf(Offset.Unspecified) }
+
+    val moveOwner = when (lastMove?.playerId) {
+        game.playerOneId -> 1
+        game.playerTwoId -> 2
+        else -> null
+    }
+    val captureCandidate = captureTracker.preview(
+        updateKey = lastMove?.id?.toString(),
+        currentOwners = boardOwners,
+        capturingOwner = moveOwner,
+        expectedCaptured = lastMove?.capturedCells ?: 0,
+    )
+    val candidateAlreadyQueued = captureCandidate?.let { candidate ->
+        captureQueue.any { it.updateKey == candidate.updateKey }
+    } ?: false
+    val candidateMyPoints =
+        if (!candidateAlreadyQueued && captureCandidate?.owner == myOwner) captureCandidate.points else 0
+    val candidateRivalPoints =
+        if (!candidateAlreadyQueued && captureCandidate?.owner == rivalOwner) captureCandidate.points else 0
+    val candidateMyLoss =
+        if (!candidateAlreadyQueued && captureCandidate?.owner == rivalOwner) captureCandidate.opponentLossPoints else 0
+    val candidateRivalLoss =
+        if (!candidateAlreadyQueued && captureCandidate?.owner == myOwner) captureCandidate.opponentLossPoints else 0
+    val displayedMyScore = wordSiegeDisplayedScore(
+        myTargetScore, pendingMyCapturePoints + candidateMyPoints, pendingMyLossPoints + candidateMyLoss,
+    )
+    val displayedRivalScore = wordSiegeDisplayedScore(
+        rivalTargetScore, pendingRivalCapturePoints + candidateRivalPoints, pendingRivalLossPoints + candidateRivalLoss,
+    )
+
+    LaunchedEffect(lastMove?.id, boardOwners) {
+        val move = lastMove ?: return@LaunchedEffect
+        val owner = when (move.playerId) {
+            game.playerOneId -> 1
+            game.playerTwoId -> 2
+            else -> return@LaunchedEffect
+        }
+        val batch = captureTracker.preview(
+            updateKey = move.id.toString(),
+            currentOwners = boardOwners,
+            capturingOwner = owner,
+            expectedCaptured = move.capturedCells,
+        ) ?: return@LaunchedEffect
+        captureTracker.consume(batch, boardOwners)
+        if (captureQueue.none { it.updateKey == batch.updateKey }) {
+            captureQueue = captureQueue + batch
+            if (batch.owner == myOwner) {
+                pendingMyCapturePoints += batch.points
+                pendingRivalLossPoints += batch.opponentLossPoints
+            } else if (batch.owner == rivalOwner) {
+                pendingRivalCapturePoints += batch.points
+                pendingMyLossPoints += batch.opponentLossPoints
+            }
+        }
+    }
+
+    val activeCapture = captureQueue.firstOrNull()
+    val captureEffect = activeCapture?.let { batch ->
+        WordSiegeCaptureEffect(
+            batch = batch,
+            targetInWindow = if (batch.owner == myOwner) myScoreTargetInWindow else rivalScoreTargetInWindow,
+            accent = if (batch.owner == myOwner) PanSiegeMineBorder else PanSiegeRivalBorder,
+            onCubeArrived = { index ->
+                if (batch.owner == myOwner) {
+                    pendingMyCapturePoints =
+                        (pendingMyCapturePoints - WORD_SIEGE_CAPTURE_POINTS_PER_CUBE).coerceAtLeast(0)
+                    myScoreArrivalTick += 1
+                    if (index in batch.opponentIndices) {
+                        pendingRivalLossPoints =
+                            (pendingRivalLossPoints - WORD_SIEGE_OPPONENT_LOSS_PER_CUBE).coerceAtLeast(0)
+                        rivalScoreLossTick += 1
+                    }
+                } else {
+                    pendingRivalCapturePoints =
+                        (pendingRivalCapturePoints - WORD_SIEGE_CAPTURE_POINTS_PER_CUBE).coerceAtLeast(0)
+                    rivalScoreArrivalTick += 1
+                    if (index in batch.opponentIndices) {
+                        pendingMyLossPoints =
+                            (pendingMyLossPoints - WORD_SIEGE_OPPONENT_LOSS_PER_CUBE).coerceAtLeast(0)
+                        myScoreLossTick += 1
+                    }
+                }
+            },
+            onFinished = {
+                captureQueue = captureQueue.filterNot { it.updateKey == batch.updateKey }
+            },
+        )
+    }
     val myMapControl = ((myAreaCount * 100f) / WordSiegeBoardSpec.CellCount).toInt().coerceIn(0, 100)
     val rivalMapControl = ((rivalAreaCount * 100f) / WordSiegeBoardSpec.CellCount).toInt().coerceIn(0, 100)
     val displayedCurrentPlayerId = game.currentPlayerId
     var fallbackPracticeActive by remember(game.id) { mutableStateOf(false) }
     var shuffleSeed by remember(game.id) { mutableIntStateOf(0) }
+    var boardViewportMode by remember(game.id) { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     val visualMyTurn = game.status == "playing" && displayedCurrentPlayerId == me
     val rackOrder = remember(rack, shuffleSeed) {
         if (shuffleSeed == 0) rack.indices.toList() else wordSiegeShuffledRackIndices(rack.length, shuffleSeed)
@@ -142,12 +255,13 @@ internal fun WordSiegePanMatch(
             .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        if (boardViewportMode == WordSiegeBoardViewportMode.FIT) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 Icon(Icons.Rounded.ArrowBack, sh("Oyunlar", "Games"), tint = WordSiegeGameUi.Text)
             }
             Column(Modifier.weight(1f)) {
-                Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = WordSiegeGameUi.Text, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(sh("KELİME TAHTI", "WORD THRONE"), color = WordSiegeGameUi.Text, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(
                     if (game.status == "playing") {
                         if (visualMyTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")
@@ -162,6 +276,8 @@ internal fun WordSiegePanMatch(
             }
         }
 
+        }
+
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             PanSiegePlayerCard(
                 profile = mine,
@@ -174,6 +290,9 @@ internal fun WordSiegePanMatch(
                 active = displayedCurrentPlayerId == me,
                 leading = myTargetScore > rivalTargetScore,
                 modifier = Modifier.weight(1f),
+                scoreArrivalTick = myScoreArrivalTick,
+                scoreLossTick = myScoreLossTick,
+                onScoreCenterChanged = { myScoreTargetInWindow = it },
             )
             PanSiegePlayerCard(
                 profile = opponent,
@@ -186,10 +305,12 @@ internal fun WordSiegePanMatch(
                 active = displayedCurrentPlayerId == opponentId,
                 leading = rivalTargetScore > myTargetScore,
                 modifier = Modifier.weight(1f),
+                scoreArrivalTick = rivalScoreArrivalTick,
+                scoreLossTick = rivalScoreLossTick,
+                onScoreCenterChanged = { rivalScoreTargetInWindow = it },
             )
         }
 
-        WordSiegeOwnershipLegend()
 
         if (game.status == "waiting") {
             Surface(
@@ -234,27 +355,59 @@ internal fun WordSiegePanMatch(
             placements = placements,
             myOwner = myOwner,
             enabled = canAct,
+            playerTurn = myTurn,
+            lastMoveMine = lastMove?.playerId == me,
             lastMove = lastMove,
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+            captureEffect = captureEffect,
+            viewportMode = boardViewportMode,
+            onViewportModeChange = { boardViewportMode = it },
+            modifier = Modifier.fillMaxSize(),
+            mascotSignal = lastMove?.let { move ->
+                val mineMove = move.playerId == me
+                when {
+                    mineMove && move.primaryWord.length >= 8 ->
+                        WordSiegeMascotSignal("rare:${move.id}", WordSiegeMascotEvent.RARE_WORD, word = move.primaryWord)
+                    mineMove && (move.totalScore >= 25 || move.capturedCells >= 3 || move.opponentCaptured > 0) ->
+                        WordSiegeMascotSignal("big:${move.id}", WordSiegeMascotEvent.BIG_PRAISE, word = move.primaryWord)
+                    mineMove -> WordSiegeMascotSignal("ok:${move.id}", WordSiegeMascotEvent.PRAISE, word = move.primaryWord)
+                    move.totalScore >= 25 || move.opponentCaptured > 0 ->
+                        WordSiegeMascotSignal("rival:${move.id}", WordSiegeMascotEvent.RIVAL_STRONG)
+                    rivalTargetScore - myTargetScore >= 40 ->
+                        WordSiegeMascotSignal("behind:${move.id}", WordSiegeMascotEvent.BEHIND)
+                    else -> null
+                }
+            },
+            mascotOutcome = if (game.status == "finished") {
+                when (game.winnerId) {
+                    null -> WordSiegeMascotOutcome.DRAW
+                    me -> WordSiegeMascotOutcome.WIN
+                    else -> WordSiegeMascotOutcome.LOSS
+                }
+            } else {
+                null
+            },
+            playerName = mine?.displayName,
+            playerGender = mine?.gender,
             onCell = onBoardCell,
             onChat = onChat,
         )
         }
 
         if (game.status == "playing") {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (placements.isNotEmpty()) {
-                    Text(readyFeedback.message, color = PanSiegeMineBorder, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                } else Spacer(Modifier.weight(1f))
-                Spacer(Modifier.weight(1f))
-                Text(sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"), color = WordSiegeGameUi.Muted, fontSize = 8.sp)
-            }
+            if (boardViewportMode == WordSiegeBoardViewportMode.FIT) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (placements.isNotEmpty()) {
+                        Text(readyFeedback.message, color = PanSiegeMineBorder, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    } else Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.weight(1f))
+                }
 
-            WordSiegePremiumPanel(
-                game = game,
-                placements = placements,
-                canAct = canAct,
-            )
+                WordSiegePremiumPanel(
+                    game = game,
+                    placements = placements,
+                    canAct = canAct,
+                )
+            }
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 rackOrder.forEach { rackIndex ->
@@ -285,31 +438,53 @@ internal fun WordSiegePanMatch(
                 WordSiegeCompactAction(sh("DEĞİŞTİR", "EXCHANGE"), Icons.Rounded.SwapHoriz,
                     canAct && game.bag.isNotEmpty(), Modifier.weight(1f), onExchange)
             }
-            Row(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                WordSiegeSideAction(
+                    sh("SOHBET", "CHAT"),
+                    Icons.Rounded.Chat,
+                    modifier = Modifier.width(74.dp),
+                    onClick = onChat,
+                )
                 Button(
                     onClick = onSubmit,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
                     enabled = canAct && placements.isNotEmpty(),
-                    modifier = Modifier.weight(1f).height(52.dp),
+                    modifier = Modifier.weight(1f).height(40.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = PanSiegeMineBorder,
                         contentColor = Color.White,
                         disabledContainerColor = WordSiegeGameUi.DisabledBackground,
                         disabledContentColor = WordSiegeGameUi.DisabledContent,
                     ),
-                    contentPadding = PaddingValues(horizontal = 5.dp),
+                    contentPadding = PaddingValues(horizontal = 3.dp),
                 ) {
-                    if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-                    else Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    if (busy) CircularProgressIndicator(Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
+                    else Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
                 }
+                WordSiegeOnlineBagButton(
+                    game = game,
+                    modifier = Modifier.width(82.dp),
+                )
             }
         } else {
             PanSiegeFinishedCard(game, me)
         }
 
         notice?.let { PanSiegeNotice(it) }
-        lastMove?.let { PanSiegeLastMoveInfo(it) }
+        if (boardViewportMode == WordSiegeBoardViewportMode.FIT) lastMove?.let { PanSiegeLastMoveInfo(it) }
+        if (game.status == "playing") {
+            WordSiegeTurnStrip(
+                text = if (visualMyTurn) sh("SIRA SENDE • Kelimeni oluştur", "YOUR TURN • Build your word") else sh("RAKİP OYNUYOR", "RIVAL IS PLAYING"),
+                playerTurn = visualMyTurn,
+                playerAccent = PanSiegeMineBorder,
+                rivalAccent = PanSiegeRivalBorder,
+            )
+        }
     }
     }
 }
@@ -322,8 +497,17 @@ private fun PanSiegeBoard(
     placements: Map<Int, Int>,
     myOwner: Int,
     enabled: Boolean,
+    playerTurn: Boolean,
+    lastMoveMine: Boolean,
     lastMove: WordSiegeMoveDto?,
+    captureEffect: WordSiegeCaptureEffect? = null,
+    viewportMode: WordSiegeBoardViewportMode,
+    onViewportModeChange: (WordSiegeBoardViewportMode) -> Unit,
     modifier: Modifier = Modifier,
+    mascotSignal: WordSiegeMascotSignal? = null,
+    mascotOutcome: WordSiegeMascotOutcome? = null,
+    playerName: String? = null,
+    playerGender: String? = null,
     onCell: (Int) -> Unit,
     onChat: () -> Unit,
 ) {
@@ -334,11 +518,12 @@ private fun PanSiegeBoard(
     var closePan by remember(gameId) { mutableStateOf(Offset.Zero) }
     var dragging by remember(gameId) { mutableStateOf(false) }
     var initialized by remember(gameId) { mutableStateOf(false) }
+    var viewportOriginInWindow by remember(gameId) { mutableStateOf(Offset.Unspecified) }
+    val mascotTouches = remember(gameId) { WordSiegeMascotTouchState() }
     var observedMoveId by remember(gameId) { mutableStateOf(lastMove?.id) }
     var actionVfxMoveId by remember(gameId) { mutableStateOf<Long?>(null) }
     var highlightedIndices by remember(gameId) { mutableStateOf<Set<Int>>(emptySet()) }
     val highlightAlpha = remember(gameId) { Animatable(0f) }
-    var viewportMode by remember(gameId) { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     val closeScale = remember(viewport, boardPx) {
         wordSiegeOnlineCloseScale(
             viewportWidthPx = viewport.width.toFloat(),
@@ -384,7 +569,7 @@ private fun PanSiegeBoard(
         if (nextMode == WordSiegeBoardViewportMode.CLOSE) {
             closePan = centerCloseOn(focusIndex)
         }
-        viewportMode = nextMode
+        onViewportModeChange(nextMode)
     }
 
     LaunchedEffect(viewport, gameId, boardPx, closeScale) {
@@ -447,16 +632,24 @@ private fun PanSiegeBoard(
 
     Surface(
         modifier = modifier,
-        color = PanSiegeBoardSurface,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, WordSiegeGameUi.Border.copy(alpha = .75f)),
+        color = WordSiegeWalnutIvory.frame,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(2.dp, WordSiegeWalnutIvory.frameEdge),
+        shadowElevation = 7.dp,
     ) {
         Box(
             Modifier
                 .fillMaxSize()
+                .padding(5.dp)
                 .clip(RoundedCornerShape(14.dp))
+                .background(WordSiegeWalnutIvory.boardGrain)
+                .border(1.dp, WordSiegeWalnutIvory.frameShade, RoundedCornerShape(14.dp))
                 .clipToBounds()
-                .onGloballyPositioned { viewport = it.size }
+                .onGloballyPositioned {
+                    viewport = it.size
+                    viewportOriginInWindow = it.localToWindow(Offset.Zero)
+                }
+                .wordSiegeMascotTouchWatcher(mascotTouches)
                 .pointerInput(gameId, viewportMode, viewport, boardPx, closeScale) {
                     if (viewportMode == WordSiegeBoardViewportMode.CLOSE) {
                         detectDragGestures(
@@ -513,15 +706,61 @@ private fun PanSiegeBoard(
                 modifier = Modifier.matchParentSize(),
             )
 
-            SmallFloatingActionButton(
-                onClick = {
-                    viewportMode = WordSiegeBoardViewportMode.CLOSE
-                    closePan = centerCloseOn(WordSiegeBoardSpec.CenterIndex)
+            captureEffect?.let { effect ->
+                val sourcePositions = effect.batch.indices.associateWith { index ->
+                    wordSiegeCaptureCellCenterInWindow(
+                        index = index,
+                        transform = transform,
+                        cellSizePx = tilePx,
+                        viewportOriginInWindow = viewportOriginInWindow,
+                    )
+                }
+                WordSiegeCaptureFlightOverlay(
+                    effect = effect,
+                    sourcePositionsInWindow = sourcePositions,
+                    anchorOriginInWindow = viewportOriginInWindow,
+                )
+            }
+
+            // Tapping the mascot sends it flying to another perch; the right corners stay free
+            // for the centre and chat buttons.
+            WordSiegeMascotCompanion(
+                anchors = WordSiegeBoardMascotPerches,
+                mascotSize = 76.dp,
+                moveId = lastMove?.id,
+                lastMoveMine = lastMoveMine,
+                playerTurn = playerTurn,
+                modifier = Modifier.matchParentSize().padding(3.dp),
+                moveScore = lastMove?.totalScore ?: 0,
+                capturedCells = lastMove?.capturedCells ?: 0,
+                opponentCaptured = lastMove?.opponentCaptured ?: 0,
+                moveCell = lastMove?.placedTiles?.firstOrNull()?.index,
+                pendingCells = placements.keys,
+                signal = mascotSignal,
+                outcome = mascotOutcome,
+                playerName = playerName,
+                playerGender = playerGender,
+                touches = mascotTouches,
+                // After a strong capture it may fly over to admire the new territory.
+                visit = lastMove?.takeIf { lastMoveMine && (it.capturedCells >= 2 || it.opponentCaptured > 0) }?.let { move ->
+                    wordSiegeMascotCellVisit(
+                        key = "cap:${move.id}",
+                        indices = move.placedTiles.map { it.index },
+                        transform = transform,
+                        cellSizePx = tilePx,
+                        viewportWidthPx = viewport.width.toFloat(),
+                        viewportHeightPx = viewport.height.toFloat(),
+                        kind = WordSiegeMascotVisitKind.CAPTURE,
+                    )
                 },
+            )
+
+            SmallFloatingActionButton(
+                onClick = { toggleViewport(WordSiegeBoardSpec.CenterIndex) },
                 modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
                 shape = CircleShape,
-                containerColor = Color.White.copy(alpha = .94f),
-                contentColor = WordSiegeGameUi.Blue,
+                containerColor = Color(0xFFFFFFFF).copy(alpha = .95f),
+                contentColor = Color(0xFF2C3E55),
             ) {
                 Icon(Icons.Rounded.CenterFocusStrong, sh("Merkeze dön", "Center board"), Modifier.size(19.dp))
             }
@@ -530,8 +769,8 @@ private fun PanSiegeBoard(
                 onClick = onChat,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp),
                 shape = CircleShape,
-                containerColor = Color.White.copy(alpha = .96f),
-                contentColor = WordSiegeGameUi.Muted,
+                containerColor = Color(0xFFFFFFFF).copy(alpha = .95f),
+                contentColor = Color(0xFF2C3E55),
             ) {
                 Icon(Icons.Rounded.Chat, sh("Oyun içi sohbet", "In-game chat"), Modifier.size(20.dp))
             }
@@ -594,33 +833,31 @@ private fun PanSiegeBoardCell(
         else -> null
     }
     val baseColor = when {
-        pending -> PanSiegeTile
+        pending -> territoryColor
         letter != null -> territoryColor
         bonusSurface != null -> bonusSurface
         else -> PanSiegeNeutral
     }
+    val displayBase = baseColor
     val border = when {
         pending -> PanSiegeTileBorder
         letter != null && owner == myOwner -> PanSiegeMineBorder
         letter != null && owner != 0 -> PanSiegeRivalBorder
-        activeBonus == WordSiegeBoardSpec.CenterBonus || activeBonus == WordSiegeBoardSpec.StarBonus -> Color(0xFF8D7438)
+        activeBonus == WordSiegeBoardSpec.CenterBonus || activeBonus == WordSiegeBoardSpec.StarBonus -> Color(0xFFB07F1E)
         activeBonus != null -> PanSiegeBonusBorder
         else -> PanSiegeNeutralBorder
     }
     val regionGap = 1.25.dp
+    val boardInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by boardInteraction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) .94f else 1f, tween(if (pressed) 65 else 150), label = "siege cell press")
 
     Box(
         Modifier
             .size(size)
-            .padding(regionGap)
-            .clip(RoundedCornerShape(7.dp))
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.lerp(baseColor, Color.White, .12f), baseColor)))
-            .border(
-                width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
-                color = PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),
-                shape = RoundedCornerShape(7.dp),
-            )
             .combinedClickable(
+                interactionSource = boardInteraction,
+                indication = null,
                 onClick = {
                     dispatchWordSiegeBoardTap(
                         WordSiegeBoardTapAction.PLACE,
@@ -637,22 +874,61 @@ private fun PanSiegeBoardCell(
                         onDoubleClick,
                     )
                 },
+            )
+            .padding(regionGap)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .clip(RoundedCornerShape(7.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        androidx.compose.ui.graphics.lerp(displayBase, Color.White, .08f),
+                        displayBase,
+                        androidx.compose.ui.graphics.lerp(displayBase, Color.Black, .10f),
+                    )
+                )
+            )
+            .border(
+                width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
+                color = PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),
+                shape = RoundedCornerShape(7.dp),
             ),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(if (letter != null && owner != 0) 4.dp else .75.dp)
+                .shadow(if (letter != null) 1.5.dp else 0.dp, RoundedCornerShape(7.dp)),
             color = Color.Transparent,
             shape = RoundedCornerShape(7.dp),
-            border = BorderStroke(if (pending) maxOf(2.dp, borderWidth) else borderWidth, border.copy(alpha = .92f)),
+            border = BorderStroke(
+                if (pending) maxOf(1.6.dp, borderWidth) else .65.dp,
+                if (pending) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel,
+            ),
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Box(
+                modifier = if (letter != null) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier,
+                contentAlignment = Alignment.Center,
+            ) {
                 if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(PanSiegeLastMove.copy(alpha = .045f * lastMoveHighlight)))
+                if (owner != 0 && !pending) {
+                    Box(
+                        Modifier.align(if (owner == myOwner) Alignment.TopStart else Alignment.TopEnd)
+                            .padding(3.dp).size(7.dp)
+                            .clip(if (owner == myOwner) CircleShape else RoundedCornerShape(1.dp))
+                            .background(if (owner == myOwner) PanSiegeMine else PanSiegeRival),
+                    )
+                }
                 if (letter != null) {
-                    Text(letter, color = Color(0xFF17372C), fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        letter,
+                        color = WordSiegeWalnutIvory.ink,
+                        fontSize = if (overview) 24.sp else 22.sp,
+                        fontFamily = FontFamily.SansSerif,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = if (overview) .10.sp else .25.sp,
+                    )
                     Text(
                         panSiegeLetterValue(letter),
-                        color = Color(0xFF17372C).copy(alpha = .78f),
+                        color = WordSiegeWalnutIvory.secondaryInk,
                         fontSize = WordSiegeBoardAccessibility.BoardLetterPoint,
                         fontWeight = FontWeight.Black,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
@@ -676,7 +952,7 @@ private fun PanSiegeBoardCell(
                         fontSize = WordSiegeBoardAccessibility.BoardBonus,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         lineHeight = 17.sp,
-                        fontWeight = FontWeight.Light,
+                        fontWeight = if (overview) FontWeight.SemiBold else FontWeight.Medium,
                     )
                 }
             }
@@ -693,22 +969,32 @@ private fun PanSiegeRackTile(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) .95f else 1f, tween(if (pressed) 65 else 150), label = "siege rack press")
     Surface(
-        modifier = modifier.height(48.dp).combinedClickable(enabled = enabled, onClick = onClick),
+        modifier = modifier.height(48.dp).graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .combinedClickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
         color = when {
             used -> WordSiegeGameUi.SurfaceSoft
-            selected -> Color(0xFFE1ECE4)
-            else -> PanSiegeTile
+            else -> WordSiegeWalnutIvory.ivory
         },
-        shape = RoundedCornerShape(11.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PanSiegeMineBorder else PanSiegeTileBorder.copy(alpha = .7f)),
-        shadowElevation = if (selected) 3.dp else 2.dp,
+        shape = RoundedCornerShape(9.dp),
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel),
+        shadowElevation = if (pressed) 0.dp else if (selected) 4.dp else 2.dp,
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(letter.toString(), color = if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else WordSiegeGameUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
+        Box(Modifier.background(WordSiegeWalnutIvory.tile), contentAlignment = Alignment.Center) {
+            Text(
+                letter.toString(),
+                color = if (used) WordSiegeWalnutIvory.ink.copy(alpha = .35f) else WordSiegeWalnutIvory.ink,
+                fontSize = 22.sp,
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Black,
+                letterSpacing = .35.sp,
+            )
             Text(
                 panSiegeLetterValue(letter.toString()),
-                color = WordSiegeGameUi.Muted,
+                color = WordSiegeWalnutIvory.secondaryInk,
                 fontSize = WordSiegeBoardAccessibility.RackPoint,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
@@ -741,6 +1027,9 @@ private fun PanSiegePlayerCard(
     active: Boolean,
     leading: Boolean,
     modifier: Modifier = Modifier,
+    scoreArrivalTick: Int = 0,
+    scoreLossTick: Int = 0,
+    onScoreCenterChanged: (Offset) -> Unit = {},
 ) {
     WordSiegeScoreCard(
         name = profile?.displayName ?: fallbackName,
@@ -749,6 +1038,9 @@ private fun PanSiegePlayerCard(
         avatarPath = profile?.avatarPath, gender = profile?.gender,
         avatarVisible = profile?.avatarVisibility != "hidden", isBot = false,
         modifier = modifier,
+        scoreArrivalTick = scoreArrivalTick,
+        scoreLossTick = scoreLossTick,
+        onScoreCenterChanged = onScoreCenterChanged,
     )
 }
 
@@ -756,26 +1048,60 @@ private fun PanSiegePlayerCard(
 private fun PanSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
     val won = game.winnerId == me
     val draw = game.winnerId == null
-    val accent = when { draw -> WordSiegeGameUi.Gold; won -> PanSiegeMineBorder; else -> PanSiegeRivalBorder }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = accent.copy(alpha = .08f),
-        border = BorderStroke(1.dp, accent.copy(alpha = .45f)),
-    ) {
-        Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
-                color = accent,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Black,
+    val mine = if (me != null && me == game.playerTwoId) 2 else 1
+    val rival = if (mine == 1) 2 else 1
+    val myWords = panSiegeWordScore(game, mine)
+    val rivalWords = panSiegeWordScore(game, rival)
+    val myCubes = panSiegeAreaCount(game, mine)
+    val myTotal = myWords + if (mine == 1) game.playerOneAreaScore else game.playerTwoAreaScore
+    val rivalTotal = rivalWords + if (rival == 1) game.playerOneAreaScore else game.playerTwoAreaScore
+    HfCard(modifier = Modifier.fillMaxWidth(), color = Hf.Ground) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            HfTitleRule(
+                when { draw -> sh("BERABERE", "DRAW"); won -> sh("TAHT SENİN!", "THE THRONE IS YOURS!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
+                fontSize = 24.sp,
             )
+            Spacer(Modifier.height(14.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                PanSiegeResultSide(sh("SEN", "YOU"), myTotal, Hf.Green, Modifier.weight(1f))
+                PanSiegeResultSide(sh("RAKİP", "RIVAL"), rivalTotal, Hf.Red, Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(14.dp))
+            HfCard(modifier = Modifier.fillMaxWidth(), color = Hf.Ground) {
+                Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                    PanSiegeResultRow(sh("Kazanılan küpler", "Cubes won"), "+$myCubes")
+                    HorizontalDivider(color = Hf.Gold.copy(alpha = .45f))
+                    PanSiegeResultRow(sh("Kelime puanı", "Word points"), "+$myWords")
+                }
+            }
+            Spacer(Modifier.height(8.dp))
             Text(
                 sh("Sonuç = kelime puanı + şu an sahip olunan küpler (küp başına 2)", "Result = word score + currently owned cubes (2 per cube)"),
                 color = WordSiegeGameUi.Muted,
-                fontSize = 9.sp,
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
             )
         }
+    }
+}
+
+@Composable
+private fun PanSiegeResultSide(label: String, score: Int, accent: Color, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Surface(shape = Hf.PillShape, color = accent, border = BorderStroke(1.5.dp, Hf.Gold)) {
+            Text(label, Modifier.fillMaxWidth().padding(vertical = 6.dp), color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+        }
+        Surface(shape = RoundedCornerShape(14.dp), color = Hf.Ivory) {
+            Text("$score", Modifier.fillMaxWidth().padding(vertical = 8.dp), color = Hf.Text, fontSize = 34.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun PanSiegeResultRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f), color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(value, color = Hf.Text, fontSize = 24.sp, fontWeight = FontWeight.Black)
     }
 }
 
@@ -804,4 +1130,35 @@ private fun panSiegeLetterValue(letter: String): String = when (letter) {
     "Ğ" -> "8"
     "J" -> "10"
     else -> "1"
+}
+
+/**
+ * Perches for the board mascot (fractions of the board viewport). All sit on the outer edge,
+ * where cells are rarely played; the right-hand corners stay free for the board buttons.
+ */
+internal val WordSiegeBoardMascotPerches = listOf(
+    Offset(0f, 0f),
+    Offset(0f, 1f),
+    Offset(.5f, 0f),
+    Offset(.5f, 1f),
+    Offset(0f, .5f),
+)
+
+/** Converts board cells into a mascot visit point (viewport fraction); null when off-screen. */
+internal fun wordSiegeMascotCellVisit(
+    key: String,
+    indices: Collection<Int>,
+    transform: WordSiegeBoardTransform,
+    cellSizePx: Float,
+    viewportWidthPx: Float,
+    viewportHeightPx: Float,
+    kind: WordSiegeMascotVisitKind,
+): WordSiegeMascotVisit? {
+    if (indices.isEmpty() || viewportWidthPx <= 0f || viewportHeightPx <= 0f) return null
+    val row = indices.map { WordSiegeBoardSpec.row(it) + .5f }.average().toFloat()
+    val column = indices.map { WordSiegeBoardSpec.column(it) + .5f }.average().toFloat()
+    val x = (transform.pan.x + column * cellSizePx * transform.scale) / viewportWidthPx
+    val y = (transform.pan.y + row * cellSizePx * transform.scale) / viewportHeightPx
+    if (x !in .06f..0.94f || y !in .06f..0.94f) return null
+    return WordSiegeMascotVisit(key, Offset(x, y), kind)
 }

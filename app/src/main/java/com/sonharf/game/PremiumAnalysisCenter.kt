@@ -238,7 +238,7 @@ private fun CenterLine(label: String, value: String) {
 }
 
 private fun modeLabel(mode: String): String = when (mode) {
-    "siege" -> sh("Kelime Kuşatması", "Word Siege")
+    "siege" -> sh("Kelime Tahtı", "Word Throne")
     "arena" -> sh("Kelime Düellosu", "Word Duel")
     else -> sh("Son Harf", "Last Letter")
 }

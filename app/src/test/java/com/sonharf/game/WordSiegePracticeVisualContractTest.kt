@@ -17,9 +17,9 @@ class WordSiegePracticeVisualContractTest {
 
     @Test fun practiceBoardUsesTerritoryFirstPaletteStrategicZonesAndThreatBorders() {
         val text = source()
-        assertTrue(text.contains("PracticeSiegeNeutral = Color(0xFFFAF7EF)"))
-        assertTrue(text.contains("PracticeSiegeMine = Color(0xFFA8D5B5)"))
-        assertTrue(text.contains("PracticeSiegeRival = Color(0xFFE4AEAA)"))
+        assertTrue(text.contains("PracticeSiegeNeutral = WordSiegeWalnutIvory.empty"))
+        assertTrue(text.contains("PracticeSiegeMine = WordSiegeWalnutIvory.mine"))
+        assertTrue(text.contains("PracticeSiegeRival = WordSiegeWalnutIvory.rival"))
         assertTrue(text.contains("PracticeSiegeThreat = Color(0xFFD8903D)"))
         assertTrue(text.contains("PracticeZoneWatch"))
         assertTrue(text.contains("PracticeZoneCritical"))
