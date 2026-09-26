@@ -54,13 +54,12 @@ fun EconomyShopScreen(
     Column(Modifier.fillMaxSize().background(SonHarfBg)) {
         StoreTitleBar(balance = balance, onBack = onBack)
         HorizontalDivider(color = Hf.Gold.copy(alpha = .18f))
-        // The store sells two things only: PRO membership and the mascots. Coin cosmetics
-        // (themes, keyboards, name styles, effects) and the season pass are off the shelf;
-        // anything a player already owns stays usable from Profile > Koleksiyonum.
-        val shown = if (tab == 4) 4 else 3
+        // Ceviz & Fildişi is the single Son Coin cosmetic on sale; use it from Profile > Koleksiyonum.
+        val shown = if (tab == 4 || tab == 2) tab else 3
         val categories = listOf(
             3 to sh("PRO Üyelik", "PRO Membership"),
             4 to sh("Maskotlar", "Mascots"),
+            2 to sh("Tahta Seti", "Board Set"),
         )
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -174,7 +173,7 @@ private fun EconomyCatalogScreen(
     )
     val filtered = when (section) {
         0 -> (featuredFirst + items).distinctBy { it.id }
-        2 -> items.filter { kindFilter == null || it.kind == kindFilter }
+        2 -> items.filter { it.id == WALNUT_IVORY_THEME_ID }
         else -> emptyList()
     }
     val bundles = storefront?.bundles.orEmpty().filter { b -> b.items.isNotEmpty() && b.items.all { it.isRuntimeReadyStyle() } }
@@ -184,10 +183,10 @@ private fun EconomyCatalogScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (section == 0 || section == 2) {
+        if (section == 0) {
             item { StoreProBanner(profile?.isVip == true) { onSection(3) } }
         }
-        if (section == 0 || section == 2) {
+        if (section == 0) {
             item { StoreCoinGuide() }
         }
 

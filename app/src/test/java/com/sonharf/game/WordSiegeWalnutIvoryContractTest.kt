@@ -17,11 +17,12 @@ class WordSiegeWalnutIvoryContractTest {
         assertTrue(style.contains("mine = Color(0xFF236D48)"))
         assertTrue(style.contains("rival = Color(0xFFA83E38)"))
         assertTrue(style.contains("val tile = Brush.verticalGradient"))
+        assertTrue(style.contains("SonHarfCosmetics.gameThemeId == WALNUT_IVORY_THEME_ID"))
         listOf(online, practice).forEach { board ->
             assertTrue(board.contains("WordSiegeWalnutIvory.boardGrain"))
             assertTrue(board.contains("WordSiegeWalnutIvory.tile"))
             assertTrue(board.contains("4.dp else .75.dp"))
-            assertTrue(board.contains("if (owner == myOwner) Alignment.TopStart else Alignment.TopEnd"))
+            assertTrue(board.contains("if (WordSiegeWalnutIvory.enabled && owner != myOwner) Alignment.TopEnd else Alignment.TopStart"))
             assertTrue(board.contains("collectIsPressedAsState()"))
             assertTrue(board.contains("val regionGap = 1.25.dp"))
             assertTrue(board.contains("WordSiegeBoardTapAction.PLACE"))

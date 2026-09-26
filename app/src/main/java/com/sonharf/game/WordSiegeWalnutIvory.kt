@@ -3,8 +3,11 @@ package com.sonharf.game
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-/** Match-only material palette; no saved cosmetic preference or game state is changed. */
+internal const val WALNUT_IVORY_THEME_ID = "theme_walnut_ivory"
+
+/** Match-only material palette. The original board remains the default. */
 internal object WordSiegeWalnutIvory {
+    val enabled: Boolean get() = SonHarfCosmetics.gameThemeId == WALNUT_IVORY_THEME_ID
     val frame = Color(0xFF503526)
     val frameEdge = Color(0xFF8C6848)
     val frameShade = Color(0xFF322419)

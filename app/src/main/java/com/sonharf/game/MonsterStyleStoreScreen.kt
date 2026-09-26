@@ -170,7 +170,7 @@ internal fun MonsterStyleStoreScreen() {
 }
 
 internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) {
-    "game_theme" -> id in setOf("theme_black", "theme_dark_arena")
+    "game_theme" -> id in setOf("theme_black", "theme_dark_arena", WALNUT_IVORY_THEME_ID)
     "profile_frame" -> false
     "name_style" -> id in setOf("name_cyan", "name_sapphire", "name_amethyst", "name_aurelia")
     "keyboard_theme" -> id in setOf(

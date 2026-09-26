@@ -46,14 +46,14 @@ class WordSiegePanAreaContractTest {
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
         val accessibility = projectFile("app/src/main/java/com/sonharf/game/WordSiegeBoardAccessibility.kt").readText()
 
-        assertTrue(pan.contains("PanSiegeMine = WordSiegeWalnutIvory.mine"))
-        assertTrue(pan.contains("PanSiegeRival = WordSiegeWalnutIvory.rival"))
+        assertTrue(pan.contains("PanSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine"))
+        assertTrue(pan.contains("PanSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival"))
         assertTrue(pan.contains("fontSize = 22.sp"))
         assertTrue(pan.contains("WordSiegeBoardAccessibility.BoardLetterPoint"))
         assertTrue(pan.contains("WordSiegeBoardAccessibility.BoardBonus"))
         assertTrue(accessibility.contains("BoardLetterPoint: TextUnit = 14.sp"))
         assertTrue(accessibility.contains("BoardBonus: TextUnit = 17.sp"))
-        assertTrue(pan.contains("color = WordSiegeWalnutIvory.ink"))
+        assertTrue(pan.contains("WordSiegeWalnutIvory.ink"))
         assertTrue(pan.contains("FontFamily.SansSerif"))
         assertTrue(pan.contains("WordSiegeWalnutIvory.selection"))
         assertTrue(pan.contains("val canPlace = enabled && (cell.letter == null || pending)"))
@@ -61,8 +61,8 @@ class WordSiegePanAreaContractTest {
         assertTrue(pan.contains("WordSiegeBoardTapAction.TOGGLE_VIEWPORT"))
         assertTrue(experience.contains("if (placements.containsKey(boardIndex))"))
         assertTrue(experience.contains("game.board.getOrNull(boardIndex)?.letter == null"))
-        assertTrue(experience.contains("owner == myOwner -> WordSiegeWalnutIvory.mine"))
-        assertTrue(experience.contains("else -> WordSiegeWalnutIvory.rival"))
+        assertTrue(experience.contains("owner == myOwner -> if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine"))
+        assertTrue(experience.contains("else -> if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival"))
     }
 
     @Test fun areaPointsUseAuthoritativePlusTwoGainAndMinusOneRivalLossLedger() {

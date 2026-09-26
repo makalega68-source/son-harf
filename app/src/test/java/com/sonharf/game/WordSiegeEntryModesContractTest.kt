@@ -39,11 +39,11 @@ class WordSiegeEntryModesContractTest {
     fun onlineBoardKeepsOwnershipRulesAndAddsPremiumFrame() {
         val board = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
 
-        assertTrue(board.contains("PanSiegeMine = WordSiegeWalnutIvory.mine"))
-        assertTrue(board.contains("PanSiegeRival = WordSiegeWalnutIvory.rival"))
-        assertTrue(board.contains("color = WordSiegeWalnutIvory.frame"))
-        assertTrue(board.contains("shadowElevation = 7.dp"))
-        assertTrue(board.contains("border = BorderStroke(2.dp, WordSiegeWalnutIvory.frameEdge)"))
+        assertTrue(board.contains("PanSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine"))
+        assertTrue(board.contains("PanSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival"))
+        assertTrue(board.contains("color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frame"))
+        assertTrue(board.contains("shadowElevation = if (WordSiegeWalnutIvory.enabled) 7.dp else 14.dp"))
+        assertTrue(board.contains("border = BorderStroke(2.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameEdge"))
         assertTrue(board.contains("WordSiegeWalnutIvory.tile"))
         assertTrue(board.contains("WordSiegePremiumPanel("))
     }

@@ -28,7 +28,7 @@ object SonHarfCosmetics {
     fun restore(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         profileFrameId = prefs.getString("profile_frame_id", null)?.takeIf { !it.isNullOrBlank() }
-        gameThemeId = prefs.getString("game_theme_id", null)?.takeIf { it in setOf("theme_black", "theme_dark_arena") }
+        gameThemeId = prefs.getString("game_theme_id", null)?.takeIf { it in setOf("theme_black", "theme_dark_arena", WALNUT_IVORY_THEME_ID) }
         nameStyleId = prefs.getString("name_style_id", null)
         keyboardThemeId = prefs.getString("keyboard_theme_id", null)
     }

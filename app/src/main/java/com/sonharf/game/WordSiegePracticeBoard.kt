@@ -39,15 +39,15 @@ import com.sonharf.game.data.WordSiegeCellDto
 import kotlinx.coroutines.delay
 
 private val PracticeSiegeCellSize = 52.dp
-private val PracticeSiegeTile = WordSiegeWalnutIvory.ivory
-private val PracticeSiegeTileBorder = WordSiegeWalnutIvory.bevel
+private val PracticeSiegeTile get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.ivory else Color(0xFFF7E3A6)
+private val PracticeSiegeTileBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bevel else Color(0xFFC9A560)
 internal val PracticeSiegeBoardSurface = Color(0xFFD5CEBD)
-internal val PracticeSiegeNeutral = WordSiegeWalnutIvory.empty
-private val PracticeSiegeEmpty = WordSiegeWalnutIvory.empty
-private val PracticeSiegeMine = WordSiegeWalnutIvory.mine
-private val PracticeSiegeRival = WordSiegeWalnutIvory.rival
-private val PracticeSiegeMineBorder = WordSiegeWalnutIvory.mine
-private val PracticeSiegeRivalBorder = WordSiegeWalnutIvory.rival
+internal val PracticeSiegeNeutral get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.empty else Color(0xFFF3EEDF)
+private val PracticeSiegeEmpty get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.empty else Color(0xFFF3EEDF)
+private val PracticeSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF5FAF73)
+private val PracticeSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFD9776F)
+private val PracticeSiegeMineBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF7FC391)
+private val PracticeSiegeRivalBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFEB9E97)
 private val PracticeSiegeThreat = Color(0xFFD8903D)
 private val PracticeSiegeLightTileText = Color(0xFF4A3217)
 private val PracticeZoneWatch = Color(0xFFCFE6F5)
@@ -175,17 +175,17 @@ internal fun WordSiegePracticeBoard(
 
     Surface(
         modifier = modifier,
-        color = WordSiegeWalnutIvory.frame,
+        color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frame else Color.White,
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(2.dp, WordSiegeWalnutIvory.frameEdge),
-        shadowElevation = 7.dp,
+        border = BorderStroke(2.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameEdge else Color(0xFFD2DBE5)),
+        shadowElevation = if (WordSiegeWalnutIvory.enabled) 7.dp else 12.dp,
     ) {
         Box(
             Modifier
                 .fillMaxSize()
                 .padding(4.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(WordSiegeWalnutIvory.boardGrain)
+                .background(if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.boardGrain else Brush.linearGradient(listOf(Color(0xFFEFE7D2), Color(0xFFECE3CB), Color(0xFFEFE7D2), Color(0xFFE9DFC5))))
                 .clipToBounds()
                 .onGloballyPositioned {
                     viewport = it.size
@@ -363,12 +363,12 @@ private fun WordSiegePracticeBoardCell(
 
     // Territory is the primary visual layer. Strategic-zone tint is only dominant on neutral cells.
     val cellColor = when {
-        pending -> territory
+        pending -> if (WordSiegeWalnutIvory.enabled) territory else PracticeSiegeTile
         letter != null -> territory
         zoneSurface != null -> zoneSurface
         else -> PracticeSiegeEmpty
     }
-    val displayCellColor = cellColor
+    val displayCellColor = if (pending && !WordSiegeWalnutIvory.enabled) Color(0xFFE3D6B0) else cellColor
     val borderColor = when {
         threatened && owner != 0 -> PracticeSiegeThreat
         pending -> PracticeSiegeTileBorder
@@ -407,7 +407,7 @@ private fun WordSiegePracticeBoardCell(
                 },
             )
             .padding(regionGap)
-            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .graphicsLayer { scaleX = if (WordSiegeWalnutIvory.enabled) pressScale else 1f; scaleY = if (WordSiegeWalnutIvory.enabled) pressScale else 1f }
             .clip(RoundedCornerShape(8.dp))
             .background(
                 Brush.linearGradient(
@@ -422,12 +422,12 @@ private fun WordSiegePracticeBoardCell(
                 width = if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
                 color = if (lastMoveHighlight > 0f) {
                     PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
-                } else WordSiegeWalnutIvory.emptyEdge,
+                } else if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.emptyEdge else Color(0xFFCDBF9F),
                 shape = RoundedCornerShape(8.dp),
             ),
         contentAlignment = Alignment.Center,
     ) {
-        if (letter != null) {
+        if (WordSiegeWalnutIvory.enabled && letter != null) {
             Box(
                 Modifier.matchParentSize()
                     .padding(if (owner != 0) 4.dp else .75.dp)
@@ -448,10 +448,10 @@ private fun WordSiegePracticeBoardCell(
         if (owner != 0 && !pending) {
             Box(
                 Modifier
-                    .align(if (owner == myOwner) Alignment.TopStart else Alignment.TopEnd)
-                    .padding(3.dp)
-                    .size(7.dp)
-                    .clip(if (owner == myOwner) CircleShape else RoundedCornerShape(1.dp))
+                    .align(if (WordSiegeWalnutIvory.enabled && owner != myOwner) Alignment.TopEnd else Alignment.TopStart)
+                    .padding(if (WordSiegeWalnutIvory.enabled) 3.dp else 4.dp)
+                    .size(if (WordSiegeWalnutIvory.enabled) 7.dp else 6.dp)
+                    .clip(if (WordSiegeWalnutIvory.enabled && owner != myOwner) RoundedCornerShape(1.dp) else CircleShape)
                     .background(if (owner == myOwner) PracticeSiegeMineBorder else PracticeSiegeRivalBorder),
             )
         }
@@ -459,7 +459,7 @@ private fun WordSiegePracticeBoardCell(
         if (letter != null) {
             Text(
                 letter,
-                color = WordSiegeWalnutIvory.ink,
+                color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.ink else if (!pending && owner != 0) Color.White else PracticeSiegeLightTileText,
                 fontSize = if (overview) 24.sp else 22.sp,
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Black,
@@ -467,7 +467,7 @@ private fun WordSiegePracticeBoardCell(
             )
             Text(
                 practiceLetterValue(letter),
-                color = WordSiegeWalnutIvory.secondaryInk,
+                color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.secondaryInk else (if (!pending && owner != 0) Color.White else PracticeSiegeLightTileText).copy(alpha = .78f),
                 fontSize = WordSiegeBoardAccessibility.BoardLetterPoint,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
@@ -523,20 +523,22 @@ internal fun WordSiegePracticeRackTile(
     val pressed by interaction.collectIsPressedAsState()
     val pressScale by animateFloatAsState(if (pressed) .95f else 1f, tween(if (pressed) 65 else 150), label = "practice rack press")
     Surface(
-        modifier = modifier.height(48.dp).graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+        modifier = modifier.height(48.dp).graphicsLayer { scaleX = if (WordSiegeWalnutIvory.enabled) pressScale else 1f; scaleY = if (WordSiegeWalnutIvory.enabled) pressScale else 1f }
             .combinedClickable(interactionSource = interaction, indication = null, onClick = onClick, enabled = enabled),
         color = when {
             used -> WordSiegeGameUi.SurfaceSoft
-            else -> WordSiegeWalnutIvory.ivory
+            WordSiegeWalnutIvory.enabled -> WordSiegeWalnutIvory.ivory
+            selected -> Color(0xFFD6C38D)
+            else -> Color(0xFFE3D6B0)
         },
         shape = RoundedCornerShape(9.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel),
-        shadowElevation = if (pressed) 0.dp else if (selected) 4.dp else 2.dp,
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (WordSiegeWalnutIvory.enabled) (if (selected) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel) else (if (selected) PracticeSiegeMineBorder else PracticeSiegeTileBorder.copy(alpha = .7f))),
+        shadowElevation = if (WordSiegeWalnutIvory.enabled && pressed) 0.dp else if (selected) 4.dp else 2.dp,
     ) {
-        Box(Modifier.background(WordSiegeWalnutIvory.tile), contentAlignment = Alignment.Center) {
+        Box(if (WordSiegeWalnutIvory.enabled) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier, contentAlignment = Alignment.Center) {
             Text(
                 letter.toString(),
-                color = if (used) WordSiegeWalnutIvory.ink.copy(alpha = .35f) else WordSiegeWalnutIvory.ink,
+                color = if (WordSiegeWalnutIvory.enabled) (if (used) WordSiegeWalnutIvory.ink.copy(alpha = .35f) else WordSiegeWalnutIvory.ink) else (if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else PracticeSiegeLightTileText),
                 fontSize = 22.sp,
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Black,
@@ -544,7 +546,7 @@ internal fun WordSiegePracticeRackTile(
             )
             Text(
                 practiceLetterValue(letter.toString()),
-                color = if (used) WordSiegeWalnutIvory.secondaryInk.copy(alpha = .45f) else WordSiegeWalnutIvory.secondaryInk,
+                color = if (WordSiegeWalnutIvory.enabled) (if (used) WordSiegeWalnutIvory.secondaryInk.copy(alpha = .45f) else WordSiegeWalnutIvory.secondaryInk) else (if (used) WordSiegeGameUi.Muted.copy(alpha = .55f) else PracticeSiegeLightTileText.copy(alpha = .72f)),
                 fontSize = WordSiegeBoardAccessibility.RackPoint,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),

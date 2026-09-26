@@ -2,6 +2,10 @@ package com.sonharf.game
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -13,14 +17,17 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.ShopItemDto
 
 /**
@@ -40,6 +47,7 @@ internal fun StoreProductPreview(
         contentAlignment = Alignment.Center,
     ) {
         when {
+            item.id == WALNUT_IVORY_THEME_ID -> WalnutIvoryStorePreview(expanded)
             item.kind == "profile_frame" -> RealFramePreview(item.id, expanded)
             storeArtworkRes(item.id) != null -> {
                 Image(
@@ -50,6 +58,31 @@ internal fun StoreProductPreview(
                 )
             }
             else -> PremiumArtworkFallback(expanded)
+        }
+    }
+}
+
+@Composable
+private fun WalnutIvoryStorePreview(expanded: Boolean) {
+    Box(
+        Modifier.fillMaxSize().padding(if (expanded) 8.dp else 3.dp)
+            .background(WordSiegeWalnutIvory.frame, RoundedCornerShape(12.dp))
+            .border(2.dp, WordSiegeWalnutIvory.frameEdge, RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            listOf("C", "F", "T").forEachIndexed { index, letter ->
+                Box(
+                    Modifier.size(if (expanded) 29.dp else 23.dp)
+                        .background(if (index == 1) WordSiegeWalnutIvory.mine else WordSiegeWalnutIvory.empty, RoundedCornerShape(5.dp))
+                        .padding(2.dp)
+                        .background(WordSiegeWalnutIvory.tile, RoundedCornerShape(4.dp))
+                        .border(.7.dp, WordSiegeWalnutIvory.bevel, RoundedCornerShape(4.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(letter, color = WordSiegeWalnutIvory.ink, fontSize = if (expanded) 18.sp else 14.sp, fontWeight = FontWeight.Black)
+                }
+            }
         }
     }
 }

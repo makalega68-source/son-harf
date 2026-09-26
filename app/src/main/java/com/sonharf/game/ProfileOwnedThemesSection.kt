@@ -87,6 +87,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
 
     fun equipStyle(itemId: String?) {
         if (busy || loading) return
+        if (itemId != null && itemId !in owned) return
         busy = true
         notice = null
         scope.launch {
@@ -124,11 +125,12 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
     }
     val darkActive = activeDarkThemeId != null
     val showBlackTheme = ownedDarkThemeId != null
+    val walnutItem = collection.firstOrNull { it.id == WALNUT_IVORY_THEME_ID && it.id in owned && it.isSupportedOwnedStyle() }
 
     // Historical ownership stays safely on the server, but products with no live game
     // integration must not occupy the player's visible profile collection. Theme aliases are
     // represented by the single canonical theme card to avoid duplicate equipped states.
-    val styles = collection.filter { it.id !in DarkThemeIds && it.isSupportedOwnedStyle() }
+    val styles = collection.filter { it.id !in DarkThemeIds && it.id != WALNUT_IVORY_THEME_ID && it.isSupportedOwnedStyle() }
     val shown = if (category == null) styles else styles.filter { it.kind == category }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -149,7 +151,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                 ProfileThemeCard(
                     title = sh("Ana Tema", "Main Theme"),
                     subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
-                    active = !darkActive,
+                    active = SonHarfCosmetics.gameThemeId == null,
                     enabled = !busy && !loading,
                     blackVariant = false,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -166,6 +168,18 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                         onClick = { equipStyle(ownedDarkThemeId ?: BlackThemeId) },
                     )
                 } else {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+            if (walnutItem != null) {
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OwnedStyleCard(
+                        item = walnutItem,
+                        active = equipped.isEquipped(walnutItem),
+                        enabled = !loading && !busy,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        onEquip = { equipStyle(walnutItem.id) },
+                    )
                     Spacer(Modifier.weight(1f))
                 }
             }

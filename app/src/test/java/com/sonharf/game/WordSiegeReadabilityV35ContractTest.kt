@@ -34,7 +34,7 @@ class WordSiegeReadabilityV35ContractTest {
             assertTrue(online.contains(it))
             assertTrue(practice.contains(it))
         }
-        assertTrue(online.contains("PanSiegeMine = WordSiegeWalnutIvory.mine"))
-        assertTrue(online.contains("PanSiegeRival = WordSiegeWalnutIvory.rival"))
+        assertTrue(online.contains("PanSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine"))
+        assertTrue(online.contains("PanSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival"))
     }
 }

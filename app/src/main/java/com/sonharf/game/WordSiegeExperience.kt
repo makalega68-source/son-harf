@@ -43,10 +43,10 @@ import kotlinx.coroutines.launch
 internal val SiegePurple = MainUi.Purple
 internal val SiegePurpleSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) MainUi.SurfaceSoft else MainUi.SurfaceSoft
 internal val SiegeBlueSoft = MainUi.BlueSoft
-private val SiegeTile = WordSiegeWalnutIvory.ivory
-private val SiegeTileBorder = WordSiegeWalnutIvory.bevel
-private val SiegeLightTileText = WordSiegeWalnutIvory.ink
-private val SiegeLightTileMuted = WordSiegeWalnutIvory.secondaryInk
+private val SiegeTile get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.ivory else Color(0xFFF7E3A6)
+private val SiegeTileBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bevel else Color(0xFFC9A560)
+private val SiegeLightTileText get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.ink else Color(0xFF4A3217)
+private val SiegeLightTileMuted get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.secondaryInk else Color(0xFF6B7A8C)
 
 private enum class SiegeListSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FINISHED }
 
@@ -894,9 +894,9 @@ internal fun WordSiegeBoard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = WordSiegeWalnutIvory.frame,
+        color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frame else Color(0xFFD6CFBE),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(2.dp, WordSiegeWalnutIvory.frameEdge),
+        border = BorderStroke(if (WordSiegeWalnutIvory.enabled) 2.dp else 1.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameEdge else MainUi.Border),
     ) {
         BoxWithConstraints(Modifier.fillMaxWidth().padding(3.dp)) {
             val cellSize = maxWidth / 9
@@ -934,9 +934,9 @@ private fun WordSiegeBoardCell(
 ) {
     val owner = if (pending) myOwner else cell.owner
     val territory = when {
-        owner == 0 -> WordSiegeWalnutIvory.board
-        owner == myOwner -> WordSiegeWalnutIvory.mine
-        else -> WordSiegeWalnutIvory.rival
+        owner == 0 -> if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.board else MainUi.Surface
+        owner == myOwner -> if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF35C878)
+        else -> if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFFF5F57)
     }
     val border = when {
         pending -> SiegeTileBorder
@@ -952,23 +952,23 @@ private fun WordSiegeBoardCell(
         Modifier
             .size(size)
             .padding(1.dp)
-            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .graphicsLayer { scaleX = if (WordSiegeWalnutIvory.enabled) pressScale else 1f; scaleY = if (WordSiegeWalnutIvory.enabled) pressScale else 1f }
             .clip(RoundedCornerShape(4.dp))
-            .background(if (letter != null) territory else WordSiegeWalnutIvory.board)
+            .background(if (letter != null) territory else if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.board else MainUi.Surface)
             .clickable(interactionSource = interaction, indication = null, enabled = enabled && (cell.letter == null || pending), onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize().padding(if (letter != null && owner != 0) 3.dp else .5.dp)
-                .shadow(if (letter != null) 1.5.dp else 0.dp, RoundedCornerShape(4.dp)),
-            color = Color.Transparent,
+            modifier = if (WordSiegeWalnutIvory.enabled) Modifier.fillMaxSize().padding(if (letter != null && owner != 0) 3.dp else .5.dp)
+                .shadow(if (letter != null) 1.5.dp else 0.dp, RoundedCornerShape(4.dp)) else Modifier.fillMaxSize(),
+            color = if (!WordSiegeWalnutIvory.enabled && pending) SiegeTile.copy(alpha = .92f) else Color.Transparent,
             shape = RoundedCornerShape(4.dp),
-            border = BorderStroke(if (pending) 1.5.dp else .7.dp, if (pending) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel),
+            border = BorderStroke(if (pending) 1.5.dp else .7.dp, if (WordSiegeWalnutIvory.enabled) (if (pending) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel) else border),
         ) {
-            Box(if (letter != null) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier, contentAlignment = Alignment.Center) {
+            Box(if (WordSiegeWalnutIvory.enabled && letter != null) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier, contentAlignment = Alignment.Center) {
                 if (letter != null) {
-                    val contentColor = SiegeLightTileText
-                    val pointColor = SiegeLightTileMuted
+                    val contentColor = if (WordSiegeWalnutIvory.enabled || pending) SiegeLightTileText else MainUi.Text
+                    val pointColor = if (WordSiegeWalnutIvory.enabled || pending) SiegeLightTileMuted else MainUi.Muted
                     Text(letter, color = contentColor, fontSize = 14.sp, fontWeight = FontWeight.Black)
                     Text(
                         wordSiegeLetterValue(letter),
