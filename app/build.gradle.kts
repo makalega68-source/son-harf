@@ -24,8 +24,8 @@ android {
         applicationId = "com.sonharf.game"
         minSdk = 26
         targetSdk = 36
-        versionCode = 35
-        versionName = "0.9.19"
+        versionCode = 36
+        versionName = "1.0.0"
 
         val supabaseUrl = providers.gradleProperty("SON_HARF_SUPABASE_URL")
             .orElse("https://bzdtftzdjtjoqhtcqtxb.supabase.co")
