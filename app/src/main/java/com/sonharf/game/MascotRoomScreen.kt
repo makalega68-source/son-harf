@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -68,6 +69,8 @@ private data class RoomFloat(val id: Long, val emoji: String, val x: Float)
 @Composable
 internal fun MascotRoomDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val screenHeightDp = LocalConfiguration.current.screenHeightDp
     val scope = rememberCoroutineScope()
     val owned = WordSiegeMascotOwnership.owned
     val skin = remember { WordSiegeMascotBond(context).skinChoice?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } }
@@ -104,6 +107,10 @@ internal fun MascotRoomDialog(onDismiss: () -> Unit) {
     var sceneEmoji by remember { mutableStateOf("") }
     var lastIdle by remember { mutableStateOf<WordSiegeMascotAction?>(null) }
     val fruitTravel = remember { Animatable(0f) }
+    val spaceTravel = remember { Animatable(0f) }
+    val kissApproach = remember { Animatable(0f) }
+    var kissMark by remember { mutableStateOf(false) }
+    var specialTap by remember { mutableIntStateOf(0) }
 
     fun react(emotion: WordSiegeMascotEmotion, moves: List<WordSiegeMascotAction>, text: String, emoji: String) {
         mood = emotion
@@ -145,10 +152,26 @@ internal fun MascotRoomDialog(onDismiss: () -> Unit) {
     }
 
     LaunchedEffect(actionKey) {
+        spaceTravel.snapTo(0f)
+        kissApproach.snapTo(0f)
+        kissMark = false
         if (action == WordSiegeMascotAction.FOOD_LOOK) fruitTravel.snapTo(0f)
         if (action == WordSiegeMascotAction.EAT) {
             fruitTravel.snapTo(0f)
             fruitTravel.animateTo(1f, tween(1_150, easing = FastOutSlowInEasing))
+        }
+        if (action == WordSiegeMascotAction.SPACE_FLIGHT) {
+            spaceTravel.animateTo(1f, tween(1_450, easing = FastOutSlowInEasing))
+            delay(400L)
+            spaceTravel.animateTo(0f, tween(1_750, easing = FastOutSlowInEasing))
+        }
+        if (action == WordSiegeMascotAction.KISS) {
+            kissApproach.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
+            kissMark = true
+            delay(500L)
+            kissApproach.animateTo(0f, tween(850, easing = FastOutSlowInEasing))
+            delay(350L)
+            kissMark = false
         }
     }
 
@@ -190,8 +213,11 @@ internal fun MascotRoomDialog(onDismiss: () -> Unit) {
         if (busy) return
         busy = true
         when (kind) {
-            "love" -> react(WordSiegeMascotEmotion.HAPPY, listOf(WordSiegeMascotAction.NUZZLE, WordSiegeMascotAction.SWAY), sh("Sen en iyi dostumsun!", "You're my best friend!"), "💖")
-            "play" -> react(WordSiegeMascotEmotion.EXCITED, listOf(WordSiegeMascotAction.HOP, WordSiegeMascotAction.CLAP, WordSiegeMascotAction.SWAY), sh("Yaşasın, oyun zamanı!", "Yay, playtime!"), "⚽")
+            "love" -> react(WordSiegeMascotEmotion.HAPPY, listOf(WordSiegeMascotAction.NUZZLE, WordSiegeMascotAction.KISS, WordSiegeMascotAction.SWAY), sh("Sen en iyi dostumsun!", "You're my best friend!"), "💖")
+            "play" -> react(WordSiegeMascotEmotion.EXCITED,
+                if (happiness >= 80) listOf(WordSiegeMascotAction.HOP, WordSiegeMascotAction.SPACE_FLIGHT, WordSiegeMascotAction.CHEER, WordSiegeMascotAction.SWAY)
+                else listOf(WordSiegeMascotAction.HOP, WordSiegeMascotAction.CLAP, WordSiegeMascotAction.SWAY),
+                sh("Yaşasın, oyun zamanı!", "Yay, playtime!"), "⚽")
             else -> react(WordSiegeMascotEmotion.PROUD, listOf(WordSiegeMascotAction.GROOM, WordSiegeMascotAction.SPARKLE, WordSiegeMascotAction.SWAY), sh("Pırıl pırıl oldum!", "All sparkly now!"), "✨")
         }
         scope.launch {
@@ -216,7 +242,11 @@ internal fun MascotRoomDialog(onDismiss: () -> Unit) {
     fun feed(fruit: RoomFruit) {
         if (busy) return
         if (fruit.price == 0 && applesLeft <= 0) {
-            react(WordSiegeMascotEmotion.CALM, listOf(WordSiegeMascotAction.SHRUG), sh("Bugünlük elma bitti... yarın yine gel?", "No more apples today... come back tomorrow?"), "🍎")
+            // The daily reward is exhausted, but the mascot can still enjoy a purely visual
+            // apple snack. No server call, fullness gain or extra reward is granted.
+            react(WordSiegeMascotEmotion.HAPPY,
+                listOf(WordSiegeMascotAction.FOOD_LOOK, WordSiegeMascotAction.EAT, WordSiegeMascotAction.HOP),
+                sh("Elmayı yedim! Bugünkü üç tokluk ödülünü zaten aldım.", "Yummy apple! Today's three fullness rewards are already used."), "🍎")
             return
         }
         busy = true
@@ -281,12 +311,46 @@ internal fun MascotRoomDialog(onDismiss: () -> Unit) {
                         pendingCells = emptyList(),
                         playerTurn = true,
                         requestedEmotion = mood,
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp).size(230.dp),
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp).size(230.dp)
+                            .graphicsLayer {
+                                val flight = spaceTravel.value
+                                val near = kissApproach.value
+                                val kissScale = (screenWidthDp * .5f / (230f * .64f)).coerceIn(1f, 1.9f)
+                                translationY = -flight * (screenHeightDp * .65f).dp.toPx() - near * 32.dp.toPx()
+                                val scale = (1f - flight * .60f) * (1f + (kissScale - 1f) * near)
+                                scaleX = scale
+                                scaleY = scale
+                            },
                         actionKey = actionKey,
                         action = action,
+                        flying = sceneRunning && action == WordSiegeMascotAction.SPACE_FLIGHT,
                         skin = skin,
-                        onTap = { if (!loved) care("love") else react(WordSiegeMascotEmotion.HAPPY, listOf(WordSiegeMascotAction.NOD, WordSiegeMascotAction.HOP), sh("Hihi, gıdıklanıyorum!", "Hehe, that tickles!"), "💕") },
+                        onTap = {
+                            if (!busy && !sceneRunning) {
+                                if (!loved) care("love") else {
+                                    specialTap++
+                                    if (specialTap % 2 == 0 && happiness >= 80) {
+                                        react(WordSiegeMascotEmotion.EXCITED,
+                                            listOf(WordSiegeMascotAction.HOP, WordSiegeMascotAction.SPACE_FLIGHT, WordSiegeMascotAction.CHEER),
+                                            sh("Sevinçten uçuyorum!", "I'm flying with joy!"), "✨")
+                                    } else {
+                                        react(WordSiegeMascotEmotion.HAPPY,
+                                            listOf(WordSiegeMascotAction.NUZZLE, WordSiegeMascotAction.KISS),
+                                            sh("Bu öpücük sana!", "This kiss is for you!"), "💕")
+                                    }
+                                }
+                            }
+                        },
                     )
+                    if (kissMark && action == WordSiegeMascotAction.KISS) {
+                        Text("💋", fontSize = 48.sp,
+                            modifier = Modifier.align(Alignment.Center).offset(y = 18.dp)
+                                .graphicsLayer {
+                                    alpha = (.35f + .65f * kissApproach.value).coerceIn(0f, 1f)
+                                    scaleX = .7f + .3f * kissApproach.value
+                                    scaleY = scaleX
+                                })
+                    }
                     if (sceneRunning && (action == WordSiegeMascotAction.FOOD_LOOK || action == WordSiegeMascotAction.EAT)) {
                         Text(sceneEmoji, fontSize = 28.sp,
                             modifier = Modifier.align(Alignment.BottomCenter).offset(x = 48.dp, y = (-60).dp)

@@ -49,7 +49,7 @@ internal enum class WordSiegeMascotAction {
     POINT,
     /** Claps along with a small bounce. */
     CLAP,
-    NUZZLE, SWAY, GROOM, FOOD_LOOK, EAT, DOZE,
+    NUZZLE, SWAY, GROOM, FOOD_LOOK, EAT, DOZE, SPACE_FLIGHT, KISS,
 }
 
 /** One clock shared by the rig and room scenes; never cut a move short with a second duration table. */
@@ -76,6 +76,8 @@ internal fun mascotActionMillis(action: WordSiegeMascotAction): Long = when (act
     WordSiegeMascotAction.FOOD_LOOK -> 2_000L
     WordSiegeMascotAction.EAT -> 4_400L
     WordSiegeMascotAction.DOZE -> 5_600L
+    WordSiegeMascotAction.SPACE_FLIGHT -> 4_000L
+    WordSiegeMascotAction.KISS -> 2_400L
 }
 
 /** Four complete chew cycles between opening the mouth and swallowing. */
@@ -382,9 +384,6 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private val followTarget = bodyTarget.copyOf()
     private val followValue = bodyTarget.copyOf()
     private val followVelocity = FloatArray(5)
-    private val tuftTarget = bodyTarget.copyOf()
-    private val tuftValue = bodyTarget.copyOf()
-    private val tuftVelocity = FloatArray(5)
     private val historyTimes = LongArray(64)
     private val historyPoses = FloatArray(64 * 5)
     private var historyWrite = 0
@@ -585,6 +584,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             WordSiegeMascotAction.STRETCH, WordSiegeMascotAction.WAVE -> WordSiegeMascotEmotion.HAPPY
             WordSiegeMascotAction.NUZZLE, WordSiegeMascotAction.GROOM, WordSiegeMascotAction.SWAY -> WordSiegeMascotEmotion.HAPPY
             WordSiegeMascotAction.EAT -> WordSiegeMascotEmotion.HAPPY
+            WordSiegeMascotAction.SPACE_FLIGHT -> WordSiegeMascotEmotion.EXCITED
+            WordSiegeMascotAction.KISS -> WordSiegeMascotEmotion.HAPPY
             WordSiegeMascotAction.DOZE, WordSiegeMascotAction.YAWN -> WordSiegeMascotEmotion.CALM
             WordSiegeMascotAction.THINK, WordSiegeMascotAction.FOOD_LOOK -> WordSiegeMascotEmotion.FOCUS
             WordSiegeMascotAction.POINT -> WordSiegeMascotEmotion.PROUD
@@ -763,6 +764,13 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
                 pose[P_WIDTH] = .72f
                 pose[P_LID] = .16f + .36f * envelope
                 pose[P_SMILE] = .65f
+            }
+            WordSiegeMascotAction.KISS -> {
+                pose[P_LID] = .95f * envelope
+                pose[P_OPEN] = .08f
+                pose[P_WIDTH] = .45f
+                pose[P_SMILE] = .5f
+                pose[P_CHEEK] = 1f
             }
             else -> Unit
         }
@@ -981,9 +989,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         bodyValue[4] = rotation
         recordBodyPose(now)
         delayedBodyPose(now - 90L, followTarget)
-        delayedBodyPose(now - 120L, tuftTarget)
         stepSprings(followTarget, followValue, followVelocity, dt, 380f, 30f)
-        stepSprings(tuftTarget, tuftValue, tuftVelocity, dt, 320f, 25f)
         setBodyMatrix(bodyMatrix, bodyValue)
         bodyMatrix.invert(bodyInverse)
 
@@ -1099,12 +1105,9 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.concat(followMatrix)
         drawHands(canvas, now, mood, dt)
         canvas.restore()
-        canvas.save()
-        canvas.concat(bodyInverse)
-        setBodyMatrix(followMatrix, tuftValue)
-        canvas.concat(followMatrix)
+        // The tuft is attached at the crown. Only its own small pivot sway may lag;
+        // its root must share the body's exact transform on every frame.
         if (hat != WordSiegeMascotHat.NONE) drawHat(canvas, now) else decor.drawTuft(canvas, now)
-        canvas.restore()
         decor.drawFront(canvas)
         if (sleeping) drawSleepZ(canvas, now)
         drawAnimeMarks(canvas, now, mood)
@@ -1373,6 +1376,15 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             WordSiegeMascotAction.FOOD_LOOK -> {
                 val lean = actionEnvelope(t)
                 motion[0] = 5f * lean; motion[4] = 3f * lean
+            }
+            WordSiegeMascotAction.SPACE_FLIGHT -> {
+                // Whole-screen travel is performed by the room; keep the rig upright.
+                motion[1] = -8f * actionEnvelope(t)
+            }
+            WordSiegeMascotAction.KISS -> {
+                val lean = actionEnvelope(t)
+                motion[1] = -6f * lean
+                motion[3] = 1f + .025f * lean
             }
             WordSiegeMascotAction.DOZE -> {
                 val nod = actionEnvelope(t)

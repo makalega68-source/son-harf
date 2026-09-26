@@ -86,12 +86,27 @@ class MascotAnimationRegressionTest {
         val draw = view.substringAfter("override fun onDraw(canvas: Canvas)").substringBefore("// ---- Expression poses")
         assertTrue(draw.contains("stepSprings(bodyTarget, bodyValue, bodyVelocity"))
         assertTrue(draw.contains("delayedBodyPose(now - 90L, followTarget)"))
-        assertTrue(draw.contains("delayedBodyPose(now - 120L, tuftTarget)"))
+        assertFalse("The tuft's root must not trail the head", draw.contains("tuftTarget"))
+        assertTrue(draw.contains("if (hat != WordSiegeMascotHat.NONE) drawHat(canvas, now) else decor.drawTuft(canvas, now)"))
         assertTrue(draw.contains("rotation.coerceIn(-8f, 8f)"))
         for (allocation in listOf("floatArrayOf(", "intArrayOf(", "listOf(", "Paint(", "Path(", "RectF(", "Matrix(")) {
             assertFalse(allocation, Regex("(?<![A-Za-z0-9_])" + Regex.escape(allocation)).containsMatchIn(draw))
         }
         assertFalse(view.contains("for ((ix, side) in listOf("))
         assertFalse(view.contains("for (cx in floatArrayOf("))
+    }
+
+    @Test
+    fun dailyAppleSnackKeepsRewardsCappedAndCelebrationsStayUpright() {
+        val room = File("src/main/java/com/sonharf/game/MascotRoomScreen.kt").readText()
+        val exhaustedApple = room.substringAfter("if (fruit.price == 0 && applesLeft <= 0) {")
+            .substringBefore("busy = true")
+        assertTrue(exhaustedApple.contains("WordSiegeMascotAction.FOOD_LOOK, WordSiegeMascotAction.EAT"))
+        assertFalse(exhaustedApple.contains("MascotRoomBackend.feed"))
+        assertTrue(room.contains("mascotActionMillis(move)"))
+        assertTrue(room.contains("WordSiegeMascotAction.SPACE_FLIGHT"))
+        assertTrue(room.contains("WordSiegeMascotAction.KISS"))
+        val view = File("src/main/java/com/sonharf/game/WordSiegeMascotView.kt").readText()
+        assertTrue(view.contains("rotation.coerceIn(-8f, 8f)"))
     }
 }
