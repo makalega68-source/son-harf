@@ -14,6 +14,14 @@ class WalnutIvoryStoreContractTest {
         assertTrue(migration.contains("'theme_walnut_ivory', 'game_theme'"))
         assertTrue(migration.contains("600, false, true, 45"))
         assertTrue(migration.contains("'theme_black','theme_dark_arena','theme_walnut_ivory'"))
+        assertTrue(migration.contains("drop constraint if exists shop_items_runtime_sale_guard_v2"))
+        assertTrue(migration.contains("id in ('theme_black','theme_walnut_ivory')"))
+        listOf(
+            "keyboard_crystal", "keyboard_obsidian", "keyboard_midnight", "keyboard_black_gold",
+            "keyboard_premium_white", "keyboard_sakura", "keyboard_ocean", "keyboard_forest",
+            "keyboard_royal_purple", "name_cyan", "name_sapphire", "name_amethyst",
+            "name_aurelia", "name_emerald", "name_ruby", "name_sunset",
+        ).forEach { assertTrue("Existing active catalog item lost: $it", migration.contains("'$it'")) }
         assertTrue(shop.contains("2 -> items.filter { it.id == WALNUT_IVORY_THEME_ID }"))
         assertTrue(shop.contains("b.purchaseShopItem(item.id)"))
         assertTrue(shop.contains("if (mine) {\n                                onCollection()"))
