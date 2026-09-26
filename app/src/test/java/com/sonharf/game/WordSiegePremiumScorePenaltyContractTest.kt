@@ -19,7 +19,7 @@ class WordSiegePremiumScorePenaltyContractTest {
         assertFalse(pan.contains("WordSiegeOwnershipLegend()"))
         assertTrue(practice.contains("mutableIntStateOf(-1)"))
         assertTrue(practiceBoard.contains("Color(0xFFCDBF9F)"))
-        assertTrue(pan.contains("Color(0xFFCDBF9F)"))
+        assertTrue(pan.contains("WordSiegeWalnutIvory.bevel"))
         assertTrue(practice.contains("pendingBotLossPoints"))
         assertTrue(pan.contains("pendingRivalLossPoints"))
         assertTrue(practice.contains("WordSiegeTurnStrip("))
