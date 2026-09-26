@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher icon: Obi's face, mood "sleepy". Generated vector, 108dp adaptive foreground. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M29,57 a25,25 0 1,0 50,0 a25,25 0 1,0 -50,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="47" android:centerY="48" android:gradientRadius="33">
+                <item android:offset="0" android:color="#FF4A4F99"/>
+                <item android:offset="0.55" android:color="#FF1B1E45"/>
+                <item android:offset="1" android:color="#FF0B0C1E"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M29,57 a25,25 0 1,0 50,0 a25,25 0 1,0 -50,0 Z" android:strokeWidth="2.4">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="sweep" android:centerX="54" android:centerY="57">
+                <item android:offset="0" android:color="#FF6FE3FF"/>
+                <item android:offset="0.33" android:color="#FFFF7EB6"/>
+                <item android:offset="0.66" android:color="#FFFFD36B"/>
+                <item android:offset="1" android:color="#FF6FE3FF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M36,44 a8,4.5 0 1,0 16,0 a8,4.5 0 1,0 -16,0 Z" android:fillColor="#FFFFFFFF" android:fillAlpha="0.28" />
+    <path android:pathData="M51,33 C48,26 52,22 55,19 C55,24 60,26 58,33 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="54" android:startY="18" android:endX="54" android:endY="33">
+                <item android:offset="0" android:color="#FF9FF0FF"/>
+                <item android:offset="1" android:color="#FF3E8CF0"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M40,57 Q45,61 50,57" android:strokeColor="#FFBFD0FF" android:strokeWidth="2.0" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M58,57 Q63,61 68,57" android:strokeColor="#FFBFD0FF" android:strokeWidth="2.0" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M35.4,65 a3.6,2.2 0 1,0 7.2,0 a3.6,2.2 0 1,0 -7.2,0 Z" android:fillColor="#FFFF7EB6" android:fillAlpha="0.55" />
+    <path android:pathData="M65.4,65 a3.6,2.2 0 1,0 7.2,0 a3.6,2.2 0 1,0 -7.2,0 Z" android:fillColor="#FFFF7EB6" android:fillAlpha="0.55" />
+    <path android:pathData="M51.8,70 a2.2,2.6 0 1,0 4.4,0 a2.2,2.6 0 1,0 -4.4,0 Z" android:fillColor="#FFE8436E" />
+    <path android:pathData="M71,33 l5,0 l-5,5 l5,0" android:strokeColor="#FFBFD0FF" android:strokeWidth="1.4" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M78,26 l3.6,0 l-3.6,3.6 l3.6,0" android:strokeColor="#FFBFD0FF" android:strokeWidth="1.4" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>

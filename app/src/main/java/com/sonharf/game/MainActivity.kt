@@ -122,10 +122,13 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         bestEffortStartup("background music") { SonHarfBackgroundMusic.start(this) }
+        bestEffortStartup("mascot icon") { MascotLauncherIcon.onAppOpened(this) }
     }
 
     override fun onStop() {
         runCatching { SonHarfBackgroundMusic.pause() }
+        // Not while rotating or finishing into another screen of ours: only a real trip away.
+        if (!isChangingConfigurations) runCatching { MascotLauncherIcon.onAppBackground(this) }
         super.onStop()
     }
 
