@@ -46,8 +46,8 @@ class WordSiegePanAreaContractTest {
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
         val accessibility = projectFile("app/src/main/java/com/sonharf/game/WordSiegeBoardAccessibility.kt").readText()
 
-        assertTrue(pan.contains("PanSiegeMine = Color(0xFF5FAF73)"))
-        assertTrue(pan.contains("PanSiegeRival = Color(0xFFD9776F)"))
+        assertTrue(pan.contains("PanSiegeMine = WordSiegeWalnutIvory.mine"))
+        assertTrue(pan.contains("PanSiegeRival = WordSiegeWalnutIvory.rival"))
         assertTrue(pan.contains("fontSize = 22.sp"))
         assertTrue(pan.contains("WordSiegeBoardAccessibility.BoardLetterPoint"))
         assertTrue(pan.contains("WordSiegeBoardAccessibility.BoardBonus"))
@@ -61,8 +61,8 @@ class WordSiegePanAreaContractTest {
         assertTrue(pan.contains("WordSiegeBoardTapAction.TOGGLE_VIEWPORT"))
         assertTrue(experience.contains("if (placements.containsKey(boardIndex))"))
         assertTrue(experience.contains("game.board.getOrNull(boardIndex)?.letter == null"))
-        assertTrue(experience.contains("0xFF35C878"))
-        assertTrue(experience.contains("0xFFFF5F57"))
+        assertTrue(experience.contains("owner == myOwner -> WordSiegeWalnutIvory.mine"))
+        assertTrue(experience.contains("else -> WordSiegeWalnutIvory.rival"))
     }
 
     @Test fun areaPointsUseAuthoritativePlusTwoGainAndMinusOneRivalLossLedger() {

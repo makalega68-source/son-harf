@@ -1,12 +1,14 @@
 package com.sonharf.game
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -43,19 +45,19 @@ import com.sonharf.game.data.WordSiegeMoveDto
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val PanSiegeTile = Color(0xFFF7E3A6)
-private val PanSiegeTileBorder = Color(0xFFC9A560)
+private val PanSiegeTile = WordSiegeWalnutIvory.ivory
+private val PanSiegeTileBorder = WordSiegeWalnutIvory.bevel
 private val PanSiegeBoardSurface = Color(0xFFEFE7D2)
-private val PanSiegeFrameNavy = Color(0xFF102C4C)
-private val PanSiegeFrameEdge = Color(0xFF9EC7D8)
-private val PanSiegeFrameInner = Color(0xFFD7E7ED)
-private val PanSiegeNeutral = Color(0xFFF3EEDF)
-private val PanSiegeMine = Color(0xFF5FAF73)
-private val PanSiegeRival = Color(0xFFD9776F)
+private val PanSiegeFrameNavy = WordSiegeWalnutIvory.frame
+private val PanSiegeFrameEdge = WordSiegeWalnutIvory.frameEdge
+private val PanSiegeFrameInner = WordSiegeWalnutIvory.frameShade
+private val PanSiegeNeutral = WordSiegeWalnutIvory.ivory
+private val PanSiegeMine = WordSiegeWalnutIvory.mine
+private val PanSiegeRival = WordSiegeWalnutIvory.rival
 private val PanSiegeNeutralBorder = Color(0xFFDCD3BD)
 private val PanSiegeBonusBorder = Color(0xFFC9BFA5)
-private val PanSiegeMineBorder = Color(0xFF7FC391)
-private val PanSiegeRivalBorder = Color(0xFFEB9E97)
+private val PanSiegeMineBorder = WordSiegeWalnutIvory.mine
+private val PanSiegeRivalBorder = WordSiegeWalnutIvory.rival
 private val PanSiegeBonus2H = Color(0xFFCFE6F5)
 private val PanSiegeBonus3H = Color(0xFFF6D3E2)
 private val PanSiegeBonus2K = Color(0xFFD6ECCB)
@@ -629,22 +631,18 @@ private fun PanSiegeBoard(
 
     Surface(
         modifier = modifier,
-        color = Color(0xFFFFFFFF),
+        color = WordSiegeWalnutIvory.frame,
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(2.dp, Color(0xFFD2DBE5)),
-        shadowElevation = 14.dp,
+        border = BorderStroke(2.dp, WordSiegeWalnutIvory.frameEdge),
+        shadowElevation = 7.dp,
     ) {
         Box(
             Modifier
                 .fillMaxSize()
                 .padding(5.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color(0xFFEFE7D2), Color(0xFFECE3CB), Color(0xFFEFE7D2), Color(0xFFE9DFC5))
-                    )
-                )
-                .border(1.dp, Color(0xFFC9A560), RoundedCornerShape(14.dp))
+                .background(WordSiegeWalnutIvory.boardGrain)
+                .border(1.dp, WordSiegeWalnutIvory.frameShade, RoundedCornerShape(14.dp))
                 .clipToBounds()
                 .onGloballyPositioned {
                     viewport = it.size
@@ -839,7 +837,7 @@ private fun PanSiegeBoardCell(
         bonusSurface != null -> bonusSurface
         else -> PanSiegeNeutral
     }
-    val displayBase = if (pending) Color(0xFFF2D680) else baseColor
+    val displayBase = baseColor
     val border = when {
         pending -> PanSiegeTileBorder
         letter != null && owner == myOwner -> PanSiegeMineBorder
@@ -850,6 +848,8 @@ private fun PanSiegeBoardCell(
     }
     val regionGap = 1.25.dp
     val boardInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by boardInteraction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) .94f else 1f, tween(if (pressed) 65 else 150), label = "siege cell press")
 
     Box(
         Modifier
@@ -875,13 +875,14 @@ private fun PanSiegeBoardCell(
                 },
             )
             .padding(regionGap)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .clip(RoundedCornerShape(7.dp))
             .background(
                 Brush.linearGradient(
                     listOf(
-                        androidx.compose.ui.graphics.lerp(displayBase, Color.White, .18f),
+                        androidx.compose.ui.graphics.lerp(displayBase, Color.White, .08f),
                         displayBase,
-                        androidx.compose.ui.graphics.lerp(displayBase, Color.Black, .07f),
+                        androidx.compose.ui.graphics.lerp(displayBase, Color.Black, .10f),
                     )
                 )
             )
@@ -893,20 +894,23 @@ private fun PanSiegeBoardCell(
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(if (letter != null && owner != 0 && !pending) 2.5.dp else .75.dp),
             color = Color.Transparent,
             shape = RoundedCornerShape(7.dp),
             border = BorderStroke(
-                if (pending) maxOf(1.4.dp, borderWidth) else .45.dp,
-                if (pending) border.copy(alpha = .92f) else Color(0xFFCDBF9F),
+                if (pending) maxOf(1.6.dp, borderWidth) else .65.dp,
+                if (pending) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel,
             ),
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Box(
+                modifier = if (letter != null) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier,
+                contentAlignment = Alignment.Center,
+            ) {
                 if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(PanSiegeLastMove.copy(alpha = .045f * lastMoveHighlight)))
                 if (letter != null) {
                     Text(
                         letter,
-                        color = if (!pending && owner != 0) Color(0xFFFFFFFF) else Color(0xFF4A3217),
+                        color = WordSiegeWalnutIvory.ink,
                         fontSize = if (overview) 24.sp else 22.sp,
                         fontFamily = FontFamily.SansSerif,
                         fontWeight = FontWeight.Black,
@@ -914,7 +918,7 @@ private fun PanSiegeBoardCell(
                     )
                     Text(
                         panSiegeLetterValue(letter),
-                        color = (if (!pending && owner != 0) Color(0xFFFFFFFF) else Color(0xFF4A3217)).copy(alpha = .78f),
+                        color = WordSiegeWalnutIvory.secondaryInk,
                         fontSize = WordSiegeBoardAccessibility.BoardLetterPoint,
                         fontWeight = FontWeight.Black,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
@@ -955,21 +959,24 @@ private fun PanSiegeRackTile(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) .95f else 1f, tween(if (pressed) 65 else 150), label = "siege rack press")
     Surface(
-        modifier = modifier.height(48.dp).combinedClickable(enabled = enabled, onClick = onClick),
+        modifier = modifier.height(48.dp).graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .combinedClickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
         color = when {
             used -> WordSiegeGameUi.SurfaceSoft
-            selected -> Color(0xFFD6C38D)
-            else -> Color(0xFFE3D6B0)
+            else -> WordSiegeWalnutIvory.ivory
         },
         shape = RoundedCornerShape(9.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PanSiegeMineBorder else Color(0xFFC9A560)),
-        shadowElevation = if (selected) 7.dp else 4.dp,
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel),
+        shadowElevation = if (pressed) 0.dp else if (selected) 4.dp else 2.dp,
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(Modifier.background(WordSiegeWalnutIvory.tile), contentAlignment = Alignment.Center) {
             Text(
                 letter.toString(),
-                color = if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else Color(0xFF4A3217),
+                color = if (used) WordSiegeWalnutIvory.ink.copy(alpha = .35f) else WordSiegeWalnutIvory.ink,
                 fontSize = 22.sp,
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Black,
@@ -977,7 +984,7 @@ private fun PanSiegeRackTile(
             )
             Text(
                 panSiegeLetterValue(letter.toString()),
-                color = WordSiegeGameUi.Muted,
+                color = WordSiegeWalnutIvory.secondaryInk,
                 fontSize = WordSiegeBoardAccessibility.RackPoint,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),

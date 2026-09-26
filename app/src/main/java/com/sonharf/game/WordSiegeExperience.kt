@@ -1,10 +1,13 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,7 +20,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -37,10 +42,10 @@ import kotlinx.coroutines.launch
 internal val SiegePurple = MainUi.Purple
 internal val SiegePurpleSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) MainUi.SurfaceSoft else MainUi.SurfaceSoft
 internal val SiegeBlueSoft = MainUi.BlueSoft
-private val SiegeTile = Color(0xFFF7E3A6)
-private val SiegeTileBorder = Color(0xFFC9A560)
-private val SiegeLightTileText = Color(0xFF4A3217)
-private val SiegeLightTileMuted = Color(0xFF6B7A8C)
+private val SiegeTile = WordSiegeWalnutIvory.ivory
+private val SiegeTileBorder = WordSiegeWalnutIvory.bevel
+private val SiegeLightTileText = WordSiegeWalnutIvory.ink
+private val SiegeLightTileMuted = WordSiegeWalnutIvory.secondaryInk
 
 private enum class SiegeListSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FINISHED }
 
@@ -888,9 +893,9 @@ internal fun WordSiegeBoard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFFD6CFBE),
+        color = WordSiegeWalnutIvory.frame,
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, MainUi.Border),
+        border = BorderStroke(2.dp, WordSiegeWalnutIvory.frameEdge),
     ) {
         BoxWithConstraints(Modifier.fillMaxWidth().padding(3.dp)) {
             val cellSize = maxWidth / 9
@@ -928,9 +933,9 @@ private fun WordSiegeBoardCell(
 ) {
     val owner = if (pending) myOwner else cell.owner
     val territory = when {
-        owner == 0 -> MainUi.Surface
-        owner == myOwner -> Color(0xFF35C878)
-        else -> Color(0xFFFF5F57)
+        owner == 0 -> WordSiegeWalnutIvory.board
+        owner == myOwner -> WordSiegeWalnutIvory.mine
+        else -> WordSiegeWalnutIvory.rival
     }
     val border = when {
         pending -> SiegeTileBorder
@@ -939,25 +944,29 @@ private fun WordSiegeBoardCell(
         else -> MainUi.Border
     }
     val letter = pendingLetter?.toString() ?: cell.letter
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) .94f else 1f, tween(if (pressed) 65 else 150), label = "classic cell press")
     Box(
         Modifier
             .size(size)
             .padding(1.dp)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .clip(RoundedCornerShape(4.dp))
-            .background(if (letter != null) territory else MainUi.Surface)
-            .clickable(enabled = enabled && (cell.letter == null || pending), onClick = onClick),
+            .background(if (letter != null) territory else WordSiegeWalnutIvory.board)
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled && (cell.letter == null || pending), onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = if (pending) SiegeTile.copy(alpha = .92f) else Color.Transparent,
+            modifier = Modifier.fillMaxSize().padding(if (letter != null && owner != 0 && !pending) 2.dp else .5.dp),
+            color = Color.Transparent,
             shape = RoundedCornerShape(4.dp),
-            border = BorderStroke(if (pending) 1.5.dp else .7.dp, border),
+            border = BorderStroke(if (pending) 1.5.dp else .7.dp, if (pending) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel),
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Box(if (letter != null) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier, contentAlignment = Alignment.Center) {
                 if (letter != null) {
-                    val contentColor = if (pending) SiegeLightTileText else MainUi.Text
-                    val pointColor = if (pending) SiegeLightTileMuted else MainUi.Muted
+                    val contentColor = SiegeLightTileText
+                    val pointColor = SiegeLightTileMuted
                     Text(letter, color = contentColor, fontSize = 14.sp, fontWeight = FontWeight.Black)
                     Text(
                         wordSiegeLetterValue(letter),

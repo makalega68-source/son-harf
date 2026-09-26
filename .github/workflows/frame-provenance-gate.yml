@@ -2,7 +2,7 @@ name: Frame Provenance Gate
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ main, claude/mascot-animations-behavior-31rof9 ]
   push:
     branches: [ main ]
   workflow_dispatch:

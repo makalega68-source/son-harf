@@ -1,12 +1,14 @@
 package com.sonharf.game
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -36,15 +38,15 @@ import com.sonharf.game.data.WordSiegeCellDto
 import kotlinx.coroutines.delay
 
 private val PracticeSiegeCellSize = 52.dp
-private val PracticeSiegeTile = Color(0xFFF7E3A6)
-private val PracticeSiegeTileBorder = Color(0xFFC9A560)
+private val PracticeSiegeTile = WordSiegeWalnutIvory.ivory
+private val PracticeSiegeTileBorder = WordSiegeWalnutIvory.bevel
 internal val PracticeSiegeBoardSurface = Color(0xFFD5CEBD)
 internal val PracticeSiegeNeutral = Color(0xFFF3EEDF)
 private val PracticeSiegeEmpty = Color(0xFFF3EEDF)
-private val PracticeSiegeMine = Color(0xFF5FAF73)
-private val PracticeSiegeRival = Color(0xFFD9776F)
-private val PracticeSiegeMineBorder = Color(0xFF7FC391)
-private val PracticeSiegeRivalBorder = Color(0xFFEB9E97)
+private val PracticeSiegeMine = WordSiegeWalnutIvory.mine
+private val PracticeSiegeRival = WordSiegeWalnutIvory.rival
+private val PracticeSiegeMineBorder = WordSiegeWalnutIvory.mine
+private val PracticeSiegeRivalBorder = WordSiegeWalnutIvory.rival
 private val PracticeSiegeThreat = Color(0xFFD8903D)
 private val PracticeSiegeLightTileText = Color(0xFF4A3217)
 private val PracticeZoneWatch = Color(0xFFCFE6F5)
@@ -172,17 +174,17 @@ internal fun WordSiegePracticeBoard(
 
     Surface(
         modifier = modifier,
-        color = Color(0xFFFFFFFF),
+        color = WordSiegeWalnutIvory.frame,
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(2.dp, Color(0xFFD2DBE5)),
-        shadowElevation = 12.dp,
+        border = BorderStroke(2.dp, WordSiegeWalnutIvory.frameEdge),
+        shadowElevation = 7.dp,
     ) {
         Box(
             Modifier
                 .fillMaxSize()
                 .padding(4.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFFEFE7D2), Color(0xFFECE3CB), Color(0xFFEFE7D2), Color(0xFFE9DFC5))))
+                .background(WordSiegeWalnutIvory.boardGrain)
                 .clipToBounds()
                 .onGloballyPositioned {
                     viewport = it.size
@@ -365,7 +367,7 @@ private fun WordSiegePracticeBoardCell(
         zoneSurface != null -> zoneSurface
         else -> PracticeSiegeEmpty
     }
-    val displayCellColor = if (pending) Color(0xFFE3D6B0) else cellColor
+    val displayCellColor = cellColor
     val borderColor = when {
         threatened && owner != 0 -> PracticeSiegeThreat
         pending -> PracticeSiegeTileBorder
@@ -377,6 +379,8 @@ private fun WordSiegePracticeBoardCell(
     }
     val regionGap = 1.25.dp
     val cellInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by cellInteraction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) .94f else 1f, tween(if (pressed) 65 else 150), label = "practice cell press")
 
     Box(
         Modifier
@@ -402,6 +406,7 @@ private fun WordSiegePracticeBoardCell(
                 },
             )
             .padding(regionGap)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .clip(RoundedCornerShape(8.dp))
             .background(
                 Brush.linearGradient(
@@ -421,6 +426,19 @@ private fun WordSiegePracticeBoardCell(
             ),
         contentAlignment = Alignment.Center,
     ) {
+        if (letter != null) {
+            Box(
+                Modifier.matchParentSize()
+                    .padding(if (owner != 0 && !pending) 2.5.dp else .75.dp)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(WordSiegeWalnutIvory.tile)
+                    .border(
+                        if (pending) 1.6.dp else .65.dp,
+                        if (pending) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel,
+                        RoundedCornerShape(7.dp),
+                    ),
+            )
+        }
         if (lastMoveHighlight > 0f) {
             Box(Modifier.matchParentSize().background(PracticeLastMove.copy(alpha = .045f * lastMoveHighlight)))
         }
@@ -439,7 +457,7 @@ private fun WordSiegePracticeBoardCell(
         if (letter != null) {
             Text(
                 letter,
-                color = if (!pending && owner != 0) Color(0xFFFFFFFF) else PracticeSiegeLightTileText,
+                color = WordSiegeWalnutIvory.ink,
                 fontSize = if (overview) 24.sp else 22.sp,
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Black,
@@ -447,7 +465,7 @@ private fun WordSiegePracticeBoardCell(
             )
             Text(
                 practiceLetterValue(letter),
-                color = (if (!pending && owner != 0) Color(0xFFFFFFFF) else PracticeSiegeLightTileText).copy(alpha = .78f),
+                color = WordSiegeWalnutIvory.secondaryInk,
                 fontSize = WordSiegeBoardAccessibility.BoardLetterPoint,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
@@ -499,21 +517,24 @@ internal fun WordSiegePracticeRackTile(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) .95f else 1f, tween(if (pressed) 65 else 150), label = "practice rack press")
     Surface(
-        modifier = modifier.height(48.dp).combinedClickable(onClick = onClick, enabled = enabled),
+        modifier = modifier.height(48.dp).graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .combinedClickable(interactionSource = interaction, indication = null, onClick = onClick, enabled = enabled),
         color = when {
             used -> WordSiegeGameUi.SurfaceSoft
-            selected -> Color(0xFFD6C38D)
-            else -> Color(0xFFE3D6B0)
+            else -> WordSiegeWalnutIvory.ivory
         },
         shape = RoundedCornerShape(9.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PracticeSiegeMineBorder else PracticeSiegeTileBorder.copy(alpha = .7f)),
-        shadowElevation = if (selected) 4.dp else 2.dp,
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel),
+        shadowElevation = if (pressed) 0.dp else if (selected) 4.dp else 2.dp,
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(Modifier.background(WordSiegeWalnutIvory.tile), contentAlignment = Alignment.Center) {
             Text(
                 letter.toString(),
-                color = if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else PracticeSiegeLightTileText,
+                color = if (used) WordSiegeWalnutIvory.ink.copy(alpha = .35f) else WordSiegeWalnutIvory.ink,
                 fontSize = 22.sp,
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Black,
@@ -521,7 +542,7 @@ internal fun WordSiegePracticeRackTile(
             )
             Text(
                 practiceLetterValue(letter.toString()),
-                color = if (used) WordSiegeGameUi.Muted.copy(alpha = .55f) else PracticeSiegeLightTileText.copy(alpha = .72f),
+                color = if (used) WordSiegeWalnutIvory.secondaryInk.copy(alpha = .45f) else WordSiegeWalnutIvory.secondaryInk,
                 fontSize = WordSiegeBoardAccessibility.RackPoint,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),

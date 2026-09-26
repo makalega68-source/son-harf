@@ -6,11 +6,13 @@ on:
   push:
     branches:
       - 'claude/kelime-tahti-home-redesign-7ojb7d'
+      - 'claude/mascot-animations-behavior-31rof9'
     paths:
       - 'app/src/main/java/com/sonharf/game/**'
       - 'app/src/main/res/**'
       - 'app/src/debug/**'
       - 'app/src/test/**'
+      - '.github/workflows/**'
       - 'supabase/migrations/**'
       - '.github/workflows/ui-screenshot.yml'
 
@@ -41,14 +43,34 @@ jobs:
         run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
       - name: Prepare APK
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk Kelime-Tahti-Final-Test.apk
-          sha256sum Kelime-Tahti-Final-Test.apk > Kelime-Tahti-Final-Test.sha256
+          cp app/build/outputs/apk/debug/app-debug.apk Kelime-Tahti-Guncel.apk
+          sha256sum Kelime-Tahti-Guncel.apk > Kelime-Tahti-Guncel.sha256
+          echo "SOURCE_SHA=$(git rev-parse HEAD)"
+      - name: Capture real Android frame from the committed debug APK
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          script: |
+            adb install -r Kelime-Tahti-Guncel.apk
+            adb shell am start -n com.sonharf.game/.UiScreenshotActivity --ez walnut_ivory_board true
+            sleep 8
+            adb shell screencap -p /sdcard/ceviz-fildisi.png
+            adb pull /sdcard/ceviz-fildisi.png Ceviz-Fildisi-Android.png
+      - name: Validate frame and APK were produced by this checkout
+        run: |
+          test -s Ceviz-Fildisi-Android.png
+          test -s Kelime-Tahti-Guncel.apk
+          echo "SOURCE_SHA=$(git rev-parse HEAD)"
+          sha256sum Kelime-Tahti-Guncel.apk Ceviz-Fildisi-Android.png
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: kelime-tahti-final-apk
+          name: ceviz-fildisi-android-teslim
           path: |
-            Kelime-Tahti-Final-Test.apk
-            Kelime-Tahti-Final-Test.sha256
+            Kelime-Tahti-Guncel.apk
+            Kelime-Tahti-Guncel.sha256
+            Ceviz-Fildisi-Android.png
           if-no-files-found: error
           retention-days: 7

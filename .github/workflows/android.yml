@@ -3,7 +3,7 @@ name: Android CI
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, claude/mascot-animations-behavior-31rof9 ]
     paths-ignore:
       - 'dist/**'
   pull_request:
