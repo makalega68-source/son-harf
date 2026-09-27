@@ -182,6 +182,7 @@ internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) 
     )
     "victory_effect" -> id == "victory_crown"
     "emoji_pack" -> id == "emoji_vip"
+    "mascot_hat" -> id in MascotHats.ids
     else -> false
 }
 
@@ -192,6 +193,7 @@ internal fun EquippedCosmeticsDto?.isEquipped(item: ShopItemDto): Boolean = when
     "keyboard_theme" -> this?.keyboardThemeId == item.id
     "victory_effect" -> this?.victoryEffectId == item.id
     "emoji_pack" -> this?.emojiPackId == item.id
+    "mascot_hat" -> this?.mascotHatId == item.id
     else -> false
 }
 

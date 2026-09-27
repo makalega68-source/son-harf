@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
@@ -54,15 +55,21 @@ fun EconomyShopScreen(
     Column(Modifier.fillMaxSize().background(SonHarfBg)) {
         StoreTitleBar(balance = balance, onBack = onBack)
         HorizontalDivider(color = Hf.Gold.copy(alpha = .18f))
-        // Ceviz & Fildişi is the single Son Coin cosmetic on sale; use it from Profile > Koleksiyonum.
-        val shown = if (tab == 4 || tab == 2) tab else 3
+        // Son Coin cosmetics are grouped by what they change; bought items are equipped from
+        // Profile > Koleksiyonum. Opening the store without a tab lands on Obi's hats.
+        val shown = when (tab) {
+            2, 4, 5, 6, 3 -> tab
+            else -> 5
+        }
         val categories = listOf(
-            3 to sh("PRO Üyelik", "PRO Membership"),
+            5 to sh("Obi & Zafer", "Obi & Victory"),
+            2 to sh("Tahta & Tema", "Board & Theme"),
+            6 to sh("Klavye & İsim", "Keys & Name"),
             4 to sh("Maskotlar", "Mascots"),
-            2 to sh("Tahta Seti", "Board Set"),
+            3 to sh("PRO Üyelik", "PRO Membership"),
         )
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             categories.forEach { (index, label) ->
@@ -173,7 +180,9 @@ private fun EconomyCatalogScreen(
     )
     val filtered = when (section) {
         0 -> (featuredFirst + items).distinctBy { it.id }
-        2 -> items.filter { it.id == WALNUT_IVORY_THEME_ID }
+        2 -> items.filter { it.kind == "game_theme" }.sortedByDescending { it.id == WALNUT_IVORY_THEME_ID }
+        5 -> items.filter { it.kind == "mascot_hat" || it.kind == "victory_effect" }
+        6 -> items.filter { it.kind == "keyboard_theme" || it.kind == "name_style" }
         else -> emptyList()
     }
     val bundles = storefront?.bundles.orEmpty().filter { b -> b.items.isNotEmpty() && b.items.all { it.isRuntimeReadyStyle() } }
@@ -186,13 +195,13 @@ private fun EconomyCatalogScreen(
         if (section == 0) {
             item { StoreProBanner(profile?.isVip == true) { onSection(3) } }
         }
-        if (section == 0) {
+        if (section == 0 || section == 5) {
             item { StoreCoinGuide() }
         }
 
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Gold, trackColor = Hf.Surface) }
 
-        if (filtered.isEmpty() && !loading && section == 2) {
+        if (filtered.isEmpty() && !loading && section in setOf(2, 5, 6)) {
             item {
                 HfCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
@@ -517,7 +526,7 @@ private fun StoreCoinGuide() {
                     listOf(
                         "💡 " + sh("Ekstra ipucu · 25", "Extra hint · 25"),
                         "🍓 " + sh("Maskot meyvesi", "Mascot fruit"),
-                        "🖼 " + sh("Çerçeveler", "Frames"),
+                        "🎩 " + sh("Obi şapkaları", "Obi hats"),
                         "⌨ " + sh("Klavyeler", "Keyboards"),
                         "🛡 " + sh("Kulüp kur · 1.000", "Found a club · 1,000"),
                     ),

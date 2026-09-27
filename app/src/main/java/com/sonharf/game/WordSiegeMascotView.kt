@@ -146,7 +146,8 @@ internal fun mascotJumpPose(t: Float, height: Float, crouch: Float, tilt: Float,
 }
 
 /** Costume worn over the orb; purely cosmetic. */
-internal enum class WordSiegeMascotHat { NONE, PARTY, CROWN }
+/** PARTY/CROWN are earned by winning; the rest are hats bought for Obi in the store. */
+internal enum class WordSiegeMascotHat { NONE, PARTY, CROWN, BERET, FLOWER, WIZARD, TOP_HAT }
 
 
 /** Local event-driven reaction selection; deterministic per move, with no network or model cost. */
@@ -453,6 +454,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         isFakeBoldText = true
         textAlign = Paint.Align.CENTER
     }
+    private val boughtHats = MascotHatPainter()
     private val hatPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val hatLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -1897,7 +1899,9 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         // Sits a little into the rim so the whole hat stays inside the view.
         canvas.translate(0f, 28f)
         canvas.rotate(-14f + sin(now / 700f) * 2f, 560f, 250f)
-        if (hat == WordSiegeMascotHat.CROWN) {
+        if (hat != WordSiegeMascotHat.CROWN && hat != WordSiegeMascotHat.PARTY) {
+            boughtHats.draw(canvas, hat, now)
+        } else if (hat == WordSiegeMascotHat.CROWN) {
             path.rewind()
             path.moveTo(400f, 260f)
             path.lineTo(420f, 110f)
@@ -2110,7 +2114,7 @@ internal fun WordSiegeMascot(
     glanceKey: Int = 0,
     glanceX: Float = 0f,
     glanceY: Float = 0f,
-    hat: WordSiegeMascotHat = WordSiegeMascotHat.NONE,
+    hat: WordSiegeMascotHat = SonHarfCosmetics.mascotHat,
     skin: WordSiegeMascotSkin = WordSiegeMascotSkin.ORB,
     onLongPress: (() -> Unit)? = null,
     onTap: () -> Unit = {},

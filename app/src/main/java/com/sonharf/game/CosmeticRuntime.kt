@@ -15,6 +15,7 @@ object SonHarfCosmetics {
     var keyboardThemeId by mutableStateOf<String?>(null)
     var victoryEffectId by mutableStateOf<String?>(null)
     var emojiPackId by mutableStateOf<String?>(null)
+    var mascotHatId by mutableStateOf<String?>(null)
 
     fun apply(e: EquippedCosmeticsDto?) {
         profileFrameId = e?.profileFrameId?.takeIf { !it.isNullOrBlank() }
@@ -23,6 +24,7 @@ object SonHarfCosmetics {
         keyboardThemeId = e?.keyboardThemeId
         victoryEffectId = e?.victoryEffectId
         emojiPackId = e?.emojiPackId
+        mascotHatId = e?.mascotHatId?.takeIf { it in MascotHats.ids }
     }
 
     fun restore(context: Context) {
@@ -31,6 +33,8 @@ object SonHarfCosmetics {
         gameThemeId = prefs.getString("game_theme_id", null)?.takeIf { it in setOf("theme_black", "theme_dark_arena", WALNUT_IVORY_THEME_ID) }
         nameStyleId = prefs.getString("name_style_id", null)
         keyboardThemeId = prefs.getString("keyboard_theme_id", null)
+        victoryEffectId = prefs.getString("victory_effect_id", null)
+        mascotHatId = prefs.getString("mascot_hat_id", null)?.takeIf { it in MascotHats.ids }
     }
 
     fun applyAndPersist(context: Context, e: EquippedCosmeticsDto?) {
@@ -40,6 +44,8 @@ object SonHarfCosmetics {
             .putString("game_theme_id", gameThemeId)
             .putString("name_style_id", nameStyleId)
             .putString("keyboard_theme_id", keyboardThemeId)
+            .putString("victory_effect_id", victoryEffectId)
+            .putString("mascot_hat_id", mascotHatId)
             .apply()
     }
 
@@ -108,6 +114,8 @@ object SonHarfCosmetics {
     // Retained only so older arena code compiles; Aurora is retired from sale.
     val auroraTheme: Boolean get() = gameThemeId == "theme_aurora"
     val crownVictory: Boolean get() = victoryEffectId == "victory_crown"
+    /** The hat Obi wears everywhere, bought with Son Coin. */
+    val mascotHat: WordSiegeMascotHat get() = MascotHats.hatFor(mascotHatId)
 }
 
 /** Shared by every embedded word keyboard so a purchased skin is real in every supported mode. */

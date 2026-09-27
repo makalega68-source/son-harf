@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -255,19 +256,19 @@ private sealed interface StartupState {
 }
 
 @Composable
-private fun StartupLoading() {
-    Surface(Modifier.fillMaxSize(), color = SonHarfBg) {
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            SonHarfBrandLogo(modifier = Modifier.fillMaxWidth(.58f), size = null)
-            Spacer(Modifier.height(24.dp))
-            CircularProgressIndicator(color = SonHarfBlue, strokeWidth = 3.dp)
-            Spacer(Modifier.height(14.dp))
-            Text(sh("Kelime Tahtı hazırlanıyor…", "Preparing Word Throne…"), color = SonHarfText, fontWeight = FontWeight.Bold)
-            Text(sh("Oturum ve ayarlar güvenli biçimde yükleniyor.", "Loading session and settings safely."), color = SonHarfMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
-        }
+private fun StartupLoading() = LaunchSplashFrame()
+
+/**
+ * The only thing shown while the app boots: smiling Obi on the launch colour, drawn at the same
+ * size as the Android 12+ system splash so the hand-over is invisible (no text, no spinner).
+ */
+@Composable
+internal fun LaunchSplashFrame() {
+    Box(Modifier.fillMaxSize().background(Color(0xFFE6ECF2)), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.obi_launcher_happy),
+            contentDescription = sh("Kelime Tahtı hazırlanıyor…", "Preparing Word Throne…"),
+            modifier = Modifier.size(240.dp),
+        )
     }
 }

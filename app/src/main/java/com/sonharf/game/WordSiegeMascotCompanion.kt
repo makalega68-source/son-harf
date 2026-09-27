@@ -624,9 +624,10 @@ internal fun WordSiegeMascotCompanion(
     val initialSignalKey = remember { signal?.key }
     val initialVisitKey = remember { visit?.key }
     val initialOutcome = remember { outcome }
-    // A win earns a party hat (or the purchased victory crown) for the rest of the screen.
+    // A win earns a party hat (or the purchased victory crown) for the rest of the screen;
+    // otherwise Obi wears the hat bought for it in the store (if any).
     val hat = when {
-        outcome != WordSiegeMascotOutcome.WIN -> WordSiegeMascotHat.NONE
+        outcome != WordSiegeMascotOutcome.WIN -> SonHarfCosmetics.mascotHat
         SonHarfCosmetics.crownVictory -> WordSiegeMascotHat.CROWN
         else -> WordSiegeMascotHat.PARTY
     }

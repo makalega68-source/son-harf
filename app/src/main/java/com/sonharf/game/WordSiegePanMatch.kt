@@ -56,17 +56,17 @@ private val PanSiegeNeutral get() = if (WordSiegeWalnutIvory.enabled) WordSiegeW
 private val PanSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF5FAF73)
 private val PanSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFD9776F)
 private val PanSiegeNeutralBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.emptyEdge else Color(0xFFDCD3BD)
-private val PanSiegeBonusBorder = Color(0xFFC9BFA5)
+private val PanSiegeBonusBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusBorder else Color(0xFFC9BFA5)
 private val PanSiegeMineBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF7FC391)
 private val PanSiegeRivalBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFEB9E97)
-private val PanSiegeBonus2H = Color(0xFFCFE6F5)
-private val PanSiegeBonus3H = Color(0xFFF6D3E2)
-private val PanSiegeBonus2K = Color(0xFFD6ECCB)
-private val PanSiegeBonus3K = Color(0xFFF8DCC3)
-private val PanSiegeBonus4K = Color(0xFFE2D6F2)
-private val PanSiegeBonusStar = Color(0xFFFBEBB5)
+private val PanSiegeBonus2H get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2H else Color(0xFFCFE6F5)
+private val PanSiegeBonus3H get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3H else Color(0xFFF6D3E2)
+private val PanSiegeBonus2K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2K else Color(0xFFD6ECCB)
+private val PanSiegeBonus3K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3K else Color(0xFFF8DCC3)
+private val PanSiegeBonus4K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus4K else Color(0xFFE2D6F2)
+private val PanSiegeBonusStar get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusStar else Color(0xFFFBEBB5)
 private val PanSiegeLastMove = Color(0xFFE0A82E)
-private val PanSiegeBonusLabel = Color(0xFF3F4A5A)
+private val PanSiegeBonusLabel get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusLabel else Color(0xFF3F4A5A)
 private val PanSiegeCellSize = 52.dp
 internal const val WORD_SIEGE_BOT_FALLBACK_DELAY_MS = 15_000L
 
@@ -843,7 +843,7 @@ private fun PanSiegeBoardCell(
         pending -> PanSiegeTileBorder
         letter != null && owner == myOwner -> PanSiegeMineBorder
         letter != null && owner != 0 -> PanSiegeRivalBorder
-        activeBonus == WordSiegeBoardSpec.CenterBonus || activeBonus == WordSiegeBoardSpec.StarBonus -> Color(0xFFB07F1E)
+        activeBonus == WordSiegeBoardSpec.CenterBonus || activeBonus == WordSiegeBoardSpec.StarBonus -> if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.selection else Color(0xFFB07F1E)
         activeBonus != null -> PanSiegeBonusBorder
         else -> PanSiegeNeutralBorder
     }
@@ -901,7 +901,7 @@ private fun PanSiegeBoardCell(
             shape = RoundedCornerShape(7.dp),
             border = BorderStroke(
                 if (pending) maxOf(if (WordSiegeWalnutIvory.enabled) 1.6.dp else 1.4.dp, borderWidth) else if (WordSiegeWalnutIvory.enabled) .65.dp else .45.dp,
-                if (WordSiegeWalnutIvory.enabled) (if (pending) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel) else (if (pending) border.copy(alpha = .92f) else Color(0xFFCDBF9F)),
+                if (WordSiegeWalnutIvory.enabled) (if (pending) WordSiegeWalnutIvory.selection else if (letter != null) WordSiegeWalnutIvory.bevel else if (activeBonus != null) border else WordSiegeWalnutIvory.emptyEdge) else (if (pending) border.copy(alpha = .92f) else Color(0xFFCDBF9F)),
             ),
         ) {
             Box(

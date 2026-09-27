@@ -9,8 +9,9 @@ import android.media.SoundPool
  *
  * The previous procedural click/noise generator was intentionally removed because it produced
  * harsh synthetic beeps on some Android devices. These effects are pre-rendered 44.1 kHz WAV
- * assets (layered bell chimes, soft mallets, warm brass and filtered air with a small room
- * reverb) played through SoundPool for low-latency gameplay feedback.
+ * assets built from modal instrument models (marimba, glass bell, kalimba and wooden tiles)
+ * with soft attacks, gentle low-pass and a small room reverb, tuned to one pentatonic palette
+ * so every cue sounds like part of the same instrument set. Played through SoundPool.
  */
 object SonHarfSoundFx {
     @Volatile private var enabled = true
@@ -64,7 +65,7 @@ object SonHarfSoundFx {
     fun rematchReady() = play(R.raw.sfx_soft_notify, .22f)
     fun softNotify() = play(R.raw.sfx_soft_notify, .20f)
     fun wordAccepted() = play(R.raw.sfx_word_accepted, .30f)
-    fun warning() = play(R.raw.sfx_ui_tap, .16f, .92f)
+    fun warning() = play(R.raw.sfx_warning, .20f)
     fun bonus() = play(R.raw.sfx_bonus, .32f)
     fun victory() = play(R.raw.sfx_victory, .42f)
     fun defeat() = play(R.raw.sfx_defeat, .34f)

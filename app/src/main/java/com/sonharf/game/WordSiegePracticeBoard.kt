@@ -50,15 +50,15 @@ private val PracticeSiegeMineBorder get() = if (WordSiegeWalnutIvory.enabled) Wo
 private val PracticeSiegeRivalBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFEB9E97)
 private val PracticeSiegeThreat = Color(0xFFD8903D)
 private val PracticeSiegeLightTileText = Color(0xFF4A3217)
-private val PracticeZoneWatch = Color(0xFFCFE6F5)
-private val PracticeZoneCritical = Color(0xFFF6D3E2)
-private val PracticeZoneFort = Color(0xFFD6ECCB)
-private val PracticeZoneSiege = Color(0xFFF8DCC3)
-private val PracticeZoneCrown = Color(0xFFE2D6F2)
-private val PracticeZoneReward = Color(0xFFFBEBB5)
+private val PracticeZoneWatch get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2H else Color(0xFFCFE6F5)
+private val PracticeZoneCritical get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3H else Color(0xFFF6D3E2)
+private val PracticeZoneFort get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2K else Color(0xFFD6ECCB)
+private val PracticeZoneSiege get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3K else Color(0xFFF8DCC3)
+private val PracticeZoneCrown get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus4K else Color(0xFFE2D6F2)
+private val PracticeZoneReward get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusStar else Color(0xFFFBEBB5)
 private val PracticeLastMove = Color(0xFFE0A82E)
 private val PracticeDefinitionBadge = Color(0xFF5C8299)
-private val PracticeSiegeBonusLabel = Color(0xFF3F4A5A)
+private val PracticeSiegeBonusLabel get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusLabel else Color(0xFF3F4A5A)
 
 internal data class PracticeResolvedWord(
     val word: String,

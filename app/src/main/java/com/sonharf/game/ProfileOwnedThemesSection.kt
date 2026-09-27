@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.EquippedCosmeticsDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ShopItemDto
+import com.sonharf.game.data.equipDefaultCosmetic
 import com.sonharf.game.data.equipDefaultGameTheme
 import com.sonharf.game.data.equipShopItem
 import com.sonharf.game.data.getEquippedCosmetics
@@ -40,6 +41,24 @@ private const val ProfileThemeTimeoutMs = 10_000L
 private const val BlackThemeId = "theme_black"
 private const val LegacyDarkArenaThemeId = "theme_dark_arena"
 private val DarkThemeIds = setOf(BlackThemeId, LegacyDarkArenaThemeId)
+
+/** Slots the player can return to the free built-in look from the profile. */
+private val ResettableKinds = listOf("mascot_hat", "victory_effect", "keyboard_theme", "name_style")
+
+private fun EquippedCosmeticsDto?.slotFor(kind: String): String? = when (kind) {
+    "keyboard_theme" -> this?.keyboardThemeId
+    "name_style" -> this?.nameStyleId
+    "mascot_hat" -> this?.mascotHatId
+    "victory_effect" -> this?.victoryEffectId
+    else -> null
+}
+
+private fun defaultStyleTitle(kind: String) = when (kind) {
+    "keyboard_theme" -> sh("Standart Klavye", "Standard Keyboard")
+    "mascot_hat" -> sh("Şapkasız Obi", "Obi, no hat")
+    "victory_effect" -> sh("Standart Zafer", "Standard Victory")
+    else -> sh("Standart İsim Rengi", "Standard Name Color")
+}
 
 /**
  * Owned Style collection. Store rotation may stop new sales, but supported purchased visuals remain
@@ -112,6 +131,32 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
         }
     }
 
+    /** Back to the free default look for one slot; ownership of bought items is untouched. */
+    fun resetSlot(kind: String) {
+        if (busy || loading) return
+        busy = true
+        notice = null
+        scope.launch {
+            try {
+                val nextEquipped = withTimeout(ProfileThemeTimeoutMs) {
+                    backend.equipDefaultCosmetic(kind)
+                    backend.getEquippedCosmetics()
+                }
+                equipped = nextEquipped
+                SonHarfCosmetics.applyAndPersist(context, nextEquipped)
+                notice = sh("Varsayılan görünüme dönüldü.", "Back to the default look.")
+            } catch (error: Exception) {
+                if (error is CancellationException && error !is TimeoutCancellationException) throw error
+                notice = sh(
+                    "İşlem doğrulanamadı. Görünümünü yenileyip kontrol et.",
+                    "Could not confirm the change. Refresh to check your equipped style.",
+                )
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     LaunchedEffect(backend) { reloadCollection() }
 
     // Current Black Theme and the retired Night Arena id share the same supported dark-theme family.
@@ -131,7 +176,9 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
     // integration must not occupy the player's visible profile collection. Theme aliases are
     // represented by the single canonical theme card to avoid duplicate equipped states.
     val styles = collection.filter { it.id !in DarkThemeIds && it.id != WALNUT_IVORY_THEME_ID && it.isSupportedOwnedStyle() }
-    val shown = if (category == null) styles else styles.filter { it.kind == category }
+    // The Obi tab also holds the victory crown, since Obi wears it when you win.
+    fun inCategory(kind: String) = kind == category || (category == "mascot_hat" && kind == "victory_effect")
+    val shown = if (category == null) styles else styles.filter { inCategory(it.kind) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (category == null) {
@@ -196,6 +243,22 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
         }
 
         if (category != "game_theme") {
+            // Every slot the player can dress up also offers the free standard look to go back to.
+            val defaultKinds = if (category == null) ResettableKinds.filter { kind -> styles.any { it.kind == kind } } else ResettableKinds.filter { kind -> inCategory(kind) && (kind == category || styles.any { it.kind == kind }) }
+            defaultKinds.forEach { kind ->
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ProfileThemeCard(
+                        title = defaultStyleTitle(kind),
+                        subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
+                        active = equipped != null && equipped.slotFor(kind) == null,
+                        enabled = !busy && !loading,
+                        blackVariant = false,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        onClick = { resetSlot(kind) },
+                    )
+                    Spacer(Modifier.weight(1f))
+                }
+            }
             if (!loading && notice == null && shown.isEmpty()) {
                 HfCard(modifier = Modifier.fillMaxWidth()) {
                     Text(

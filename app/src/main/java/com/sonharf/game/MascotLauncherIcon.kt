@@ -10,8 +10,9 @@ import android.content.pm.PackageManager
 import android.widget.Toast
 
 /**
- * The home-screen icon shows the mascot's mood, like a pet that misses you: happy while you
- * play, sad after a day away, cross after three days, and asleep (sulking) after a week.
+ * The home-screen icon shows the mascot's mood, like a pet that misses you: a big smile once you
+ * have played, then a new face for every day away: looking around for you (1 day), sad (2),
+ * cross (3), dozing off (5) and in tears after a week.
  *
  * Each mood is an activity-alias with its own icon; exactly one is enabled. Switching happens
  * only while the app is in the background (onStop) or from an alarm, never while it is in use.
@@ -19,9 +20,11 @@ import android.widget.Toast
 internal object MascotLauncherIcon {
     enum class Mood(val alias: String, val afterHours: Long) {
         HAPPY(".LauncherMascotHappy", 0),
-        SAD(".LauncherMascotSad", 24),
+        CURIOUS(".LauncherMascotCurious", 24),
+        SAD(".LauncherMascotSad", 48),
         ANGRY(".LauncherMascotAngry", 72),
-        SLEEPY(".LauncherMascotSleepy", 168),
+        SLEEPY(".LauncherMascotSleepy", 120),
+        CRYING(".LauncherMascotCrying", 168),
     }
 
     private const val PREFS = "mascot_launcher_icon"
@@ -108,9 +111,11 @@ internal object MascotLauncherIcon {
 
     private fun greetBack(context: Context, mood: Mood) {
         val text = when (mood) {
+            Mood.CURIOUS -> sh("Obi kapıyı gözlüyordu... hoş geldin!", "Obi was watching the door... welcome back!")
             Mood.SAD -> sh("Obi seni çok özlemişti... geri geldin!", "Obi missed you so much... you're back!")
             Mood.ANGRY -> sh("Hmph! Obi küsmüştü ama tamam, barıştık!", "Hmph! Obi was sulking, but okay, friends again!")
-            else -> sh("Obi uyuyakalmıştı... uyandın mı? Oyun zamanı!", "Obi fell asleep... wake up? Game time!")
+            Mood.SLEEPY -> sh("Obi uyuyakalmıştı... uyandın mı? Oyun zamanı!", "Obi fell asleep... wake up? Game time!")
+            else -> sh("Obi bir haftadır ağlıyordu! Bir daha bu kadar gitme, tamam mı?", "Obi cried all week! Don't stay away this long again, okay?")
         }
         runCatching { Toast.makeText(context, MascotVoice.style(text, WordSiegeMascotSkin.ORB, mood.ordinal), Toast.LENGTH_LONG).show() }
     }

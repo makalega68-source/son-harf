@@ -48,6 +48,7 @@ internal fun StoreProductPreview(
     ) {
         when {
             item.id == WALNUT_IVORY_THEME_ID -> WalnutIvoryStorePreview(expanded)
+            item.kind == "mascot_hat" -> ObiHatPreview(item.id)
             item.kind == "profile_frame" -> RealFramePreview(item.id, expanded)
             storeArtworkRes(item.id) != null -> {
                 Image(

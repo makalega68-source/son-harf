@@ -57,6 +57,7 @@ data class EquippedCosmeticsDto(
     @SerialName("victory_effect_id") val victoryEffectId: String? = null,
     @SerialName("emoji_pack_id") val emojiPackId: String? = null,
     @SerialName("mascot_id") val mascotId: String? = null,
+    @SerialName("mascot_hat_id") val mascotHatId: String? = null,
 )
 
 @Serializable
@@ -121,6 +122,11 @@ suspend fun OnlineGameBackend.equipShopItem(itemId: String) {
 /** Restores the built-in blue/white visual system without creating a fake purchasable item. */
 suspend fun OnlineGameBackend.equipDefaultGameTheme() {
     SupabaseProvider.client.postgrest.rpc("equip_default_game_theme")
+}
+
+/** Clears one equipped slot (keyboard, name colour, ...) back to the built-in default look. */
+suspend fun OnlineGameBackend.equipDefaultCosmetic(kind: String) {
+    SupabaseProvider.client.postgrest.rpc("equip_default_cosmetic", buildJsonObject { put("p_kind", kind) })
 }
 
 suspend fun OnlineGameBackend.claimVipMonthlyDiamonds() {

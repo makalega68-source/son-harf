@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Surface
@@ -74,9 +73,7 @@ fun StableV1App() {
     }
 
     if (!authChecked) {
-        Box(Modifier.fillMaxSize().background(MainUi.Background), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = MainUi.Blue)
-        }
+        LaunchSplashFrame()
         return
     }
 
