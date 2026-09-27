@@ -1779,8 +1779,9 @@ private object PremierBotBrain {
     }
 }
 
-private const val PREMIER_WORD_TILE_STAGGER_MS = 95L
-private const val PREMIER_WORD_TILE_DROP_MS = 380L
+// Snappy: the whole word lands in well under half a second.
+private const val PREMIER_WORD_TILE_STAGGER_MS = 40L
+private const val PREMIER_WORD_TILE_DROP_MS = 200L
 
 /** How long the played word's tiles take to finish dropping in. */
 private fun premierWordLandMillis(letters: Int): Long =
@@ -1792,9 +1793,9 @@ private fun premierBotThinkMillis(room: GameRoomDto, words: List<GameWordDto>): 
     val hardLetter = required.lowercase(Locale.ROOT) in setOf("ğ", "j", "ı", "ü", "z", "l", "v", "ö", "x", "q", "y", "k")
     // The bot waits until the word just played has fully landed and been readable for a moment.
     val lastWord = words.lastOrNull()?.let { it.normalizedWord.ifBlank { it.word } }.orEmpty()
-    val landed = premierWordLandMillis(lastWord.length) + 900L
-    val base = if (hardLetter) 1_300L else 700L
-    return landed + base + kotlin.random.Random.nextLong(0L, 1_200L)
+    val landed = premierWordLandMillis(lastWord.length) + 450L
+    val base = if (hardLetter) 1_000L else 500L
+    return landed + base + kotlin.random.Random.nextLong(0L, 800L)
 }
 
 /** Three round pips (gold = you, coral = rival) around the round number. */

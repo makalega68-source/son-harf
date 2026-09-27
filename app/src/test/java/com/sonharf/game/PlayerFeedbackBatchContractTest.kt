@@ -88,6 +88,9 @@ class PlayerFeedbackBatchContractTest {
         // Photos fill the ring exactly: clipped to the circle, cropped, no frame composable.
         assertTrue(art.contains("Image(bitmap.asImageBitmap(), seat.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)"))
         assertFalse(art.contains("ProfileFrameArt("))
+        // Photos sit behind the art (wells are cut out), so rings and the 1-2-3 badges stay on top.
+        assertTrue(art.indexOf("if (seat != null) PodiumPhoto(seat, size) else EmptyWell()") < art.indexOf("Image(painterResource(style.art)"))
+        assertTrue(art.contains("(labelH * (if (compete) .46f else .36f)).toSp()"))
         assertFalse(art.contains("ProfilePhotoAvatarWithGender("))
         for (name in listOf("weekly_podium_blue.png", "weekly_podium_gold.png")) {
             val f = listOf(File("src/main/res/drawable-nodpi/$name"), File("app/src/main/res/drawable-nodpi/$name")).first { it.exists() }
@@ -103,6 +106,22 @@ class PlayerFeedbackBatchContractTest {
         assertFalse(compete.contains("RankingPodiumStep("))
         assertTrue(compete.contains("kotlinx.coroutines.delay(WEEKLY_PODIUM_REFRESH_MS)"))
         assertFalse(source("UnifiedProApp.kt").contains("WeeklyChampionPodium("))
+    }
+
+    @Test fun carriedBoardTilesKeepTheirGestureAndTheBoardStaysFast() {
+        for (screen in listOf("WordSiegePracticeBoard.kt", "WordSiegePanMatch.kt")) {
+            val s = source(screen)
+            // The drag source follows the placed tile, not the (hidden while carried) shown one.
+            assertTrue(screen, s.contains("dragSource = if (placedRackIndex != null) {"))
+            assertTrue(screen, s.contains("derivedStateOf { tileDrag?.hoverCell }"))
+        }
+        val board = source("WordSiegePracticeBoard.kt")
+        assertFalse(board.contains("rememberInfiniteTransition(label = \"hint-glow\")"))
+        assertTrue(board.contains("hintGlow: (() -> Float)? = null"))
+        val duel = source("PremierWordDuelScreen.kt")
+        assertTrue(duel.contains("PREMIER_WORD_TILE_STAGGER_MS = 40L"))
+        assertTrue(duel.contains("PREMIER_WORD_TILE_DROP_MS = 200L"))
+        assertTrue(source("MascotHatPainter.kt").contains("Placement(R.drawable.hat_beret_worn,"))
     }
 
     @Test fun hintLettersFlyOntoTheBoard() {
@@ -122,7 +141,7 @@ class PlayerFeedbackBatchContractTest {
     @Test fun hintAnswerGlowsAndTheMascotFliesOverIt() {
         val board = source("WordSiegePracticeBoard.kt")
         assertTrue(board.contains("kind = WordSiegeMascotVisitKind.ANSWER"))
-        assertTrue(board.contains("hintGlow = if (index in hintSet) hintPulse else 0f"))
+        assertTrue(board.contains("hintGlow = if (index in hintSet) ({ hintPulse.value }) else null"))
         val companion = source("WordSiegeMascotCompanion.kt")
         assertTrue(companion.contains("WordSiegeMascotVisitKind.ANSWER -> {"))
         assertTrue(companion.contains("flyBeside(above, 900, onTop = true)"))

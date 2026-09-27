@@ -176,7 +176,8 @@ internal fun WordSiegePracticeBoard(
     }
 
     WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx)
-    val dragHover = tileDrag?.hoverCell
+    // Only the hovered cell matters, so the board recomposes when it changes, not every finger move.
+    val dragHover by remember(tileDrag) { derivedStateOf { tileDrag?.hoverCell } }
     val hiddenCells: Set<Int> = buildSet {
         tileDrag?.fromCell?.let { add(it) }
         tileDrag?.flyingCells?.let { addAll(it) }
@@ -244,17 +245,20 @@ internal fun WordSiegePracticeBoard(
                 // The mascot's answer tiles pulse gold while they sit on the board, so it is clear
                 // which letters the hint placed.
                 val hintSet = if (hint != null && hintCells.isNotEmpty() && placements.keys.containsAll(hintCells)) hintCells.toSet() else emptySet()
-                val hintPulse by androidx.compose.animation.core.rememberInfiniteTransition(label = "hint-glow").animateFloat(
-                    initialValue = .35f,
-                    targetValue = 1f,
-                    animationSpec = androidx.compose.animation.core.infiniteRepeatable(tween(650), androidx.compose.animation.core.RepeatMode.Reverse),
-                    label = "hint-glow-pulse",
-                )
+                // The pulse runs only while a hint is on the board and is read at draw time, so the
+                // board is not recomposed every frame.
+                val hintPulse = remember { Animatable(.35f) }
+                LaunchedEffect(hintSet.isNotEmpty()) {
+                    if (hintSet.isNotEmpty()) {
+                        hintPulse.animateTo(1f, androidx.compose.animation.core.infiniteRepeatable(tween(650), androidx.compose.animation.core.RepeatMode.Reverse))
+                    } else hintPulse.snapTo(.35f)
+                }
                 repeat(WordSiegeBoardSpec.Size) { row ->
                     Row {
                         repeat(WordSiegeBoardSpec.Size) { column ->
                             val index = WordSiegeBoardSpec.index(row, column)
-                            val pendingRackIndex = placements[index]?.takeIf { index !in hiddenCells }
+                            val placedRackIndex = placements[index]
+                            val pendingRackIndex = placedRackIndex?.takeIf { index !in hiddenCells }
                             val cell = board.getOrElse(index) { WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index)) }
                             WordSiegePracticeBoardCell(
                                 cell = cell,
@@ -269,15 +273,17 @@ internal fun WordSiegePracticeBoard(
                                 onDefinitionClick = { resolvedWord?.word?.let { definitionWord = it } },
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleMode,
-                                hintGlow = if (index in hintSet) hintPulse else 0f,
+                                hintGlow = if (index in hintSet) ({ hintPulse.value }) else null,
                                 dropTarget = dragHover == index && (cell.letter == null),
-                                dragSource = if (pendingRackIndex != null) {
+                                // Keyed on the placed tile, not the shown one: the tile hides while it is being
+                                // carried and the gesture must survive that.
+                                dragSource = if (placedRackIndex != null) {
                                     Modifier.wordSiegeTileDragSource(
                                         drag = tileDrag,
                                         enabled = enabled,
-                                        rackIndex = pendingRackIndex,
+                                        rackIndex = placedRackIndex,
                                         fromCell = index,
-                                        letter = rack.getOrNull(pendingRackIndex) ?: ' ',
+                                        letter = rack.getOrNull(placedRackIndex) ?: ' ',
                                         onDrop = onTileDrop,
                                     )
                                 } else Modifier,
@@ -399,7 +405,7 @@ private fun WordSiegePracticeBoardCell(
     onDefinitionClick: () -> Unit,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
-    hintGlow: Float = 0f,
+    hintGlow: (() -> Float)? = null,
     dropTarget: Boolean = false,
     dragSource: Modifier = Modifier,
 ) {
@@ -470,9 +476,9 @@ private fun WordSiegePracticeBoardCell(
             )
             .drawBehind {
                 // Hint glow: a soft gold halo around the answer tile.
-                if (hintGlow > 0f) {
+                if (hintGlow != null) {
                     drawRoundRect(
-                        color = Color(0xFFFFD54F).copy(alpha = .55f * hintGlow),
+                        color = Color(0xFFFFD54F).copy(alpha = .55f * hintGlow()),
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(9.dp.toPx()),
                     )
                 }
@@ -490,11 +496,11 @@ private fun WordSiegePracticeBoardCell(
                 )
             )
             .border(
-                width = if (dropTarget) 3.dp else if (hintGlow > 0f) 2.2.dp else if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
+                width = if (dropTarget) 3.dp else if (hintGlow != null) 2.2.dp else if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
                 color = if (dropTarget) {
                     Color(0xFF2FB36A)
-                } else if (hintGlow > 0f) {
-                    Color(0xFFFFE082).copy(alpha = .55f + .45f * hintGlow)
+                } else if (hintGlow != null) {
+                    Color(0xFFFFE082)
                 } else if (lastMoveHighlight > 0f) {
                     PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
                 } else if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.emptyEdge else Color(0xFFCDBF9F),

@@ -63,7 +63,8 @@ internal class MascotHatPainter(context: Context) {
     )
 
     private fun placement(hat: WordSiegeMascotHat): Placement? = when (hat) {
-        WordSiegeMascotHat.BERET -> Placement(R.drawable.store_art_hat_beret, 19 / 512f, 75 / 512f, 499 / 512f, 440 / 512f, 480f, 350f)
+        // Worn beret: its dark inside is cut away so Obi's head fills the opening instead of it facing out.
+        WordSiegeMascotHat.BERET -> Placement(R.drawable.hat_beret_worn, 19 / 512f, 75 / 512f, 499 / 512f, 440 / 512f, 480f, 385f)
         WordSiegeMascotHat.FLOWER -> Placement(R.drawable.store_art_hat_flower, 14 / 512f, 50 / 512f, 497 / 512f, 447 / 512f, 560f, 325f, squash = .55f)
         WordSiegeMascotHat.WIZARD -> Placement(R.drawable.store_art_hat_wizard, 23 / 512f, 23 / 512f, 489 / 512f, 475 / 512f, 390f, 360f)
         WordSiegeMascotHat.TOP_HAT -> Placement(R.drawable.store_art_hat_top, 41 / 512f, 36 / 512f, 496 / 512f, 464 / 512f, 390f, 350f)

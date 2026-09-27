@@ -589,7 +589,7 @@ private fun PanSiegeBoard(
     }
     val boardBorderWidth = wordSiegeBoardBorderWidthDp(transform.scale).dp
     WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx)
-    val dragHover = tileDrag?.hoverCell
+    val dragHover by remember(tileDrag) { derivedStateOf { tileDrag?.hoverCell } }
     val draggedFrom = tileDrag?.fromCell
 
     fun clampClosePan(candidate: Offset): Offset = clampWordSiegeBoardPan(
@@ -725,7 +725,8 @@ private fun PanSiegeBoard(
                     Row {
                         repeat(WordSiegeBoardSpec.Size) { column ->
                             val index = WordSiegeBoardSpec.index(row, column)
-                            val pendingRackIndex = placements[index]?.takeIf { index != draggedFrom }
+                            val placedRackIndex = placements[index]
+                            val pendingRackIndex = placedRackIndex?.takeIf { index != draggedFrom }
                             val pending = pendingRackIndex != null
                             val boardCell = board.getOrElse(index) { WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index)) }
                             PanSiegeBoardCell(
@@ -741,13 +742,14 @@ private fun PanSiegeBoard(
                                 onClick = { onCell(index) },
                                 onDoubleClick = { toggleViewport(index) },
                                 dropTarget = dragHover == index && boardCell.letter == null,
-                                dragSource = if (pendingRackIndex != null) {
+                                // Keyed on the placed tile so the gesture survives the tile hiding while carried.
+                                dragSource = if (placedRackIndex != null) {
                                     Modifier.wordSiegeTileDragSource(
                                         drag = tileDrag,
                                         enabled = enabled,
-                                        rackIndex = pendingRackIndex,
+                                        rackIndex = placedRackIndex,
                                         fromCell = index,
-                                        letter = rack.getOrNull(pendingRackIndex) ?: ' ',
+                                        letter = rack.getOrNull(placedRackIndex) ?: ' ',
                                         onDrop = onTileDrop,
                                     )
                                 } else Modifier,

@@ -25,7 +25,8 @@ class StoreArtRuntimeParityContractTest {
 
     @Test fun obiWearsTheVeryHatImageTheStoreSells() {
         val painter = source("MascotHatPainter.kt")
-        listOf("store_art_hat_beret", "store_art_hat_flower", "store_art_hat_wizard", "store_art_hat_top", "store_art_victory_crown")
+        // The beret is the same image with its dark inside cut away, so it sits on Obi's head.
+        listOf("hat_beret_worn", "store_art_hat_flower", "store_art_hat_wizard", "store_art_hat_top", "store_art_victory_crown")
             .forEach { assertTrue(painter.contains("R.drawable.$it")) }
         assertTrue(painter.contains("canvas.drawBitmap(bitmap, src, dst, paint)"))
         assertTrue(source("WordSiegeMascotView.kt").contains("if (boughtHats.draws(hat)) {"))
