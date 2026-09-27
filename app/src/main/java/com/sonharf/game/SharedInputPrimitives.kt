@@ -44,7 +44,8 @@ internal fun EmbeddedWordKeyboard(
         modifier = modifier.fillMaxWidth(),
         color = palette.background,
         shape = trayShape,
-        border = BorderStroke(1.dp, palette.border),
+        // A painted panel brings its own frame.
+        border = if (palette.panelImage == null) BorderStroke(1.dp, palette.border) else null,
     ) {
         Column(
             Modifier.fillMaxWidth().keyboardTray(palette, trayShape).padding(horizontal = 5.dp, vertical = 6.dp),

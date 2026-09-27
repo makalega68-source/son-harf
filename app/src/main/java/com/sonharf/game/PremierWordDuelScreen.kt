@@ -2659,10 +2659,20 @@ private fun PremierKeyboard(language: String, value: String, enabled: Boolean, k
     Surface(
         color = palette.background,
         shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
-        border = BorderStroke(1.dp, PremierUi.Border),
-        shadowElevation = 14.dp,
+        // A painted panel brings its own frame and must not sit on a shadow box.
+        border = if (palette.panelImage == null) BorderStroke(1.dp, PremierUi.Border) else null,
+        shadowElevation = if (palette.panelImage == null) 14.dp else 0.dp,
     ) {
-        Column(Modifier.fillMaxWidth().keyboardTray(palette, RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)).padding(horizontal = 6.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        // A painted panel adds its crown band and frame; on compact screens keep both slim so the
+        // board keeps its room.
+        val painted = palette.panelImage != null
+        val crownBand = if (keyHeight <= 39.dp) 22.dp else 30.dp
+        Column(
+            Modifier.fillMaxWidth()
+                .keyboardTray(palette, RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp), crownBand)
+                .padding(horizontal = if (painted) 2.dp else 6.dp, vertical = if (painted) 3.dp else 7.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
             val widest = rows.first().size
             rows.forEachIndexed { index, row ->
                 val last = index == rows.lastIndex
@@ -2706,8 +2716,8 @@ private fun PremierBackspaceKey(enabled: Boolean, modifier: Modifier, keyHeight:
     Box(
         modifier
             .height(keyHeight)
-            .graphicsLayer { scaleX = if (pressed) .94f else 1f; scaleY = if (pressed) .94f else 1f }
-            .keyFace(palette, KeyKind.ALT, enabled, 6.dp)
+            .graphicsLayer { scaleX = if (pressed) .96f else 1f; scaleY = if (pressed) .96f else 1f }
+            .keyFace(palette, KeyKind.ALT, enabled, 6.dp, rememberSkinImage(palette.keyImage), pressed)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {

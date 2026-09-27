@@ -44,4 +44,23 @@ class StoreArtRuntimeParityContractTest {
         assertTrue(board.contains("ink = Color(0xFFF2C75C)"))
         assertTrue(source("MainPlayerProfileScreen.kt").contains("NameStyleEmblem(30.dp)"))
     }
+
+    @Test fun paintedKeyboardPackIsWiredToTheExistingKeyboardProducts() {
+        val runtime = source("CosmeticRuntime.kt")
+        listOf("keyboard_crystal", "keyboard_obsidian", "keyboard_midnight", "keyboard_black_gold", "keyboard_premium_white").forEach { id ->
+            assertTrue("$id key art", art("${id}_key").isFile)
+            assertTrue("$id panel art", art("${id}_panel").isFile)
+            assertTrue(runtime.contains("keyImage = R.drawable.${id}_key, panelImage = R.drawable.${id}_panel"))
+        }
+        val skin = source("KeyboardSkin.kt")
+        // Panel behind the real buttons, sliced so crown and corners keep their shape.
+        assertTrue(skin.contains("internal fun Modifier.keyboardTray(p: WordKeyboardPalette, shape: Shape, crownBand: Dp = 30.dp)"))
+        assertTrue(skin.contains("val top = (ih * .29f).toInt()"))
+        assertTrue(skin.contains("colorFilter = if (pressed) PressedBrightness else null"))
+        assertTrue(skin.contains("internal fun KeyboardSkinPreview(themeId: String"))
+        assertTrue(source("StoreProductPreview.kt").contains("KeyboardSkinPreview(item.id"))
+        // Letters, layout and send/delete logic stay in the existing keyboards.
+        assertTrue(source("PremierWordDuelScreen.kt").contains("rememberSkinImage(palette.keyImage), pressed)"))
+        assertTrue(source("SharedInputPrimitives.kt").contains("border = if (palette.panelImage == null) BorderStroke(1.dp, palette.border) else null"))
+    }
 }

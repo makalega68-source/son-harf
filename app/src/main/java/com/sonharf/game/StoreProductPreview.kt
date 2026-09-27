@@ -42,6 +42,9 @@ internal fun StoreProductPreview(
     ) {
         when {
             item.kind == "profile_frame" -> RealFramePreview(item.id, expanded)
+            // Painted keyboards: the working keyboard itself, not a picture of it.
+            item.kind == "keyboard_theme" && SonHarfCosmetics.keyboardPaletteFor(item.id).keyImage != null ->
+                KeyboardSkinPreview(item.id, Modifier.fillMaxSize().padding(if (expanded) 6.dp else 2.dp))
             storeArtworkRes(item.id) != null -> {
                 Image(
                     painter = painterResource(storeArtworkRes(item.id)!!),
