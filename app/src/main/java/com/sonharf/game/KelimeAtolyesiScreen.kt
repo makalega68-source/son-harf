@@ -66,7 +66,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.AtelierBoardDto
+import com.sonharf.game.data.AtelierCompetitionBackend
+import com.sonharf.game.data.AtelierWeeklyRewardDto
 import com.sonharf.game.data.SharedDictionaryService
+import com.sonharf.game.data.SupabaseProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -156,18 +160,58 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var hintText by remember { mutableStateOf<String?>(null) }
     var mascotAction by remember { mutableStateOf<WordSiegeMascotAction?>(null) }
     var mascotActionKey by remember { mutableStateOf(0L) }
+    // Competition: the lobby (daily race + boards), practice rounds and the one official daily run.
+    val online = SupabaseProvider.configured
+    var mode by remember { mutableStateOf(AtelierMode.LOBBY) }
+    var board by remember { mutableStateOf<AtelierBoardDto?>(null) }
+    var weeklyBoard by remember { mutableStateOf(false) }
+    var loadingBoard by remember { mutableStateOf(false) }
+    var boardNonce by remember { mutableIntStateOf(0) }
+    var reward by remember { mutableStateOf<AtelierWeeklyRewardDto?>(null) }
+    var lobbyNotice by remember { mutableStateOf<String?>(null) }
+    var startingDaily by remember { mutableStateOf(false) }
+    var raceBoard by remember { mutableStateOf<AtelierBoardDto?>(null) }
+    var dailyLine by remember { mutableStateOf<String?>(null) }
 
-    BackHandler { onExit() }
+    fun toLobby() {
+        mode = AtelierMode.LOBBY
+        state = null
+        boardNonce += 1
+    }
+
+    BackHandler { if (mode == AtelierMode.LOBBY) onExit() else toLobby() }
+
+    LaunchedEffect(mode, weeklyBoard, boardNonce, language) {
+        if (mode != AtelierMode.LOBBY || !online) return@LaunchedEffect
+        loadingBoard = true
+        runCatching { AtelierCompetitionBackend.board(language, weeklyBoard) }.onSuccess { board = it }
+        runCatching { AtelierCompetitionBackend.weeklyReward(language) }.onSuccess { reward = it }
+        loadingBoard = false
+    }
 
     fun endRound(finished: AtelierState) {
         state = finished
         newBest = finished.score > best
         best = AtelierRecords.save(context, language, finished.score)
         if (finished.allTasksDone) SonHarfSoundFx.victory() else SonHarfSoundFx.softNotify()
+        if (mode == AtelierMode.DAILY) {
+            dailyLine = sh("Puanın kaydediliyor…", "Saving your score…")
+            scope.launch {
+                runCatching {
+                    AtelierCompetitionBackend.finishDaily(language, finished.score, finished.words.size, finished.completedTasks)
+                }.onSuccess { r ->
+                    dailyLine = if (r.rank == 1) sh("🥇 Bugünün lideri sensin! (${r.total} oyuncu)", "🥇 You lead today! (${r.total} players)")
+                        else sh("Bugün ${r.rank}. sıradasın · ${r.total} oyuncu", "You're #${r.rank} today · ${r.total} players")
+                }.onFailure {
+                    dailyLine = sh("Puan kaydedilemedi (süre aşımı veya bağlantı).", "Score could not be saved (timeout or connection).")
+                }
+            }
+        }
     }
 
-    fun startRound() {
+    fun startRound(seed: Long? = null) {
         val e = engine ?: return
+        e.reseed(seed ?: System.nanoTime())
         scope.launch {
             val fresh = withContext(Dispatchers.Default) { runCatching { e.newRound() }.getOrNull() }
             if (fresh == null) {
@@ -199,7 +243,50 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             return@LaunchedEffect
         }
         engine = built
+        // Rounds start from the lobby: the official daily race or free practice.
+        if (mode != AtelierMode.LOBBY) startRound()
+    }
+
+    fun startPractice() {
+        mode = AtelierMode.PRACTICE
+        dailyLine = null
         startRound()
+    }
+
+    fun startDaily() {
+        if (startingDaily || engine == null) return
+        startingDaily = true
+        lobbyNotice = null
+        scope.launch {
+            val started = runCatching { AtelierCompetitionBackend.startDaily(language) }.getOrNull()
+            when {
+                started == null -> lobbyNotice = sh("Yarış başlatılamadı. Bağlantını kontrol et.", "Could not start the race. Check your connection.")
+                !started.started -> {
+                    lobbyNotice = sh("Bugünkü hakkını zaten kullandın. Yarın yeni yarış!", "You already used today's try. New race tomorrow!")
+                    boardNonce += 1
+                }
+                else -> {
+                    raceBoard = runCatching { AtelierCompetitionBackend.board(language, weekly = false) }.getOrNull()
+                    mode = AtelierMode.DAILY
+                    dailyLine = null
+                    startRound(KelimeAtolyesiEngine.dailySeed(language, started.day))
+                }
+            }
+            startingDaily = false
+        }
+    }
+
+    fun claimReward() {
+        scope.launch {
+            runCatching { AtelierCompetitionBackend.claimWeeklyReward(language) }
+                .onSuccess { r ->
+                    lobbyNotice = if (r.claimed) sh("+${r.reward} Son Coin hesabına eklendi!", "+${r.reward} Son Coin added!")
+                        else sh("Bu ödül alınamadı.", "This reward could not be claimed.")
+                    if (r.claimed) SonHarfSoundFx.bonus()
+                    boardNonce += 1
+                }
+                .onFailure { lobbyNotice = sh("Ödül alınamadı. Tekrar dene.", "Could not claim. Try again.") }
+        }
     }
 
     // The 60-second round clock.
@@ -328,7 +415,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             AtelierTopBar(
                 seconds = secondsLeft,
                 score = current?.score ?: 0,
-                onBack = onExit,
+                onBack = { if (mode == AtelierMode.LOBBY) onExit() else toLobby() },
             )
             AtelierMascotRow(
                 skin = mascotSkin,
@@ -341,6 +428,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                 actionKey = mascotActionKey,
                 action = mascotAction,
                 hint = when {
+                    mode == AtelierMode.LOBBY -> sh("Bugünün yarışına hazır mısın? Herkes aynı harflerle!", "Ready for today's race? Same letters for everyone!")
                     current?.over == true -> sh("Tur bitti.", "Round over.")
                     hintText != null -> hintText!!
                     else -> sh("Harflere dokun, kelimeni kur.", "Tap letters to build your word.")
@@ -351,6 +439,19 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             )
             when {
                 loadFailed -> AtelierLoadError { loadNonce += 1 }
+                mode == AtelierMode.LOBBY -> AtelierLobby(
+                    online = online,
+                    board = board,
+                    weekly = weeklyBoard,
+                    loadingBoard = loadingBoard,
+                    reward = reward,
+                    notice = lobbyNotice,
+                    starting = startingDaily || engine == null,
+                    onWeekly = { weeklyBoard = it },
+                    onDaily = { startDaily() },
+                    onPractice = { if (engine != null) startPractice() },
+                    onClaim = { claimReward() },
+                )
                 current == null -> Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         CircularProgressIndicator(color = AtelierUi.Green)
@@ -362,12 +463,16 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     language = language,
                     best = best,
                     newBest = newBest,
-                    onNewRound = { startRound() },
+                    daily = mode == AtelierMode.DAILY,
+                    dailyLine = dailyLine,
+                    onNewRound = { if (mode == AtelierMode.DAILY) toLobby() else startRound() },
+                    onLobby = { toLobby() },
                     onExit = onExit,
                 )
                 else -> {
                     // Tasks and the word slot on top; the letter pool sits at the bottom right above
                     // Temizle / Gönder, where the thumbs are.
+                    if (mode == AtelierMode.DAILY) AtelierRivalStrip(raceBoard, current.score)
                     AtelierTasks(current.tasks, language)
                     AtelierSlot(current, language, gain = gain, gainNonce = gainNonce, shakeNonce = shakeNonce) { index ->
                         SonHarfSoundFx.puzzleKey()
@@ -799,7 +904,10 @@ private fun AtelierResult(
     language: String,
     best: Int,
     newBest: Boolean,
+    daily: Boolean,
+    dailyLine: String?,
     onNewRound: () -> Unit,
+    onLobby: () -> Unit,
     onExit: () -> Unit,
 ) {
     Column(
@@ -819,6 +927,10 @@ private fun AtelierResult(
             fontWeight = FontWeight.Bold,
         )
         Text("${state.score}", color = AtelierUi.Green, fontSize = 44.sp, fontWeight = FontWeight.Bold)
+        if (daily) {
+            Text(sh("GÜNLÜK YARIŞ", "DAILY RACE"), color = AtelierUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            dailyLine?.let { Text(it, color = AtelierUi.Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) }
+        }
         Text(
             if (newBest) sh("Yeni en iyi skor!", "New best score!") else sh("En iyi: $best", "Best: $best"),
             color = if (newBest) AtelierUi.Gold else AtelierUi.InkMuted,
@@ -858,7 +970,18 @@ private fun AtelierResult(
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(containerColor = AtelierUi.Green, contentColor = Color.White),
         ) {
-            Text(sh("Yeni Tur", "New Round"), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(if (daily) sh("Sıralamayı Gör", "See the Board") else sh("Yeni Tur", "New Round"), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+        if (!daily) {
+            OutlinedButton(
+                onClick = onLobby,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, AtelierUi.Gold),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = AtelierUi.Ink),
+            ) {
+                Text(sh("Günlük Yarış", "Daily Race"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
         }
         OutlinedButton(
             onClick = onExit,

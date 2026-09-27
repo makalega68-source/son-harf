@@ -98,6 +98,17 @@ class KelimeAtolyesiEngineTest {
         assertFalse(result.state.tasks[2].done)
     }
 
+    @Test fun dailyRaceGivesEveryoneTheSameStartingRound() {
+        val seed = KelimeAtolyesiEngine.dailySeed("tr", "2026-09-27")
+        // Two players, different engines built from the same words in a different order.
+        val first = KelimeAtolyesiEngine(TR_WORDS, "tr").apply { reseed(seed) }.newRound()
+        val second = KelimeAtolyesiEngine(TR_WORDS.reversed().toSet(), "tr").apply { reseed(seed) }.newRound()
+        assertEquals(first.pool.map { it.letter }, second.pool.map { it.letter })
+        assertEquals(first.tasks, second.tasks)
+        // A different day is a different race.
+        assertFalse(seed == KelimeAtolyesiEngine.dailySeed("tr", "2026-09-28"))
+    }
+
     @Test fun turkishLettersKeepTheirOwnCase() {
         assertEquals("İ", KelimeAtolyesiEngine.display('i', "tr"))
         assertEquals("I", KelimeAtolyesiEngine.display('ı', "tr"))

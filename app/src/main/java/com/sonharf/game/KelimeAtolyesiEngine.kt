@@ -74,19 +74,28 @@ internal data class AtelierSubmit(
 internal class KelimeAtolyesiEngine(
     dictionary: Set<String>,
     language: String,
-    private val random: Random = Random.Default,
+    private var random: Random = Random.Default,
 ) {
     val language: String = if (language.lowercase(Locale.ROOT) == "en") "en" else "tr"
     private val alphabet = if (this.language == "en") EN_ALPHABET else TR_ALPHABET
     private val words: Set<String> =
         dictionary.filterTo(hashSetOf()) { it.length in MIN_WORD..POOL_SIZE && it.all { c -> c in alphabet } }
-    private val index: List<Pair<String, IntArray>> = words.map { it to counts(it) }
+    // Sorted so a seeded round picks the same letters on every device (hash-set order is not a contract).
+    private val index: List<Pair<String, IntArray>> = words.sorted().map { it to counts(it) }
     private val seeds: List<String> = index.map { it.first }.filter { it.length == POOL_SIZE }
         .ifEmpty { index.map { it.first }.filter { it.length >= POOL_SIZE - 2 } }
     private val weights: List<Pair<Char, Double>> =
         (if (this.language == "en") EN_FREQUENCY else TR_FREQUENCY).filter { it.first in alphabet }
 
     val playable: Boolean get() = seeds.isNotEmpty()
+
+    /**
+     * Günlük Yarış: seeding with the same value (language + day) gives every player the same
+     * starting letters and tasks; practice rounds reseed from the clock.
+     */
+    fun reseed(seed: Long) {
+        random = Random(seed)
+    }
 
     fun isWord(word: String): Boolean = word in words
 
@@ -274,6 +283,9 @@ internal class KelimeAtolyesiEngine(
         /** Upper-case display with the right locale (Turkish i → İ, ı → I). */
         fun display(letter: Char, language: String): String =
             letter.toString().uppercase(if (language == "en") Locale.ENGLISH else Locale.forLanguageTag("tr-TR"))
+
+        /** The shared seed of a day's official round, e.g. ("tr", "2026-09-27"). */
+        fun dailySeed(language: String, day: String): Long = "atelier:$language:$day".hashCode().toLong()
 
         fun display(word: String, language: String): String =
             word.uppercase(if (language == "en") Locale.ENGLISH else Locale.forLanguageTag("tr-TR"))
