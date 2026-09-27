@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -84,6 +85,9 @@ private fun WordSiegePracticeContent(
     var dictionaryRetryKey by remember { mutableIntStateOf(0) }
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
+    // Tiles are carried with the finger like Kelimelik; hint tiles fly from the rack to the board.
+    val tileDrag = remember { WordSiegeTileDrag() }
+    val rackCenters = remember { mutableStateMapOf<Int, Offset>() }
     var notice by remember(matchmakingFallback) {
         mutableStateOf(
             if (matchmakingFallback) {
@@ -160,6 +164,18 @@ private fun WordSiegePracticeContent(
         placementsCount = placements.size,
         turkish = !SonHarfUiState.isEnglish,
     )
+    // A valid pending move gets a green check and (for PRO) its score above the word.
+    var pendingMove by remember { mutableStateOf<WordSiegePracticeMove?>(null) }
+    LaunchedEffect(placements, state, dictionaryReady) {
+        pendingMove = null
+        if (placements.isEmpty() || !dictionaryReady || state.status != "playing" || state.currentOwner != 1) return@LaunchedEffect
+        val snapshot = state
+        val tiles = placements
+        delay(90L)
+        pendingMove = withContext(Dispatchers.Default) {
+            runCatching { WordSiegePracticeEngine.applyMove(snapshot, 1, tiles).second }.getOrNull()
+        }
+    }
     val previewCapturedCells = placements.keys.count { index -> state.board.getOrNull(index)?.owner != 1 }
     val playerTerritoryPoints = state.playerAreaScore
     val botTerritoryPoints = state.botAreaScore
@@ -213,6 +229,14 @@ private fun WordSiegePracticeContent(
             delay(1_300)
             showSiegePulse = false
         }
+    }
+
+    fun dropTile(rackIndex: Int, fromCell: Int?, target: Int?) {
+        if (!canPlayerAct) return
+        selectedRackIndex = null
+        val next = wordSiegeDropTile(placements, state.board, rackIndex, fromCell, target)
+        if (rackIndex in next.values && (tutorialStep == 1 || tutorialStep == 2)) tutorialStep = 3
+        placements = next
     }
 
     fun clearSelection() {
@@ -556,6 +580,10 @@ private fun WordSiegePracticeContent(
                         playerName = playerProfile?.displayName,
                         playerGender = playerProfile?.gender,
                         onViewportModeChange = { boardViewportMode = it },
+                        tileDrag = tileDrag,
+                        onTileDrop = ::dropTile,
+                        pendingValid = pendingMove != null && pendingMove?.placements == placements,
+                        pendingScore = pendingMove?.takeIf { playerProfile?.isVip == true && it.placements == placements }?.wordScore,
                         onCell = { boardIndex ->
                             if (!canPlayerAct) return@WordSiegePracticeBoard
                             if (placements.containsKey(boardIndex)) {
@@ -623,9 +651,19 @@ private fun WordSiegePracticeContent(
                             WordSiegePracticeRackTile(
                                 letter = letter,
                                 selected = selectedRackIndex == rackIndex,
-                                used = rackIndex in placements.values,
+                                used = rackIndex in placements.values || tileDrag.rackIndex == rackIndex,
                                 enabled = canPlayerAct,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onGloballyPositioned { rackCenters[rackIndex] = it.localToWindow(Offset(it.size.width / 2f, it.size.height / 2f)) }
+                                    .wordSiegeTileDragSource(
+                                        drag = tileDrag,
+                                        enabled = canPlayerAct && rackIndex !in placements.values,
+                                        rackIndex = rackIndex,
+                                        fromCell = null,
+                                        letter = letter,
+                                        onDrop = ::dropTile,
+                                    ),
                                 onClick = {
                                     val pending = placements.entries.firstOrNull { it.value == rackIndex }?.key
                                     if (pending != null) placements = placements - pending
@@ -673,6 +711,15 @@ private fun WordSiegePracticeContent(
                                     placements = move.placements
                                     selectedRackIndex = null
                                     siegeHintCells = move.placements.keys.sorted()
+                                    // The answer's letters fly one by one from the rack onto their cells.
+                                    tileDrag.launchFlights(
+                                        move.placements.entries.sortedBy { it.key }.mapIndexedNotNull { order, (cell, rackIndex) ->
+                                            val from = rackCenters[rackIndex] ?: return@mapIndexedNotNull null
+                                            val to = tileDrag.cellCenter(cell) ?: return@mapIndexedNotNull null
+                                            val letter = state.playerRack.getOrNull(rackIndex) ?: return@mapIndexedNotNull null
+                                            WordSiegeTileFlight("hint$key:$cell", cell, letter, from, to, order * 140)
+                                        },
+                                    )
                                     val word = MascotHints.full(move.primaryWord, state.language)
                                     siegeHint = key to sh(
                                         "Tam buraya: $word (+${move.wordScore} puan). Taşları yerleştirdim, onayla!",
@@ -712,11 +759,8 @@ private fun WordSiegePracticeContent(
                             ),
                             contentPadding = PaddingValues(horizontal = 3.dp),
                         ) {
-                            // PRO sees what the move is worth before confirming it.
-                            val preview = if (playerProfile?.isVip == true && placements.isNotEmpty()) {
-                                remember(placements, state.board, state.playerRack) { WordSiegePracticeEngine.previewScore(state.board, state.playerRack, placements) }
-                            } else null
-                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE") + (preview?.let { " • +$it" } ?: ""), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                            // PRO's move score now floats above the word on the board.
+                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
                         }
                         WordSiegePracticeBagButton(
                             bag = state.bag,
@@ -783,6 +827,7 @@ private fun WordSiegePracticeContent(
                 )
             }
         }
+        WordSiegeTileDragOverlay(tileDrag)
     }
 
     if (showRestart) {

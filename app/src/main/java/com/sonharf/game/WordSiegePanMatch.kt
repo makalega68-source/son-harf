@@ -43,7 +43,9 @@ import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.WordSiegeCellDto
 import com.sonharf.game.data.WordSiegeGameDto
 import com.sonharf.game.data.WordSiegeMoveDto
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 private val PanSiegeTile get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.ivory else Color(0xFFF7E3A6)
@@ -89,6 +91,8 @@ internal fun WordSiegePanMatch(
     onChat: () -> Unit,
     onForfeit: () -> Unit,
     onCancelWaiting: () -> Unit,
+    /** Finger-dragged tiles replace the pending placements (Kelimelik-style). */
+    onPlacementsChange: (Map<Int, Int>) -> Unit = {},
 ) {
     val mine = me?.let(profiles::get)
     val opponentId = if (me == game.playerOneId) game.playerTwoId else game.playerOneId
@@ -227,6 +231,25 @@ internal fun WordSiegePanMatch(
         placementsCount = placements.size,
         turkish = !SonHarfUiState.isEnglish,
     )
+    val tileDrag = remember(game.id) { WordSiegeTileDrag() }
+    // Green check on a valid word; PRO also sees its points above the word.
+    var pendingScore by remember(game.id) { mutableStateOf<Int?>(null) }
+    var pendingFor by remember(game.id) { mutableStateOf<Map<Int, Int>>(emptyMap()) }
+    LaunchedEffect(placements, game.board, rack) {
+        pendingScore = null
+        if (placements.isEmpty()) return@LaunchedEffect
+        val tiles = placements
+        delay(90L)
+        pendingScore = withContext(Dispatchers.Default) {
+            runCatching { WordSiegePracticeEngine.previewValidScore(game.board, rack, tiles, game.language) }.getOrNull()
+        }
+        pendingFor = tiles
+    }
+    val pendingValid = pendingScore != null && pendingFor == placements
+    fun dropTile(rackIndex: Int, fromCell: Int?, target: Int?) {
+        if (!canAct) return
+        onPlacementsChange(wordSiegeDropTile(placements, game.board, rackIndex, fromCell, target))
+    }
 
     LaunchedEffect(game.id, game.status) {
         if (game.status == "waiting") {
@@ -246,6 +269,7 @@ internal fun WordSiegePanMatch(
     }
 
     WordSiegeGameTheme {
+    Box(Modifier.fillMaxSize()) {
     Column(
         Modifier
             .fillMaxSize()
@@ -389,6 +413,10 @@ internal fun WordSiegePanMatch(
             },
             playerName = mine?.displayName,
             playerGender = mine?.gender,
+            tileDrag = tileDrag,
+            onTileDrop = ::dropTile,
+            pendingValid = pendingValid,
+            pendingScore = pendingScore.takeIf { mine?.isVip == true },
             onCell = onBoardCell,
             onChat = onChat,
         )
@@ -416,9 +444,16 @@ internal fun WordSiegePanMatch(
                     PanSiegeRackTile(
                         letter = letter,
                         selected = selectedRackIndex == rackIndex,
-                        used = rackIndex in placements.values,
+                        used = rackIndex in placements.values || tileDrag.rackIndex == rackIndex,
                         enabled = canAct,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).wordSiegeTileDragSource(
+                            drag = tileDrag,
+                            enabled = canAct && rackIndex !in placements.values,
+                            rackIndex = rackIndex,
+                            fromCell = null,
+                            letter = letter,
+                            onDrop = ::dropTile,
+                        ),
                         onClick = { onRackTile(rackIndex) },
                     )
                 }
@@ -464,12 +499,9 @@ internal fun WordSiegePanMatch(
                     ),
                     contentPadding = PaddingValues(horizontal = 3.dp),
                 ) {
-                    // PRO sees what the move is worth before confirming it.
-                    val preview = if (mine?.isVip == true && placements.isNotEmpty()) {
-                        remember(placements, game.board, rack) { WordSiegePracticeEngine.previewScore(game.board, rack, placements) }
-                    } else null
+                    // PRO's move score now floats above the word on the board.
                     if (busy) CircularProgressIndicator(Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
-                    else Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE") + (preview?.let { " • +$it" } ?: ""), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                    else Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
                 }
                 WordSiegeOnlineBagButton(
                     game = game,
@@ -490,6 +522,8 @@ internal fun WordSiegePanMatch(
                 rivalAccent = PanSiegeRivalBorder,
             )
         }
+    }
+    WordSiegeTileDragOverlay(tileDrag)
     }
     }
 }
@@ -513,6 +547,10 @@ private fun PanSiegeBoard(
     mascotOutcome: WordSiegeMascotOutcome? = null,
     playerName: String? = null,
     playerGender: String? = null,
+    tileDrag: WordSiegeTileDrag? = null,
+    onTileDrop: (rackIndex: Int, fromCell: Int?, target: Int?) -> Unit = { _, _, _ -> },
+    pendingValid: Boolean = false,
+    pendingScore: Int? = null,
     onCell: (Int) -> Unit,
     onChat: () -> Unit,
 ) {
@@ -550,6 +588,9 @@ private fun PanSiegeBoard(
         }
     }
     val boardBorderWidth = wordSiegeBoardBorderWidthDp(transform.scale).dp
+    WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx)
+    val dragHover = tileDrag?.hoverCell
+    val draggedFrom = tileDrag?.fromCell
 
     fun clampClosePan(candidate: Offset): Offset = clampWordSiegeBoardPan(
         candidate,
@@ -684,8 +725,9 @@ private fun PanSiegeBoard(
                     Row {
                         repeat(WordSiegeBoardSpec.Size) { column ->
                             val index = WordSiegeBoardSpec.index(row, column)
-                            val pendingRackIndex = placements[index]
+                            val pendingRackIndex = placements[index]?.takeIf { index != draggedFrom }
                             val pending = pendingRackIndex != null
+                            val boardCell = board.getOrElse(index) { WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index)) }
                             PanSiegeBoardCell(
                                 cell = board.getOrElse(index) { WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index)) },
                                 pendingLetter = pendingRackIndex?.let(rack::getOrNull),
@@ -698,11 +740,30 @@ private fun PanSiegeBoard(
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
                                 onClick = { onCell(index) },
                                 onDoubleClick = { toggleViewport(index) },
+                                dropTarget = dragHover == index && boardCell.letter == null,
+                                dragSource = if (pendingRackIndex != null) {
+                                    Modifier.wordSiegeTileDragSource(
+                                        drag = tileDrag,
+                                        enabled = enabled,
+                                        rackIndex = pendingRackIndex,
+                                        fromCell = index,
+                                        letter = rack.getOrNull(pendingRackIndex) ?: ' ',
+                                        onDrop = onTileDrop,
+                                    )
+                                } else Modifier,
                             )
                         }
                     }
                 }
             }
+
+            WordSiegePendingMoveBadges(
+                cells = placements.keys.filter { it != draggedFrom }.takeIf { it.size == placements.size }.orEmpty(),
+                transform = transform,
+                cellSizePx = tilePx,
+                valid = pendingValid,
+                score = pendingScore,
+            )
 
             PurchasedBoardActionVfxOverlay(
                 events = actionVfxEvents,
@@ -818,6 +879,8 @@ private fun PanSiegeBoardCell(
     lastMoveHighlight: Float,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
+    dropTarget: Boolean = false,
+    dragSource: Modifier = Modifier,
 ) {
     val owner = if (pending) myOwner else cell.owner
     val territoryColor = when {
@@ -860,6 +923,7 @@ private fun PanSiegeBoardCell(
     Box(
         Modifier
             .size(size)
+            .then(dragSource)
             .combinedClickable(
                 interactionSource = boardInteraction,
                 indication = null,
@@ -893,8 +957,8 @@ private fun PanSiegeBoardCell(
                 )
             )
             .border(
-                width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
-                color = PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),
+                width = if (dropTarget) 3.dp else if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
+                color = if (dropTarget) Color(0xFF2FB36A) else PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),
                 shape = RoundedCornerShape(7.dp),
             ),
         contentAlignment = Alignment.Center,

@@ -56,9 +56,38 @@ class PlayerFeedbackBatchContractTest {
 
     @Test fun proSeesTheMoveScoreBeforeConfirming() {
         assertTrue(source("WordSiegePracticeEngine.kt").contains("fun previewScore(board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>): Int?"))
-        assertTrue(source("WordSiegePanMatch.kt").contains("if (mine?.isVip == true && placements.isNotEmpty())"))
-        assertTrue(source("WordSiegePracticeScreen.kt").contains("if (playerProfile?.isVip == true && placements.isNotEmpty())"))
+        // The score floats above the word on the board, only for PRO.
+        assertTrue(source("WordSiegePanMatch.kt").contains("pendingScore = pendingScore.takeIf { mine?.isVip == true }"))
+        assertTrue(source("WordSiegePracticeScreen.kt").contains("pendingScore = pendingMove?.takeIf { playerProfile?.isVip == true && it.placements == placements }?.wordScore"))
+        assertFalse(source("WordSiegePracticeScreen.kt").contains("\" • +\$it\""))
     }
+
+    @Test fun tilesAreCarriedWithTheFingerAndValidWordsGetAGreenCheck() {
+        val drag = source("WordSiegeTileDrag.kt")
+        assertTrue(drag.contains("detectDragGestures("))
+        assertTrue(drag.contains("drag.start(currentRack, currentFrom, currentLetter, c.localToWindow(local), 46.dp.toPx())"))
+        assertTrue(drag.contains("fun WordSiegePendingMoveBadges("))
+        assertTrue(drag.contains("Icons.Rounded.Check"))
+        // The score bubble sits above the word.
+        assertTrue(drag.contains("(top - bubbleH - 4f)"))
+        for (screen in listOf("WordSiegePracticeScreen.kt", "WordSiegePanMatch.kt")) {
+            val s = source(screen)
+            assertTrue(screen, s.contains("WordSiegeTileDragOverlay(tileDrag)"))
+            assertTrue(screen, s.contains(".wordSiegeTileDragSource("))
+            assertTrue(screen, s.contains("wordSiegeDropTile(placements,"))
+        }
+        assertTrue(source("WordSiegePracticeEngine.kt").contains("fun previewValidScore("))
+        assertTrue(source("WordSiegeExperience.kt").contains("onPlacementsChange = { next ->"))
+        assertTrue(source("WordSiegeSeriesScreen.kt").contains("onPlacementsChange = { next ->"))
+    }
+
+    @Test fun hintLettersFlyOntoTheBoard() {
+        val practice = source("WordSiegePracticeScreen.kt")
+        assertTrue(practice.contains("tileDrag.launchFlights("))
+        assertTrue(practice.contains("WordSiegeTileFlight(\"hint\$key:\$cell\", cell, letter, from, to, order * 140)"))
+        assertTrue(source("WordSiegeTileDrag.kt").contains("sin(PI * t.value)"))
+    }
+
 
     @Test fun storeOnlySellsAndTheProfileManages() {
         assertTrue(source("ProfileFrameStore.kt").contains("if (equipped || owned) sh(\"SATIN ALINDI\", \"PURCHASED\") else price"))

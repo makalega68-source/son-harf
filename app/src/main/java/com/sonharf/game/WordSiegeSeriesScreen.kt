@@ -245,6 +245,10 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                                     }
                                 }
                             },
+                            onPlacementsChange = { next ->
+                                placements = next
+                                selectedRackIndex = null
+                            },
                             onRackTile = { rackIndex ->
                                 val pendingCell = placements.entries.firstOrNull { it.value == rackIndex }?.key
                                 if (pendingCell != null) placements = placements - pendingCell

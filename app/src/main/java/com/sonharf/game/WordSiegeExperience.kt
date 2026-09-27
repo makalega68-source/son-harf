@@ -244,6 +244,10 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                             }
                         }
                     },
+                    onPlacementsChange = { next ->
+                        placements = next
+                        selectedRackIndex = null
+                    },
                     onRackTile = { rackIndex ->
                         val pendingCell = placements.entries.firstOrNull { it.value == rackIndex }?.key
                         if (pendingCell != null) placements = placements - pendingCell

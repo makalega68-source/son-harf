@@ -444,6 +444,32 @@ internal object WordSiegePracticeEngine {
         return score + starBonus
     }
 
+    /**
+     * The move's score when it is legal and every word it forms is in the dictionary; null otherwise.
+     * Drives the green check on the board before the player confirms.
+     */
+    fun previewValidScore(board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>, language: String): Int? {
+        val score = previewScore(board, rack, placements) ?: return null
+        val horizontal = WordSiegeFinalRules.detectOrientation(board, placements.keys) == WordSiegeOrientation.HORIZONTAL
+        val indices = placements.keys.sorted()
+        fun letterAt(index: Int): Char? = placements[index]?.let(rack::getOrNull) ?: board[index].letter?.firstOrNull()
+        val hasBoardLetter = board.any { it.letter != null }
+        if (!hasBoardLetter && WordSiegeBoardSpec.CenterIndex !in indices) return null
+        val words = mutableListOf<List<Int>>()
+        val main = collectCells(indices.first(), if (horizontal) WordSiegeBoardSpec.HorizontalDelta else WordSiegeBoardSpec.VerticalDelta, ::letterAt)
+        if (main.size > 1) words += main
+        indices.forEach { index ->
+            val cross = collectCells(index, if (horizontal) WordSiegeBoardSpec.VerticalDelta else WordSiegeBoardSpec.HorizontalDelta, ::letterAt)
+            if (cross.size > 1) words += cross
+        }
+        if (words.isEmpty()) return null
+        if (hasBoardLetter && words.none { cells -> cells.any { board[it].letter != null } }) return null
+        val allValid = words.all { cells ->
+            SharedDictionaryService.isValidWordBlocking(cells.joinToString("") { letterAt(it)?.toString().orEmpty() }, language)
+        }
+        return if (allValid) score else null
+    }
+
     private fun scoreWord(
         board: List<WordSiegeCellDto>,
         placements: Map<Int, Int>,

@@ -93,6 +93,13 @@ internal fun WordSiegePracticeBoard(
     /** Cells of the mascot's hint move: it flies there while it says the word. */
     hintCells: List<Int> = emptyList(),
     onViewportModeChange: (WordSiegeBoardViewportMode) -> Unit = {},
+    /** Finger dragging of tiles (rack → board, board → board/rack). */
+    tileDrag: WordSiegeTileDrag? = null,
+    onTileDrop: (rackIndex: Int, fromCell: Int?, target: Int?) -> Unit = { _, _, _ -> },
+    /** The pending tiles form a valid move: a green check sits on the last tile. */
+    pendingValid: Boolean = false,
+    /** What the pending move scores, shown above the word (null hides it). */
+    pendingScore: Int? = null,
     onCell: (Int) -> Unit,
 ) {
     val density = LocalDensity.current
@@ -168,6 +175,13 @@ internal fun WordSiegePracticeBoard(
         onViewportModeChange(nextMode)
     }
 
+    WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx)
+    val dragHover = tileDrag?.hoverCell
+    val hiddenCells: Set<Int> = buildSet {
+        tileDrag?.fromCell?.let { add(it) }
+        tileDrag?.flyingCells?.let { addAll(it) }
+    }
+
     LaunchedEffect(viewport, boardPx) {
         if (!initialized && viewport.width > 0 && viewport.height > 0) {
             closePan = centerClose()
@@ -240,7 +254,7 @@ internal fun WordSiegePracticeBoard(
                     Row {
                         repeat(WordSiegeBoardSpec.Size) { column ->
                             val index = WordSiegeBoardSpec.index(row, column)
-                            val pendingRackIndex = placements[index]
+                            val pendingRackIndex = placements[index]?.takeIf { index !in hiddenCells }
                             val cell = board.getOrElse(index) { WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index)) }
                             WordSiegePracticeBoardCell(
                                 cell = cell,
@@ -256,11 +270,30 @@ internal fun WordSiegePracticeBoard(
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleMode,
                                 hintGlow = if (index in hintSet) hintPulse else 0f,
+                                dropTarget = dragHover == index && (cell.letter == null),
+                                dragSource = if (pendingRackIndex != null) {
+                                    Modifier.wordSiegeTileDragSource(
+                                        drag = tileDrag,
+                                        enabled = enabled,
+                                        rackIndex = pendingRackIndex,
+                                        fromCell = index,
+                                        letter = rack.getOrNull(pendingRackIndex) ?: ' ',
+                                        onDrop = onTileDrop,
+                                    )
+                                } else Modifier,
                             )
                         }
                     }
                 }
             }
+
+            WordSiegePendingMoveBadges(
+                cells = placements.keys.filter { it !in hiddenCells }.takeIf { it.size == placements.size }.orEmpty(),
+                transform = transform,
+                cellSizePx = tilePx,
+                valid = pendingValid,
+                score = pendingScore,
+            )
 
             PurchasedBoardActionVfxOverlay(
                 events = actionVfxEvents,
@@ -367,6 +400,8 @@ private fun WordSiegePracticeBoardCell(
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
     hintGlow: Float = 0f,
+    dropTarget: Boolean = false,
+    dragSource: Modifier = Modifier,
 ) {
     val owner = if (pending) myOwner else cell.owner
     val territory = when {
@@ -412,6 +447,7 @@ private fun WordSiegePracticeBoardCell(
     Box(
         Modifier
             .size(PracticeSiegeCellSize)
+            .then(dragSource)
             .combinedClickable(
                 interactionSource = cellInteraction,
                 indication = null,
@@ -454,8 +490,10 @@ private fun WordSiegePracticeBoardCell(
                 )
             )
             .border(
-                width = if (hintGlow > 0f) 2.2.dp else if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
-                color = if (hintGlow > 0f) {
+                width = if (dropTarget) 3.dp else if (hintGlow > 0f) 2.2.dp else if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
+                color = if (dropTarget) {
+                    Color(0xFF2FB36A)
+                } else if (hintGlow > 0f) {
                     Color(0xFFFFE082).copy(alpha = .55f + .45f * hintGlow)
                 } else if (lastMoveHighlight > 0f) {
                     PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
@@ -661,7 +699,7 @@ private fun practiceCellThreatened(board: List<WordSiegeCellDto>, index: Int, ow
     }
 }
 
-private fun practiceLetterValue(letter: String): String = when (letter) {
+internal fun practiceLetterValue(letter: String): String = when (letter) {
     "A", "E", "İ", "K", "L", "N", "R", "T" -> "1"
     "I", "M", "O", "S", "U" -> "2"
     "B", "D", "Ü", "Y" -> "3"
