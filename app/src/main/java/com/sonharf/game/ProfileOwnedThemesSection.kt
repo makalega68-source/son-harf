@@ -2,10 +2,12 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -256,6 +258,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                         enabled = !busy && !loading,
                         blackVariant = false,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
+                        preview = { DefaultSlotPreview(kind) },
                         onClick = { resetSlot(kind) },
                     )
                     Spacer(Modifier.weight(1f))
@@ -298,6 +301,7 @@ private fun ProfileThemeCard(
     enabled: Boolean,
     blackVariant: Boolean,
     modifier: Modifier = Modifier,
+    preview: (@Composable BoxScope.() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -317,6 +321,7 @@ private fun ProfileThemeCard(
                     shape = RoundedCornerShape(12.dp),
                 ),
             ) {
+                preview?.invoke(this)
                 if (active) {
                     Icon(
                         Icons.Rounded.CheckCircle,
@@ -331,6 +336,31 @@ private fun ProfileThemeCard(
             Spacer(Modifier.weight(1f))
             ProfileUseButton(active = active, enabled = enabled, onClick = onClick)
         }
+    }
+}
+
+/** What the free standard look of a slot is: a plain ring, bare Obi, a plain key, and so on. */
+@Composable
+private fun BoxScope.DefaultSlotPreview(kind: String) {
+    when (kind) {
+        "profile_frame" -> Box(
+            Modifier.align(Alignment.Center).size(58.dp).border(2.dp, Color(0xFFBDBDBD), CircleShape).background(Hf.Surface, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Rounded.Person, null, Modifier.size(34.dp), tint = Hf.TextMuted)
+        }
+        "mascot_hat" -> ObiHatPreview(hatId = "", modifier = Modifier.align(Alignment.Center).padding(6.dp))
+        else -> Text(
+            when (kind) {
+                "victory_effect" -> "🏆"
+                "keyboard_theme" -> "⌨️"
+                else -> "Aa"
+            },
+            Modifier.align(Alignment.Center),
+            color = Hf.Text,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

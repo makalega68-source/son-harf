@@ -102,17 +102,31 @@ fun EconomyShopScreen(
 
 @Composable
 private fun StoreTitleBar(balance: Int?, onBack: (() -> Unit)?) {
-    Box(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+    // A row, not an overlay: a large balance can never cover the title.
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         if (onBack != null) {
-            IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).size(48.dp)) {
+            IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
                 Icon(painterResource(R.drawable.hf_ic_back), sh("Geri", "Back"), tint = Hf.Gold, modifier = Modifier.size(30.dp))
             }
+        } else {
+            Spacer(Modifier.width(8.dp))
         }
-        Text(sh("Mağaza", "Store"), color = Hf.Text, fontSize = 28.sp, fontWeight = FontWeight.Black)
-        HfPill(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 6.dp)) {
+        Text(
+            sh("Mağaza", "Store"),
+            modifier = Modifier.weight(1f),
+            color = Hf.Text,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Black,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
+        HfPill(modifier = Modifier.padding(end = 6.dp)) {
             HfCoin(20.dp)
             Spacer(Modifier.width(8.dp))
-            Text(balance?.let { storeGrouped(it) } ?: "—", color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
+            Text(balance?.let { storeGrouped(it) } ?: "—", color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
 }

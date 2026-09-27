@@ -1256,7 +1256,7 @@ private fun PremierArena(
         if (buyingHint) return
         buyingHint = true
         hintScope.launch {
-            val bought = com.sonharf.game.data.MascotRoomBackend.buyHint("son_harf")
+            val bought = com.sonharf.game.data.GameHintBackend.buyHint("son_harf")
             if (bought != null) {
                 hintsLeft += 1
                 askHint()
@@ -1593,7 +1593,7 @@ private fun PremierArena(
                     ) {
                         Text(
                             if (hintsLeft > 0) pt(language, "💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)")
-                            else pt(language, "💡 +1 İpucu · ${com.sonharf.game.data.MascotRoomBackend.HINT_PRICE} SC", "💡 +1 Hint · ${com.sonharf.game.data.MascotRoomBackend.HINT_PRICE} SC"),
+                            else pt(language, "💡 +1 İpucu · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC", "💡 +1 Hint · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC"),
                             Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                             color = PremierBoard.Ink,
                             fontSize = 12.sp,

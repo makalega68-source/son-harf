@@ -12,6 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -263,16 +265,30 @@ private sealed interface StartupState {
 private fun StartupLoading() = LaunchSplashFrame()
 
 /**
- * The only thing shown while the app boots: smiling Obi on the launch colour, drawn at the same
- * size as the Android 12+ system splash so the hand-over is invisible (no text, no spinner).
+ * Shown for the moment the app checks the session between screens: the plain app background,
+ * no mascot and no logo, so nothing flashes by. Only a slow check (over ~0.7 s) gets a small
+ * spinner, so the player can tell the app is working.
  */
 @Composable
 internal fun LaunchSplashFrame() {
-    Box(Modifier.fillMaxSize().background(Color(0xFFE6ECF2)), contentAlignment = Alignment.Center) {
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.obi_launcher_happy),
-            contentDescription = sh("Kelime Tahtı hazırlanıyor…", "Preparing Word Throne…"),
-            modifier = Modifier.size(240.dp),
-        )
+    var slow by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(700L)
+        slow = true
+    }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xFFE6ECF2))
+            .semantics { contentDescription = sh("Kelime Tahtı hazırlanıyor…", "Preparing Word Throne…") },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (slow) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(28.dp),
+                color = Color(0xFF9AA8B8),
+                strokeWidth = 2.5.dp,
+            )
+        }
     }
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Android 12+ draws its own launch screen: show smiling Obi on the app background instead of the
-         legacy badge, so the system splash and the in-app loading frame look like one screen. -->
+    <!-- Android 12+ draws its own launch screen: keep it to the plain app background (blank icon), so
+         the system splash and the in-app loading frame look like one calm screen with no mascot. -->
     <style name="Theme.SonHarf" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowBackground">#E6ECF2</item>
@@ -10,6 +10,6 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowSplashScreenBackground">#E6ECF2</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/obi_launcher_happy</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_blank</item>
     </style>
 </resources>

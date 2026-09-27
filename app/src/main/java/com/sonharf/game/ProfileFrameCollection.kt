@@ -2,12 +2,26 @@ package com.sonharf.game
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sonharf.game.billing.ProductCatalog
 
 /**
@@ -59,14 +73,48 @@ internal object ProfileFrameCollection {
 /**
  * Draws a frame around content of [size] without changing layout: the art is laid out larger
  * than its slot and simply overflows it, so headers and rows keep their measured height.
+ * The PRO frame carries a "PRO" plate on its bottom jewel, so everyone sees how it was earned.
  */
 @Composable
 internal fun ProfileFrameArt(frameId: String?, size: Dp, modifier: Modifier = Modifier) {
     val frame = ProfileFrameCollection.find(frameId) ?: return
-    Image(
-        painter = painterResource(frame.drawable),
-        contentDescription = null,
-        modifier = modifier.requiredSize(size * 1.42f),
-        contentScale = ContentScale.Fit,
-    )
+    Box(modifier.requiredSize(size * 1.42f), contentAlignment = Alignment.Center) {
+        Image(
+            painter = painterResource(frame.drawable),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit,
+        )
+        if (frame == ProfileFrameCollection.proFrame) ProFramePlate(size)
+    }
+}
+
+/** Ruby-and-gold "PRO" plate sitting on the PRO frame's bottom jewel; scales with the avatar. */
+@Composable
+private fun ProFramePlate(size: Dp) {
+    val scale = size.value / 100f
+    Box(
+        Modifier
+            .offset(y = size * .47f)
+            .border(
+                (1.5f * scale).coerceAtLeast(1f).dp,
+                Brush.verticalGradient(listOf(Color(0xFFFFF1B8), Color(0xFFD4A21F), Color(0xFF8A5A0B))),
+                RoundedCornerShape(50),
+            )
+            .background(
+                Brush.verticalGradient(listOf(Color(0xFFD7263D), Color(0xFF8E0F24))),
+                RoundedCornerShape(50),
+            )
+            .padding(horizontal = (9f * scale).dp, vertical = (1.5f * scale).dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            "PRO",
+            color = Color(0xFFFFE6A0),
+            fontSize = (13f * scale).coerceAtLeast(6f).sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = (1.2f * scale).sp,
+            maxLines = 1,
+        )
+    }
 }

@@ -386,7 +386,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         if (buyingHint) return
         buyingHint = true
         hintScope.launch {
-            val bought = com.sonharf.game.data.MascotRoomBackend.buyHint("kelime_atolyesi")
+            val bought = com.sonharf.game.data.GameHintBackend.buyHint("kelime_atolyesi")
             if (bought != null) {
                 hintsLeft += 1
                 askHint()
@@ -661,7 +661,7 @@ private fun AtelierMascotRow(
             ) {
                 Text(
                     if (hintsLeft > 0) sh("💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)")
-                    else "💡 ${com.sonharf.game.data.MascotRoomBackend.HINT_PRICE} SC",
+                    else "💡 ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                 )

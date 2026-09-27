@@ -65,13 +65,7 @@ class MascotAnimationRegressionTest {
     }
 
     @Test
-    fun roomUsesRigClockAndIdleCannotInterruptAnInteraction() {
-        val room = File("src/main/java/com/sonharf/game/MascotRoomScreen.kt").readText()
-        assertTrue(room.contains("roomMoveMillis(move: WordSiegeMascotAction): Long = mascotActionMillis(move)"))
-        assertTrue(room.contains("if (busy || sceneRunning ||"))
-        assertTrue(room.contains("while (sceneRunning) delay(100L)"))
-        assertTrue(room.contains("WordSiegeMascotAction.FOOD_LOOK, WordSiegeMascotAction.EAT, WordSiegeMascotAction.HOP, WordSiegeMascotAction.SWAY"))
-        assertFalse(room.contains("BoxWithConstraints("))
+    fun mascotActionsHaveSaneDurations() {
         for (action in WordSiegeMascotAction.entries) assertTrue(mascotActionMillis(action) in 800L..6_000L)
         for (idle in listOf(WordSiegeMascotAction.LOOK_AROUND, WordSiegeMascotAction.STRETCH,
             WordSiegeMascotAction.PEEK, WordSiegeMascotAction.SWAY, WordSiegeMascotAction.THINK,
@@ -97,15 +91,10 @@ class MascotAnimationRegressionTest {
     }
 
     @Test
-    fun dailyAppleSnackKeepsRewardsCappedAndCelebrationsStayUpright() {
-        val room = File("src/main/java/com/sonharf/game/MascotRoomScreen.kt").readText()
-        val exhaustedApple = room.substringAfter("if (fruit.price == 0 && applesLeft <= 0) {")
-            .substringBefore("busy = true")
-        assertTrue(exhaustedApple.contains("WordSiegeMascotAction.FOOD_LOOK, WordSiegeMascotAction.EAT"))
-        assertFalse(exhaustedApple.contains("MascotRoomBackend.feed"))
-        assertTrue(room.contains("mascotActionMillis(move)"))
-        assertTrue(room.contains("WordSiegeMascotAction.SPACE_FLIGHT"))
-        assertTrue(room.contains("WordSiegeMascotAction.KISS"))
+    fun mascotRoomIsGoneAndCelebrationsStayUpright() {
+        assertFalse(File("src/main/java/com/sonharf/game/MascotRoomScreen.kt").exists())
+        val home = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        assertFalse(home.contains("MascotRoom"))
         val view = File("src/main/java/com/sonharf/game/WordSiegeMascotView.kt").readText()
         assertTrue(view.contains("rotation.coerceIn(-8f, 8f)"))
     }
