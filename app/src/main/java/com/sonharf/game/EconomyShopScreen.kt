@@ -131,6 +131,7 @@ private fun EconomyCatalogScreen(
     onPro: () -> Unit,
     onBalance: (Int?) -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -239,11 +240,22 @@ private fun EconomyCatalogScreen(
                             busy = item.id
                             val displayName = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
                             if (mine) {
-                                onCollection()
+                                // Owned: put it on right here instead of sending the player away.
+                                runCatching { b.equipShopItem(item.id) }
+                                    .onSuccess {
+                                        SonHarfCosmetics.applyAndPersist(context, b.getEquippedCosmetics())
+                                        notice = sh("$displayName kullanılıyor.", "$displayName equipped.")
+                                        reload()
+                                    }
+                                    .onFailure { notice = sh("$displayName takılamadı. Profil > Koleksiyonum'dan deneyebilirsin.", "Could not equip $displayName. Try Profile > My Collection.") }
                             } else {
                                 runCatching { b.purchaseShopItem(item.id) }
                                     .onSuccess {
-                                        notice = sh("$displayName satın alındı. Profil > Koleksiyonum'dan kullanabilirsin.", "$displayName purchased. Equip it from Profile > My Collection.")
+                                        // A purchase is worn straight away; any slot can go back to the free look in Profile.
+                                        runCatching { b.equipShopItem(item.id) }
+                                        runCatching { SonHarfCosmetics.applyAndPersist(context, b.getEquippedCosmetics()) }
+                                        notice = sh("$displayName satın alındı ve kullanılıyor!", "$displayName purchased and equipped!")
+                                        SonHarfSoundFx.bonus()
                                         reload()
                                     }
                                     .onFailure {

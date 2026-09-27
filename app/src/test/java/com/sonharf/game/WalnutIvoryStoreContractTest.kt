@@ -24,7 +24,9 @@ class WalnutIvoryStoreContractTest {
         ).forEach { assertTrue("Existing active catalog item lost: $it", migration.contains("'$it'")) }
         assertTrue(shop.contains("2 -> items.filter { it.kind == \"game_theme\" }"))
         assertTrue(shop.contains("b.purchaseShopItem(item.id)"))
-        assertTrue(shop.contains("if (mine) {\n                                onCollection()"))
+        // Buying wears the item at once; tapping an owned item equips it in place.
+        assertTrue(shop.contains("runCatching { b.equipShopItem(item.id) }"))
+        assertTrue(shop.contains("SonHarfCosmetics.applyAndPersist(context, b.getEquippedCosmetics())"))
         assertTrue(profile.contains("itemId != null && itemId !in owned"))
         assertTrue(profile.contains("it.id == WALNUT_IVORY_THEME_ID && it.id in owned"))
         assertTrue(profile.contains("backend.equipShopItem(itemId)"))
