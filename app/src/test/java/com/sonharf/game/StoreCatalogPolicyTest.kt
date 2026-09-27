@@ -19,7 +19,7 @@ class StoreCatalogPolicyTest {
         // Frames v2: new-artwork rings are coin items; legacy retired frames stay off sale.
         assertTrue(item("frame_round_ocean", "profile_frame").isRuntimeReadyStyle())
         assertFalse(item("frame_wing_gold", "profile_frame").isRuntimeReadyStyle())
-        assertFalse(item("profile_frame_royal_gold", "profile_frame").isRuntimeReadyStyle())
+        assertFalse(item("frame_round_golden_avatar", "profile_frame").isRuntimeReadyStyle())
         assertTrue(item("victory_crown", "victory_effect").isRuntimeReadyStyle())
         assertTrue(item("emoji_vip", "emoji_pack").isRuntimeReadyStyle())
         assertFalse(item("unknown", "profile_frame").isRuntimeReadyStyle())
@@ -55,7 +55,7 @@ class StoreCatalogPolicyTest {
         assertFalse(item("frame_round_ocean", "profile_frame").copy(active = false).isRuntimeReadyStyle())
         assertFalse(item("frame_wing_gold", "profile_frame").isSupportedOwnedStyle())
         assertTrue(item("frame_round_ocean", "profile_frame").copy(active = false).isSupportedOwnedStyle())
-        assertTrue(item("profile_frame_royal_gold", "profile_frame").copy(active = false).isSupportedOwnedStyle())
+        assertTrue(item("frame_round_golden_avatar", "profile_frame").copy(active = false).isSupportedOwnedStyle())
 
         listOf(
             item("theme_dark_arena", "game_theme"),
