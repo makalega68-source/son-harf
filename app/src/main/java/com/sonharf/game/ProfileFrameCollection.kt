@@ -12,8 +12,10 @@ import com.sonharf.game.billing.ProductCatalog
 
 /**
  * Live profile frames (collection v2). Simple rings are Son Coin items in the shop; the ornate
- * ones are permanent Google Play products whose store id equals the Play product id, granted to
- * user_inventory by the purchase verifier. Every owned frame is equipped through equip_shop_item.
+ * ones are permanent Google Play products, and the ruby-crowned Royal Gold is reserved for PRO:
+ * the server grants and equips it the moment a player becomes PRO and takes it back when PRO ends.
+ * A Play frame's store id equals its Play product id; the verifier grants it to
+ * user_inventory. Every owned frame is equipped through equip_shop_item.
  */
 internal object ProfileFrameCollection {
     data class Frame(
@@ -36,7 +38,6 @@ internal object ProfileFrameCollection {
     )
 
     val premiumFrames = listOf(
-        Frame(ProductCatalog.PROFILE_FRAME_ROYAL_GOLD, R.drawable.profile_frame_royal_gold, "Kraliyet Altın", "Royal Gold", ProductCatalog.PROFILE_FRAME_ROYAL_GOLD),
         Frame(ProductCatalog.PROFILE_FRAME_GOLD_CREST, R.drawable.profile_frame_premium_gold, "Altın Arma", "Gold Crest", ProductCatalog.PROFILE_FRAME_GOLD_CREST),
         Frame(ProductCatalog.PROFILE_FRAME_EMERALD, R.drawable.profile_frame_premium_emerald, "Zümrüt Arma", "Emerald Crest", ProductCatalog.PROFILE_FRAME_EMERALD),
         Frame(ProductCatalog.PROFILE_FRAME_AMETHYST, R.drawable.profile_frame_premium_amethyst, "Ametist Arma", "Amethyst Crest", ProductCatalog.PROFILE_FRAME_AMETHYST),
@@ -44,7 +45,10 @@ internal object ProfileFrameCollection {
         Frame(ProductCatalog.PROFILE_FRAME_SAPPHIRE, R.drawable.profile_frame_premium_sapphire, "Safir Arma", "Sapphire Crest", ProductCatalog.PROFILE_FRAME_SAPPHIRE),
     )
 
-    val all = coinFrames + premiumFrames
+    /** PRO-only frame: never sold, granted with PRO membership. */
+    val proFrame = Frame("frame_round_golden_avatar", R.drawable.profile_frame_round_golden_avatar, "PRO Kraliyet Altın", "PRO Royal Gold")
+
+    val all = coinFrames + premiumFrames + proFrame
     val coinIds = coinFrames.map { it.id }.toSet()
     val allIds = all.map { it.id }.toSet()
     val premiumProductIds = premiumFrames.mapNotNull { it.playProductId }

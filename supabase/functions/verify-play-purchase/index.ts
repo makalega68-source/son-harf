@@ -10,7 +10,7 @@ const mascotProducts = [
 ];
 // Premium profile frames: permanent one-time products; the grant puts the frame in the inventory.
 const frameProducts = [
-  "profile_frame_royal_gold", "profile_frame_gold_crest", "profile_frame_emerald", "profile_frame_amethyst",
+  "profile_frame_gold_crest", "profile_frame_emerald", "profile_frame_amethyst",
   "profile_frame_pink_blossom", "profile_frame_blue_royal",
 ];
 const premiumProducts = new Set(["series_game", "letter_table", "score_calculator", "pro_lifetime", ...mascotProducts, ...frameProducts]);

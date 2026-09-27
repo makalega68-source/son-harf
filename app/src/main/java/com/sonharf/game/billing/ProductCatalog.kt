@@ -43,7 +43,6 @@ object ProductCatalog {
 
     // Premium profile frames: permanent one-time products (price set in Play Console). The shop
     // item id equals the product id; simple frames are sold for Son Coin instead.
-    const val PROFILE_FRAME_ROYAL_GOLD = "profile_frame_royal_gold"
     const val PROFILE_FRAME_GOLD_CREST = "profile_frame_gold_crest"
     const val PROFILE_FRAME_EMERALD = "profile_frame_emerald"
     const val PROFILE_FRAME_AMETHYST = "profile_frame_amethyst"

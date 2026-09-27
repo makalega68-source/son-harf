@@ -84,7 +84,7 @@ fun EconomyShopScreen(
             }
             // Profile frames: ornate crests via Google Play, simple rings for Son Coin.
             else if (shown == 7) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
-                ProfileFrameStoreSection(onBalance = { balance = it })
+                ProfileFrameStoreSection(onBalance = { balance = it }, onPro = { tab = 3 })
             }
             else EconomyCatalogScreen(
                 section = shown,

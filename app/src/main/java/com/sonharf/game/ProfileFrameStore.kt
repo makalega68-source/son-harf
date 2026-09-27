@@ -55,7 +55,7 @@ import kotlinx.coroutines.launch
  * products. Buying equips the frame right away; any owned frame can be re-equipped here or in Profile.
  */
 @Composable
-internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit) {
+internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Unit = {}) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
@@ -126,6 +126,8 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit) {
         val b = backend ?: return
         when {
             frame.id in owned -> scope.launch { busy = frame.id; equip(frame.id); busy = null }
+            // The PRO frame comes with PRO membership; the button leads to PRO.
+            frame == ProfileFrameCollection.proFrame -> onPro()
             frame.playProductId != null -> {
                 val product = products[frame.playProductId]
                 if (activity == null || product?.oneTimePurchaseOfferDetails == null) {
@@ -155,6 +157,11 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (notice.isNotBlank()) {
             Text(notice, color = Hf.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        }
+        FrameSectionTitle(sh("PRO ÜYELERE ÖZEL", "PRO MEMBERS ONLY"), sh("PRO olunca otomatik takılır", "Equipped automatically when you go PRO"))
+        FrameGrid(listOf(ProfileFrameCollection.proFrame)) { frame ->
+            FrameCard(frame, owned = frame.id in owned, equipped = equipped == frame.id, busy = busy != null,
+                price = sh("PRO ol", "Go PRO"), premium = true) { onFrame(frame) }
         }
         FrameSectionTitle(sh("PREMIUM ÇERÇEVELER", "PREMIUM FRAMES"), sh("Kalıcı • Google Play ile", "Permanent • via Google Play"))
         FrameGrid(ProfileFrameCollection.premiumFrames) { frame ->
