@@ -1,5 +1,8 @@
 package com.sonharf.game
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -40,6 +44,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.ComebackGiftDto
+import com.sonharf.game.data.PresenceBackend
 import com.sonharf.game.data.SupabaseProvider
 
 /** Unified Pro startup shell: language -> auth -> premium product. */
@@ -85,6 +91,19 @@ fun StableV1App() {
     // Players who skipped the language screen (e.g. an update over an older install) still get
     // the classic mascot's welcome once, on their first entry.
     var mascotWelcomePending by remember { mutableStateOf(!FirstRunLanguagePreferences.mascotWelcomeSeen(context)) }
+    var comebackGift by remember { mutableStateOf<ComebackGiftDto?>(null) }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        // Every entry counts as a visit; a player back after days away gets Obi's gift.
+        comebackGift = runCatching { PresenceBackend.touch() }.getOrNull()?.takeIf { it.gift > 0 }
+    }
+    LaunchedEffect(mascotWelcomePending) {
+        // Ask for reminder notifications once, after the welcome, never over it.
+        if (!mascotWelcomePending && ReminderNotifications.shouldAskPermission(context)) {
+            ReminderNotifications.markPermissionAsked(context)
+            runCatching { notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) }
+        }
+    }
     Box(Modifier.fillMaxSize()) {
         PremiumUnifiedProApp(onSignedOut = { authenticated = false })
         if (mascotWelcomePending) {
@@ -93,7 +112,32 @@ fun StableV1App() {
                 mascotWelcomePending = false
             })
         }
+        val gift = comebackGift
+        if (gift != null && !mascotWelcomePending) {
+            ComebackGiftDialog(gift) { comebackGift = null }
+        }
     }
+}
+
+/** Obi welcomes a player who has been away and hands over the Son Coin the server just credited. */
+@Composable
+private fun ComebackGiftDialog(gift: ComebackGiftDto, onDismiss: () -> Unit) {
+    LaunchedEffect(gift) { SonHarfSoundFx.bonus() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(onClick = onDismiss) { Text(sh("Teşekkürler Obi!", "Thanks, Obi!")) }
+        },
+        title = { Text(sh("Obi seni özledi! 🎁", "Obi missed you! 🎁"), fontWeight = FontWeight.Black) },
+        text = {
+            Text(
+                sh(
+                    "${gift.daysAway} gündür yoktun. Obi sana ${gift.gift} Son Coin biriktirdi. Hoş geldin!",
+                    "You were away for ${gift.daysAway} days. Obi saved ${gift.gift} Son Coins for you. Welcome back!",
+                ),
+            )
+        },
+    )
 }
 
 /** A one-time greeting from the classic mascot over the home screen; tap anywhere to continue. */

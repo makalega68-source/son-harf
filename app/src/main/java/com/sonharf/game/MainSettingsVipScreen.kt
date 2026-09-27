@@ -43,6 +43,7 @@ internal fun MainSettingsScreen(
     var gameInvites by remember { mutableStateOf(SonHarfPreferences.gameInviteNotificationsEnabled(context)) }
     var friendRequests by remember { mutableStateOf(SonHarfPreferences.friendRequestNotificationsEnabled(context)) }
     var systemNotifications by remember { mutableStateOf(SonHarfPreferences.systemNotificationsEnabled(context)) }
+    var reminders by remember { mutableStateOf(ReminderNotifications.enabled(context)) }
     var profileVisible by remember { mutableStateOf(true) }
     var visibilityBusy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -123,6 +124,11 @@ internal fun MainSettingsScreen(
                 MainToggleSetting(Icons.Rounded.Notifications, sh("Sistem duyuruları", "System announcements"), sh("Ödül, bakım ve önemli haberler", "Rewards, maintenance and important news"), systemNotifications) {
                     systemNotifications = it
                     SonHarfPreferences.setSystemNotificationsEnabled(context, it)
+                }
+                HorizontalDivider(color = MainUi.Border)
+                MainToggleSetting(Icons.Rounded.Alarm, sh("Hatırlatmalar", "Reminders"), sh("Günlük yarış, seri uyarısı ve Obi'nin mesajları", "Daily race, streak alerts and notes from Obi"), reminders) {
+                    reminders = it
+                    ReminderNotifications.setEnabled(context, it)
                 }
             }
         }

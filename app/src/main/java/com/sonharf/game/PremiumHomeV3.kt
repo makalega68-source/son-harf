@@ -161,6 +161,7 @@ private fun HomeSiegeHero(onSiege: () -> Unit) {
 
 @Composable
 internal fun PremiumHomeDailyTasks(onClick: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var dashboard by remember { mutableStateOf<GrowthDashboardDto?>(null) }
     var streakDays by remember { mutableIntStateOf(0) }
@@ -173,6 +174,7 @@ internal fun PremiumHomeDailyTasks(onClick: () -> Unit) {
         }
         dashboard = runCatching { active.getGrowthDashboard() }.getOrNull()
         streakDays = runCatching { active.getMetaProgressV2().dailyPlayStreak }.getOrDefault(0)
+        ReminderNotifications.rememberStreak(context, streakDays)
         loading = false
     }
     val matches = dashboard?.matchesToday?.coerceIn(0, 3) ?: 0
