@@ -115,7 +115,7 @@ object SonHarfCosmetics {
     val auroraTheme: Boolean get() = gameThemeId == "theme_aurora"
     val crownVictory: Boolean get() = victoryEffectId == "victory_crown"
     /** The hat Obi wears everywhere, bought with Son Coin. */
-    val mascotHat: WordSiegeMascotHat get() = MascotHats.hatFor(mascotHatId)
+    internal val mascotHat: WordSiegeMascotHat get() = MascotHats.hatFor(mascotHatId)
 }
 
 /** Shared by every embedded word keyboard so a purchased skin is real in every supported mode. */
