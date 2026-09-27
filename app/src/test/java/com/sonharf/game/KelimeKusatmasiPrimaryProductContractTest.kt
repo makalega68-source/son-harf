@@ -43,7 +43,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(home.contains("sh(\"Günlük Görevler\", \"Daily Tasks\")"))
         assertTrue(home.contains("getMetaProgressV2().dailyPlayStreak"))
         assertTrue(home.contains("getWeeklyTopV210(limit = 3)"))
-        assertTrue(home.contains("sh(\"HAFTANIN İLK 3'Ü\", \"WEEKLY TOP 3\")"))
+        assertTrue(home.contains("style = WeeklyPodiumStyle.HOME"))
         assertTrue(home.contains("sh(\"Kelime Atölyesi\", \"Word Workshop\")"))
         assertTrue(shell.contains("PremiumBottomBar("))
         assertTrue(shell.contains("PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)"))

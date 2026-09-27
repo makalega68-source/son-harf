@@ -38,8 +38,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
+import kotlinx.coroutines.delay
 
-internal data class HomePodiumEntry(val row: LeaderboardV2Row, val profile: ProfileDto?)
 
 private val HomeHeroShape = RoundedCornerShape(18.dp)
 private val HomeCardShape = RoundedCornerShape(16.dp)
@@ -216,77 +216,6 @@ internal fun PremiumHomeDailyTasks(onClick: () -> Unit) {
     }
 }
 
-@Composable
-internal fun PremiumWeeklyPodium(
-    players: List<HomePodiumEntry>,
-    loading: Boolean,
-    failed: Boolean,
-    onOpenLeague: () -> Unit,
-    onRetry: () -> Unit,
-) {
-    Surface(
-        onClick = onOpenLeague,
-        shape = HomeCardShape,
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(1.dp, SonHarfTheme.Border),
-    ) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            HomeSectionHeader(sh("HAFTANIN ZİRVESİ", "WEEKLY ELITE"))
-            when {
-                loading -> HomeLoadingRow()
-                failed -> Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Refresh, null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(17.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(sh("Sıralama yenilenemedi", "Ranking could not refresh"), Modifier.weight(1f), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
-                    TextButton(onClick = onRetry, modifier = Modifier.height(34.dp), contentPadding = PaddingValues(horizontal = 8.dp)) {
-                        Text(sh("YENİLE", "RETRY"), color = SonHarfTheme.Primary, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    }
-                }
-                else -> Column(Modifier.fillMaxWidth().semantics { isTraversalGroup = true }) {
-                    players.take(3).forEachIndexed { index, item ->
-                        if (index > 0) HorizontalDivider(color = HomeHairline)
-                        Row(
-                            Modifier.fillMaxWidth().clearAndSetSemantics {
-                                contentDescription = sh(
-                                    "${index + 1}. sıra, ${item.row.displayName}, ${item.row.rating} RP",
-                                    "Rank ${index + 1}, ${item.row.displayName}, ${item.row.rating} RP",
-                                )
-                            }.padding(vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                "${index + 1}",
-                                modifier = Modifier.width(24.dp),
-                                color = if (index == 0) SonHarfTheme.ActionOrange else SonHarfTheme.TextSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                            ProfilePhotoAvatarWithGender(
-                                avatarPath = if (item.profile?.avatarVisibility == "hidden") null else item.profile?.avatarPath,
-                                gender = item.profile?.gender,
-                                name = item.row.displayName,
-                                size = 34.dp,
-                                accent = if (index == 0) SonHarfTheme.ActionOrange else SonHarfTheme.Primary,
-                                visible = item.profile?.avatarVisibility != "hidden",
-                            )
-                            Spacer(Modifier.width(9.dp))
-                            Text(
-                                item.row.displayName,
-                                Modifier.weight(1f),
-                                color = SonHarfTheme.TextPrimary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text("${item.row.rating} RP", color = SonHarfTheme.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 internal fun PremiumLeagueProgress(profile: ProfileDto?, onLeague: () -> Unit) {
@@ -408,128 +337,48 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
     var failed by remember { mutableStateOf(false) }
     var reloadKey by remember { mutableIntStateOf(0) }
 
+    // The week's ranking changes on its own: it is refreshed every minute while the home is open,
+    // and the server starts a new week every Monday.
     LaunchedEffect(backend, reloadKey) {
         val activeBackend = backend
         if (activeBackend == null) {
             loading = false
             return@LaunchedEffect
         }
-        loading = true
-        failed = false
-        runCatching { activeBackend.getWeeklyTopV210(limit = 3) }
-            .onSuccess { players = it.take(3) }
-            .onFailure { failed = true }
-        loading = false
-    }
-
-    HfGamePanel(HfPanel.NavySet, Modifier.fillMaxWidth(), onClick = onClick) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                Image(painterResource(R.drawable.style_icon_trophy), null, Modifier.size(30.dp), contentScale = ContentScale.Fit)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    sh("HAFTANIN İLK 3'Ü", "WEEKLY TOP 3"),
-                    color = Hf.GoldLight,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = .8.sp,
-                    maxLines = 1,
-                )
-                Spacer(Modifier.width(8.dp))
-                Image(painterResource(R.drawable.style_icon_trophy), null, Modifier.size(30.dp), contentScale = ContentScale.Fit)
-            }
-            when {
-                loading -> Box(Modifier.fillMaxWidth().height(44.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(20.dp), color = Hf.GoldLight, strokeWidth = 2.dp)
-                }
-                failed -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        sh("Sıralama şu an güncellenemiyor", "Ranking is temporarily unavailable"),
-                        Modifier.weight(1f),
-                        color = Color.White.copy(alpha = .8f),
-                        fontSize = 13.sp,
-                    )
-                    HfPill(onClick = { reloadKey += 1 }) {
-                        Text(sh("YENİLE", "RETRY"), color = Hf.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                    }
-                }
-                // Podium side by side: 2nd, 1st (raised, bigger), 3rd.
-                else -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(1, 0, 2).forEach { index ->
-                        HomePodiumSpot(index, players.getOrNull(index), Modifier.weight(1f))
-                    }
-                }
-            }
+        while (true) {
+            failed = false
+            runCatching { activeBackend.getWeeklyTopV210(limit = 3) }
+                .onSuccess { players = it.take(3) }
+                .onFailure { if (players.isEmpty()) failed = true }
+            loading = false
+            delay(WEEKLY_PODIUM_REFRESH_MS)
         }
     }
-}
 
-@Composable
-private fun HomePodiumSpot(index: Int, player: WeeklyTopPlayerV210?, modifier: Modifier) {
-    val medal = HomeMedals[index]
-    val first = index == 0
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(contentAlignment = Alignment.BottomEnd) {
-            Box(
-                Modifier
-                    .size(if (first) 76.dp else 60.dp)
-                    .background(Brush.verticalGradient(listOf(medal.first, medal.second)), CircleShape)
-                    .padding(3.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (player != null) {
-                    ProfilePhotoAvatarWithGender(
-                        avatarPath = player.avatarUrl,
-                        gender = null,
-                        name = player.username,
-                        size = if (first) 70.dp else 54.dp,
-                        accent = medal.first,
-                        visible = true,
-                    )
-                } else {
-                    Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = .15f), CircleShape))
-                }
-            }
-            Box(
-                Modifier.size(24.dp).background(Brush.verticalGradient(listOf(medal.first, medal.second)), CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("${index + 1}", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            player?.username?.ifBlank { sh("Oyuncu", "Player") } ?: sh("Boş", "Open"),
-            color = if (player != null) Color.White else Color.White.copy(alpha = .5f),
-            fontSize = if (first) 15.sp else 13.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Blue weekly podium art: HAFTALIK SIRALAMA with silver, gold and bronze rings.
+        WeeklyPodiumArt(
+            style = WeeklyPodiumStyle.HOME,
+            seats = players.map { PodiumSeat(it.userId, it.username, "${it.rp} RP", it.avatarUrl) },
         )
-        Spacer(Modifier.height(4.dp))
-        // The step of the podium: tallest for the winner.
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(if (first) 54.dp else if (index == 1) 40.dp else 30.dp)
-                .background(
-                    Brush.verticalGradient(listOf(medal.first.copy(alpha = .55f), medal.second.copy(alpha = .25f))),
-                    RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp),
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(player?.let { "${it.rp} RP" } ?: "—", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+        when {
+            loading -> CircularProgressIndicator(Modifier.size(22.dp), color = Hf.GoldLight, strokeWidth = 2.dp)
+            failed -> HfPill(onClick = { reloadKey += 1 }) {
+                Text(sh("YENİLE", "RETRY"), color = Hf.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
+            }
         }
     }
 }
 
-/** Gold, silver and bronze gradients for the weekly podium. */
-private val HomeMedals = listOf(
-    Color(0xFFFFD36B) to Color(0xFFD99A1E),
-    Color(0xFFE3E8EE) to Color(0xFF9AA5B2),
-    Color(0xFFF0B27A) to Color(0xFFB36A2E),
-)
+internal const val WEEKLY_PODIUM_REFRESH_MS = 60_000L
+
+
 
 @Composable
 private fun HomeLoadingRow() {

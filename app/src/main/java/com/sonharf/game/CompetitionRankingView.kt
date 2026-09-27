@@ -50,9 +50,13 @@ internal fun CompetitionRankingView(onCup: () -> Unit, onRivals: () -> Unit) {
         val b = backend ?: return@LaunchedEffect
         myId = b.currentUserId()
         profile = myId?.let { id -> runCatching { b.getProfile(id) }.getOrNull() }
-        weekly = runCatching { b.getWeeklyTopV210(limit = 50) }.getOrDefault(emptyList())
-            .map { RankingRow(it.userId, it.username, it.rp, it.avatarUrl) }
-        loading = false
+        // The weekly ranking updates by itself while this page is open; a new week starts on Monday.
+        while (true) {
+            runCatching { b.getWeeklyTopV210(limit = 50) }
+                .onSuccess { list -> weekly = list.map { RankingRow(it.userId, it.username, it.rp, it.avatarUrl) } }
+            loading = false
+            kotlinx.coroutines.delay(WEEKLY_PODIUM_REFRESH_MS)
+        }
     }
     LaunchedEffect(backend, period) {
         val b = backend ?: return@LaunchedEffect
@@ -73,7 +77,7 @@ internal fun CompetitionRankingView(onCup: () -> Unit, onRivals: () -> Unit) {
     ) {
         item { HfTitleRule(sh("Rekabet", "Compete"), fontSize = 34.sp) }
         item { RankingLeagueCard(profile) }
-        item { HfTitleRule(sh("Haftalık Sıralama", "Weekly Ranking"), fontSize = 24.sp) }
+        // Gold and ivory podium art; its banner already reads "Haftalık Sıralama".
         item { RankingPodium(weekly.take(3), loading) }
         item {
             HfSegmentedTabs(
@@ -167,51 +171,12 @@ private fun RankingLeagueGem(size: Dp) {
 
 @Composable
 private fun RankingPodium(top: List<RankingRow>, loading: Boolean) {
-    if (loading) {
-        Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(Modifier.size(22.dp), color = Hf.Gold, strokeWidth = 2.dp)
-        }
-        return
-    }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-        RankingPodiumStep(2, top.getOrNull(1), pedestal = 120.dp, avatar = 66.dp, ring = RankSilver, modifier = Modifier.weight(1f))
-        RankingPodiumStep(1, top.getOrNull(0), pedestal = 150.dp, avatar = 74.dp, ring = Hf.Gold, modifier = Modifier.weight(1f))
-        RankingPodiumStep(3, top.getOrNull(2), pedestal = 108.dp, avatar = 66.dp, ring = RankSilver, modifier = Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun RankingPodiumStep(place: Int, row: RankingRow?, pedestal: Dp, avatar: Dp, ring: Color, modifier: Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(avatar).border(3.dp, ring, CircleShape).padding(4.dp), contentAlignment = Alignment.Center) {
-            if (row != null) {
-                ProfilePhotoAvatarWithGender(
-                    avatarPath = row.avatarPath,
-                    gender = null,
-                    name = row.name,
-                    size = avatar - 12.dp,
-                    accent = ring,
-                    visible = true,
-                    showGenderBadge = false,
-                    frameId = rememberPlayerFrame(row.userId),
-                )
-            } else {
-                Box(Modifier.size(avatar - 12.dp).background(Hf.Surface, CircleShape))
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Surface(
-            modifier = Modifier.fillMaxWidth().height(pedestal),
-            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
-            color = Hf.Surface,
-            border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .35f)),
-        ) {
-            Column(Modifier.padding(top = 10.dp, start = 6.dp, end = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("$place", color = Hf.Gold, fontSize = 34.sp, fontWeight = FontWeight.Black)
-                Text(row?.name ?: "—", color = Hf.Text, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(row?.let { rankingGrouped(it.score) } ?: "", color = Hf.Gold, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            }
-        }
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        WeeklyPodiumArt(
+            style = WeeklyPodiumStyle.COMPETE,
+            seats = top.map { PodiumSeat(it.userId, it.name, "${rankingGrouped(it.score)} RP", it.avatarPath) },
+        )
+        if (loading) CircularProgressIndicator(Modifier.size(22.dp), color = Hf.Gold, strokeWidth = 2.dp)
     }
 }
 

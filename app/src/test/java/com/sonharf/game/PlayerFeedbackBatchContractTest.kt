@@ -81,6 +81,30 @@ class PlayerFeedbackBatchContractTest {
         assertTrue(source("WordSiegeSeriesScreen.kt").contains("onPlacementsChange = { next ->"))
     }
 
+    @Test fun weeklyPodiumUsesTheNewArtWithFramelessPhotos() {
+        val art = source("WeeklyPodiumArt.kt")
+        assertTrue(art.contains("art = R.drawable.weekly_podium_blue"))
+        assertTrue(art.contains("art = R.drawable.weekly_podium_gold"))
+        // Photos fill the ring exactly: clipped to the circle, cropped, no frame composable.
+        assertTrue(art.contains("Image(bitmap.asImageBitmap(), seat.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)"))
+        assertFalse(art.contains("ProfileFrameArt("))
+        assertFalse(art.contains("ProfilePhotoAvatarWithGender("))
+        for (name in listOf("weekly_podium_blue.png", "weekly_podium_gold.png")) {
+            val f = listOf(File("src/main/res/drawable-nodpi/$name"), File("app/src/main/res/drawable-nodpi/$name")).first { it.exists() }
+            assertTrue(name, f.length() > 100_000L)
+        }
+        val home = source("PremiumHomeV3.kt")
+        assertTrue(home.contains("style = WeeklyPodiumStyle.HOME"))
+        assertFalse(home.contains("HomePodiumSpot("))
+        assertFalse(home.contains("PremiumWeeklyPodium("))
+        assertTrue(home.contains("delay(WEEKLY_PODIUM_REFRESH_MS)"))
+        val compete = source("CompetitionRankingView.kt")
+        assertTrue(compete.contains("style = WeeklyPodiumStyle.COMPETE"))
+        assertFalse(compete.contains("RankingPodiumStep("))
+        assertTrue(compete.contains("kotlinx.coroutines.delay(WEEKLY_PODIUM_REFRESH_MS)"))
+        assertFalse(source("UnifiedProApp.kt").contains("WeeklyChampionPodium("))
+    }
+
     @Test fun hintLettersFlyOntoTheBoard() {
         val practice = source("WordSiegePracticeScreen.kt")
         assertTrue(practice.contains("tileDrag.launchFlights("))

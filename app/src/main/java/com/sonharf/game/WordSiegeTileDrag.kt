@@ -291,14 +291,6 @@ internal fun WordSiegeRegisterBoardHitTest(
     }
 }
 
-internal fun wordSiegeCellCenterInViewport(index: Int, transform: WordSiegeBoardTransform, cellSizePx: Float): Offset {
-    val step = cellSizePx * transform.scale
-    return transform.pan + Offset(
-        (WordSiegeBoardSpec.column(index) + .5f) * step,
-        (WordSiegeBoardSpec.row(index) + .5f) * step,
-    )
-}
-
 /**
  * Kelimelik-style move feedback on the board: a green check on the last tile of a valid word and,
  * when [score] is given, the move's points floating above the word. Draw inside the board viewport.
