@@ -440,6 +440,10 @@ private fun VerifiedStoreProductCard(
                 StoreProductPreview(item, Modifier.fillMaxWidth().height(104.dp))
                 Spacer(Modifier.height(10.dp))
                 Text(name, color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                storeItemEffect(item)?.let { effect ->
+                    Spacer(Modifier.height(3.dp))
+                    Text(effect, color = Hf.TextMuted, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                }
                 Spacer(Modifier.height(8.dp))
                 Box(Modifier.fillMaxWidth().height(1.dp).background(Hf.Gold.copy(alpha = .45f)))
                 Spacer(Modifier.height(10.dp))

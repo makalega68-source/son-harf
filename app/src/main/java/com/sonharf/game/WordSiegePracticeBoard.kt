@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -19,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -225,6 +227,15 @@ internal fun WordSiegePracticeBoard(
                         transformOrigin = TransformOrigin(0f, 0f)
                     },
             ) {
+                // The mascot's answer tiles pulse gold while they sit on the board, so it is clear
+                // which letters the hint placed.
+                val hintSet = if (hint != null && hintCells.isNotEmpty() && placements.keys.containsAll(hintCells)) hintCells.toSet() else emptySet()
+                val hintPulse by androidx.compose.animation.core.rememberInfiniteTransition(label = "hint-glow").animateFloat(
+                    initialValue = .35f,
+                    targetValue = 1f,
+                    animationSpec = androidx.compose.animation.core.infiniteRepeatable(tween(650), androidx.compose.animation.core.RepeatMode.Reverse),
+                    label = "hint-glow-pulse",
+                )
                 repeat(WordSiegeBoardSpec.Size) { row ->
                     Row {
                         repeat(WordSiegeBoardSpec.Size) { column ->
@@ -244,6 +255,7 @@ internal fun WordSiegePracticeBoard(
                                 onDefinitionClick = { resolvedWord?.word?.let { definitionWord = it } },
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleMode,
+                                hintGlow = if (index in hintSet) hintPulse else 0f,
                             )
                         }
                     }
@@ -300,7 +312,7 @@ internal fun WordSiegePracticeBoard(
                             cellSizePx = tilePx,
                             viewportWidthPx = viewport.width.toFloat(),
                             viewportHeightPx = viewport.height.toFloat(),
-                            kind = WordSiegeMascotVisitKind.HINT,
+                            kind = WordSiegeMascotVisitKind.ANSWER,
                         )
                     // Fresh territory after the player's own strong move.
                     moveEventKey != null && lastMoveMine && capturedCells >= 2 && moveCell != null ->
@@ -354,6 +366,7 @@ private fun WordSiegePracticeBoardCell(
     onDefinitionClick: () -> Unit,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
+    hintGlow: Float = 0f,
 ) {
     val owner = if (pending) myOwner else cell.owner
     val territory = when {
@@ -419,6 +432,15 @@ private fun WordSiegePracticeBoardCell(
                     )
                 },
             )
+            .drawBehind {
+                // Hint glow: a soft gold halo around the answer tile.
+                if (hintGlow > 0f) {
+                    drawRoundRect(
+                        color = Color(0xFFFFD54F).copy(alpha = .55f * hintGlow),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(9.dp.toPx()),
+                    )
+                }
+            }
             .padding(regionGap)
             .graphicsLayer { scaleX = if (WordSiegeWalnutIvory.enabled) pressScale else 1f; scaleY = if (WordSiegeWalnutIvory.enabled) pressScale else 1f }
             .clip(RoundedCornerShape(8.dp))
@@ -432,8 +454,10 @@ private fun WordSiegePracticeBoardCell(
                 )
             )
             .border(
-                width = if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
-                color = if (lastMoveHighlight > 0f) {
+                width = if (hintGlow > 0f) 2.2.dp else if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
+                color = if (hintGlow > 0f) {
+                    Color(0xFFFFE082).copy(alpha = .55f + .45f * hintGlow)
+                } else if (lastMoveHighlight > 0f) {
                     PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
                 } else if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.emptyEdge else Color(0xFFCDBF9F),
                 shape = RoundedCornerShape(8.dp),

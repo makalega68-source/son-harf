@@ -122,3 +122,18 @@ private fun PremiumArtworkFallback(expanded: Boolean) {
         }
     }
 }
+
+/** What a product does once worn, in one short line (shown on store and collection cards). */
+internal fun storeItemEffect(item: ShopItemDto): String? = when {
+    item.id == "victory_crown" -> sh(
+        "Kazandığında Obi altın taç takar, zafer ekranına taç iner. Profil > Obi'den takılır.",
+        "When you win, Obi wears a gold crown and a crown lands on the victory screen. Wear it in Profile > Obi.",
+    )
+    item.kind == "mascot_hat" -> sh("Obi bu şapkayı her yerde takar.", "Obi wears this hat everywhere.")
+    item.kind == "keyboard_theme" -> sh("Oyunlarda yazdığın klavye bu görünümü alır.", "The in-game keyboard takes this look.")
+    item.kind == "name_style" -> sh("İsmin bu renkte yazılır, yanında amblemi görünür.", "Your name shows in this colour with its emblem.")
+    item.id == WALNUT_IVORY_THEME_ID -> sh("Uygulama, Kuşatma tahtası ve Son Harf ceviz-fildişi olur.", "The app, the siege board and Last Letter turn walnut and ivory.")
+    item.kind == "game_theme" -> sh("Uygulama ve oyun alanları bu temaya bürünür.", "The app and game areas take this theme.")
+    item.kind == "profile_frame" -> sh("Profil fotoğrafının çevresinde her yerde görünür.", "Shown around your photo everywhere.")
+    else -> sh(item.descriptionTr, item.descriptionEn).takeIf { it.isNotBlank() }
+}

@@ -467,6 +467,7 @@ private fun OwnedStyleCard(
                     }
                 }
                 Text(sh(item.nameTr, item.nameEn), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                storeItemEffect(item)?.let { Text(it, color = Hf.TextMuted, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 3) }
                 if (!item.active) {
                     Text(sh("Arşiv ürünü • Koleksiyonunda", "Retired item • In your collection"), color = Hf.TextMuted, fontSize = 11.sp)
                 }

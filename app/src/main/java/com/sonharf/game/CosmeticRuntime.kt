@@ -138,6 +138,9 @@ object SonHarfCosmetics {
 
     /** Black Theme is the live catalog id; dark_arena remains an ownership/cache compatibility alias. */
     val darkArenaTheme: Boolean get() = gameThemeId in setOf("theme_black", "theme_dark_arena")
+    /** Ceviz & Fildişi is a full theme: warm ivory surfaces and walnut ink across the app and
+     *  every game, not only the siege board's wood (which WordSiegeWalnutIvory draws). */
+    val walnutTheme: Boolean get() = gameThemeId == WALNUT_IVORY_THEME_ID
     // Kept for compatibility with an already-equipped legacy item. It is no longer sold.
     val monsterBlueTheme: Boolean get() = gameThemeId == "theme_monster_blue"
     // Retained only so older arena code compiles; Aurora is retired from sale.

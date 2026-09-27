@@ -93,7 +93,12 @@ internal data class WordSiegeMascotSignal(
     val count: Int = 0,
 )
 
-internal enum class WordSiegeMascotVisitKind { CAPTURE, HINT }
+internal enum class WordSiegeMascotVisitKind {
+    CAPTURE,
+    HINT,
+    /** A hint the player asked for: fly straight over the answer word and point at it. */
+    ANSWER,
+}
 
 /** A spot in the game area worth flying to: fresh territory, or (practice only) a bonus square. */
 internal data class WordSiegeMascotVisit(
@@ -1076,6 +1081,19 @@ internal fun WordSiegeMascotCompanion(
                         perform(WordSiegeMascotAction.NOD)
                         if (mind.chance(.5f)) say(mind.line(WordSiegeMascotLines.capture, currentName))
                         delay(1_200L)
+                        flyTo(home, 1_000)
+                    }
+                }
+                WordSiegeMascotVisitKind.ANSWER -> {
+                    // Right away: the mascot hovers just above the answer so everyone sees whose
+                    // answer it is, points at the glowing tiles, then goes home.
+                    delay(250L)
+                    startTrip {
+                        val home = homeIndex
+                        val above = Offset(current.point.x, current.point.y - .55f * baseSizePx / max(1f, area.height))
+                        flyBeside(above, 900, onTop = true)
+                        perform(WordSiegeMascotAction.POINT)
+                        delay(3_800L)
                         flyTo(home, 1_000)
                     }
                 }

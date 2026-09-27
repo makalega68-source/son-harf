@@ -10,7 +10,7 @@ class PlayerFeedbackBatchContractTest {
     private fun source(name: String) = File("src/main/java/com/sonharf/game/$name").readText()
 
     @Test fun blackThemeReachesSiegeAndSonHarfArenas() {
-        assertTrue(source("WordSiegeGameUi.kt").contains("val Background: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else Color(0xFFE6ECF2)"))
+        assertTrue(source("WordSiegeGameUi.kt").contains("val Background: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEFE3CC) else Color(0xFFE6ECF2)"))
         val duel = source("PremierWordDuelScreen.kt")
         assertTrue(duel.contains("val BackgroundTop: Color get() = if (SonHarfCosmetics.darkArenaTheme)"))
         assertTrue(duel.contains("val Tile: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F2025)"))
@@ -64,5 +64,27 @@ class PlayerFeedbackBatchContractTest {
         assertTrue(source("ProfileFrameStore.kt").contains("if (equipped || owned) sh(\"SATIN ALINDI\", \"PURCHASED\") else price"))
         assertTrue(source("MascotStore.kt").contains("Text(sh(\"SATIN ALINDI\", \"PURCHASED\")"))
         assertTrue(source("ProfileOwnedThemesSection.kt").contains("private fun OwnedMascotsPicker()"))
+    }
+
+    @Test fun hintAnswerGlowsAndTheMascotFliesOverIt() {
+        val board = source("WordSiegePracticeBoard.kt")
+        assertTrue(board.contains("kind = WordSiegeMascotVisitKind.ANSWER"))
+        assertTrue(board.contains("hintGlow = if (index in hintSet) hintPulse else 0f"))
+        val companion = source("WordSiegeMascotCompanion.kt")
+        assertTrue(companion.contains("WordSiegeMascotVisitKind.ANSWER -> {"))
+        assertTrue(companion.contains("flyBeside(above, 900, onTop = true)"))
+    }
+
+    @Test fun victoryCrownSaysWhatItDoesAndCrownsEveryWin() {
+        assertTrue(source("StoreProductPreview.kt").contains("item.id == \"victory_crown\" -> sh("))
+        assertTrue(source("EconomyShopScreen.kt").contains("storeItemEffect(item)?.let"))
+        assertTrue(source("PremierWordDuelScreen.kt").contains("CrownVictoryCelebration(eventKey = \"sonharf:"))
+    }
+
+    @Test fun walnutIsAFullTheme() {
+        assertTrue(source("CosmeticRuntime.kt").contains("val walnutTheme: Boolean get() = gameThemeId == WALNUT_IVORY_THEME_ID"))
+        assertTrue(source("HiggsfieldUi.kt").contains("else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)"))
+        assertTrue(source("SonHarfTheme.kt").contains("else if (SonHarfCosmetics.walnutTheme) Color(0xFFEFE3CC)"))
+        assertTrue(source("PremierWordDuelScreen.kt").contains("else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFF7E3A6)"))
     }
 }

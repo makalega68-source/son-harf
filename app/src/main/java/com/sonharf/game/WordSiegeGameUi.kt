@@ -46,21 +46,21 @@ import kotlinx.coroutines.launch
  * Black Theme the whole siege screen (page, cards, buttons, bars) turns graphite to match its board.
  */
 internal object WordSiegeGameUi {
-    val Background: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else Color(0xFFE6ECF2)
-    val Surface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else Color(0xFFFFFFFF)
-    val SurfaceSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF232A33) else Color(0xFFF3F6F9)
-    val Text: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else Color(0xFF243142)
-    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else Color(0xFF6B7A8C)
-    val Border: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else Color(0xFFD2DBE5)
+    val Background: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEFE3CC) else Color(0xFFE6ECF2)
+    val Surface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
+    val SurfaceSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF232A33) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF3E8D2) else Color(0xFFF3F6F9)
+    val Text: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else if (SonHarfCosmetics.walnutTheme) Color(0xFF3A2417) else Color(0xFF243142)
+    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else if (SonHarfCosmetics.walnutTheme) Color(0xFF7A6650) else Color(0xFF6B7A8C)
+    val Border: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else if (SonHarfCosmetics.walnutTheme) Color(0xFFCDB58E) else Color(0xFFD2DBE5)
     val Blue = Color(0xFF3E9F4D)
     val Red = Color(0xFFD0514A)
     val Gold = Color(0xFFE0A82E)
-    val Navy: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8C9DE) else Color(0xFF2C3E55)
-    val NavySoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF8FA3BD) else Color(0xFF3A4F6B)
-    val PremiumSurface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A3020) else Color(0xFFFFF3D6)
+    val Navy: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8C9DE) else if (SonHarfCosmetics.walnutTheme) Color(0xFF4A2E1C) else Color(0xFF2C3E55)
+    val NavySoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF8FA3BD) else if (SonHarfCosmetics.walnutTheme) Color(0xFF6B4630) else Color(0xFF3A4F6B)
+    val PremiumSurface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A3020) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF5E3BD) else Color(0xFFFFF3D6)
     val PremiumBorder = Color(0xFFE0A82E)
-    val DisabledBackground: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF262C35) else Color(0xFFE3E9EF)
-    val DisabledContent: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF6B7684) else Color(0xFF9AA7B5)
+    val DisabledBackground: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF262C35) else if (SonHarfCosmetics.walnutTheme) Color(0xFFE6D9C1) else Color(0xFFE3E9EF)
+    val DisabledContent: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF6B7684) else if (SonHarfCosmetics.walnutTheme) Color(0xFFA89378) else Color(0xFF9AA7B5)
 }
 
 @Composable

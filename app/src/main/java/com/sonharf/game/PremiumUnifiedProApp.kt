@@ -193,7 +193,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             },
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding).wordSiegeMascotTouchWatcher(shellMascotTouches)) {
-                if (!SonHarfTheme.IsDark && !SonHarfCosmetics.darkArenaTheme) SonHarfLeafBackdrop(Modifier.matchParentSize())
+                if (!SonHarfTheme.IsDark && !SonHarfCosmetics.darkArenaTheme && !SonHarfCosmetics.walnutTheme) SonHarfLeafBackdrop(Modifier.matchParentSize())
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
                         backend = backend,

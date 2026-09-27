@@ -89,42 +89,42 @@ private const val PREMIER_ROUND_PREP_SECONDS = 20
 
 /** Son Harf arena colours; the Black Theme swaps in graphite surfaces and black-gold tiles. */
 private object PremierUi {
-    val Background: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else Color(0xFFE6ECF2)
-    val Surface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else Color(0xFFFFFFFF)
-    val Ink: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else Color(0xFF243142)
-    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else Color(0xFF6B7A8C)
-    val Ocean: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8C9DE) else Color(0xFF2C3E55)
+    val Background: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEFE3CC) else Color(0xFFE6ECF2)
+    val Surface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
+    val Ink: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else if (SonHarfCosmetics.walnutTheme) Color(0xFF3A2417) else Color(0xFF243142)
+    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else if (SonHarfCosmetics.walnutTheme) Color(0xFF7A6650) else Color(0xFF6B7A8C)
+    val Ocean: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8C9DE) else if (SonHarfCosmetics.walnutTheme) Color(0xFF4A2E1C) else Color(0xFF2C3E55)
     val OceanDeep = Color(0xFF3E9F4D)
     val Sky = Color(0xFF5DADE2)
-    val Ice: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF232A33) else Color(0xFFF3F6F9)
-    val Border: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else Color(0xFFD2DBE5)
+    val Ice: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF232A33) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF3E8D2) else Color(0xFFF3F6F9)
+    val Border: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else if (SonHarfCosmetics.walnutTheme) Color(0xFFCDB58E) else Color(0xFFD2DBE5)
     val Green = Color(0xFF3E9F4D)
-    val GreenSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F3525) else Color(0xFFE1F2E3)
+    val GreenSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F3525) else if (SonHarfCosmetics.walnutTheme) Color(0xFFE3EBCF) else Color(0xFFE1F2E3)
     val Red = Color(0xFFD0514A)
-    val RedSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else Color(0xFFFBE4E2)
+    val RedSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF5DDD3) else Color(0xFFFBE4E2)
     val Gold = Color(0xFFE0A82E)
-    val GoldSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A3020) else Color(0xFFFFF3D6)
+    val GoldSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A3020) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF5E3BD) else Color(0xFFFFF3D6)
 }
 
 private object PremierArenaSky {
-    val BackgroundTop: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else Color(0xFFE6ECF2)
-    val BackgroundMid: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF12171D) else Color(0xFFE9EEF3)
-    val BackgroundBottom: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF151A21) else Color(0xFFEDF1F5)
-    val Surface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else Color(0xFFFFFFFF)
-    val SurfaceBlue: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF232A33) else Color(0xFFF3F6F9)
-    val Ink: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else Color(0xFF243142)
-    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else Color(0xFF6B7A8C)
-    val Ocean: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8C9DE) else Color(0xFF2C3E55)
+    val BackgroundTop: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEFE3CC) else Color(0xFFE6ECF2)
+    val BackgroundMid: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF12171D) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEBDDC3) else Color(0xFFE9EEF3)
+    val BackgroundBottom: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF151A21) else if (SonHarfCosmetics.walnutTheme) Color(0xFFE6D6B9) else Color(0xFFEDF1F5)
+    val Surface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
+    val SurfaceBlue: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF232A33) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF3E8D2) else Color(0xFFF3F6F9)
+    val Ink: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else if (SonHarfCosmetics.walnutTheme) Color(0xFF3A2417) else Color(0xFF243142)
+    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else if (SonHarfCosmetics.walnutTheme) Color(0xFF7A6650) else Color(0xFF6B7A8C)
+    val Ocean: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8C9DE) else if (SonHarfCosmetics.walnutTheme) Color(0xFF4A2E1C) else Color(0xFF2C3E55)
     val OceanDeep = Color(0xFF22324A)
-    val Border: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else Color(0xFFD2DBE5)
+    val Border: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else if (SonHarfCosmetics.walnutTheme) Color(0xFFCDB58E) else Color(0xFFD2DBE5)
     val Rival = Color(0xFFD0514A)
-    val RivalSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else Color(0xFFFBE4E2)
+    val RivalSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF5DDD3) else Color(0xFFFBE4E2)
     val Green = Color(0xFF3E9F4D)
-    val GreenSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F3525) else Color(0xFFE1F2E3)
+    val GreenSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F3525) else if (SonHarfCosmetics.walnutTheme) Color(0xFFE3EBCF) else Color(0xFFE1F2E3)
     val Gold = Color(0xFFE0A82E)
-    val GoldSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A3020) else Color(0xFFFFF3D6)
+    val GoldSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A3020) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF5E3BD) else Color(0xFFFFF3D6)
     val Red = Color(0xFFD0514A)
-    val RedSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else Color(0xFFFBE4E2)
+    val RedSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF5DDD3) else Color(0xFFFBE4E2)
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr
@@ -1155,22 +1155,22 @@ private fun PremierStatPill(text: String, accent: Color) {
 
 /** Word-game palette: a calm teal board, cream letter tiles, one soft colour per player. */
 private object PremierBoard {
-    val BoardTop: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1E2127) else Color(0xFFF6F1E3)
-    val BoardBottom: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF15171B) else Color(0xFFEFE7D2)
-    val Tile: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F2025) else Color(0xFFF7E3A6)
-    val TileEdge: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8903A) else Color(0xFFC9A560)
-    val TileInk: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFF2C75C) else Color(0xFF4A3217)
+    val BoardTop: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1E2127) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF7EEDC) else Color(0xFFF6F1E3)
+    val BoardBottom: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF15171B) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEADCC0) else Color(0xFFEFE7D2)
+    val Tile: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F2025) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFF7E3A6)
+    val TileEdge: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8903A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFCDB58E) else Color(0xFFC9A560)
+    val TileInk: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFF2C75C) else if (SonHarfCosmetics.walnutTheme) Color(0xFF2A2018) else Color(0xFF4A3217)
     val Gold = Color(0xFFE0A82E)
     val GoldEdge = Color(0xFFB07F1E)
-    val Ink: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else Color(0xFF243142)
-    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else Color(0xFF6B7A8C)
+    val Ink: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else if (SonHarfCosmetics.walnutTheme) Color(0xFF3A2417) else Color(0xFF243142)
+    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else if (SonHarfCosmetics.walnutTheme) Color(0xFF7A6650) else Color(0xFF6B7A8C)
     val Mine = Color(0xFF3E9F4D)
-    val MineSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F3525) else Color(0xFFE1F2E3)
+    val MineSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F3525) else if (SonHarfCosmetics.walnutTheme) Color(0xFFE3EBCF) else Color(0xFFE1F2E3)
     val Rival = Color(0xFFD0514A)
-    val RivalSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else Color(0xFFFBE4E2)
+    val RivalSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF5DDD3) else Color(0xFFFBE4E2)
     val Danger = Color(0xFFD0514A)
-    val Card: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else Color(0xFFFFFFFF)
-    val CardBorder: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else Color(0xFFD2DBE5)
+    val Card: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
+    val CardBorder: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else if (SonHarfCosmetics.walnutTheme) Color(0xFFCDB58E) else Color(0xFFD2DBE5)
 }
 
 /** Every turn is 15 seconds; a new round's first turn adds the preparation break on the server. */
@@ -2968,6 +2968,10 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
             )
             Surface(shape = CircleShape, color = if (won) PremierUi.GoldSoft else PremierUi.RedSoft, border = BorderStroke(2.dp, if (won) PremierUi.Gold else PremierUi.Red)) {
                 Icon(if (won) Icons.Rounded.EmojiEvents else Icons.Rounded.SportsEsports, null, tint = if (won) PremierUi.Gold else PremierUi.Red, modifier = Modifier.padding(22.dp).size(52.dp))
+            }
+            // Taç Zaferi: the purchased crown comes down onto the victory, as in Kelime Tahtı.
+            if (won && SonHarfCosmetics.crownVictory) {
+                CrownVictoryCelebration(eventKey = "sonharf:${room.id}", modifier = Modifier.size(190.dp), compact = true)
             }
         }
         Spacer(Modifier.height(18.dp))
