@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.Color
 import com.sonharf.game.data.EquippedCosmeticsDto
 
@@ -74,30 +75,46 @@ object SonHarfCosmetics {
 
     /** Single palette source for the live keyboard and its store preview/art direction. */
     fun keyboardPaletteFor(themeId: String?): WordKeyboardPalette = when (themeId) {
+        // Every skin below is read off its store image: tray, rim, key faces, glow and send key.
+        // Crystal: faceted icy keys lit cyan from below, on a silver tray with a gold rim.
         "keyboard_crystal" -> WordKeyboardPalette(
-            background = Color(0xFFE8F1F5), key = Color(0xFFF8FCFF), keyAlt = Color(0xFFD6E5ED),
-            text = Color(0xFF26353E), action = Color(0xFF537FA1), actionText = Color.White,
-            border = Color(0xFF9ABBCB), secondaryBorder = Color(0xFFA9BFCA),
+            background = Color(0xFFD5DBE6), key = Color(0xFFA9DDFF), keyAlt = Color(0xFFC4C6F4),
+            text = Color(0xFF17324F), action = Color(0xFF1E7FE0), actionText = Color.White,
+            border = Color(0xFF7FCBFF), secondaryBorder = Color(0xFFA9A6EE),
+            keyTop = Color(0xFFF2FBFF), altTop = Color(0xFFF2F1FF), actionTop = Color(0xFF7FDBFF),
+            glow = Color(0xFF2EC8FF), trayTop = Color(0xFFF8F9FC), rim = Color(0xFFD4AF37), crystal = true,
         )
+        // Obsidian: glossy black keys, violet secondary keys, a gold send key, teal underglow, blue rim.
         "keyboard_obsidian" -> WordKeyboardPalette(
-            background = Color(0xFF151719), key = Color(0xFF24272A), keyAlt = Color(0xFF343535),
-            text = Color(0xFFF7F1E3), action = Color(0xFFB9914D), actionText = Color(0xFF21180A),
-            border = Color(0xFF6A6254), secondaryBorder = Color(0xFFB9914D),
+            background = Color(0xFF0A0B0E), key = Color(0xFF15171C), keyAlt = Color(0xFF221A38),
+            text = Color(0xFFF1F4FA), action = Color(0xFFD49A2A), actionText = Color(0xFF1E1606),
+            border = Color(0xFF3A3F4C), secondaryBorder = Color(0xFF8F6BFF),
+            keyTop = Color(0xFF2C2F38), altTop = Color(0xFF3D2F66), actionTop = Color(0xFFFFD36A),
+            glow = Color(0xFF22D3C5), trayTop = Color(0xFF1E2027), rim = Color(0xFF2E5BFF),
         )
+        // Midnight: deep navy keys glowing blue-violet from below, cyan-to-blue send key.
         "keyboard_midnight" -> WordKeyboardPalette(
-            background = Color(0xFF0E1625), key = Color(0xFF1B2740), keyAlt = Color(0xFF263551),
-            text = Color(0xFFEDF3FF), action = Color(0xFF5C7CFA), actionText = Color.White,
-            border = Color(0xFF31466B), secondaryBorder = Color(0xFF13D8D0),
+            background = Color(0xFF0B1024), key = Color(0xFF131B36), keyAlt = Color(0xFF1D1745),
+            text = Color(0xFFE6ECFF), action = Color(0xFF3C5BFF), actionText = Color.White,
+            border = Color(0xFF3552A8), secondaryBorder = Color(0xFF8E6BFF),
+            keyTop = Color(0xFF26335F), altTop = Color(0xFF33296B), actionTop = Color(0xFF3FD0FF),
+            glow = Color(0xFF6D7CFF), trayTop = Color(0xFF1B2757), rim = Color(0xFF3D6BFF),
         )
+        // Black Gold: black keys with gold rims and letters, a solid gold send key, gold tray edge.
         "keyboard_black_gold" -> WordKeyboardPalette(
-            background = Color(0xFF090A0D), key = Color(0xFF17191D), keyAlt = Color(0xFF252119),
-            text = Color(0xFFFFF0CF), action = Color(0xFFE0B45C), actionText = Color(0xFF21170A),
-            border = Color(0xFF6E592E), secondaryBorder = Color(0xFFE0B45C),
+            background = Color(0xFF050506), key = Color(0xFF101114), keyAlt = Color(0xFF1A1712),
+            text = Color(0xFFFFE3A3), action = Color(0xFFC8922E), actionText = Color(0xFF21170A),
+            border = Color(0xFF8A6A2E), secondaryBorder = Color(0xFFE0B45C),
+            keyTop = Color(0xFF2E3036), altTop = Color(0xFF3A3222), actionTop = Color(0xFFFFE08A),
+            glow = Color(0xFFFFC857), trayTop = Color(0xFF1A1B1F), rim = Color(0xFFE0B45C),
         )
+        // Premium White: pearl-white glossy keys with a soft sky-blue glow and a blue send key.
         "keyboard_premium_white" -> WordKeyboardPalette(
-            background = Color(0xFFF3F6FA), key = Color.White, keyAlt = Color(0xFFE8EEF5),
-            text = Color(0xFF263238), action = Color(0xFF2A72E5), actionText = Color.White,
-            border = Color(0xFFCFD9E6), secondaryBorder = Color(0xFF14B8B1),
+            background = Color(0xFFDCE4EF), key = Color(0xFFE3ECF7), keyAlt = Color(0xFFD9E6F5),
+            text = Color(0xFF22324D), action = Color(0xFF2A72E5), actionText = Color.White,
+            border = Color(0xFFC3D6EC), secondaryBorder = Color(0xFF8CC4F5),
+            keyTop = Color(0xFFFFFFFF), altTop = Color(0xFFF4F8FD), actionTop = Color(0xFF6CC3FF),
+            glow = Color(0xFF7FC4FF), trayTop = Color(0xFFFFFFFF), rim = Color(0xFFB8D4F5),
         )
         // Default keyboard: cream letter keys, light grey special keys, green enter on a light tray.
         else -> WordKeyboardPalette(
@@ -128,4 +145,32 @@ data class WordKeyboardPalette(
     val actionText: Color,
     val border: Color,
     val secondaryBorder: Color,
+    /** Gradient tops for glossy key faces; null keeps flat keys (the default keyboard). */
+    val keyTop: Color? = null,
+    val altTop: Color? = null,
+    val actionTop: Color? = null,
+    /** Light under each key, as in the store art. */
+    val glow: Color? = null,
+    /** Tray gradient top (the bottom is [background]) and the tray's rim. */
+    val trayTop: Color? = null,
+    val rim: Color? = null,
+    /** Faceted cut-glass keys (Crystal). */
+    val crystal: Boolean = false,
 )
+
+/** The emblem of the equipped name style: the store image, shown beside the player's name. */
+@androidx.compose.runtime.Composable
+internal fun NameStyleEmblem(size: androidx.compose.ui.unit.Dp, styleId: String? = SonHarfCosmetics.nameStyleId) {
+    val res = when (styleId) {
+        "name_cyan" -> R.drawable.store_art_name_cyan
+        "name_sapphire" -> R.drawable.store_art_name_sapphire
+        "name_amethyst" -> R.drawable.store_art_name_amethyst
+        "name_aurelia" -> R.drawable.store_art_name_aurelia
+        else -> return
+    }
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(res),
+        contentDescription = null,
+        modifier = androidx.compose.ui.Modifier.size(size),
+    )
+}

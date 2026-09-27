@@ -216,6 +216,13 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                         enabled = !busy && !loading,
                         blackVariant = true,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
+                        preview = {
+                            androidx.compose.foundation.Image(
+                                painter = androidx.compose.ui.res.painterResource(R.drawable.store_art_theme_black),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize().padding(4.dp),
+                            )
+                        },
                         onClick = { equipStyle(ownedDarkThemeId ?: BlackThemeId) },
                     )
                 } else {

@@ -454,7 +454,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         isFakeBoldText = true
         textAlign = Paint.Align.CENTER
     }
-    private val boughtHats = MascotHatPainter()
+    private val boughtHats = MascotHatPainter(context)
     private val hatPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val hatLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -1899,7 +1899,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         // Sits a little into the rim so the whole hat stays inside the view.
         canvas.translate(0f, 28f)
         canvas.rotate(-14f + sin(now / 700f) * 2f, 560f, 250f)
-        if (hat != WordSiegeMascotHat.CROWN && hat != WordSiegeMascotHat.PARTY) {
+        if (boughtHats.draws(hat)) {
+            // Store hats and the victory crown: the very image the shop sells.
             boughtHats.draw(canvas, hat, now)
         } else if (hat == WordSiegeMascotHat.CROWN) {
             path.rewind()

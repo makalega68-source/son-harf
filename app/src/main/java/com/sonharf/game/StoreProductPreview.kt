@@ -2,10 +2,6 @@ package com.sonharf.game
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -17,21 +13,19 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.ShopItemDto
 
 /**
- * Product art is intentionally text-free and transparent. Product names, prices and ownership
+ * Product art is intentionally transparent, and it is the product itself: the same images drive
+ * what the player uses (Obi wears the hat PNG, keyboards and boards are styled after their art). Product names, prices and ownership
  * states remain real Compose UI text outside the artwork. The vectors mirror the approved Canva
  * product-library language while profile frames keep using their actual packaged runtime assets.
  */
@@ -47,8 +41,6 @@ internal fun StoreProductPreview(
         contentAlignment = Alignment.Center,
     ) {
         when {
-            item.id == WALNUT_IVORY_THEME_ID -> WalnutIvoryStorePreview(expanded)
-            item.kind == "mascot_hat" -> ObiHatPreview(item.id)
             item.kind == "profile_frame" -> RealFramePreview(item.id, expanded)
             storeArtworkRes(item.id) != null -> {
                 Image(
@@ -59,31 +51,6 @@ internal fun StoreProductPreview(
                 )
             }
             else -> PremiumArtworkFallback(expanded)
-        }
-    }
-}
-
-@Composable
-private fun WalnutIvoryStorePreview(expanded: Boolean) {
-    Box(
-        Modifier.fillMaxSize().padding(if (expanded) 8.dp else 3.dp)
-            .background(WordSiegeWalnutIvory.frame, RoundedCornerShape(12.dp))
-            .border(2.dp, WordSiegeWalnutIvory.frameEdge, RoundedCornerShape(12.dp)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            listOf("C", "F", "T").forEachIndexed { index, letter ->
-                Box(
-                    Modifier.size(if (expanded) 29.dp else 23.dp)
-                        .background(if (index == 1) WordSiegeWalnutIvory.mine else WordSiegeWalnutIvory.empty, RoundedCornerShape(5.dp))
-                        .padding(2.dp)
-                        .background(WordSiegeWalnutIvory.tile, RoundedCornerShape(4.dp))
-                        .border(.7.dp, WordSiegeWalnutIvory.bevel, RoundedCornerShape(4.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(letter, color = WordSiegeWalnutIvory.ink, fontSize = if (expanded) 18.sp else 14.sp, fontWeight = FontWeight.Black)
-                }
-            }
         }
     }
 }
@@ -100,6 +67,11 @@ private fun storeArtworkRes(itemId: String): Int? = when (itemId) {
     "keyboard_black_gold" -> R.drawable.store_art_keyboard_black_gold
     "keyboard_premium_white" -> R.drawable.store_art_keyboard_premium_white
     "theme_black", "theme_dark_arena" -> R.drawable.store_art_theme_black
+    WALNUT_IVORY_THEME_ID -> R.drawable.store_art_theme_walnut_ivory
+    MascotHats.BERET -> R.drawable.store_art_hat_beret
+    MascotHats.FLOWER -> R.drawable.store_art_hat_flower
+    MascotHats.WIZARD -> R.drawable.store_art_hat_wizard
+    MascotHats.TOP -> R.drawable.store_art_hat_top
     "victory_crown" -> R.drawable.store_art_victory_crown
     "emoji_vip" -> R.drawable.store_art_emoji_vip
     else -> null

@@ -31,12 +31,14 @@ class PremiumStoreProContractTest {
             "premium_series_game.xml",
             "premium_letter_table.xml",
             "premium_score_calculator.xml",
-            "premium_pro.xml",
         ).forEach { name ->
             val vector = repoFile("app/src/main/res/drawable/$name").readText()
             assertTrue(vector.contains("<vector"))
             assertFalse("Decorative premium asset must not bake text", vector.contains("<text"))
         }
+        // The PRO emblem is the text-free painted store image (shield, crown and laurels).
+        assertTrue(repoFile("app/src/main/res/drawable-nodpi/premium_pro.png").isFile)
+        assertFalse(File("src/main/res/drawable/premium_pro.xml").exists() || File("app/src/main/res/drawable/premium_pro.xml").exists())
     }
 
     @Test

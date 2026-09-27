@@ -144,14 +144,21 @@ internal fun MainPlayerProfileScreen(
             }
             Spacer(Modifier.width(18.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    p?.displayName ?: sh("Oyuncu", "Player"),
-                    color = displayNameColor,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Black,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        p?.displayName ?: sh("Oyuncu", "Player"),
+                        modifier = Modifier.weight(1f, fill = false),
+                        color = displayNameColor,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (hasEquippedNameStyle) {
+                        Spacer(Modifier.width(6.dp))
+                        NameStyleEmblem(30.dp)
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(painterResource(R.drawable.hf_ic_club), null, tint = Hf.Gold, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(8.dp))

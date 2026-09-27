@@ -1092,7 +1092,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
         Text(pt(language, "RAKİP BULUNDU!", "RIVAL FOUND!"), color = PremierUi.Ocean, fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
         Text(pt(language, "Maç 3 saniye içinde başlıyor", "Match starts in 3 seconds"), color = PremierUi.Muted, fontSize = 12.sp)
         Spacer(Modifier.weight(1f))
-        PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Ocean, nameColor = SonHarfCosmetics.playerNameColor)
+        PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Ocean, nameColor = SonHarfCosmetics.playerNameColor, nameEmblem = true)
         Spacer(Modifier.height(16.dp))
         Surface(shape = RoundedCornerShape(99.dp), color = Color.Transparent) {
             Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.OceanDeep, Color(0xFF2C3E55)))).padding(horizontal = 27.dp, vertical = 10.dp)) {
@@ -1111,7 +1111,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
 }
 
 @Composable
-private fun PremierVsPlayerCard(language: String, name: String, avatar: String?, gender: String?, visible: Boolean, rating: Int, winRate: Int, accent: Color, bot: Boolean = false, nameColor: Color = PremierUi.Ink) {
+private fun PremierVsPlayerCard(language: String, name: String, avatar: String?, gender: String?, visible: Boolean, rating: Int, winRate: Int, accent: Color, bot: Boolean = false, nameColor: Color = PremierUi.Ink, nameEmblem: Boolean = false) {
     Surface(modifier = Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(23.dp)), shape = RoundedCornerShape(23.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, accent.copy(alpha = .22f))) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (bot) PremierBotAvatar(size = 70.dp, accent = accent)
@@ -1125,7 +1125,14 @@ private fun PremierVsPlayerCard(language: String, name: String, avatar: String?,
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(name, color = nameColor, fontSize = 18.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, modifier = Modifier.weight(1f, fill = false), color = nameColor, fontSize = 18.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // The player's own card carries their name-style emblem, as sold in the store.
+                    if (nameEmblem && !bot) {
+                        Spacer(Modifier.width(4.dp))
+                        NameStyleEmblem(20.dp)
+                    }
+                }
                 Text(if (bot) pt(language, "ADAPTİF BOT", "ADAPTIVE BOT") else pt(language, "PREMIER OYUNCU", "PREMIER PLAYER"), color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(7.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -2655,7 +2662,7 @@ private fun PremierKeyboard(language: String, value: String, enabled: Boolean, k
         border = BorderStroke(1.dp, PremierUi.Border),
         shadowElevation = 14.dp,
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Column(Modifier.fillMaxWidth().keyboardTray(palette, RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)).padding(horizontal = 6.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             val widest = rows.first().size
             rows.forEachIndexed { index, row ->
                 val last = index == rows.lastIndex
@@ -2700,9 +2707,7 @@ private fun PremierBackspaceKey(enabled: Boolean, modifier: Modifier, keyHeight:
         modifier
             .height(keyHeight)
             .graphicsLayer { scaleX = if (pressed) .94f else 1f; scaleY = if (pressed) .94f else 1f }
-            .clip(RoundedCornerShape(6.dp))
-            .background(if (enabled) palette.keyAlt else palette.keyAlt.copy(alpha = .55f))
-            .border(BorderStroke(1.dp, palette.secondaryBorder.copy(alpha = .55f)), RoundedCornerShape(6.dp))
+            .keyFace(palette, KeyKind.ALT, enabled, 6.dp)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {
@@ -2737,22 +2742,9 @@ private fun PremierBackspaceKey(enabled: Boolean, modifier: Modifier, keyHeight:
 @Composable
 private fun PremierKey(label: String, enabled: Boolean, modifier: Modifier, keyHeight: Dp, alt: Boolean = false, action: Boolean = false, onClick: () -> Unit) {
     val palette = SonHarfCosmetics.keyboardPalette
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.height(keyHeight),
-        contentPadding = PaddingValues(0.dp),
-        shape = RoundedCornerShape(6.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = when { action -> palette.action; alt -> palette.keyAlt; else -> palette.key },
-            contentColor = if (action) palette.actionText else palette.text,
-            disabledContainerColor = if (alt) palette.keyAlt.copy(alpha = .55f) else palette.key.copy(alpha = .55f),
-            disabledContentColor = palette.text.copy(alpha = .42f),
-        ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = if (action) 7.dp else 2.dp),
-        border = BorderStroke(1.dp, when { action -> palette.action.copy(alpha = .82f); alt -> palette.secondaryBorder.copy(alpha = .55f); else -> palette.border }),
-    ) {
-        Text(label, fontSize = if (label.length > 5) 9.sp else 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+    val kind = when { action -> KeyKind.ACTION; alt -> KeyKind.ALT; else -> KeyKind.LETTER }
+    SkinKey(kind, enabled, 6.dp, modifier.height(keyHeight), onClick) {
+        Text(label, color = palette.labelColor(kind, enabled), fontSize = if (label.length > 5) 9.sp else 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 

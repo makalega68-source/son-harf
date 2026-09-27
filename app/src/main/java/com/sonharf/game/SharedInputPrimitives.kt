@@ -3,8 +3,6 @@ package com.sonharf.game
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,14 +39,15 @@ internal fun EmbeddedWordKeyboard(
         )
     }
 
+    val trayShape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = palette.background,
-        shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
+        shape = trayShape,
         border = BorderStroke(1.dp, palette.border),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp),
+            Modifier.fillMaxWidth().keyboardTray(palette, trayShape).padding(horizontal = 5.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             rows.forEachIndexed { index, row ->
@@ -123,13 +122,14 @@ internal fun EmbeddedNumberKeyboard(
 ) {
     val palette = SonHarfCosmetics.keyboardPalette
     val rows = listOf(listOf("1","2","3"), listOf("4","5","6"), listOf("7","8","9"))
+    val trayShape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = palette.background,
-        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        shape = trayShape,
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 7.dp),
+            Modifier.fillMaxWidth().keyboardTray(palette, trayShape).padding(horizontal = 8.dp, vertical = 7.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             rows.forEach { row ->
@@ -205,32 +205,8 @@ private fun SharedKeyboardKeyButton(
     onClick: () -> Unit,
 ) {
     val palette = SonHarfCosmetics.keyboardPalette
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.height(38.dp),
-        contentPadding = PaddingValues(0.dp),
-        shape = RoundedCornerShape(11.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = when {
-                action -> palette.action
-                alt -> palette.keyAlt
-                else -> palette.key
-            },
-            contentColor = if (action) palette.actionText else palette.text,
-            disabledContainerColor = if (alt) palette.keyAlt.copy(alpha = .55f) else palette.key.copy(alpha = .55f),
-            disabledContentColor = palette.text.copy(alpha = .42f),
-        ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp),
-        border = BorderStroke(
-            1.dp,
-            when {
-                action -> palette.action.copy(alpha = .82f)
-                alt -> palette.secondaryBorder.copy(alpha = .55f)
-                else -> palette.border
-            },
-        ),
-    ) {
-        Text(label, fontSize = if (label.length > 4) 10.sp else 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    val kind = when { action -> KeyKind.ACTION; alt -> KeyKind.ALT; else -> KeyKind.LETTER }
+    SkinKey(kind, enabled, 11.dp, modifier.height(38.dp), onClick) {
+        Text(label, color = palette.labelColor(kind, enabled), fontSize = if (label.length > 4) 10.sp else 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
