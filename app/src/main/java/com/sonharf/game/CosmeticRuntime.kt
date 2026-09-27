@@ -86,6 +86,7 @@ object SonHarfCosmetics {
             keyTop = Color(0xFFF2FBFF), altTop = Color(0xFFF2F1FF), actionTop = Color(0xFF7FDBFF),
             glow = Color(0xFF2EC8FF), trayTop = Color(0xFFF8F9FC), rim = Color(0xFFD4AF37), crystal = true,
             keyImage = R.drawable.keyboard_crystal_key, panelImage = R.drawable.keyboard_crystal_panel,
+            panelSide = .035f, panelTop = .25f, panelBottom = .06f,
         )
         // Obsidian: glossy black keys, violet secondary keys, a gold send key, teal underglow, blue rim.
         "keyboard_obsidian" -> WordKeyboardPalette(
@@ -95,6 +96,7 @@ object SonHarfCosmetics {
             keyTop = Color(0xFF2C2F38), altTop = Color(0xFF3D2F66), actionTop = Color(0xFFFFD36A),
             glow = Color(0xFF22D3C5), trayTop = Color(0xFF1E2027), rim = Color(0xFF2E5BFF),
             keyImage = R.drawable.keyboard_obsidian_key, panelImage = R.drawable.keyboard_obsidian_panel,
+            panelSide = .03f, panelTop = .18f, panelBottom = .045f,
         )
         // Midnight: deep navy keys glowing blue-violet from below, cyan-to-blue send key.
         "keyboard_midnight" -> WordKeyboardPalette(
@@ -104,6 +106,7 @@ object SonHarfCosmetics {
             keyTop = Color(0xFF26335F), altTop = Color(0xFF33296B), actionTop = Color(0xFF3FD0FF),
             glow = Color(0xFF6D7CFF), trayTop = Color(0xFF1B2757), rim = Color(0xFF3D6BFF),
             keyImage = R.drawable.keyboard_midnight_key, panelImage = R.drawable.keyboard_midnight_panel,
+            panelSide = .035f, panelTop = .12f, panelBottom = .05f,
         )
         // Black Gold: black keys with gold rims and letters, a solid gold send key, gold tray edge.
         "keyboard_black_gold" -> WordKeyboardPalette(
@@ -113,6 +116,7 @@ object SonHarfCosmetics {
             keyTop = Color(0xFF2E3036), altTop = Color(0xFF3A3222), actionTop = Color(0xFFFFE08A),
             glow = Color(0xFFFFC857), trayTop = Color(0xFF1A1B1F), rim = Color(0xFFE0B45C),
             keyImage = R.drawable.keyboard_black_gold_key, panelImage = R.drawable.keyboard_black_gold_panel,
+            panelSide = .04f, panelTop = .22f, panelBottom = .07f,
         )
         // Premium White: pearl-white glossy keys with a soft sky-blue glow and a blue send key.
         "keyboard_premium_white" -> WordKeyboardPalette(
@@ -122,6 +126,7 @@ object SonHarfCosmetics {
             keyTop = Color(0xFFFFFFFF), altTop = Color(0xFFF4F8FD), actionTop = Color(0xFF6CC3FF),
             glow = Color(0xFF7FC4FF), trayTop = Color(0xFFFFFFFF), rim = Color(0xFFB8D4F5),
             keyImage = R.drawable.keyboard_premium_white_key, panelImage = R.drawable.keyboard_premium_white_panel,
+            panelSide = .035f, panelTop = .20f, panelBottom = .08f,
         )
         // Default keyboard: cream letter keys, light grey special keys, green enter on a light tray.
         else -> WordKeyboardPalette(
@@ -166,6 +171,10 @@ data class WordKeyboardPalette(
     /** Painted skin: every key wears [keyImage] and the keys sit in [panelImage] (the tray). */
     val keyImage: Int? = null,
     val panelImage: Int? = null,
+    /** Frame insets of [panelImage] as fractions of its width (side) and height (top, bottom). */
+    val panelSide: Float = .04f,
+    val panelTop: Float = .2f,
+    val panelBottom: Float = .06f,
 )
 
 /** The emblem of the equipped name style: the store image, shown beside the player's name. */

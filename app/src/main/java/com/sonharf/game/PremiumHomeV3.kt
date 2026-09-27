@@ -13,6 +13,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -110,13 +112,15 @@ private fun HomeStatusRow(
                 maxLines = 1,
             )
         }
-        Surface(
-            onClick = onPro,
-            shape = Hf.PillShape,
-            color = Hf.Gold,
-            border = BorderStroke(1.dp, Hf.GoldLight),
+        // A compact pill: a clickable Surface would stretch its gold background to the 48 dp touch height.
+        Box(
+            Modifier
+                .clip(Hf.PillShape)
+                .background(Hf.Gold)
+                .border(1.dp, Hf.GoldLight, Hf.PillShape)
+                .clickable(onClick = onPro),
         ) {
-            Row(Modifier.padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(horizontal = 9.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.WorkspacePremium, null, tint = Hf.Ink, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(3.dp))
                 Text(

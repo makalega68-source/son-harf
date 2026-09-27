@@ -45,7 +45,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.offset
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
@@ -65,25 +68,36 @@ internal fun Modifier.keyboardTray(p: WordKeyboardPalette, shape: Shape, crownBa
     if (panel != null) {
         val iw = panel.width
         val ih = panel.height
-        // Source slices, as fractions of the panel: key well 7.5% in from the sides, 29% from the
-        // top (crown band) and 14% from the bottom; the crown is the middle 33.6% of the top band.
-        val side = (iw * .075f).toInt()
-        val top = (ih * .29f).toInt()
-        val bottom = (ih * .14f).toInt()
-        val crown = (iw * .168f).toInt()
-        val dpPerPx = crownBand / top.toFloat()
+        // Frame insets measured per panel (the key well starts inside them); the corners and the
+        // crown are drawn unstretched, only the flat parts between them stretch.
+        val side = (iw * p.panelSide).toInt()
+        val top = (ih * p.panelTop).toInt()
+        val bottom = (ih * p.panelBottom).toInt()
+        val corner = (iw * .09f).toInt()
+        val crown = (iw * .17f).toInt()
+        // Scale follows the keyboard width, capped so the crown band never exceeds [crownBand].
+        fun Density.scaleFor(width: Float) = minOf(width / iw, crownBand.toPx() / top)
         return drawBehind {
-            val s = crownBand.toPx() / top
+            val s = scaleFor(size.width)
             val w = size.width
             val h = size.height
-            val dSide = side * s
+            val dCorner = corner * s
             val dTop = top * s
             val dBottom = bottom * s
-            val c0 = maxOf(dSide, w / 2f - crown * s)
-            val c1 = minOf(w - dSide, w / 2f + crown * s)
-            drawSlices(panel, intArrayOf(0, side, iw / 2 - crown, iw / 2 + crown, iw - side, iw), intArrayOf(0, top), floatArrayOf(0f, dSide, c0, c1, w - dSide, w), floatArrayOf(0f, dTop))
-            drawSlices(panel, intArrayOf(0, side, iw - side, iw), intArrayOf(top, ih - bottom, ih), floatArrayOf(0f, dSide, w - dSide, w), floatArrayOf(dTop, h - dBottom, h))
-        }.padding(start = dpPerPx * side, end = dpPerPx * side, top = crownBand, bottom = dpPerPx * bottom)
+            val c0 = maxOf(dCorner, w / 2f - crown * s)
+            val c1 = minOf(w - dCorner, w / 2f + crown * s)
+            drawSlices(panel, intArrayOf(0, corner, iw / 2 - crown, iw / 2 + crown, iw - corner, iw), intArrayOf(0, top), floatArrayOf(0f, dCorner, c0, c1, w - dCorner, w), floatArrayOf(0f, dTop))
+            drawSlices(panel, intArrayOf(0, corner, iw - corner, iw), intArrayOf(top, ih - bottom, ih), floatArrayOf(0f, dCorner, w - dCorner, w), floatArrayOf(dTop, h - dBottom, h))
+        }.layout { measurable, constraints ->
+            // Keys go inside the frame: insets follow the same scale the panel is drawn at.
+            val width = if (constraints.hasBoundedWidth) constraints.maxWidth.toFloat() else iw.toFloat()
+            val s = scaleFor(width)
+            val l = (side * s).roundToInt()
+            val t = (top * s).roundToInt()
+            val bt = (bottom * s).roundToInt()
+            val placeable = measurable.measure(constraints.offset(-2 * l, -(t + bt)))
+            layout(placeable.width + 2 * l, placeable.height + t + bt) { placeable.place(l, t) }
+        }
     }
     val top = p.trayTop ?: return this
     val rim = p.rim

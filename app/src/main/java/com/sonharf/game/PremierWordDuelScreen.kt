@@ -87,44 +87,44 @@ private const val PREMIER_RECONNECT_SECONDS = 60
 /** Breather before every new round; the server adds it to the round's first turn. */
 private const val PREMIER_ROUND_PREP_SECONDS = 20
 
-/** Yetişkin, yüksek okunabilirlikli Son Harf oyun paleti. */
+/** Son Harf arena colours; the Black Theme swaps in graphite surfaces and black-gold tiles. */
 private object PremierUi {
-    val Background = Color(0xFFE6ECF2)
-    val Surface = Color(0xFFFFFFFF)
-    val Ink = Color(0xFF243142)
-    val Muted = Color(0xFF6B7A8C)
-    val Ocean = Color(0xFF2C3E55)
+    val Background: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else Color(0xFFE6ECF2)
+    val Surface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else Color(0xFFFFFFFF)
+    val Ink: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else Color(0xFF243142)
+    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else Color(0xFF6B7A8C)
+    val Ocean: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8C9DE) else Color(0xFF2C3E55)
     val OceanDeep = Color(0xFF3E9F4D)
     val Sky = Color(0xFF5DADE2)
-    val Ice = Color(0xFFF3F6F9)
-    val Border = Color(0xFFD2DBE5)
+    val Ice: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF232A33) else Color(0xFFF3F6F9)
+    val Border: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else Color(0xFFD2DBE5)
     val Green = Color(0xFF3E9F4D)
-    val GreenSoft = Color(0xFFE1F2E3)
+    val GreenSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F3525) else Color(0xFFE1F2E3)
     val Red = Color(0xFFD0514A)
-    val RedSoft = Color(0xFFFBE4E2)
+    val RedSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else Color(0xFFFBE4E2)
     val Gold = Color(0xFFE0A82E)
-    val GoldSoft = Color(0xFFFFF3D6)
+    val GoldSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A3020) else Color(0xFFFFF3D6)
 }
 
 private object PremierArenaSky {
-    val BackgroundTop = Color(0xFFE6ECF2)
-    val BackgroundMid = Color(0xFFE9EEF3)
-    val BackgroundBottom = Color(0xFFEDF1F5)
-    val Surface = Color(0xFFFFFFFF)
-    val SurfaceBlue = Color(0xFFF3F6F9)
-    val Ink = Color(0xFF243142)
-    val Muted = Color(0xFF6B7A8C)
-    val Ocean = Color(0xFF2C3E55)
+    val BackgroundTop: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else Color(0xFFE6ECF2)
+    val BackgroundMid: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF12171D) else Color(0xFFE9EEF3)
+    val BackgroundBottom: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF151A21) else Color(0xFFEDF1F5)
+    val Surface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else Color(0xFFFFFFFF)
+    val SurfaceBlue: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF232A33) else Color(0xFFF3F6F9)
+    val Ink: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else Color(0xFF243142)
+    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else Color(0xFF6B7A8C)
+    val Ocean: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8C9DE) else Color(0xFF2C3E55)
     val OceanDeep = Color(0xFF22324A)
-    val Border = Color(0xFFD2DBE5)
+    val Border: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else Color(0xFFD2DBE5)
     val Rival = Color(0xFFD0514A)
-    val RivalSoft = Color(0xFFFBE4E2)
+    val RivalSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else Color(0xFFFBE4E2)
     val Green = Color(0xFF3E9F4D)
-    val GreenSoft = Color(0xFFE1F2E3)
+    val GreenSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F3525) else Color(0xFFE1F2E3)
     val Gold = Color(0xFFE0A82E)
-    val GoldSoft = Color(0xFFFFF3D6)
+    val GoldSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A3020) else Color(0xFFFFF3D6)
     val Red = Color(0xFFD0514A)
-    val RedSoft = Color(0xFFFBE4E2)
+    val RedSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else Color(0xFFFBE4E2)
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr
@@ -1000,13 +1000,14 @@ private fun PremierSearching(language: String, me: ProfileDto?, onCancel: () -> 
     Column(
         Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFFF4F7FA), Color(0xFFE3EAF1))))
+            // Follows the equipped theme so the (theme-coloured) text always reads.
+            .background(Brush.verticalGradient(listOf(Hf.Surface, Hf.Ground)))
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(horizontal = 20.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        HfTitleRule(sh("Kelime Tahtı", "Kelime Tahtı"), fontSize = 24.sp)
+        HfTitleRule(pt(language, "Son Harf", "Last Letter"), fontSize = 24.sp)
         Spacer(Modifier.height(28.dp))
         Text(
             pt(language, "Rakip aranıyor", "Finding a rival") + ".".repeat(dots.toInt()),
@@ -1018,7 +1019,7 @@ private fun PremierSearching(language: String, me: ProfileDto?, onCancel: () -> 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
-                    Modifier.size(104.dp).shadow(10.dp, CircleShape).background(Color.White, CircleShape).border(4.dp, Hf.Green, CircleShape).padding(6.dp),
+                    Modifier.size(104.dp).shadow(10.dp, CircleShape).background(Hf.Surface, CircleShape).border(4.dp, Hf.Green, CircleShape).padding(6.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     ProfilePhotoAvatarWithGender(
@@ -1051,7 +1052,7 @@ private fun PremierSearching(language: String, me: ProfileDto?, onCancel: () -> 
                         }
                     }
                     Box(
-                        Modifier.size(96.dp).shadow(6.dp, CircleShape).background(Color.White, CircleShape).border(3.dp, Hf.Border, CircleShape),
+                        Modifier.size(96.dp).shadow(6.dp, CircleShape).background(Hf.Surface, CircleShape).border(3.dp, Hf.Border, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text("?", color = Hf.Muted, fontSize = 40.sp, fontWeight = FontWeight.Black)
@@ -1092,7 +1093,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
         Text(pt(language, "RAKİP BULUNDU!", "RIVAL FOUND!"), color = PremierUi.Ocean, fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
         Text(pt(language, "Maç 3 saniye içinde başlıyor", "Match starts in 3 seconds"), color = PremierUi.Muted, fontSize = 12.sp)
         Spacer(Modifier.weight(1f))
-        PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Ocean, nameColor = SonHarfCosmetics.playerNameColor, nameEmblem = true)
+        PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Ocean, nameColor = SonHarfCosmetics.playerNameColor, nameEmblem = true, frameId = SonHarfCosmetics.profileFrameId)
         Spacer(Modifier.height(16.dp))
         Surface(shape = RoundedCornerShape(99.dp), color = Color.Transparent) {
             Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.OceanDeep, Color(0xFF2C3E55)))).padding(horizontal = 27.dp, vertical = 10.dp)) {
@@ -1103,7 +1104,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
         if (room.isBot) {
             PremierVsPlayerCard(language, room.botName ?: pt(language, "KelimeBot", "WordBot"), null, null, true, (me?.rating ?: 1000), 50, PremierUi.OceanDeep, bot = true)
         } else {
-            PremierVsPlayerCard(language, opponent?.displayName ?: pt(language, "Rakip", "Rival"), opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", opponent?.rating ?: 1000, profileWinRate(opponent), PremierUi.OceanDeep)
+            PremierVsPlayerCard(language, opponent?.displayName ?: pt(language, "Rakip", "Rival"), opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", opponent?.rating ?: 1000, profileWinRate(opponent), PremierUi.OceanDeep, frameId = rememberPlayerFrame(opponent?.id))
         }
         Spacer(Modifier.weight(1f))
         Text(pt(language, "Sunucu kilidi aktif • Adil oyun", "Server lock active • Fair play"), color = PremierUi.Muted, fontSize = 10.sp)
@@ -1111,7 +1112,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
 }
 
 @Composable
-private fun PremierVsPlayerCard(language: String, name: String, avatar: String?, gender: String?, visible: Boolean, rating: Int, winRate: Int, accent: Color, bot: Boolean = false, nameColor: Color = PremierUi.Ink, nameEmblem: Boolean = false) {
+private fun PremierVsPlayerCard(language: String, name: String, avatar: String?, gender: String?, visible: Boolean, rating: Int, winRate: Int, accent: Color, bot: Boolean = false, nameColor: Color = PremierUi.Ink, nameEmblem: Boolean = false, frameId: String? = null) {
     Surface(modifier = Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(23.dp)), shape = RoundedCornerShape(23.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, accent.copy(alpha = .22f))) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (bot) PremierBotAvatar(size = 70.dp, accent = accent)
@@ -1122,6 +1123,7 @@ private fun PremierVsPlayerCard(language: String, name: String, avatar: String?,
                 width = 84.dp,
                 height = 64.dp,
                 accent = accent,
+                frameId = frameId,
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -1153,22 +1155,22 @@ private fun PremierStatPill(text: String, accent: Color) {
 
 /** Word-game palette: a calm teal board, cream letter tiles, one soft colour per player. */
 private object PremierBoard {
-    val BoardTop = Color(0xFFF6F1E3)
-    val BoardBottom = Color(0xFFEFE7D2)
-    val Tile = Color(0xFFF7E3A6)
-    val TileEdge = Color(0xFFC9A560)
-    val TileInk = Color(0xFF4A3217)
+    val BoardTop: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1E2127) else Color(0xFFF6F1E3)
+    val BoardBottom: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF15171B) else Color(0xFFEFE7D2)
+    val Tile: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F2025) else Color(0xFFF7E3A6)
+    val TileEdge: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8903A) else Color(0xFFC9A560)
+    val TileInk: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFF2C75C) else Color(0xFF4A3217)
     val Gold = Color(0xFFE0A82E)
     val GoldEdge = Color(0xFFB07F1E)
-    val Ink = Color(0xFF243142)
-    val Muted = Color(0xFF6B7A8C)
+    val Ink: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else Color(0xFF243142)
+    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else Color(0xFF6B7A8C)
     val Mine = Color(0xFF3E9F4D)
-    val MineSoft = Color(0xFFE1F2E3)
+    val MineSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F3525) else Color(0xFFE1F2E3)
     val Rival = Color(0xFFD0514A)
-    val RivalSoft = Color(0xFFFBE4E2)
+    val RivalSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A2322) else Color(0xFFFBE4E2)
     val Danger = Color(0xFFD0514A)
-    val Card = Color(0xFFFFFFFF)
-    val CardBorder = Color(0xFFD2DBE5)
+    val Card: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else Color(0xFFFFFFFF)
+    val CardBorder: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else Color(0xFFD2DBE5)
 }
 
 /** Every turn is 15 seconds; a new round's first turn adds the preparation break on the server. */
@@ -1993,6 +1995,7 @@ private fun PremierArenaHeader(
             mirrored = false,
             modifier = Modifier.weight(1f).height(cardHeight),
             nameColor = SonHarfCosmetics.playerNameColor,
+            frameId = SonHarfCosmetics.profileFrameId,
         )
         PremierSymmetricPlayerCard(
             language = language,
@@ -2009,6 +2012,8 @@ private fun PremierArenaHeader(
             mirrored = true,
             modifier = Modifier.weight(1f).height(cardHeight),
             bot = room.isBot,
+            frameId = if (room.isBot) null else rememberPlayerFrame(opponent?.id),
+            mascot = if (room.isBot) null else rememberRivalMascot(opponent?.id),
         )
     }
 }
@@ -2031,6 +2036,8 @@ private fun PremierSymmetricPlayerCard(
     modifier: Modifier,
     bot: Boolean = false,
     nameColor: Color = PremierArenaSky.Ink,
+    frameId: String? = null,
+    mascot: WordSiegeMascotSkin? = null,
 ) {
     val shownScore by animateIntAsState(score, tween(450), label = "score-count")
     val glow = rememberInfiniteTransition(label = "card-glow")
@@ -2053,7 +2060,24 @@ private fun PremierSymmetricPlayerCard(
                 width = 40.dp,
                 height = 40.dp,
                 accent = accent,
+                frameId = frameId,
             )
+        }
+    }
+    // The rival's own mascot rides on their card; you see it whether or not you own a mascot.
+    val avatarWithMascot: @Composable () -> Unit = {
+        Box {
+            avatarView()
+            if (mascot != null) {
+                WordSiegeMascot(
+                    moveId = null,
+                    lastMoveMine = false,
+                    pendingCells = emptyList(),
+                    playerTurn = active,
+                    modifier = Modifier.align(if (mirrored) Alignment.TopStart else Alignment.TopEnd).offset(x = if (mirrored) (-12).dp else 12.dp, y = (-8).dp).size(28.dp),
+                    skin = mascot,
+                )
+            }
         }
     }
     val info: @Composable (Modifier) -> Unit = { infoModifier ->
@@ -2111,7 +2135,7 @@ private fun PremierSymmetricPlayerCard(
     ) {
         Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (!mirrored) {
-                avatarView()
+                avatarWithMascot()
                 Spacer(Modifier.width(7.dp))
                 info(Modifier.weight(1f))
                 scoreView()
@@ -2119,7 +2143,7 @@ private fun PremierSymmetricPlayerCard(
                 scoreView()
                 info(Modifier.weight(1f))
                 Spacer(Modifier.width(7.dp))
-                avatarView()
+                avatarWithMascot()
             }
         }
     }
@@ -2300,7 +2324,7 @@ private fun PremierPressureStrip(
                         }
                 )
                 if (active) {
-                    Surface(shape = CircleShape, color = Color.White, border = BorderStroke(2.dp, barColor), shadowElevation = 2.dp) {
+                    Surface(shape = CircleShape, color = PremierUi.Surface, border = BorderStroke(2.dp, barColor), shadowElevation = 2.dp) {
                         // A fixed square with the digits centred on both axes (no font padding).
                         Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
                             Text(
@@ -2417,7 +2441,11 @@ private fun PremierTargetCard(
                     }
                     .shadow(10.dp, shape, ambientColor = PremierBoard.GoldEdge, spotColor = PremierBoard.GoldEdge)
                     .clip(shape)
-                    .background(Brush.verticalGradient(listOf(Color(0xFFFFF8E1), Color(0xFFF7E4AA), Color(0xFFECCB78))))
+                    .background(
+                        // Black Theme: a glossy black tile with a gold rim, like the Black Theme board.
+                        if (SonHarfCosmetics.darkArenaTheme) Brush.verticalGradient(listOf(Color(0xFF3B3C43), Color(0xFF1F2025), Color(0xFF0E0F12)))
+                        else Brush.verticalGradient(listOf(Color(0xFFFFF8E1), Color(0xFFF7E4AA), Color(0xFFECCB78))),
+                    )
                     .border(1.5.dp, Brush.verticalGradient(listOf(Color(0xFFFBEFC8), Color(0xFFB8913F))), shape),
                 contentAlignment = Alignment.Center,
             ) {
@@ -2427,7 +2455,7 @@ private fun PremierTargetCard(
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
                         .fillMaxHeight(.42f)
-                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .55f), Color.Transparent))),
+                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = if (SonHarfCosmetics.darkArenaTheme) .16f else .55f), Color.Transparent))),
                 )
                 Text(
                     required,
@@ -2778,7 +2806,7 @@ private fun PremierChatSheet(
     }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color(0xFFFFFFFF)) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = PremierUi.Surface) {
         Column(
             Modifier.fillMaxWidth().imePadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -2798,7 +2826,7 @@ private fun PremierChatSheet(
             }
 
             if (messages.isEmpty()) {
-                Surface(shape = RoundedCornerShape(14.dp), color = Color.White) {
+                Surface(shape = RoundedCornerShape(14.dp), color = PremierUi.Ice) {
                     Text(
                         pt(language, "Henüz mesaj yok. İlk mesajı sen gönder.", "No messages yet. Send the first one."),
                         Modifier.fillMaxWidth().padding(14.dp),
@@ -2827,7 +2855,7 @@ private fun PremierChatSheet(
                                     bottomStart = if (mine) 14.dp else 4.dp,
                                     bottomEnd = if (mine) 4.dp else 14.dp,
                                 ),
-                                color = if (mine) PremierBoard.Mine else Color.White,
+                                color = if (mine) PremierBoard.Mine else PremierUi.Ice,
                                 shadowElevation = 1.dp,
                             ) {
                                 Text(
@@ -2868,8 +2896,8 @@ private fun PremierChatSheet(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PremierBoard.Mine,
                         unfocusedBorderColor = PremierBoard.TileEdge,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = PremierUi.Ice,
+                        unfocusedContainerColor = PremierUi.Ice,
                         focusedTextColor = PremierBoard.Ink,
                         unfocusedTextColor = PremierBoard.Ink,
                     ),

@@ -43,7 +43,6 @@ import com.sonharf.game.billing.PlayPurchaseVerification
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ShopItemDto
 import com.sonharf.game.data.SupabaseProvider
-import com.sonharf.game.data.equipShopItem
 import com.sonharf.game.data.getEquippedCosmetics
 import com.sonharf.game.data.getInventory
 import com.sonharf.game.data.getShopItems
@@ -79,13 +78,6 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Un
         }.onFailure { notice = sh("Çerçeveler yüklenemedi.", "Frames could not be loaded.") }
     }
 
-    suspend fun equip(id: String) {
-        val b = backend ?: return
-        runCatching { b.equipShopItem(id) }
-            .onSuccess { reload(); notice = sh("Çerçeve takıldı.", "Frame equipped.") }
-            .onFailure { notice = sh("Çerçeve takılamadı.", "Could not equip the frame.") }
-    }
-
     val manager = remember {
         BillingManager(
             context = context,
@@ -95,7 +87,10 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Un
                     scope.launch {
                         busy = productId
                         runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
-                            .onSuccess { reload(); equip(productId) }
+                            .onSuccess {
+                                reload()
+                                notice = sh("Çerçeve satın alındı! Profil > Çerçeve'den takabilirsin.", "Frame purchased! Wear it from Profile > Frame.")
+                            }
                             .onFailure { error ->
                                 notice = when {
                                     "google_play_not_configured" in error.message.orEmpty() ->
@@ -125,7 +120,8 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Un
         if (busy != null) return
         val b = backend ?: return
         when {
-            frame.id in owned -> scope.launch { busy = frame.id; equip(frame.id); busy = null }
+            // Owned frames are worn, changed and removed from the profile.
+            frame.id in owned -> notice = sh("Bu çerçeve sende var. Profil > Çerçeve'den takabilirsin.", "You own this frame. Wear it from Profile > Frame.")
             // The PRO frame comes with PRO membership; the button leads to PRO.
             frame == ProfileFrameCollection.proFrame -> onPro()
             frame.playProductId != null -> {
@@ -144,7 +140,10 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Un
             else -> scope.launch {
                 busy = frame.id
                 runCatching { b.purchaseShopItem(frame.id) }
-                    .onSuccess { reload(); equip(frame.id) }
+                    .onSuccess {
+                        reload()
+                        notice = sh("Çerçeve satın alındı! Profil > Çerçeve'den takabilirsin.", "Frame purchased! Wear it from Profile > Frame.")
+                    }
                     .onFailure {
                         notice = if ("insufficient_diamonds" in it.message.orEmpty()) sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
                             else sh("Satın alma tamamlanamadı.", "Purchase failed.")
@@ -228,12 +227,11 @@ private fun FrameCard(
             Text(sh(frame.nameTr, frame.nameEn), color = Hf.Text, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             Surface(
                 onClick = onClick,
-                enabled = !busy && !equipped,
+                enabled = !busy && !equipped && !owned,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp),
                 shape = Hf.PillShape,
                 color = when {
-                    equipped -> Hf.Green
-                    owned -> Hf.Ivory
+                    equipped || owned -> Hf.Green
                     premium -> Hf.Gold
                     else -> Hf.Ivory
                 },
@@ -241,12 +239,8 @@ private fun FrameCard(
                 Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     if (!owned && !premium) { HfCoin(16.dp); Spacer(Modifier.width(6.dp)) }
                     Text(
-                        when {
-                            equipped -> sh("Takılı", "Equipped")
-                            owned -> sh("Tak", "Equip")
-                            else -> price
-                        },
-                        color = if (equipped) Hf.OnAccent else Hf.Text,
+                        if (equipped || owned) sh("SATIN ALINDI", "PURCHASED") else price,
+                        color = if (equipped || owned) Hf.OnAccent else Hf.Text,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
                     )

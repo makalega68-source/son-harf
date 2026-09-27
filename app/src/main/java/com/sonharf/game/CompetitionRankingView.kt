@@ -98,7 +98,7 @@ internal fun CompetitionRankingView(onCup: () -> Unit, onRivals: () -> Unit) {
                         )
                         else -> rows.take(10).forEachIndexed { index, row ->
                             if (index > 0) HorizontalDivider(color = Hf.Gold.copy(alpha = .22f))
-                            RankingListRow(index + 1, row.name, row.score, row.avatarPath, mine = row.userId == myId)
+                            RankingListRow(index + 1, row.name, row.score, row.avatarPath, mine = row.userId == myId, userId = row.userId)
                         }
                     }
                 }
@@ -113,6 +113,7 @@ internal fun CompetitionRankingView(onCup: () -> Unit, onRivals: () -> Unit) {
                         score = if (myIndex >= 0) rows[myIndex].score else if (period == 1) profile?.rating else null,
                         avatarPath = profile?.avatarPath,
                         mine = true,
+                        userId = profile?.id,
                     )
                 }
             }
@@ -192,6 +193,7 @@ private fun RankingPodiumStep(place: Int, row: RankingRow?, pedestal: Dp, avatar
                     accent = ring,
                     visible = true,
                     showGenderBadge = false,
+                    frameId = rememberPlayerFrame(row.userId),
                 )
             } else {
                 Box(Modifier.size(avatar - 12.dp).background(Hf.Surface, CircleShape))
@@ -214,7 +216,7 @@ private fun RankingPodiumStep(place: Int, row: RankingRow?, pedestal: Dp, avatar
 }
 
 @Composable
-private fun RankingListRow(rank: Int?, name: String, score: Int?, avatarPath: String?, mine: Boolean) {
+private fun RankingListRow(rank: Int?, name: String, score: Int?, avatarPath: String?, mine: Boolean, userId: String? = null) {
     val chip = when (rank) {
         1 -> Hf.Gold
         2 -> RankSilver
@@ -234,6 +236,7 @@ private fun RankingListRow(rank: Int?, name: String, score: Int?, avatarPath: St
             accent = if (mine) Hf.Green else Hf.Gold,
             visible = true,
             showGenderBadge = false,
+            frameId = rememberPlayerFrame(userId),
         )
         Spacer(Modifier.width(12.dp))
         Text(

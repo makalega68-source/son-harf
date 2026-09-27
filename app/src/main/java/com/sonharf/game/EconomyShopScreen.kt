@@ -254,21 +254,13 @@ private fun EconomyCatalogScreen(
                             busy = item.id
                             val displayName = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
                             if (mine) {
-                                // Owned: put it on right here instead of sending the player away.
-                                runCatching { b.equipShopItem(item.id) }
-                                    .onSuccess {
-                                        SonHarfCosmetics.applyAndPersist(context, b.getEquippedCosmetics())
-                                        notice = sh("$displayName kullanılıyor.", "$displayName equipped.")
-                                        reload()
-                                    }
-                                    .onFailure { notice = sh("$displayName takılamadı. Profil > Koleksiyonum'dan deneyebilirsin.", "Could not equip $displayName. Try Profile > My Collection.") }
+                                // Owned items are managed (worn, changed, removed) only from the profile.
+                                notice = sh("$displayName sende var. Profil > Koleksiyon'dan kullanabilirsin.", "You own $displayName. Use it from Profile > Collection.")
                             } else {
                                 runCatching { b.purchaseShopItem(item.id) }
                                     .onSuccess {
-                                        // A purchase is worn straight away; any slot can go back to the free look in Profile.
-                                        runCatching { b.equipShopItem(item.id) }
-                                        runCatching { SonHarfCosmetics.applyAndPersist(context, b.getEquippedCosmetics()) }
-                                        notice = sh("$displayName satın alındı ve kullanılıyor!", "$displayName purchased and equipped!")
+                                        // Buying only adds it to the collection; the player wears it from the profile.
+                                        notice = sh("$displayName satın alındı! Profil > Koleksiyon'dan kullanabilirsin.", "$displayName purchased! Use it from Profile > Collection.")
                                         SonHarfSoundFx.bonus()
                                         reload()
                                     }
@@ -436,11 +428,11 @@ private fun VerifiedStoreProductCard(
 
     Surface(
         onClick = onAction,
-        enabled = !busy && !equipped && !lockedByPro,
+        enabled = !busy && !owned && !equipped && !lockedByPro,
         modifier = modifier.heightIn(min = 198.dp),
         shape = Hf.CardShape,
         color = Hf.Ivory,
-        border = BorderStroke(if (equipped) 3.dp else 1.5.dp, if (equipped) Hf.Green else Hf.Gold),
+        border = BorderStroke(1.5.dp, if (owned || equipped) Hf.Green else Hf.Gold),
         shadowElevation = 3.dp,
     ) {
         Box {
@@ -457,11 +449,7 @@ private fun VerifiedStoreProductCard(
                             Icon(Icons.Rounded.Check, null, tint = Hf.OnAccent, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                when {
-                                    equipped -> sh("AKTİF", "ACTIVE")
-                                    owned -> sh("SAHİPSİN", "OWNED")
-                                    else -> ""
-                                },
+                                sh("SATIN ALINDI", "PURCHASED"),
                                 color = Hf.OnAccent,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
@@ -482,11 +470,6 @@ private fun VerifiedStoreProductCard(
                             }
                         }
                     }
-                }
-            }
-            if (equipped) {
-                Surface(Modifier.align(Alignment.TopEnd).padding(8.dp).size(24.dp), shape = CircleShape, color = Hf.Green) {
-                    Icon(Icons.Rounded.Check, null, tint = Hf.OnAccent, modifier = Modifier.padding(4.dp))
                 }
             }
             if (lockedByPro) {

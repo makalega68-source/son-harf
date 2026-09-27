@@ -104,28 +104,20 @@ internal object ProfilePhotoRuntime {
     }
 }
 
-private data class GenderVisual(val symbol: String, val color: Color)
-
-private fun genderVisual(gender: String?): GenderVisual? = when (gender?.trim()?.lowercase()) {
-    "kadın", "kadin", "female", "woman" -> GenderVisual("♀", Color(0xFFFF4F9A))
-    "erkek", "male", "man" -> GenderVisual("♂", Color(0xFF238BFF))
+/** The painted gender icons: blue for men, pink for women; nothing for other/unset. */
+internal fun genderIconRes(gender: String?): Int? = when (gender?.trim()?.lowercase()) {
+    "kadın", "kadin", "female", "woman" -> R.drawable.gender_female
+    "erkek", "male", "man" -> R.drawable.gender_male
     else -> null
 }
 
 @Composable
 private fun FramelessGenderSymbol(gender: String?, size: Dp) {
-    val visual = genderVisual(gender) ?: return
-    Text(
-        text = visual.symbol,
-        color = visual.color,
-        fontWeight = FontWeight.Black,
-        fontSize = (size.value * .31f).coerceAtLeast(13f).sp,
-        style = TextStyle(
-            shadow = Shadow(
-                color = visual.color.copy(alpha = .28f),
-                blurRadius = (size.value * .12f).coerceAtLeast(3f),
-            )
-        ),
+    val res = genderIconRes(gender) ?: return
+    Image(
+        painter = androidx.compose.ui.res.painterResource(res),
+        contentDescription = null,
+        modifier = Modifier.size((size.value * .30f).coerceAtLeast(14f).dp),
     )
 }
 
@@ -225,7 +217,9 @@ internal fun ProfilePhotoAvatarWithGender(
     accent: Color = SonHarfCyan,
     visible: Boolean = true,
     showGenderBadge: Boolean = true,
+    frameId: String? = null,
 ) {
+    val framed = ProfileFrameCollection.find(frameId) != null
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(avatarPath, visible) {
         bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
@@ -242,7 +236,9 @@ internal fun ProfilePhotoAvatarWithGender(
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
-        if (showGenderBadge) {
+        // The player's frame is drawn around the photo wherever the avatar appears.
+        if (framed) ProfileFrameArt(frameId, size)
+        if (showGenderBadge && !framed) {
             Box(Modifier.align(Alignment.BottomEnd)) {
                 FramelessGenderSymbol(gender, size)
             }
@@ -259,7 +255,9 @@ internal fun ProfilePhotoAvatarRectWithGender(
     height: Dp,
     accent: Color = SonHarfCyan,
     showGenderBadge: Boolean = true,
+    frameId: String? = null,
 ) {
+    val framed = ProfileFrameCollection.find(frameId) != null
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(avatarPath) {
         bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
@@ -295,7 +293,8 @@ internal fun ProfilePhotoAvatarRectWithGender(
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
-        if (showGenderBadge) {
+        if (framed) ProfileFrameArt(frameId, diameter)
+        if (showGenderBadge && !framed) {
             Box(Modifier.align(Alignment.BottomEnd)) {
                 FramelessGenderSymbol(gender, diameter)
             }

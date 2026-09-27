@@ -285,6 +285,31 @@ internal object WordSiegePracticeEngine {
         return ordered[choiceIndex]
     }
 
+    /**
+     * Mascot hint for the player: the strongest move their own rack can play right now (word points
+     * plus captured territory), with exact cells. Null when the rack has no legal move.
+     */
+    fun hintMove(state: WordSiegePracticeState): WordSiegePracticeMove? {
+        if (state.currentOwner != 1 || state.status != "playing") return null
+        val rack = state.playerRack
+        var best: WordSiegePracticeMove? = null
+        var bestValue = Int.MIN_VALUE
+        SharedDictionaryService.practiceCandidates(state.language, rack).forEach { word ->
+            listOf(true, false).forEach { horizontal ->
+                (0 until WordSiegeBoardSpec.CellCount).forEach startLoop@{ start ->
+                    val placements = placementsForWord(state, rack, word, start, horizontal) ?: return@startLoop
+                    val move = runCatching { applyMove(state, 1, placements) }.getOrNull()?.second ?: return@startLoop
+                    val value = move.wordScore + WordSiegeFinalRules.cubeTransfer(move.capturedCells)
+                    if (value > bestValue) {
+                        best = move
+                        bestValue = value
+                    }
+                }
+            }
+        }
+        return best
+    }
+
     internal fun botTargetPercentile(
         state: WordSiegePracticeState,
         playerRating: Int,
@@ -377,6 +402,46 @@ internal object WordSiegePracticeEngine {
             }
         }
         return placements.takeIf { it.isNotEmpty() }
+    }
+
+    /**
+     * PRO move preview: the points the pending tiles would score (every word they form plus the
+     * star bonus), computed with the same rules as a real move but without a dictionary check or
+     * any change to the game. Null when the tiles do not yet form a straight, gap-free word.
+     */
+    fun previewScore(board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>): Int? {
+        if (placements.isEmpty()) return null
+        if (placements.keys.any { !WordSiegeBoardSpec.isValidIndex(it) || board.getOrNull(it)?.letter != null }) return null
+        if (placements.values.any { it !in rack.indices }) return null
+        val horizontal = WordSiegeFinalRules.detectOrientation(board, placements.keys) == WordSiegeOrientation.HORIZONTAL
+        val indices = placements.keys.sorted()
+        val anchor = indices.first()
+        if (indices.size > 1) {
+            if (horizontal && indices.any { WordSiegeBoardSpec.row(it) != WordSiegeBoardSpec.row(anchor) }) return null
+            if (!horizontal && indices.any { WordSiegeBoardSpec.column(it) != WordSiegeBoardSpec.column(anchor) }) return null
+        }
+        fun letterAt(index: Int): Char? = placements[index]?.let(rack::getOrNull) ?: board[index].letter?.firstOrNull()
+        val mainCells = collectCells(anchor, if (horizontal) WordSiegeBoardSpec.HorizontalDelta else WordSiegeBoardSpec.VerticalDelta, ::letterAt)
+        if (!indices.all(mainCells::contains)) return null
+        var score = 0
+        var words = 0
+        if (mainCells.size > 1) {
+            score += scoreWord(board, placements, rack, mainCells)
+            words++
+        }
+        indices.forEach { index ->
+            val cross = collectCells(index, if (horizontal) WordSiegeBoardSpec.VerticalDelta else WordSiegeBoardSpec.HorizontalDelta, ::letterAt)
+            if (cross.size > 1) {
+                score += scoreWord(board, placements, rack, cross)
+                words++
+            }
+        }
+        if (words == 0) return null
+        val starBonus = placements.keys.count { index ->
+            val cell = board[index]
+            cell.letter == null && !cell.bonusUsed && cell.bonus == WordSiegeBoardSpec.StarBonus
+        } * WordSiegeBoardSpec.StarBonusPoints
+        return score + starBonus
     }
 
     private fun scoreWord(

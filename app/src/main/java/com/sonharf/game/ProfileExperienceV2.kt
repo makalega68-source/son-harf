@@ -187,17 +187,11 @@ fun ProfileExperienceV2Screen() {
                         val female = gender.trim().lowercase() in setOf("kadın", "kadin", "female", "woman")
                         val male = gender.trim().lowercase() in setOf("erkek", "male", "man")
                         if (female || male) {
-                            Surface(
-                                modifier = Modifier.align(Alignment.BottomStart).size(42.dp),
-                                shape = CircleShape,
-                                color = if (female) Color(0xFFFF76A8) else Color(0xFF439EF2),
-                                border = BorderStroke(2.dp, Color.White),
-                                shadowElevation = 3.dp,
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(if (female) "♀" else "♂", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                                }
-                            }
+                            androidx.compose.foundation.Image(
+                                painter = androidx.compose.ui.res.painterResource(if (female) R.drawable.gender_female else R.drawable.gender_male),
+                                contentDescription = if (female) sh("Kadın", "Female") else sh("Erkek", "Male"),
+                                modifier = Modifier.align(Alignment.BottomStart).size(38.dp),
+                            )
                         }
                     }
                 }

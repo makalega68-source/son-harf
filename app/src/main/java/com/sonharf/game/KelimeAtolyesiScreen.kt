@@ -375,9 +375,8 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         hintText = if (word == null) {
             sh("Harflerini bir daha incele, bir kelime saklanıyor!", "Look at your letters again, a word is hiding!")
         } else {
-            val shown = (word.length / 2).coerceAtLeast(1)
-            sh("Şunu dene: ${MascotHints.pattern(word, shown, language)} (${word.length} harf)",
-                "Try this: ${MascotHints.pattern(word, shown, language)} (${word.length} letters)")
+            // The clear answer: the whole word that completes an open task.
+            sh("Cevap: ${MascotHints.full(word, language)}", "Answer: ${MascotHints.full(word, language)}")
         }
     }
     val hintScope = rememberCoroutineScope()

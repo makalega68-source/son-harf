@@ -43,6 +43,12 @@ internal object MascotHints {
         return from(dictionary).filter { it.length <= 6 }.ifEmpty { from(dictionary) }.randomOrNull(random)
     }
 
+    /** The whole word in capitals: hints give the clear answer, not a puzzle. */
+    internal fun full(word: String, language: String): String {
+        val locale = if (SharedDictionaryService.canonicalLanguage(language) == "en") Locale.ENGLISH else Locale.forLanguageTag("tr-TR")
+        return word.uppercase(locale)
+    }
+
     /** "KA _ _ _": the first letters and one blank per hidden letter. */
     internal fun pattern(word: String, shown: Int, language: String): String {
         val locale = if (SharedDictionaryService.canonicalLanguage(language) == "en") Locale.ENGLISH else Locale.forLanguageTag("tr-TR")
@@ -55,17 +61,17 @@ internal object MascotHints {
         val lang = SharedDictionaryService.canonicalLanguage(language)
         val word = pickWord(prefix, common(context, lang), SharedDictionaryService.snapshot(lang).orEmpty(), exclude)
             ?: return sh("Bu harfle zor bir kelime… kısa ve bildik bir şey dene!", "A tricky letter… try something short and familiar!")
-        val shown = (prefix.length + 1).coerceAtMost(word.length - 1)
-        val hint = pattern(word, shown, lang)
-        return sh("Şuna ne dersin: $hint (${word.length} harf)", "How about: $hint (${word.length} letters)")
+        // A hint is a clear answer: the whole word, ready to type.
+        val shown = full(word, lang)
+        return sh("Cevap: $shown — hemen yaz!", "Answer: $shown — type it now!")
     }
 
     /** A hint built from a player's letters (practice, solo): the start of a word they can make. */
     fun fromLetters(language: String, candidates: List<String>, exclude: Set<String> = emptySet()): String {
         val word = candidates.filter { it !in exclude }.sortedByDescending { it.length }.take(6).randomOrNull()
             ?: return sh("Harflerini karıştır, gözden kaçan bir kelime çıkabilir!", "Shuffle your letters, a word may pop out!")
-        val hint = pattern(word, (word.length / 2).coerceAtLeast(1), language)
-        return sh("Harflerinle bunu kurabilirsin: $hint", "You can build this with your letters: $hint")
+        val shown = full(word, language)
+        return sh("Cevap: $shown", "Answer: $shown")
     }
 
     /** A hint from the player's rack (Kuşatma practice): half of an everyday word the rack can make. */

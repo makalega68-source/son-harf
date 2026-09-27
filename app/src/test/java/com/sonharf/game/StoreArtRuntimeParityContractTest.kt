@@ -55,7 +55,8 @@ class StoreArtRuntimeParityContractTest {
         val skin = source("KeyboardSkin.kt")
         // Panel behind the real buttons, sliced so crown and corners keep their shape.
         assertTrue(skin.contains("internal fun Modifier.keyboardTray(p: WordKeyboardPalette, shape: Shape, crownBand: Dp = 30.dp)"))
-        assertTrue(skin.contains("val top = (ih * .29f).toInt()"))
+        assertTrue(skin.contains("val top = (ih * p.panelTop).toInt()"))
+        assertTrue(skin.contains("placeable.place(l, t)"))
         assertTrue(skin.contains("colorFilter = if (pressed) PressedBrightness else null"))
         assertTrue(skin.contains("internal fun KeyboardSkinPreview(themeId: String"))
         assertTrue(source("StoreProductPreview.kt").contains("KeyboardSkinPreview(item.id"))

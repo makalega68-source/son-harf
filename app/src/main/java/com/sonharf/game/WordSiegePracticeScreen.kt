@@ -33,6 +33,7 @@ import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SharedDictionaryService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private data class PracticeBotProfile(val name: String, val gender: String)
@@ -105,6 +106,10 @@ private fun WordSiegePracticeContent(
     // Mascot hints against the practice bot: three per match.
     var siegeHintsLeft by remember { mutableIntStateOf(MascotHints.HINTS_PER_MATCH) }
     var siegeHint by remember { mutableStateOf<Pair<Int, String>?>(null) }
+    // The hint move's cells: the mascot flies there; the tiles are already placed for the player.
+    var siegeHintCells by remember { mutableStateOf<List<Int>>(emptyList()) }
+    var hintSearching by remember { mutableStateOf(false) }
+    val hintScope = androidx.compose.runtime.rememberCoroutineScope()
     var boardViewportMode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     var actionVfxEvent by remember { mutableIntStateOf(0) }
     // The result dialog waits a moment so the mascot's celebration on the board is seen first.
@@ -511,6 +516,7 @@ private fun WordSiegePracticeContent(
                         board = state.board,
                         rack = state.playerRack,
                         hint = siegeHint,
+                        hintCells = siegeHintCells,
                         placements = placements,
                         myOwner = 1,
                         enabled = canPlayerAct,
@@ -653,9 +659,33 @@ private fun WordSiegePracticeContent(
                             exchangeSelection = emptySet(); showExchange = true
                         }
                         WordSiegeCompactAction(sh("İPUCU $siegeHintsLeft", "HINT $siegeHintsLeft"), Icons.Rounded.Lightbulb,
-                            canPlayerAct && siegeHintsLeft > 0, Modifier.weight(1f)) {
+                            canPlayerAct && siegeHintsLeft > 0 && !hintSearching, Modifier.weight(1f)) {
+                            // A hint is the clear answer: the best move the rack can play, placed on
+                            // the board, with the mascot flying to it and saying the word.
                             siegeHintsLeft -= 1
-                            siegeHint = ((siegeHint?.first ?: 0) + 1) to MascotHints.fromRack(context, state.language, state.playerRack)
+                            hintSearching = true
+                            val snapshot = state
+                            val key = (siegeHint?.first ?: 0) + 1
+                            hintScope.launch {
+                                val move = withContext(Dispatchers.Default) { runCatching { WordSiegePracticeEngine.hintMove(snapshot) }.getOrNull() }
+                                hintSearching = false
+                                if (move != null && state === snapshot) {
+                                    placements = move.placements
+                                    selectedRackIndex = null
+                                    siegeHintCells = move.placements.keys.sorted()
+                                    val word = MascotHints.full(move.primaryWord, state.language)
+                                    siegeHint = key to sh(
+                                        "Tam buraya: $word (+${move.wordScore} puan). Taşları yerleştirdim, onayla!",
+                                        "Right here: $word (+${move.wordScore} points). Tiles placed, confirm it!",
+                                    )
+                                } else if (state === snapshot) {
+                                    siegeHintCells = emptyList()
+                                    siegeHint = key to sh(
+                                        "Bu harflerle oynanacak kelime yok. DEĞİŞTİR ile harflerini yenile.",
+                                        "No playable word with these letters. Use EXCHANGE for new ones.",
+                                    )
+                                }
+                            }
                         }
                     }
                     Row(
@@ -682,7 +712,11 @@ private fun WordSiegePracticeContent(
                             ),
                             contentPadding = PaddingValues(horizontal = 3.dp),
                         ) {
-                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                            // PRO sees what the move is worth before confirming it.
+                            val preview = if (playerProfile?.isVip == true && placements.isNotEmpty()) {
+                                remember(placements, state.board, state.playerRack) { WordSiegePracticeEngine.previewScore(state.board, state.playerRack, placements) }
+                            } else null
+                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE") + (preview?.let { " • +$it" } ?: ""), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
                         }
                         WordSiegePracticeBagButton(
                             bag = state.bag,
@@ -1062,5 +1096,7 @@ private fun WordSiegePracticeScoreCard(
         scoreArrivalTick = scoreArrivalTick,
         scoreLossTick = scoreLossTick,
         onScoreCenterChanged = onScoreCenterChanged,
+        // Practice is you against a bot: your own frame on your card.
+        frameId = if (isBot) null else SonHarfCosmetics.profileFrameId,
     )
 }

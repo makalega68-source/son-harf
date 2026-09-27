@@ -44,6 +44,7 @@ import com.sonharf.game.billing.PlayPurchaseVerification
 import com.sonharf.game.billing.ProductCatalog
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.launch
 
 /**
@@ -76,7 +77,50 @@ internal object WordSiegeMascotOwnership {
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putStringSet(KEY_OWNED, next.map { it.productId }.toSet())
             .apply()
+        // Keep the server's copy of "the mascot I bring" in step with what this device shows.
+        val pick = WordSiegeMascotBond(context).skinChoice?.takeIf { it in next } ?: next.minByOrNull { it.ordinal }
+        PlayerMascots.publish(pick)
     }
+}
+
+/**
+ * The mascot a player brings to games. Your pick is saved on the server (only an owned mascot is
+ * accepted) so opponents can see it; seeing a rival's mascot needs no mascot of your own.
+ */
+internal object PlayerMascots {
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    suspend fun publish(skin: WordSiegeMascotSkin?) {
+        if (!SupabaseProvider.configured) return
+        runCatching {
+            SupabaseProvider.client.postgrest.rpc(
+                "set_my_mascot_v1",
+                kotlinx.serialization.json.buildJsonObject { put("p_key", skin?.productId) },
+            )
+        }
+    }
+
+    suspend fun of(userId: String): WordSiegeMascotSkin? {
+        cache[userId]?.let { return WordSiegeMascotSkin.fromProductId(it) }
+        if (!SupabaseProvider.configured) return null
+        val key = runCatching {
+            SupabaseProvider.client.postgrest.rpc(
+                "get_player_mascot_v1",
+                kotlinx.serialization.json.buildJsonObject { put("p_user_id", userId) },
+            ).decodeAs<String?>()
+        }.getOrNull()
+        cache[userId] = key.orEmpty()
+        return WordSiegeMascotSkin.fromProductId(key)
+    }
+}
+
+/** The mascot [userId] brings to the game, or null (bots and players without one). */
+@androidx.compose.runtime.Composable
+internal fun rememberRivalMascot(userId: String?): WordSiegeMascotSkin? {
+    if (userId.isNullOrBlank()) return null
+    var skin by androidx.compose.runtime.remember(userId) { androidx.compose.runtime.mutableStateOf<WordSiegeMascotSkin?>(null) }
+    androidx.compose.runtime.LaunchedEffect(userId) { skin = PlayerMascots.of(userId) }
+    return skin
 }
 
 private fun WordSiegeMascotSkin.pitch(): String = when (this) {
@@ -122,9 +166,7 @@ internal fun MascotStoreSection() {
                         runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
                             .onSuccess {
                                 WordSiegeMascotOwnership.refresh(context)
-                                bond.skinChoice = skin
-                                chosen = skin
-                                notice = sh("${skin.titleTr} artık senin! Yanına uçuyor ✨", "${skin.titleEn} is yours! On its way ✨")
+                                notice = sh("${skin.titleTr} artık senin! Profil > Obi'den seçebilirsin ✨", "${skin.titleEn} is yours! Pick it in Profile > Obi ✨")
                             }
                             .onFailure { error ->
                                 notice = when {
@@ -289,18 +331,17 @@ private fun MascotStoreCard(
                 )
                 Spacer(Modifier.height(8.dp))
                 when {
+                    // Bought mascots are chosen in the profile; the store only says it is yours.
                     owned -> Button(
-                        onClick = onUse,
-                        enabled = !active,
+                        onClick = {},
+                        enabled = false,
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Hf.Gold,
-                            contentColor = Hf.Ink,
-                            disabledContainerColor = Hf.Disabled,
-                            disabledContentColor = Hf.Text,
+                            disabledContainerColor = Hf.Green,
+                            disabledContentColor = Hf.OnAccent,
                         ),
                     ) {
-                        Text(if (active) sh("SEÇİLİ", "SELECTED") else sh("SAHİPSİN • SEÇ", "OWNED • USE"), fontWeight = FontWeight.Black, fontSize = 12.sp)
+                        Text(sh("SATIN ALINDI", "PURCHASED"), fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }
                     offer != null -> Button(
                         onClick = onBuy,

@@ -253,6 +253,8 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
             }
         }
 
+        if (category == null || category == "mascot_hat") OwnedMascotsPicker()
+
         if (category != "game_theme") {
             // Every slot the player can dress up also offers the free standard look to go back to.
             val defaultKinds = if (category == null) ResettableKinds.filter { kind -> styles.any { it.kind == kind } } else ResettableKinds.filter { kind -> inCategory(kind) && (kind == category || styles.any { it.kind == kind }) }
@@ -342,6 +344,52 @@ private fun ProfileThemeCard(
             Text(subtitle, color = Hf.TextMuted, fontSize = 12.sp)
             Spacer(Modifier.weight(1f))
             ProfileUseButton(active = active, enabled = enabled, onClick = onClick)
+        }
+    }
+}
+
+/** Bought mascots are chosen here (the store only sells them): the pick follows the player everywhere. */
+@Composable
+private fun OwnedMascotsPicker() {
+    val owned = WordSiegeMascotOwnership.owned.sortedBy { it.ordinal }
+    if (owned.isEmpty()) return
+    val context = LocalContext.current
+    val bond = remember { WordSiegeMascotBond(context) }
+    var chosen by remember { mutableStateOf(bond.skinChoice?.takeIf { it in owned } ?: owned.first()) }
+    val scope = rememberCoroutineScope()
+    Text(sh("MASKOTLARIM", "MY MASCOTS"), color = Hf.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+    owned.chunked(2).forEach { row ->
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            row.forEach { skin ->
+                val active = chosen == skin
+                Surface(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    shape = Hf.CardShape,
+                    color = Hf.Ground,
+                    border = BorderStroke(if (active) 2.dp else 1.5.dp, if (active) Hf.Green else Hf.Gold.copy(alpha = .75f)),
+                ) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(Modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.Center) {
+                            WordSiegeMascot(
+                                moveId = null,
+                                lastMoveMine = false,
+                                pendingCells = emptyList(),
+                                playerTurn = false,
+                                modifier = Modifier.size(106.dp),
+                                skin = skin,
+                            )
+                        }
+                        Text(sh(skin.titleTr, skin.titleEn), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Spacer(Modifier.weight(1f))
+                        ProfileUseButton(active = active, enabled = true) {
+                            bond.skinChoice = skin
+                            chosen = skin
+                            scope.launch { PlayerMascots.publish(skin) }
+                        }
+                    }
+                }
+            }
+            if (row.size == 1) Spacer(Modifier.weight(1f))
         }
     }
 }

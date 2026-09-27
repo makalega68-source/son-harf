@@ -41,23 +41,26 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
-/** Match-only presentation. Never changes the selected cosmetic theme or game state. */
+/**
+ * Match-only presentation. Never changes the selected cosmetic theme or game state; with the
+ * Black Theme the whole siege screen (page, cards, buttons, bars) turns graphite to match its board.
+ */
 internal object WordSiegeGameUi {
-    val Background = Color(0xFFE6ECF2)
-    val Surface = Color(0xFFFFFFFF)
-    val SurfaceSoft = Color(0xFFF3F6F9)
-    val Text = Color(0xFF243142)
-    val Muted = Color(0xFF6B7A8C)
-    val Border = Color(0xFFD2DBE5)
+    val Background: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else Color(0xFFE6ECF2)
+    val Surface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else Color(0xFFFFFFFF)
+    val SurfaceSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF232A33) else Color(0xFFF3F6F9)
+    val Text: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else Color(0xFF243142)
+    val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else Color(0xFF6B7A8C)
+    val Border: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else Color(0xFFD2DBE5)
     val Blue = Color(0xFF3E9F4D)
     val Red = Color(0xFFD0514A)
     val Gold = Color(0xFFE0A82E)
-    val Navy = Color(0xFF2C3E55)
-    val NavySoft = Color(0xFF3A4F6B)
-    val PremiumSurface = Color(0xFFFFF3D6)
+    val Navy: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8C9DE) else Color(0xFF2C3E55)
+    val NavySoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF8FA3BD) else Color(0xFF3A4F6B)
+    val PremiumSurface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF3A3020) else Color(0xFFFFF3D6)
     val PremiumBorder = Color(0xFFE0A82E)
-    val DisabledBackground = Color(0xFFE3E9EF)
-    val DisabledContent = Color(0xFF9AA7B5)
+    val DisabledBackground: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF262C35) else Color(0xFFE3E9EF)
+    val DisabledContent: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF6B7684) else Color(0xFF9AA7B5)
 }
 
 @Composable
@@ -95,6 +98,7 @@ internal fun WordSiegeScoreCard(
     scoreArrivalTick: Int = 0,
     scoreLossTick: Int = 0,
     onScoreCenterChanged: (Offset) -> Unit = {},
+    frameId: String? = null,
 ) {
     val scoreScale = remember { Animatable(1f) }
     val scoreGlow = remember { Animatable(0f) }
@@ -145,6 +149,7 @@ internal fun WordSiegeScoreCard(
                     ProfilePhotoAvatarWithGender(
                         avatarPath = avatarPath, gender = gender, name = name,
                         size = 52.dp, accent = accent, visible = avatarVisible,
+                        frameId = frameId,
                     )
                     if (leading) WordSiegeLeaderBadge(Modifier.align(Alignment.TopCenter).offset(y = (-16).dp).rotate(-12f))
                 }

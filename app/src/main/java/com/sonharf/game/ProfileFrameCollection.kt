@@ -12,6 +12,14 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.json.put
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -117,4 +125,37 @@ private fun ProFramePlate(size: Dp) {
             maxLines = 1,
         )
     }
+}
+
+@kotlinx.serialization.Serializable
+private data class PublicFrameDto(@kotlinx.serialization.SerialName("profile_frame_id") val profileFrameId: String? = null)
+
+/** Other players' equipped frames (server `get_public_profile_frame_v1`), fetched once per player. */
+internal object PublicFrames {
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    suspend fun get(userId: String): String? {
+        cache[userId]?.let { return it.ifBlank { null } }
+        val frame = runCatching {
+            com.sonharf.game.data.SupabaseProvider.client.postgrest.rpc(
+                "get_public_profile_frame_v1",
+                kotlinx.serialization.json.buildJsonObject { put("p_user_id", userId) },
+            ).decodeList<PublicFrameDto>().firstOrNull()?.profileFrameId
+        }.getOrNull()
+        cache[userId] = frame.orEmpty()
+        return frame
+    }
+}
+
+/** The frame a player wears: yours instantly from the local cosmetics, others' from the server. */
+@Composable
+internal fun rememberPlayerFrame(userId: String?): String? {
+    if (userId.isNullOrBlank()) return null
+    val me = remember { runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull() }
+    if (userId == me) return SonHarfCosmetics.profileFrameId
+    var frame by remember(userId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(userId) {
+        if (com.sonharf.game.data.SupabaseProvider.configured) frame = PublicFrames.get(userId)
+    }
+    return frame
 }

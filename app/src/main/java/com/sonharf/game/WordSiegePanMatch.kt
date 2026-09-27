@@ -308,6 +308,7 @@ internal fun WordSiegePanMatch(
                 scoreArrivalTick = rivalScoreArrivalTick,
                 scoreLossTick = rivalScoreLossTick,
                 onScoreCenterChanged = { rivalScoreTargetInWindow = it },
+                mascot = rememberRivalMascot(opponent?.id),
             )
         }
 
@@ -463,8 +464,12 @@ internal fun WordSiegePanMatch(
                     ),
                     contentPadding = PaddingValues(horizontal = 3.dp),
                 ) {
+                    // PRO sees what the move is worth before confirming it.
+                    val preview = if (mine?.isVip == true && placements.isNotEmpty()) {
+                        remember(placements, game.board, rack) { WordSiegePracticeEngine.previewScore(game.board, rack, placements) }
+                    } else null
                     if (busy) CircularProgressIndicator(Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
-                    else Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                    else Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE") + (preview?.let { " • +$it" } ?: ""), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1)
                 }
                 WordSiegeOnlineBagButton(
                     game = game,
@@ -759,7 +764,7 @@ private fun PanSiegeBoard(
                 onClick = { toggleViewport(WordSiegeBoardSpec.CenterIndex) },
                 modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
                 shape = CircleShape,
-                containerColor = Color(0xFFFFFFFF).copy(alpha = .95f),
+                containerColor = WordSiegeGameUi.Surface.copy(alpha = .95f),
                 contentColor = Color(0xFF2C3E55),
             ) {
                 Icon(Icons.Rounded.CenterFocusStrong, sh("Merkeze dön", "Center board"), Modifier.size(19.dp))
@@ -769,7 +774,7 @@ private fun PanSiegeBoard(
                 onClick = onChat,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp),
                 shape = CircleShape,
-                containerColor = Color(0xFFFFFFFF).copy(alpha = .95f),
+                containerColor = WordSiegeGameUi.Surface.copy(alpha = .95f),
                 contentColor = Color(0xFF2C3E55),
             ) {
                 Icon(Icons.Rounded.Chat, sh("Oyun içi sohbet", "In-game chat"), Modifier.size(20.dp))
@@ -1032,18 +1037,33 @@ private fun PanSiegePlayerCard(
     scoreArrivalTick: Int = 0,
     scoreLossTick: Int = 0,
     onScoreCenterChanged: (Offset) -> Unit = {},
+    mascot: WordSiegeMascotSkin? = null,
 ) {
+    // The rival's mascot perches on their card; no mascot of your own is needed to see it.
+    Box(modifier) {
     WordSiegeScoreCard(
         name = profile?.displayName ?: fallbackName,
         score = score, wordPoints = wordPoints, territoryPoints = territoryPoints,
         area = areaCount, accent = accent, active = active, leading = leading,
         avatarPath = profile?.avatarPath, gender = profile?.gender,
         avatarVisible = profile?.avatarVisibility != "hidden", isBot = false,
-        modifier = modifier,
+        modifier = Modifier.fillMaxWidth(),
         scoreArrivalTick = scoreArrivalTick,
         scoreLossTick = scoreLossTick,
         onScoreCenterChanged = onScoreCenterChanged,
+        frameId = rememberPlayerFrame(profile?.id),
     )
+    if (mascot != null) {
+        WordSiegeMascot(
+            moveId = null,
+            lastMoveMine = false,
+            pendingCells = emptyList(),
+            playerTurn = active,
+            modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-18).dp).size(36.dp),
+            skin = mascot,
+        )
+    }
+    }
 }
 
 @Composable

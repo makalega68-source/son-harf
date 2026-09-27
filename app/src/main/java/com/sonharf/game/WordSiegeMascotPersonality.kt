@@ -61,7 +61,7 @@ internal class WordSiegeMascotPersonality(
                     "Merhaba %s! Ben Pinki, kurdelemi senin için taktım 🎀" to "Hi %s! I'm Pinky, I wore my bow just for you 🎀",
                 ),
                 WordSiegeMascotTopic.GREET to listOf(
-                    "Geldin! Kalbim pıt pıt 💓" to "You're here! My heart goes pitter-patter 💓",
+                    "Geldin! Seni bekliyordum 💓" to "You're here! I was waiting for you 💓",
                     "Seni özlemiştim tatlım 💖" to "I missed you, sweetie 💖",
                     "Bugün de birlikte parlayalım ✨" to "Let's shine together today too ✨",
                 ),
