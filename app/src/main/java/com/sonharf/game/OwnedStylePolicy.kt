@@ -9,7 +9,7 @@ import com.sonharf.game.data.ShopItemDto
  */
 internal fun ShopItemDto.isSupportedOwnedStyle(): Boolean = when (kind) {
     "game_theme" -> id in setOf("theme_black", "theme_dark_arena", WALNUT_IVORY_THEME_ID)
-    "profile_frame" -> false
+    "profile_frame" -> id in ProfileFrameCollection.allIds
     "name_style" -> id in setOf("name_cyan", "name_sapphire", "name_amethyst", "name_aurelia")
     "keyboard_theme" -> id in setOf(
         "keyboard_crystal",

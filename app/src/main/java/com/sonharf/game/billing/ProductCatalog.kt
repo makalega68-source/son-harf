@@ -41,7 +41,16 @@ object ProductCatalog {
         MASCOT_ASTRONOT,
     )
 
-    /** Legacy identifiers retained only so old receipts can be recognized safely. Frames are not sold or rendered. */
+    // Premium profile frames: permanent one-time products (price set in Play Console). The shop
+    // item id equals the product id; simple frames are sold for Son Coin instead.
+    const val PROFILE_FRAME_ROYAL_GOLD = "profile_frame_royal_gold"
+    const val PROFILE_FRAME_GOLD_CREST = "profile_frame_gold_crest"
+    const val PROFILE_FRAME_EMERALD = "profile_frame_emerald"
+    const val PROFILE_FRAME_AMETHYST = "profile_frame_amethyst"
+    const val PROFILE_FRAME_SAKURA = "profile_frame_pink_blossom"
+    const val PROFILE_FRAME_SAPPHIRE = "profile_frame_blue_royal"
+
+    /** Legacy identifiers retained only so old receipts can be recognized safely. These rings are now Son Coin items. */
     @Deprecated("Profile frames were retired from the game")
     const val PROFILE_FRAME_OCEAN = "profile_frame_ocean"
     @Deprecated("Profile frames were retired from the game")

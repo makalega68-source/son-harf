@@ -99,9 +99,10 @@ internal fun MainPlayerProfileScreen(
     var collectionTab by rememberSaveable { mutableIntStateOf(1) }
     val collectionTabs = listOf(
         "mascot_hat" to sh("Obi", "Obi"),
-        "game_theme" to sh("Temalar", "Themes"),
-        "keyboard_theme" to sh("Klavyeler", "Keyboards"),
-        "name_style" to sh("İsim rengi", "Name color"),
+        "profile_frame" to sh("Çerçeve", "Frame"),
+        "game_theme" to sh("Tema", "Theme"),
+        "keyboard_theme" to sh("Klavye", "Keys"),
+        "name_style" to sh("İsim", "Name"),
     )
 
     Column(

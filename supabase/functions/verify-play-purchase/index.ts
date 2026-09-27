@@ -8,16 +8,21 @@ const mascotProducts = [
   "mascot_klasik", "mascot_pembe", "mascot_mavi_seytancik", "mascot_kirmizi_seytancik",
   "mascot_tekir", "mascot_robot", "mascot_astronot",
 ];
-const premiumProducts = new Set(["series_game", "letter_table", "score_calculator", "pro_lifetime", ...mascotProducts]);
+// Premium profile frames: permanent one-time products; the grant puts the frame in the inventory.
+const frameProducts = [
+  "profile_frame_royal_gold", "profile_frame_gold_crest", "profile_frame_emerald", "profile_frame_amethyst",
+  "profile_frame_pink_blossom", "profile_frame_blue_royal",
+];
+const premiumProducts = new Set(["series_game", "letter_table", "score_calculator", "pro_lifetime", ...mascotProducts, ...frameProducts]);
 const oneTimeProducts = new Set([
   "series_game", "letter_table", "score_calculator", "pro_lifetime",
   ...mascotProducts,
+  ...frameProducts,
   "coins_500", "coins_1500", "coins_3500", "coins_8000",
   // Historical IDs remain recognizable so the server can return an explicit
   // product_disabled response instead of silently treating an old receipt as unknown.
   "starter_style_pack", "premium_style_pack", "season_pack", "vip_welcome_pack", "theme_neon",
   "profile_frame_ocean", "profile_frame_botanic", "profile_frame_lilac", "profile_frame_rose",
-  "profile_frame_pink_blossom", "profile_frame_blue_royal", "profile_frame_amethyst", "profile_frame_emerald",
 ]);
 const consumableProducts = new Set(["coins_500", "coins_1500", "coins_3500", "coins_8000"]);
 const entitledSubscriptionStates = new Set([

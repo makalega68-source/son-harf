@@ -58,11 +58,12 @@ fun EconomyShopScreen(
         // Son Coin cosmetics are grouped by what they change; bought items are equipped from
         // Profile > Koleksiyonum. Opening the store without a tab lands on Obi's hats.
         val shown = when (tab) {
-            2, 4, 5, 6, 3 -> tab
+            2, 4, 5, 6, 7, 3 -> tab
             else -> 5
         }
         val categories = listOf(
             5 to sh("Obi & Zafer", "Obi & Victory"),
+            7 to sh("Çerçeveler", "Frames"),
             2 to sh("Tahta & Tema", "Board & Theme"),
             6 to sh("Klavye & İsim", "Keys & Name"),
             4 to sh("Maskotlar", "Mascots"),
@@ -80,6 +81,10 @@ fun EconomyShopScreen(
             // Mascot characters, each a permanent Google Play product.
             if (shown == 4) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
                 MascotStoreSection()
+            }
+            // Profile frames: ornate crests via Google Play, simple rings for Son Coin.
+            else if (shown == 7) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
+                ProfileFrameStoreSection(onBalance = { balance = it })
             }
             else EconomyCatalogScreen(
                 section = shown,

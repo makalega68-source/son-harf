@@ -15,6 +15,7 @@ private val supportedProfileFrameIds = setOf(
     "frame_round_botanic",
     "frame_round_lilac",
     "frame_round_rose",
+    "frame_round_pearl",
     "frame_wing_silver",
     "frame_wing_gold",
     "frame_wing_aurora",

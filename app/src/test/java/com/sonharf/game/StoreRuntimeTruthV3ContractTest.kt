@@ -12,8 +12,9 @@ class StoreRuntimeTruthV3ContractTest {
         val mainShop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
         val ownedPolicy = projectFile("app/src/main/java/com/sonharf/game/OwnedStylePolicy.kt").readText()
 
-        assertTrue(styleStore.contains("\"profile_frame\" -> false"))
-        assertTrue(ownedPolicy.contains("\"profile_frame\" -> false"))
+        // Retired frame ids stay out; only the v2 collection (new artwork) may be sold or owned.
+        assertTrue(styleStore.contains("\"profile_frame\" -> id in ProfileFrameCollection.coinIds"))
+        assertTrue(ownedPolicy.contains("\"profile_frame\" -> id in ProfileFrameCollection.allIds"))
         assertTrue(mainShop.contains("items = b.getShopItems().filter { it.isRuntimeReadyStyle() }"))
         assertFalse(mainShop.contains("it.isRuntimeReadyStyle() || it.kind == \"profile_frame\""))
         assertFalse(styleStore.contains("StoreTab(sh(\"ÇERÇEVELER\", \"FRAMES\")"))

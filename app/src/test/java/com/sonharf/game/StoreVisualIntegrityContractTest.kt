@@ -16,7 +16,7 @@ class StoreVisualIntegrityContractTest {
 
         assertTrue(economy.contains("StoreProductPreview("))
         assertTrue(styleStore.contains("StoreProductPreview("))
-        assertTrue(preview.contains("PurchasedProfileFrameOverlay("))
+        assertTrue(preview.contains("ProfileFrameArt("))
         assertTrue(preview.contains("R.drawable.store_art_theme_black"))
         assertTrue(preview.contains("R.drawable.store_art_keyboard_crystal"))
         assertTrue(preview.contains("R.drawable.store_art_keyboard_obsidian"))

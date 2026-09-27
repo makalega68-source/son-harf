@@ -399,7 +399,7 @@ private fun PremiumGameCenter(
             PremiumGameCard(
                 icon = Icons.Rounded.GridView,
                 title = sh("KELİME TAHTI", "KELİME TAHTI"),
-                artRes = R.drawable.kelime_tahti_brand_logo,
+                artRes = R.drawable.kelime_tahti_game_icon,
                 subtitle = sh("Ana oyun • taktik alan savaşı", "Main game • tactical territory battle"),
                 language = siegeLanguage,
                 onLanguageChange = onSiegeLanguage,

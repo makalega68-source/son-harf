@@ -41,6 +41,15 @@ Tek seferlik (Managed):
 | mascot_astronot | Maskot: Nova | 680 TL |
 | coins_500 / coins_1500 / coins_3500 / coins_8000 | Son Coin paketleri | mağaza fiyatlarına göre |
 | series_game / letter_table / score_calculator | Kelime Tahtı araçları | 129 / 65 / 129 TL |
+| profile_frame_royal_gold | Çerçeve: Kraliyet Altın | 149,99 TL |
+| profile_frame_gold_crest | Çerçeve: Altın Arma | 149,99 TL |
+| profile_frame_emerald | Çerçeve: Zümrüt Arma | 99,99 TL |
+| profile_frame_amethyst | Çerçeve: Ametist Arma | 99,99 TL |
+| profile_frame_pink_blossom | Çerçeve: Sakura Çelengi | 99,99 TL |
+| profile_frame_blue_royal | Çerçeve: Safir Arma | 99,99 TL |
+
+Sade çerçeveler (Okyanus, Gül, Lavanta, Botanik, Başlangıç Mavi/Nötr, Beyaz İnci), Obi şapkaları,
+Taç Zaferi, klavyeler, isim renkleri ve temalar Son Coin ile satılır; Play Console'da ürün gerekmez.
 Abonelik (varsa): vip_monthly, vip_yearly, season_pass_monthly — kullanmıyorsanız oluşturmayın.
 
 ## Yayın sırası

@@ -13,9 +13,9 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Profile avatar renderer kept source-compatible with older call sites.
- * Legacy frame artwork is retired; the only trim we still draw is a thin ring
- * that marks Pro members in gold. Everyone else gets a soft grey ring so the
- * avatar still looks framed without introducing paid cosmetics.
+ * A frame from the live collection (coin rings or premium crests) is drawn around the photo
+ * without changing the avatar's layout size. Without one, Pro members get a thin gold ring
+ * and everyone else a soft grey ring.
  */
 private val ProGoldFrame = Color(0xFFD4AF37)
 private val StandardGreyFrame = Color(0xFFBDBDBD)
@@ -32,12 +32,12 @@ internal fun FramedProfilePhotoAvatar(
     showGenderBadge: Boolean = true,
     isPro: Boolean = false,
 ) {
-    @Suppress("UNUSED_VARIABLE")
     val legacyFrameId = frameId
+    val framed = ProfileFrameCollection.find(legacyFrameId) != null
     val ringColor = if (isPro) ProGoldFrame else StandardGreyFrame
     val ringWidth = if (isPro) 3.dp else 2.dp
     Box(
-        modifier = Modifier.border(BorderStroke(ringWidth, ringColor), CircleShape),
+        modifier = if (framed) Modifier else Modifier.border(BorderStroke(ringWidth, ringColor), CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         ProfilePhotoAvatarWithGender(
@@ -47,7 +47,8 @@ internal fun FramedProfilePhotoAvatar(
             size = size,
             accent = accent,
             visible = visible,
-            showGenderBadge = showGenderBadge,
+            showGenderBadge = showGenderBadge && !framed,
         )
+        if (framed) ProfileFrameArt(frameId = legacyFrameId, size = size)
     }
 }

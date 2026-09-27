@@ -43,12 +43,13 @@ private const val LegacyDarkArenaThemeId = "theme_dark_arena"
 private val DarkThemeIds = setOf(BlackThemeId, LegacyDarkArenaThemeId)
 
 /** Slots the player can return to the free built-in look from the profile. */
-private val ResettableKinds = listOf("mascot_hat", "victory_effect", "keyboard_theme", "name_style")
+private val ResettableKinds = listOf("profile_frame", "mascot_hat", "victory_effect", "keyboard_theme", "name_style")
 
 private fun EquippedCosmeticsDto?.slotFor(kind: String): String? = when (kind) {
     "keyboard_theme" -> this?.keyboardThemeId
     "name_style" -> this?.nameStyleId
     "mascot_hat" -> this?.mascotHatId
+    "profile_frame" -> this?.profileFrameId
     "victory_effect" -> this?.victoryEffectId
     else -> null
 }
@@ -56,6 +57,7 @@ private fun EquippedCosmeticsDto?.slotFor(kind: String): String? = when (kind) {
 private fun defaultStyleTitle(kind: String) = when (kind) {
     "keyboard_theme" -> sh("Standart Klavye", "Standard Keyboard")
     "mascot_hat" -> sh("Şapkasız Obi", "Obi, no hat")
+    "profile_frame" -> sh("Çerçevesiz", "No frame")
     "victory_effect" -> sh("Standart Zafer", "Standard Victory")
     else -> sh("Standart İsim Rengi", "Standard Name Color")
 }
@@ -374,7 +376,7 @@ private fun OwnedStyleCard(
                 Box(Modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.Center) {
                     if (item.kind == "profile_frame" && supported) {
                         Icon(Icons.Rounded.Person, null, Modifier.size(40.dp), tint = Hf.TextMuted)
-                        PurchasedProfileFrameOverlay(frameId = item.id, modifier = Modifier.size(104.dp))
+                        ProfileFrameArt(frameId = item.id, size = 64.dp)
                     } else {
                         StoreProductPreview(item, Modifier.fillMaxSize())
                     }

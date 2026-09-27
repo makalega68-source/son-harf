@@ -22,7 +22,8 @@ class AssetIntegrationContractTest {
         val avatar = read("src/main/java/com/sonharf/game/FramedProfileAvatar.kt")
         assertTrue(frames.contains("PROFILE_FRAMES_RETIRED = true"))
         assertTrue(frames.contains("if (PROFILE_FRAMES_RETIRED) return"))
-        assertTrue(preview.contains("PurchasedProfileFrameOverlay("))
+        // The legacy sale row stays retired; live frames render through collection v2.
+        assertTrue(preview.contains("ProfileFrameArt("))
         assertTrue(avatar.contains("val legacyFrameId = frameId"))
         assertFalse(avatar.contains("PurchasedProfileFrameOverlay("))
     }

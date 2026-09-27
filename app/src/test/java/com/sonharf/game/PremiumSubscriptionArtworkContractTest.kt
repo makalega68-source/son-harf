@@ -9,16 +9,15 @@ class PremiumSubscriptionArtworkContractTest {
     @Test
     fun `subscription products use distinct transparent text-free artwork`() {
         val drawables = listOf(
-            "premium_vip_monthly.xml",
-            "premium_vip_yearly.xml",
-            "premium_season_pass.xml",
+            "premium_vip_monthly.png",
+            "premium_vip_yearly.png",
+            "premium_season_pass.png",
         )
         val contents = drawables.map { fileName ->
-            val vector = repoFile("app/src/main/res/drawable/$fileName").readText()
-            assertTrue("Missing vector root for $fileName", vector.contains("<vector"))
-            assertFalse("Subscription artwork must not bake text: $fileName", vector.contains("<text"))
-            assertFalse("Subscription artwork must not bake runtime plan copy: $fileName", vector.contains("MONTHLY") || vector.contains("YEARLY") || vector.contains("SEASON PASS"))
-            vector
+            val bytes = repoFile("app/src/main/res/drawable-nodpi/$fileName").readBytes()
+            // Painted, text-free plan art: transparent RGBA PNG; plan copy comes from the UI.
+            assertTrue("Subscription artwork must be a transparent PNG: $fileName", bytes[1] == 'P'.code.toByte() && bytes[25].toInt() == 6)
+            bytes.toList()
         }
         assertTrue("Each subscription product must have distinct artwork", contents.toSet().size == contents.size)
     }

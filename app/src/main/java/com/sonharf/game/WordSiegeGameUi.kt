@@ -10,6 +10,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.foundation.BorderStroke
@@ -145,7 +146,7 @@ internal fun WordSiegeScoreCard(
                         avatarPath = avatarPath, gender = gender, name = name,
                         size = 52.dp, accent = accent, visible = avatarVisible,
                     )
-                    if (leading) WordSiegeLeaderBadge(Modifier.align(Alignment.BottomEnd).offset(x = 3.dp, y = 3.dp))
+                    if (leading) WordSiegeLeaderBadge(Modifier.align(Alignment.TopCenter).offset(y = (-16).dp).rotate(-12f))
                 }
                 Spacer(Modifier.width(6.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
@@ -325,14 +326,10 @@ private fun WordSiegeLeaderHalo(modifier: Modifier) {
 /** A small gold medal with a star in the photo's corner. */
 @Composable
 private fun WordSiegeLeaderBadge(modifier: Modifier) {
-    Box(
-        modifier
-            .size(20.dp)
-            .shadow(3.dp, CircleShape)
-            .background(Brush.verticalGradient(listOf(Color(0xFFFFE9A3), Color(0xFFE0A82E), Color(0xFFB07F1E))), CircleShape)
-            .border(1.5.dp, Color.White, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text("★", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
-    }
+    // The leader wears the Kelime Tahtı leader crown.
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(R.drawable.word_siege_leader_crown),
+        contentDescription = null,
+        modifier = modifier.size(30.dp),
+    )
 }

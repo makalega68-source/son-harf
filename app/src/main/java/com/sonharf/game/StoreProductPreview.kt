@@ -126,10 +126,7 @@ private fun RealFramePreview(frameId: String, expanded: Boolean) {
                 )
             }
         }
-        PurchasedProfileFrameOverlay(
-            frameId = frameId,
-            modifier = Modifier.size(frameSize),
-        )
+        ProfileFrameArt(frameId = frameId, size = frameSize * .72f)
     }
 }
 
