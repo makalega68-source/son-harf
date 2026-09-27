@@ -104,6 +104,13 @@ internal object ProfilePhotoRuntime {
     }
 }
 
+/** Portrait background tint matching the gender icons (pink / blue). */
+private fun genderTint(gender: String?): Color? = when (genderIconRes(gender)) {
+    R.drawable.gender_female -> Color(0xFFFF4F9A)
+    R.drawable.gender_male -> Color(0xFF238BFF)
+    else -> null
+}
+
 /** The painted gender icons: blue for men, pink for women; nothing for other/unset. */
 internal fun genderIconRes(gender: String?): Int? = when (gender?.trim()?.lowercase()) {
     "kadın", "kadin", "female", "woman" -> R.drawable.gender_female
@@ -123,13 +130,13 @@ private fun FramelessGenderSymbol(gender: String?, size: Dp) {
 
 @Composable
 private fun SyntheticProfilePortrait(name: String, gender: String?, modifier: Modifier, accent: Color) {
-    val visual = genderVisual(gender)
+    val tint = genderTint(gender)
     Box(
         modifier.background(
             Brush.linearGradient(
                 listOf(
                     accent.copy(alpha = .18f),
-                    (visual?.color ?: Color(0xFFE0A82E)).copy(alpha = .22f),
+                    (tint ?: Color(0xFFE0A82E)).copy(alpha = .22f),
                     Color(0xFFFFFFFF),
                 )
             )

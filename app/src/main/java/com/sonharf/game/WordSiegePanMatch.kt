@@ -1060,6 +1060,8 @@ private fun PanSiegePlayerCard(
             pendingCells = emptyList(),
             playerTurn = active,
             modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-18).dp).size(36.dp),
+            // The rival's mascot, bare: your own hat is not theirs.
+            hat = WordSiegeMascotHat.NONE,
             skin = mascot,
         )
     }

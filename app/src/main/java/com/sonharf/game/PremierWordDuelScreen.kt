@@ -2075,6 +2075,7 @@ private fun PremierSymmetricPlayerCard(
                     pendingCells = emptyList(),
                     playerTurn = active,
                     modifier = Modifier.align(if (mirrored) Alignment.TopStart else Alignment.TopEnd).offset(x = if (mirrored) (-12).dp else 12.dp, y = (-8).dp).size(28.dp),
+                    hat = WordSiegeMascotHat.NONE,
                     skin = mascot,
                 )
             }
