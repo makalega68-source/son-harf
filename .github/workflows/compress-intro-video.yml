@@ -1,7 +1,7 @@
 name: Compress intro video
 
 # One-off helper: when a new source clip lands in media/intro_source.mp4, re-encode it at a
-# visually lossless quality (H.265, CRF 23, slow preset; audio copied untouched), install it as
+# near-master quality (H.265, CRF 18, slow preset; audio copied untouched), install it as
 # the app's intro and remove the large source from the branch.
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
       - name: Re-encode
         run: |
           ffmpeg -hide_banner -y -i media/intro_source.mp4 \
-            -c:v libx265 -preset slow -crf 23 -pix_fmt yuv420p -tag:v hvc1 \
+            -c:v libx265 -preset slow -crf 18 -pix_fmt yuv420p -tag:v hvc1 \
             -x265-params log-level=error \
             -c:a copy -movflags +faststart \
             app/src/main/res/raw/intro_welcome.mp4
@@ -33,5 +33,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm -q media/intro_source.mp4
           git add app/src/main/res/raw/intro_welcome.mp4
-          git commit -m "Install compressed intro video (H.265 CRF 23, audio unchanged)"
+          git commit -m "Install HD intro video (H.265 CRF 18 from the master, audio unchanged)"
           git push origin HEAD:${GITHUB_REF_NAME}
