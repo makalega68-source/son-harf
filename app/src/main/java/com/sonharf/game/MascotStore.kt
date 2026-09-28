@@ -30,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -195,6 +196,7 @@ internal fun MascotStoreSection() {
     LaunchedEffect(Unit) { WordSiegeMascotOwnership.refresh(context) }
 
     fun buy(skin: WordSiegeMascotSkin) {
+        if (!skin.onSale) return
         val product = products[skin.productId]
         if (activity == null || product?.oneTimePurchaseOfferDetails == null) {
             notice = sh("Bu maskot Google Play'de henüz satışta değil.", "This mascot is not on Google Play yet.")
@@ -281,7 +283,9 @@ private fun MascotStoreHero() {
                             lastMoveMine = false,
                             pendingCells = emptyList(),
                             playerTurn = false,
-                            modifier = Modifier.size(if (index == 1) 120.dp else 99.dp).offset(y = if (index % 2 == 0) 8.dp else 0.dp),
+                            // Obi in front and sharp; the coming-soon friends stay misted beside him.
+                            modifier = Modifier.size(if (index == 1) 120.dp else 99.dp).offset(y = if (index % 2 == 0) 8.dp else 0.dp)
+                                .then(if (skin.onSale) Modifier else Modifier.blur(6.dp)),
                             skin = skin,
                         )
                     }
@@ -312,6 +316,8 @@ private fun MascotStoreCard(
             Modifier.background(skin.cardBrush()).padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Only Obi is on sale for now; the others are shown misted with "Yakında".
+            val comingSoon = !owned && !skin.onSale
             Box(
                 Modifier.size(156.dp).clip(RoundedCornerShape(22.dp)).background(Hf.Text.copy(alpha = .05f)),
                 contentAlignment = Alignment.Center,
@@ -321,9 +327,23 @@ private fun MascotStoreCard(
                     lastMoveMine = false,
                     pendingCells = emptyList(),
                     playerTurn = false,
-                    modifier = Modifier.size(146.dp),
+                    modifier = Modifier.size(146.dp).then(if (comingSoon) Modifier.blur(9.dp) else Modifier),
                     skin = skin,
                 )
+                if (comingSoon) {
+                    // A frosted veil (also where blur is unavailable) and the badge.
+                    Box(Modifier.matchParentSize().background(Color.White.copy(alpha = .38f)))
+                    Surface(shape = RoundedCornerShape(50), color = Hf.Text.copy(alpha = .82f)) {
+                        Text(
+                            sh("ÇOK YAKINDA", "COMING SOON"),
+                            Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp,
+                        )
+                    }
+                }
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -340,6 +360,16 @@ private fun MascotStoreCard(
                 )
                 Spacer(Modifier.height(8.dp))
                 when {
+                    comingSoon -> Surface(shape = RoundedCornerShape(14.dp), color = Hf.Text.copy(alpha = .08f), border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .6f))) {
+                        Text(
+                            sh("YAKINDA", "COMING SOON"),
+                            Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            color = Hf.GoldDeep,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp,
+                        )
+                    }
                     // Bought mascots are chosen in the profile; the store only says it is yours.
                     owned -> Button(
                         onClick = {},

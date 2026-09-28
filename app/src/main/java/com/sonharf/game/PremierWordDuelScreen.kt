@@ -2964,6 +2964,18 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
             WordSiegeMascotOutcome.DRAW -> SonHarfSoundFx.bonus()
         }
     }
+    if (won && showMascotVictory) {
+        // Mascot owners: the victory clip full screen, the result written underneath.
+        MascotVictoryScreen(
+            title = pt(language, "KAZANDIN!", "YOU WON!"),
+            lines = listOf(pt(language, "Skor", "Score") + ": $myScore  —  $rivalScore"),
+            primaryLabel = if (busy) "…" else pt(language, "RÖVANŞ", "REMATCH"),
+            onPrimary = { if (!busy) onRematch() },
+            secondaryLabel = pt(language, "Ana sayfa", "Home"),
+            onSecondary = onHome,
+        )
+        return
+    }
     val glowTransition = rememberInfiniteTransition(label = "result-glow")
     val glow by glowTransition.animateFloat(.6f, 1f, infiniteRepeatable(tween(1_100), RepeatMode.Reverse), label = "result-glow-value")
     Box(Modifier.fillMaxSize()) {

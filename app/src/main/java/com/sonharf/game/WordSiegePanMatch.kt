@@ -1145,6 +1145,16 @@ private fun PanSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
     val myCubes = panSiegeAreaCount(game, mine)
     val myTotal = myWords + if (mine == 1) game.playerOneAreaScore else game.playerTwoAreaScore
     val rivalTotal = rivalWords + if (rival == 1) game.playerOneAreaScore else game.playerTwoAreaScore
+    // Mascot owners first see the victory clip full screen; closing it shows the details below.
+    var showVictory by androidx.compose.runtime.saveable.rememberSaveable(game.id) { mutableStateOf(won && showMascotVictory) }
+    if (showVictory) {
+        MascotVictoryScreen(
+            title = sh("TAHT SENİN!", "THE THRONE IS YOURS!"),
+            lines = listOf("$myTotal  —  $rivalTotal"),
+            primaryLabel = sh("DEVAM", "CONTINUE"),
+            onPrimary = { showVictory = false },
+        )
+    }
     HfCard(modifier = Modifier.fillMaxWidth(), color = Hf.Ground) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             HfTitleRule(

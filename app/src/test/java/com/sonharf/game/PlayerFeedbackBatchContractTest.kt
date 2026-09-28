@@ -124,6 +124,28 @@ class PlayerFeedbackBatchContractTest {
         assertTrue(source("MascotHatPainter.kt").contains("Placement(R.drawable.hat_beret_worn,"))
     }
 
+    @Test fun mascotOwnersWinWithTheVictoryClipAndOnlyObiIsOnSale() {
+        val video = source("ChromaKeyVideo.kt")
+        assertTrue(video.contains("smoothstep(0.10, 0.30, distance(c, uKey))"))
+        assertTrue(video.contains("isOpaque = false"))
+        assertFalse(video.contains("EGL14.eglTerminate("))
+        val victory = source("MascotVictoryScreen.kt")
+        assertTrue(victory.contains("raw = R.raw.mascot_victory"))
+        assertTrue(victory.contains("usePlatformDefaultWidth = false"))
+        for (screen in listOf("WordSiegePracticeScreen.kt", "PremierWordDuelScreen.kt", "WordSiegePanMatch.kt")) {
+            assertTrue(screen, source(screen).contains("MascotVictoryScreen("))
+        }
+        val raw = listOf(File("src/main/res/raw/mascot_victory.mp4"), File("app/src/main/res/raw/mascot_victory.mp4")).first { it.exists() }
+        assertTrue(raw.length() > 1_000_000L)
+        val skins = source("WordSiegeMascotSkins.kt")
+        assertTrue(skins.contains("val onSale: Boolean get() = this == ORB"))
+        for (name in listOf("\"Pofi\"", "\"Buzo\"", "\"Zıpo\"", "\"Mino\"", "\"Bibo\"", "\"Novi\"")) assertTrue(name, skins.contains(name))
+        val store = source("MascotStore.kt")
+        assertTrue(store.contains("val comingSoon = !owned && !skin.onSale"))
+        assertTrue(store.contains("sh(\"ÇOK YAKINDA\", \"COMING SOON\")"))
+        assertTrue(store.contains("if (!skin.onSale) return"))
+    }
+
     @Test fun hintLettersFlyOntoTheBoard() {
         val practice = source("WordSiegePracticeScreen.kt")
         assertTrue(practice.contains("tileDrag.launchFlights("))

@@ -24,13 +24,16 @@ internal enum class WordSiegeMascotSkin(
     val kindEn: String,
 ) {
     ORB("klasik", "Obi", "Obi", "Klasik ışıltı", "Classic glow"),
-    PINK("pembe", "Pinki", "Pinky", "Pembe prenses", "Pink princess"),
-    DEVIL_BLUE("mavi_seytancik", "Buzi", "Frosty", "Buz şeytancık", "Ice imp"),
-    DEVIL_RED("kirmizi_seytancik", "Zıpır", "Blaze", "Ateş şeytancık", "Fire imp"),
-    CAT("tekir", "Mırnav", "Purrnie", "Tekir kedi", "Tabby cat"),
-    ROBOT("robot", "Bipbop", "Bipbop", "Robot", "Robot"),
-    ASTRONAUT("astronot", "Nova", "Nova", "Astronot", "Astronaut"),
+    PINK("pembe", "Pofi", "Pofi", "Pembe prenses", "Pink princess"),
+    DEVIL_BLUE("mavi_seytancik", "Buzo", "Buzo", "Buz şeytancık", "Ice imp"),
+    DEVIL_RED("kirmizi_seytancik", "Zıpo", "Zipo", "Ateş şeytancık", "Fire imp"),
+    CAT("tekir", "Mino", "Mino", "Tekir kedi", "Tabby cat"),
+    ROBOT("robot", "Bibo", "Bibo", "Robot", "Robot"),
+    ASTRONAUT("astronot", "Novi", "Novi", "Astronot", "Astronaut"),
     ;
+
+    /** Only Obi is sold for now; the others come later ("Yakında"). */
+    val onSale: Boolean get() = this == ORB
 
     /** Google Play product and server entitlement key of this character. */
     val productId: String get() = "mascot_$id"

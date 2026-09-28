@@ -50,15 +50,15 @@ internal class WordSiegeMascotPersonality(
             ),
         )
 
-        /** Pinki: sweet, affectionate and a little emotional; hearts everywhere. */
+        /** Pofi: sweet, affectionate and a little emotional; hearts everywhere. */
         private val PINKI = WordSiegeMascotPersonality(
             chattiness = 1.2f,
             playfulness = 1.05f,
             idleBias = mapOf(WordSiegeMascotIdle.SPARKLE to 1.8f, WordSiegeMascotIdle.CHAT to 1.3f, WordSiegeMascotIdle.STRETCH to .6f),
             lines = mapOf(
                 WordSiegeMascotTopic.GREET_FIRST to listOf(
-                    "Selam tatlım! Ben Pinki 💖 Seninle oynamak çok güzel olacak!" to "Hi sweetie! I'm Pinky 💖 Playing with you will be lovely!",
-                    "Merhaba %s! Ben Pinki, kurdelemi senin için taktım 🎀" to "Hi %s! I'm Pinky, I wore my bow just for you 🎀",
+                    "Selam tatlım! Ben Pofi 💖 Seninle oynamak çok güzel olacak!" to "Hi sweetie! I'm Pofi 💖 Playing with you will be lovely!",
+                    "Merhaba %s! Ben Pofi, kurdelemi senin için taktım 🎀" to "Hi %s! I'm Pofi, I wore my bow just for you 🎀",
                 ),
                 WordSiegeMascotTopic.GREET to listOf(
                     "Geldin! Seni bekliyordum 💓" to "You're here! I was waiting for you 💓",
@@ -66,7 +66,7 @@ internal class WordSiegeMascotPersonality(
                     "Bugün de birlikte parlayalım ✨" to "Let's shine together today too ✨",
                 ),
                 WordSiegeMascotTopic.HELLO to listOf(
-                    "Pinki geldi! Kurdelem nasıl? 🎀" to "Pinky's here! How's my bow? 🎀",
+                    "Pofi geldi! Kurdelem nasıl? 🎀" to "Pofi's here! How's my bow? 🎀",
                     "Tadaa, pembe ve tatlı! 💖" to "Ta-da, pink and sweet! 💖",
                 ),
                 WordSiegeMascotTopic.PRAISE to listOf(
@@ -128,15 +128,15 @@ internal class WordSiegeMascotPersonality(
             ),
         )
 
-        /** Buzi: the icy imp. Calm, cool and dry; says little, but it lands. */
+        /** Buzo: the icy imp. Calm, cool and dry; says little, but it lands. */
         private val BUZI = WordSiegeMascotPersonality(
             chattiness = .6f,
             playfulness = .8f,
             idleBias = mapOf(WordSiegeMascotIdle.WATCH to 1.5f, WordSiegeMascotIdle.PEEK to 1.4f, WordSiegeMascotIdle.HOP to .6f),
             lines = mapOf(
                 WordSiegeMascotTopic.GREET_FIRST to listOf(
-                    "Ben Buzi. Soğukkanlı ol, gerisini birlikte hallederiz. ❄️" to "I'm Frosty. Stay cool, we'll handle the rest together. ❄️",
-                    "Selam %s. Buzi burada. Rakipler üşüsün. 🧊" to "Hi %s. Frosty's here. Let the rivals shiver. 🧊",
+                    "Ben Buzo. Soğukkanlı ol, gerisini birlikte hallederiz. ❄️" to "I'm Buzo. Stay cool, we'll handle the rest together. ❄️",
+                    "Selam %s. Buzo burada. Rakipler üşüsün. 🧊" to "Hi %s. Buzo's here. Let the rivals shiver. 🧊",
                 ),
                 WordSiegeMascotTopic.GREET to listOf(
                     "Yine buradayız. Sakin ve ölümcül. ❄️" to "Here again. Calm and deadly. ❄️",
@@ -144,7 +144,7 @@ internal class WordSiegeMascotPersonality(
                     "Hazırım. Sen de öylesin, biliyorum." to "I'm ready. So are you, I know.",
                 ),
                 WordSiegeMascotTopic.HELLO to listOf(
-                    "Buzi. Sadece Buzi. ❄️" to "Frosty. Just Frosty. ❄️",
+                    "Buzo. Sadece Buzo. ❄️" to "Buzo. Just Buzo. ❄️",
                     "Ortam biraz serinledi mi? 🧊" to "Did it just get a bit chilly? 🧊",
                 ),
                 WordSiegeMascotTopic.PRAISE to listOf(
@@ -201,15 +201,15 @@ internal class WordSiegeMascotPersonality(
             ),
         )
 
-        /** Zıpır: the fiery imp. Hyper, competitive and loves a bit of trash talk. */
+        /** Zıpo: the fiery imp. Hyper, competitive and loves a bit of trash talk. */
         private val ZIPIR = WordSiegeMascotPersonality(
             chattiness = 1.35f,
             playfulness = 1.35f,
             idleBias = mapOf(WordSiegeMascotIdle.HOP to 1.6f, WordSiegeMascotIdle.DANCE to 1.3f, WordSiegeMascotIdle.WATCH to .75f),
             lines = mapOf(
                 WordSiegeMascotTopic.GREET_FIRST to listOf(
-                    "Ben Zıpır! 🔥 Rakipleri yakmaya geldim, hazır mısın?!" to "I'm Blaze! 🔥 Here to burn the rivals, you ready?!",
-                    "Selam %s! Zıpır burada, ortalık ısınıyor! 🔥" to "Hi %s! Blaze is here, things are heating up! 🔥",
+                    "Ben Zıpo! 🔥 Rakipleri yakmaya geldim, hazır mısın?!" to "I'm Zipo! 🔥 Here to burn the rivals, you ready?!",
+                    "Selam %s! Zıpo burada, ortalık ısınıyor! 🔥" to "Hi %s! Zipo is here, things are heating up! 🔥",
                 ),
                 WordSiegeMascotTopic.GREET to listOf(
                     "Hadi hadi hadi! Maç zamanı! 🔥" to "Come on come on! Match time! 🔥",
@@ -217,7 +217,7 @@ internal class WordSiegeMascotPersonality(
                     "Isındım bile! 💥" to "I'm already fired up! 💥",
                 ),
                 WordSiegeMascotTopic.HELLO to listOf(
-                    "Zıpır sahnede! 🔥😈" to "Blaze on stage! 🔥😈",
+                    "Zıpo sahnede! 🔥😈" to "Zipo on stage! 🔥😈",
                     "Ateş gibiyim bugün! 💥" to "I'm on fire today! 💥",
                 ),
                 WordSiegeMascotTopic.PRAISE to listOf(
@@ -277,7 +277,7 @@ internal class WordSiegeMascotPersonality(
             ),
         )
 
-        /** Mırnav: the tabby cat. Lazy, sassy, secretly delighted; loves chasing letters. */
+        /** Mino: the tabby cat. Lazy, sassy, secretly delighted; loves chasing letters. */
         private val MIRNAV = WordSiegeMascotPersonality(
             chattiness = .75f,
             playfulness = .85f,
@@ -289,8 +289,8 @@ internal class WordSiegeMascotPersonality(
             ),
             lines = mapOf(
                 WordSiegeMascotTopic.GREET_FIRST to listOf(
-                    "Miyav. Ben Mırnav. Seni sahibim olarak kabul ediyorum… şimdilik. 🐾" to "Meow. I'm Purrnie. I accept you as my human… for now. 🐾",
-                    "Mırr… selam %s. Ben Mırnav. Mama var mı? 🐟" to "Purr… hi %s. I'm Purrnie. Got any snacks? 🐟",
+                    "Miyav. Ben Mino. Seni sahibim olarak kabul ediyorum… şimdilik. 🐾" to "Meow. I'm Mino. I accept you as my human… for now. 🐾",
+                    "Mırr… selam %s. Ben Mino. Mama var mı? 🐟" to "Purr… hi %s. I'm Mino. Got any snacks? 🐟",
                 ),
                 WordSiegeMascotTopic.GREET to listOf(
                     "Mırr… uyanmışım bak. 😺" to "Purr… look, I'm awake. 😺",
@@ -298,7 +298,7 @@ internal class WordSiegeMascotPersonality(
                     "Miyav! Hadi bakalım. 😼" to "Meow! Let's go. 😼",
                 ),
                 WordSiegeMascotTopic.HELLO to listOf(
-                    "Miyav. Mırnav geldi. Alkış bekliyorum. 😼" to "Meow. Purrnie has arrived. Applause, please. 😼",
+                    "Miyav. Mino geldi. Alkış bekliyorum. 😼" to "Meow. Mino has arrived. Applause, please. 😼",
                     "Kulaklarıma bak, ne kadar tatlı. 🐾" to "Look at my ears, so cute. 🐾",
                 ),
                 WordSiegeMascotTopic.PRAISE to listOf(
@@ -355,15 +355,15 @@ internal class WordSiegeMascotPersonality(
             ),
         )
 
-        /** Bipbop: the analytical robot. Speaks in numbers, calculates everything. */
+        /** Bibo: the analytical robot. Speaks in numbers, calculates everything. */
         private val BIPBOP = WordSiegeMascotPersonality(
             chattiness = 1f,
             playfulness = .7f,
             idleBias = mapOf(WordSiegeMascotIdle.NOD to 1.8f, WordSiegeMascotIdle.LOOK_AROUND to 1.6f, WordSiegeMascotIdle.DANCE to .6f),
             lines = mapOf(
                 WordSiegeMascotTopic.GREET_FIRST to listOf(
-                    "Bip bop! Ben Bipbop. Kazanma olasılığımız hesaplanıyor… %100! 🤖" to "Beep boop! I'm Bipbop. Calculating our odds of winning… 100%! 🤖",
-                    "Merhaba %s. Bipbop sistemleri çevrimiçi. Arkadaşlık modülü aktif. 🤖" to "Hello %s. Bipbop systems online. Friendship module active. 🤖",
+                    "Bip bop! Ben Bibo. Kazanma olasılığımız hesaplanıyor… %100! 🤖" to "Beep boop! I'm Bibo. Calculating our odds of winning… 100%! 🤖",
+                    "Merhaba %s. Bibo sistemleri çevrimiçi. Arkadaşlık modülü aktif. 🤖" to "Hello %s. Bibo systems online. Friendship module active. 🤖",
                 ),
                 WordSiegeMascotTopic.GREET to listOf(
                     "Sistemler hazır. Oyuncu tanındı: favori insan. 🤖" to "Systems ready. Player recognised: favourite human. 🤖",
@@ -371,7 +371,7 @@ internal class WordSiegeMascotPersonality(
                     "Enerji %100. Başlayalım. 🔋" to "Energy 100%. Let's begin. 🔋",
                 ),
                 WordSiegeMascotTopic.HELLO to listOf(
-                    "Bipbop yeniden başlatıldı. Tüm sistemler normal. 🤖" to "Bipbop rebooted. All systems nominal. 🤖",
+                    "Bibo yeniden başlatıldı. Tüm sistemler normal. 🤖" to "Bibo rebooted. All systems nominal. 🤖",
                     "Anten sinyali: güçlü. 📡" to "Antenna signal: strong. 📡",
                 ),
                 WordSiegeMascotTopic.PRAISE to listOf(
@@ -431,7 +431,7 @@ internal class WordSiegeMascotPersonality(
             ),
         )
 
-        /** Nova: the dreamy astronaut. Floaty, curious, talks in stars and orbits. */
+        /** Novi: the dreamy astronaut. Floaty, curious, talks in stars and orbits. */
         private val NOVA = WordSiegeMascotPersonality(
             chattiness = 1f,
             playfulness = 1.1f,
@@ -442,8 +442,8 @@ internal class WordSiegeMascotPersonality(
             ),
             lines = mapOf(
                 WordSiegeMascotTopic.GREET_FIRST to listOf(
-                    "Merhaba Dünyalı! Ben Nova. Seninle yıldızlara uzanacağız! 🚀" to "Hello, Earthling! I'm Nova. We'll reach for the stars together! 🚀",
-                    "Selam %s! Nova yörüngeye girdi. 🌌" to "Hi %s! Nova has entered orbit. 🌌",
+                    "Merhaba Dünyalı! Ben Novi. Seninle yıldızlara uzanacağız! 🚀" to "Hello, Earthling! I'm Novi. We'll reach for the stars together! 🚀",
+                    "Selam %s! Novi yörüngeye girdi. 🌌" to "Hi %s! Novi has entered orbit. 🌌",
                 ),
                 WordSiegeMascotTopic.GREET to listOf(
                     "Kalkışa hazırız! 3… 2… 1… 🚀" to "Ready for launch! 3… 2… 1… 🚀",
@@ -451,7 +451,7 @@ internal class WordSiegeMascotPersonality(
                     "Bugün yıldızlar bizden yana. ⭐" to "The stars are with us today. ⭐",
                 ),
                 WordSiegeMascotTopic.HELLO to listOf(
-                    "Nova iniş yaptı! 🚀" to "Nova has landed! 🚀",
+                    "Novi iniş yaptı! 🚀" to "Novi has landed! 🚀",
                     "Kaskım parlıyor mu? 🌟" to "Is my helmet shiny? 🌟",
                 ),
                 WordSiegeMascotTopic.PRAISE to listOf(

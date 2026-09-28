@@ -122,7 +122,7 @@ private fun WordSiegePracticeContent(
         showPracticeResult = false
         if (state.status == "finished") {
             // Only an owned mascot has a celebration to show first.
-            if (WordSiegeMascotOwnership.hasAny) delay(3_600L)
+            if (WordSiegeMascotOwnership.hasAny) delay(1_500L)
             showPracticeResult = true
         }
     }
@@ -1000,14 +1000,29 @@ private fun WordSiegePracticeContent(
     }
 
     if (state.status == "finished" && showPracticeResult) {
-        WordSiegePracticeResultDialog(
-            winnerOwner = state.winnerOwner,
-            opponentName = botProfile.name,
-            playerScore = WordSiegePracticeEngine.totalScore(state, 1),
-            botScore = WordSiegePracticeEngine.totalScore(state, 2),
-            onRematch = ::startRematch,
-            onExit = onExit,
-        )
+        if (state.winnerOwner == 1 && showMascotVictory) {
+            // Mascot owners: the victory clip, full screen, with the result underneath.
+            MascotVictoryScreen(
+                title = sh("KAZANDIN!", "YOU WON!"),
+                lines = listOf(
+                    sh("${botProfile.name} karşısında taht senin.", "The throne is yours against ${botProfile.name}."),
+                    "${WordSiegePracticeEngine.totalScore(state, 1)}  —  ${WordSiegePracticeEngine.totalScore(state, 2)}",
+                ),
+                primaryLabel = sh("RÖVANŞ", "REMATCH"),
+                onPrimary = ::startRematch,
+                secondaryLabel = sh("Çıkış", "Exit"),
+                onSecondary = onExit,
+            )
+        } else {
+            WordSiegePracticeResultDialog(
+                winnerOwner = state.winnerOwner,
+                opponentName = botProfile.name,
+                playerScore = WordSiegePracticeEngine.totalScore(state, 1),
+                botScore = WordSiegePracticeEngine.totalScore(state, 2),
+                onRematch = ::startRematch,
+                onExit = onExit,
+            )
+        }
     }
 
     zoneInfoCode?.let { code ->
