@@ -1870,11 +1870,13 @@ private fun PremierBoardMessage(text: String, color: Color) {
     Text(
         text,
         color = color,
-        fontSize = 16.sp,
+        fontSize = if (text.length > 26) 13.sp else 16.sp,
+        lineHeight = 18.sp,
         fontWeight = FontWeight.Black,
+        textAlign = TextAlign.Center,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.graphicsLayer { scaleX = pop.value; scaleY = pop.value },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value },
     )
 }
 
@@ -2673,14 +2675,19 @@ private fun PremierInputBar(
                     )
                 }
             }
-            if (problem != null) {
-                Text(
-                    validationMessage(language, problem),
-                    color = PremierBoard.Danger,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
+            // A fixed one-line slot: a rejection note never grows the bar or pushes the board.
+            Box(Modifier.fillMaxWidth().height(14.dp), contentAlignment = Alignment.Center) {
+                if (problem != null) {
+                    Text(
+                        validationMessage(language, problem),
+                        color = PremierBoard.Danger,
+                        fontSize = 10.sp,
+                        lineHeight = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
@@ -3153,15 +3160,15 @@ private fun premierBotChatReply(language: String, message: String): String {
 }
 
 private fun validationMessage(language: String, reason: String): String = when (reason) {
-    "invalid_length" -> pt(language, "Kelime 2-30 harf arasında olmalı.", "Word must be 2-30 letters.")
-    "invalid_characters" -> pt(language, "Bu dil için geçersiz karakter var.", "The word contains invalid characters for this language.")
-    "not_in_dictionary", "invalid_word" -> pt(language, "Kelime ana sözlükte yok.", "Word is not in the master dictionary.")
+    "invalid_length" -> pt(language, "En az 2 harf olmalı.", "At least 2 letters.")
+    "invalid_characters" -> pt(language, "Geçersiz karakter var.", "Invalid characters.")
+    "not_in_dictionary", "invalid_word" -> pt(language, "Sözlükte yok.", "Not in the dictionary.")
     "abbreviation_not_allowed" -> pt(language, "Kısaltmalar kullanılamaz.", "Abbreviations are not allowed.")
     "proper_noun_not_allowed" -> pt(language, "Özel adlar kullanılamaz.", "Proper nouns are not allowed.")
-    "not_game_allowed" -> pt(language, "Bu kelime oyun için uygun değil.", "This word is not allowed in gameplay.")
-    "ends_with_soft_g" -> pt(language, "Ğ ile biten kelimeler kullanılamaz.", "Words ending with Ğ are not allowed.")
-    "wrong_start_letter" -> pt(language, "Kelime hedef harf/harflerle başlamalı.", "Word must start with the target letter/letters.")
-    "word_already_used" -> pt(language, "Bu kelime daha önce kullanıldı.", "This word has already been used.")
+    "not_game_allowed" -> pt(language, "Oyunda geçerli değil.", "Not allowed in play.")
+    "ends_with_soft_g" -> pt(language, "Ğ ile bitemez.", "Cannot end with Ğ.")
+    "wrong_start_letter" -> pt(language, "Hedef harfle başlamalı.", "Must start with the target.")
+    "word_already_used" -> pt(language, "Daha önce kullanıldı.", "Already used.")
     "turn_expired" -> pt(language, "Süren doldu.", "Your turn expired.")
     else -> pt(language, "Hamle kabul edilmedi.", "Move was not accepted.")
 }

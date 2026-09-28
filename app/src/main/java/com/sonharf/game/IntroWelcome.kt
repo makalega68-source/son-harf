@@ -1,11 +1,5 @@
 package com.sonharf.game
 
-import android.content.Context
-import android.graphics.Matrix
-import android.graphics.SurfaceTexture
-import android.media.MediaPlayer
-import android.view.Surface
-import android.view.TextureView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -53,7 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.findViewTreeLifecycleOwner
@@ -68,7 +61,7 @@ private val IntroLogoWidth = (320 * .6f).dp
 private val IntroLogoHeight = (170 * .6f).dp
 
 /**
- * First meeting with the game: the welcome clip plays full screen with sound. Near the end, as the
+ * First meeting with the game: the welcome clip plays with sound, whole and fitted to the screen. Near the end, as the
  * mascot closes its eyes, the Kelime Tahtı logo glides down from the top to above the mascot
  * (never touching it). When the clip ends, the language choice and the continue button rise in
  * under the mascot.
@@ -79,15 +72,12 @@ internal fun IntroWelcomeScreen(onContinue: (String) -> Unit) {
     var ended by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<String?>(null) }
     val logoDrop = remember { Animatable(0f) }
-    val player = remember { IntroVideoPlayer(context.applicationContext) }
+    val player = remember { ChromaKeyVideoController() }
 
     // The clip has its own soundtrack: the game music waits until the intro is over.
     DisposableEffect(Unit) {
         SonHarfBackgroundMusic.pause()
-        onDispose {
-            player.release()
-            SonHarfBackgroundMusic.start(context)
-        }
+        onDispose { SonHarfBackgroundMusic.start(context) }
     }
     // Pause with the app, carry on when it comes back.
     val lifecycle = LocalView.current.findViewTreeLifecycleOwner()?.lifecycle
@@ -107,7 +97,7 @@ internal fun IntroWelcomeScreen(onContinue: (String) -> Unit) {
     LaunchedEffect(Unit) {
         while (!ended) {
             val duration = player.durationMs
-            if (player.failed) ended = true
+            if (player.completed) ended = true
             if (duration > 0 && player.positionMs >= duration - INTRO_LOGO_LEAD_MS && logoDrop.value == 0f && !logoDrop.isRunning) {
                 break
             }
@@ -117,8 +107,17 @@ internal fun IntroWelcomeScreen(onContinue: (String) -> Unit) {
     }
     LaunchedEffect(player.completed) { if (player.completed) ended = true }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        AndroidView(factory = { player.view(it) }, modifier = Modifier.fillMaxSize())
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0B1430), Color(0xFF1B2F5E), Color(0xFF081226))))) {
+        // The whole clip is shown (fitted, not cropped) and a little smaller than the screen, with
+        // its green backdrop keyed out and the edge smoothed, so the mascot stands at a comfortable
+        // distance on the game's own background.
+        ChromaKeyVideo(
+            raw = R.raw.intro_welcome,
+            muted = false,
+            scale = .8f,
+            controller = player,
+            modifier = Modifier.fillMaxSize().padding(bottom = 40.dp),
+        )
 
         // The logo comes down from above the screen and stops high above the mascot.
         val density = LocalDensity.current
@@ -207,98 +206,5 @@ private fun IntroLanguageCard(flag: String, title: String, subtitle: String, sel
             Text(title, color = if (selected) Color(0xFFFFD36B) else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
             Text(subtitle, color = Color.White.copy(alpha = .65f), fontSize = 11.sp)
         }
-    }
-}
-
-/** Plays the intro clip into a TextureView, filling the screen (centre-crop), with sound. */
-private class IntroVideoPlayer(private val context: Context) : TextureView.SurfaceTextureListener {
-    private var player: MediaPlayer? = null
-    private var surface: Surface? = null
-    private var textureView: TextureView? = null
-    private var videoW = 0
-    private var videoH = 0
-
-    var completed by mutableStateOf(false)
-        private set
-    @Volatile var failed = false
-        private set
-
-    val durationMs: Long get() = runCatching { player?.duration?.toLong() ?: 0L }.getOrDefault(0L)
-    val positionMs: Long get() = runCatching { player?.currentPosition?.toLong() ?: 0L }.getOrDefault(0L)
-
-    fun view(context: Context): TextureView = TextureView(context).also {
-        textureView = it
-        it.surfaceTextureListener = this
-    }
-
-    override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
-        val out = Surface(texture)
-        surface = out
-        val existing = player
-        if (existing != null) {
-            existing.setSurface(out)
-            return
-        }
-        runCatching {
-            val afd = context.resources.openRawResourceFd(R.raw.intro_welcome)
-            player = MediaPlayer().apply {
-                setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
-                afd.close()
-                setSurface(out)
-                setOnVideoSizeChangedListener { _, w, h ->
-                    videoW = w
-                    videoH = h
-                    fitCenterCrop()
-                }
-                setOnCompletionListener { completed = true }
-                setOnErrorListener { _, _, _ ->
-                    failed = true
-                    completed = true
-                    true
-                }
-                setOnPreparedListener { it.start() }
-                prepareAsync()
-            }
-        }.onFailure {
-            failed = true
-            completed = true
-        }
-    }
-
-    private fun fitCenterCrop() {
-        val view = textureView ?: return
-        val vw = view.width.toFloat()
-        val vh = view.height.toFloat()
-        if (vw <= 0f || vh <= 0f || videoW <= 0 || videoH <= 0) return
-        val scale = maxOf(vw / videoW, vh / videoH)
-        val matrix = Matrix()
-        matrix.setScale(videoW * scale / vw, videoH * scale / vh, vw / 2f, vh / 2f)
-        view.setTransform(matrix)
-    }
-
-    override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) = fitCenterCrop()
-
-    override fun onSurfaceTextureDestroyed(texture: SurfaceTexture): Boolean {
-        runCatching { player?.setSurface(null) }
-        surface?.release()
-        surface = null
-        return true
-    }
-
-    override fun onSurfaceTextureUpdated(texture: SurfaceTexture) = Unit
-
-    fun pause() {
-        runCatching { if (player?.isPlaying == true) player?.pause() }
-    }
-
-    fun resume() {
-        runCatching { if (player != null && player?.isPlaying == false && !completed) player?.start() }
-    }
-
-    fun release() {
-        runCatching { player?.release() }
-        player = null
-        surface?.release()
-        surface = null
     }
 }

@@ -84,7 +84,7 @@ internal fun MatchResultScreen(
             ) {
                 // The clip, centred, with a soft glow of the result's colour behind it.
                 Box(
-                    Modifier.fillMaxWidth().widthIn(max = 400.dp).aspectRatio(1f),
+                    Modifier.fillMaxWidth().widthIn(max = 360.dp).aspectRatio(1f),
                     contentAlignment = Alignment.Center,
                 ) {
                     Box(
@@ -95,6 +95,10 @@ internal fun MatchResultScreen(
                     ChromaKeyVideo(
                         raw = if (won) R.raw.mascot_victory else R.raw.mascot_defeat,
                         modifier = Modifier.fillMaxSize(),
+                        // Smaller than the box so the mascot is not in the viewer's face; the
+                        // defeat clip runs slower so its falling letters can be read.
+                        scale = .74f,
+                        speed = if (won) 1f else .65f,
                     )
                 }
                 Column(

@@ -18,34 +18,59 @@ import android.view.TextureView
 import androidx.annotation.RawRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 import kotlin.math.abs
+import kotlin.math.min
+
+/** Lets a screen follow and steer a [ChromaKeyVideo]: time, end, pause and resume. */
+internal class ChromaKeyVideoController {
+    @Volatile internal var player: MediaPlayer? = null
+    var completed by mutableStateOf(false)
+        internal set
+    val positionMs: Long get() = runCatching { player?.currentPosition?.toLong() ?: 0L }.getOrDefault(0L)
+    val durationMs: Long get() = runCatching { player?.duration?.toLong() ?: 0L }.getOrDefault(0L)
+    fun pause() { runCatching { if (player?.isPlaying == true) player?.pause() } }
+    fun resume() { runCatching { if (!completed && player?.isPlaying == false) player?.start() } }
+}
 
 /**
- * Plays a video with its plain background removed, so it floats over the screen.
- *
- * The clip has no alpha channel, so the background colour is read from the first frame's border
- * and keyed out on the GPU (soft edge + colour spill removal). If the border is not one plain
- * colour the video simply plays as it is.
+ * Plays a green-screen (or any plain-backdrop) clip with the backdrop removed, so it floats over
+ * the screen. The backdrop colour is read from the first frame's border and keyed out on the GPU
+ * by hue (chroma), the edge is smoothed over neighbouring pixels and the green spill is removed,
+ * so there is no jagged or green outline. The clip keeps its aspect ratio, fitted and shrunk by
+ * [scale] inside the view. If the border is not one plain colour, the clip plays as it is.
  */
 @Composable
-internal fun ChromaKeyVideo(@RawRes raw: Int, modifier: Modifier = Modifier, loop: Boolean = false, onFinished: () -> Unit = {}) {
+internal fun ChromaKeyVideo(
+    @RawRes raw: Int,
+    modifier: Modifier = Modifier,
+    loop: Boolean = false,
+    muted: Boolean = true,
+    speed: Float = 1f,
+    scale: Float = 1f,
+    controller: ChromaKeyVideoController? = null,
+    onFinished: () -> Unit = {},
+) {
     val finished by rememberUpdatedState(onFinished)
     AndroidView(
-        factory = { ChromaKeyVideoView(it, raw, loop) { finished() } },
+        factory = { ChromaKeyVideoView(it, KeyVideoSpec(raw, loop, muted, speed, scale), controller) { finished() } },
         modifier = modifier,
     )
 }
 
+internal data class KeyVideoSpec(@RawRes val raw: Int, val loop: Boolean, val muted: Boolean, val speed: Float, val scale: Float)
+
 internal class ChromaKeyVideoView(
     context: Context,
-    @RawRes private val raw: Int,
-    private val loop: Boolean,
+    private val spec: KeyVideoSpec,
+    private val controller: ChromaKeyVideoController?,
     private val onFinished: () -> Unit,
 ) : TextureView(context), TextureView.SurfaceTextureListener {
     private var renderer: KeyRenderer? = null
@@ -56,7 +81,7 @@ internal class ChromaKeyVideoView(
     }
 
     override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-        renderer = KeyRenderer(context.applicationContext, raw, loop, surface, width, height, onFinished).also { it.start() }
+        renderer = KeyRenderer(context.applicationContext, spec, controller, surface, width, height, onFinished).also { it.start() }
     }
 
     override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
@@ -74,8 +99,8 @@ internal class ChromaKeyVideoView(
 
 private class KeyRenderer(
     private val context: Context,
-    @RawRes private val raw: Int,
-    private val loop: Boolean,
+    private val spec: KeyVideoSpec,
+    private val controller: ChromaKeyVideoController?,
     private val output: SurfaceTexture,
     @Volatile private var width: Int,
     @Volatile private var height: Int,
@@ -93,6 +118,8 @@ private class KeyRenderer(
     private var videoTexture: SurfaceTexture? = null
     private var videoSurface: Surface? = null
     private var player: MediaPlayer? = null
+    @Volatile private var videoW = 0
+    @Volatile private var videoH = 0
     private val texMatrix = FloatArray(16)
     private val quad: FloatBuffer = ByteBuffer.allocateDirect(16 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
         // x, y, u, v
@@ -102,12 +129,13 @@ private class KeyRenderer(
     // Key colour, decided from the first frame; keying stays off when the border is not plain.
     private var keyKnown = false
     private var keyOn = false
+    private var keyTries = 0
     private val key = floatArrayOf(0f, 0f, 0f)
 
     fun start() {
         thread.start()
         handler = Handler(thread.looper)
-        handler.post { runCatching { setUp() }.onFailure { tearDown(); main.post(onFinished) } }
+        handler.post { runCatching { setUp() }.onFailure { tearDown(); finish() } }
     }
 
     fun resize(w: Int, h: Int) {
@@ -119,6 +147,13 @@ private class KeyRenderer(
         handler.post {
             tearDown()
             thread.quitSafely()
+        }
+    }
+
+    private fun finish() {
+        main.post {
+            controller?.completed = true
+            onFinished()
         }
     }
 
@@ -146,6 +181,8 @@ private class KeyRenderer(
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+        GLES20.glEnable(GLES20.GL_BLEND)
+        GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA)
 
         // Nothing is shown until the first keyed frame is ready.
         clear()
@@ -157,18 +194,37 @@ private class KeyRenderer(
         val surface = Surface(texture)
         videoSurface = surface
 
-        val afd = context.resources.openRawResourceFd(raw)
+        val afd = context.resources.openRawResourceFd(spec.raw)
         player = MediaPlayer().apply {
             setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
             afd.close()
             setSurface(surface)
-            setVolume(0f, 0f)
-            isLooping = loop
-            setOnCompletionListener { main.post(onFinished) }
-            setOnErrorListener { _, _, _ -> main.post(onFinished); true }
-            setOnPreparedListener { it.start() }
+            if (spec.muted) setVolume(0f, 0f)
+            isLooping = spec.loop
+            setOnVideoSizeChangedListener { _, w, h ->
+                videoW = w
+                videoH = h
+            }
+            setOnCompletionListener { finish() }
+            setOnErrorListener { _, _, _ -> finish(); true }
+            setOnPreparedListener {
+                it.start()
+                if (spec.speed != 1f) runCatching { it.playbackParams = it.playbackParams.setSpeed(spec.speed) }
+            }
             prepareAsync()
         }
+        controller?.player = player
+    }
+
+    /** Fit the clip inside the view keeping its aspect ratio, then shrink it by [KeyVideoSpec.scale]. */
+    private fun fitScale(): Pair<Float, Float> {
+        val vw = videoW.toFloat()
+        val vh = videoH.toFloat()
+        if (vw <= 0f || vh <= 0f || width <= 0 || height <= 0) return spec.scale to spec.scale
+        val viewAspect = width.toFloat() / height
+        val videoAspect = vw / vh
+        val (sx, sy) = if (videoAspect > viewAspect) 1f to viewAspect / videoAspect else videoAspect / viewAspect to 1f
+        return sx * spec.scale to sy * spec.scale
     }
 
     private fun drawFrame() {
@@ -178,13 +234,14 @@ private class KeyRenderer(
         texture.getTransformMatrix(texMatrix)
         GLES20.glViewport(0, 0, width, height)
         if (!keyKnown) {
-            // Draw the frame as it is and read its border to learn the background colour.
+            // Draw the frame full-size and unkeyed, and read its border to learn the backdrop colour.
             clear()
-            draw(keying = false)
+            draw(keying = false, sx = 1f, sy = 1f)
             decideKey()
         }
+        val (sx, sy) = fitScale()
         clear()
-        draw(keying = keyOn)
+        draw(keying = keyOn, sx = sx, sy = sy)
         EGL14.eglSwapBuffers(display, eglSurface)
     }
 
@@ -201,10 +258,14 @@ private class KeyRenderer(
             floatArrayOf((pixel.get(0).toInt() and 0xFF) / 255f, (pixel.get(1).toInt() and 0xFF) / 255f, (pixel.get(2).toInt() and 0xFF) / 255f)
         }
         for (c in 0..2) key[c] = samples.map { it[c] }.sorted()[samples.size / 2]
-        // Plain background: most border samples sit close to the median colour.
-        val close = samples.count { s -> (0..2).sumOf { abs(s[it] - key[it]).toDouble() } < .18 }
-        keyOn = close >= 6
-        keyKnown = true
+        // Plain backdrop: most border samples sit close to the median colour.
+        val close = samples.count { s -> (0..2).sumOf { abs(s[it] - key[it]).toDouble() } < .22 }
+        // Only a coloured backdrop is keyed: a black (fade-in) or grey border would wipe out the
+        // dark parts of the mascot, so such frames are skipped and a later frame decides.
+        val saturation = maxOf(key[0], key[1], key[2]) - minOf(key[0], key[1], key[2])
+        keyOn = close >= 6 && saturation > .18f
+        keyTries++
+        keyKnown = keyOn || keyTries >= 45
     }
 
     private fun clear() {
@@ -212,7 +273,7 @@ private class KeyRenderer(
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
     }
 
-    private fun draw(keying: Boolean) {
+    private fun draw(keying: Boolean, sx: Float, sy: Float) {
         GLES20.glUseProgram(program)
         val pos = GLES20.glGetAttribLocation(program, "aPos")
         val uv = GLES20.glGetAttribLocation(program, "aUv")
@@ -223,8 +284,14 @@ private class KeyRenderer(
         GLES20.glVertexAttribPointer(uv, 2, GLES20.GL_FLOAT, false, 16, quad)
         GLES20.glEnableVertexAttribArray(uv)
         GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(program, "uTex"), 1, false, texMatrix, 0)
+        GLES20.glUniform2f(GLES20.glGetUniformLocation(program, "uScale"), sx, sy)
         GLES20.glUniform3f(GLES20.glGetUniformLocation(program, "uKey"), key[0], key[1], key[2])
         GLES20.glUniform1f(GLES20.glGetUniformLocation(program, "uKeying"), if (keying) 1f else 0f)
+        val greenKey = key[1] > key[0] + .08f && key[1] > key[2] + .08f
+        GLES20.glUniform1f(GLES20.glGetUniformLocation(program, "uGreen"), if (greenKey) 1f else 0f)
+        // One source texel in texture space, for smoothing the edge over neighbours.
+        val texel = 1f / maxOf(1, min(videoW, videoH).takeIf { it > 0 } ?: 1080)
+        GLES20.glUniform1f(GLES20.glGetUniformLocation(program, "uTexel"), texel * 1.5f)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, videoTex)
         GLES20.glUniform1i(GLES20.glGetUniformLocation(program, "sTex"), 0)
@@ -236,27 +303,47 @@ private class KeyRenderer(
             attribute vec2 aPos;
             attribute vec2 aUv;
             uniform mat4 uTex;
+            uniform vec2 uScale;
             varying vec2 vUv;
             void main() {
-                gl_Position = vec4(aPos, 0.0, 1.0);
+                gl_Position = vec4(aPos * uScale, 0.0, 1.0);
                 vUv = (uTex * vec4(aUv, 0.0, 1.0)).xy;
             }
         """.trimIndent()
         val fragment = """
             #extension GL_OES_EGL_image_external : require
-            precision mediump float;
+            precision highp float;
             uniform samplerExternalOES sTex;
             uniform vec3 uKey;
             uniform float uKeying;
+            uniform float uGreen;
+            uniform float uTexel;
             varying vec2 vUv;
+
+            // Hue plane (Cb, Cr): lighting changes on the backdrop barely move it.
+            vec2 chroma(vec3 c) {
+                return vec2(-0.1687 * c.r - 0.3313 * c.g + 0.5 * c.b, 0.5 * c.r - 0.4187 * c.g - 0.0813 * c.b);
+            }
+            float keyAlpha(vec2 uv) {
+                vec3 c = texture2D(sTex, uv).rgb;
+                return smoothstep(0.075, 0.18, distance(chroma(c), chroma(uKey)));
+            }
             void main() {
                 vec3 c = texture2D(sTex, vUv).rgb;
                 float a = 1.0;
                 if (uKeying > 0.5) {
-                    // Soft key: fully clear near the background colour, solid further away.
-                    a = smoothstep(0.10, 0.30, distance(c, uKey));
-                    // Remove the background's tint from half-transparent edge pixels.
-                    c = clamp((c - uKey * (1.0 - a)) / max(a, 0.02), 0.0, 1.0);
+                    // Smooth the matte over the neighbours so the outline is not jagged,
+                    // then pull it in slightly so no backdrop fringe is left around the edge.
+                    float m = keyAlpha(vUv) * 0.4
+                        + (keyAlpha(vUv + vec2(uTexel, 0.0)) + keyAlpha(vUv - vec2(uTexel, 0.0))
+                        + keyAlpha(vUv + vec2(0.0, uTexel)) + keyAlpha(vUv - vec2(0.0, uTexel))) * 0.15;
+                    a = smoothstep(0.2, 0.9, m);
+                    if (uGreen > 0.5) {
+                        // Green spill: green never exceeds the stronger of red and blue.
+                        c.g = min(c.g, max(c.r, c.b));
+                    } else {
+                        c = clamp((c - uKey * (1.0 - a)) / max(a, 0.02), 0.0, 1.0);
+                    }
                 }
                 gl_FragColor = vec4(c * a, a);
             }
@@ -276,6 +363,7 @@ private class KeyRenderer(
     }
 
     private fun tearDown() {
+        controller?.player = null
         runCatching { player?.release() }
         player = null
         videoSurface?.release()

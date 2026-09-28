@@ -423,16 +423,37 @@ private fun VerifiedStoreProductCard(
         shadowElevation = 3.dp,
     ) {
         Box {
-            Column(Modifier.fillMaxWidth().padding(12.dp)) {
+            // Same order on every card: picture, name, one short line, then the price at the bottom,
+            // all centred so neighbouring cards line up.
+            Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 StoreProductPreview(item, Modifier.fillMaxWidth().height(104.dp))
                 Spacer(Modifier.height(10.dp))
-                Text(name, color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    name,
+                    color = Hf.Text,
+                    fontSize = 15.sp,
+                    lineHeight = 19.sp,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 storeItemEffect(item)?.let { effect ->
                     Spacer(Modifier.height(3.dp))
-                    Text(effect, color = Hf.TextMuted, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        effect,
+                        color = Hf.TextMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
-                Spacer(Modifier.height(8.dp))
-                Box(Modifier.fillMaxWidth().height(1.dp).background(Hf.Gold.copy(alpha = .45f)))
+                Spacer(Modifier.weight(1f).heightIn(min = 8.dp))
+                Box(Modifier.fillMaxWidth(.6f).height(1.dp).background(Hf.Gold.copy(alpha = .35f)))
                 Spacer(Modifier.height(10.dp))
                 if (owned || equipped) {
                     Surface(shape = Hf.PillShape, color = Hf.Green) {
@@ -442,22 +463,22 @@ private fun VerifiedStoreProductCard(
                             Text(
                                 sh("SATIN ALINDI", "PURCHASED"),
                                 color = Hf.OnAccent,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Black,
                             )
                         }
                     }
                 } else {
-                    Surface(shape = Hf.PillShape, color = Color(0xFFE6E1D4)) {
-                        Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(shape = Hf.PillShape, color = Hf.Gold.copy(alpha = .14f), border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .7f))) {
+                        Row(Modifier.padding(horizontal = 14.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                             if (lockedByPro) {
                                 Icon(Icons.Rounded.WorkspacePremium, null, tint = Hf.GoldDeep, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text("PRO", color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Black)
                             } else {
-                                HfCoin(20.dp)
-                                Spacer(Modifier.width(8.dp))
-                                Text(storeGrouped(item.diamondPrice), color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                HfCoin(18.dp)
+                                Spacer(Modifier.width(6.dp))
+                                Text(storeGrouped(item.diamondPrice), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Black)
                             }
                         }
                     }

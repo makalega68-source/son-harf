@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +31,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -134,13 +139,29 @@ private fun WordSiegeMascotSkin.pitch(): String = when (this) {
     WordSiegeMascotSkin.ASTRONAUT -> sh("Hayalperest bir kâşif. Sıfır yerçekiminde takla atar, seni yıldızlara taşır.", "A dreamy explorer. Flips in zero gravity and takes you to the stars.")
 }
 
-/** Card background: a soft gradient in the character's own colours. */
-private fun WordSiegeMascotSkin.cardBrush(): Brush {
-    val decor = WordSiegeMascotDecor.of(this)
-    val light = Color(decor.handColors[0])
-    val dark = Color(decor.handColors[1])
-    return Brush.linearGradient(listOf(Hf.Ground, dark.copy(alpha = .55f), light.copy(alpha = .30f)))
+/** One calm palette for the whole mascot catalogue, the same on every app theme. */
+private object MascotShop {
+    val CardTop = Color(0xFF16223D)
+    val CardBottom = Color(0xFF223457)
+    val Border = Color(0xFFE0A82E)
+    val Title = Color(0xFFFFF6E0)
+    val Body = Color(0xFFC9D3E3)
+    val Faint = Color(0xFF8E9BB2)
+    val Gold = Color(0xFFF2C14E)
+    val Chip = Color(0x1FFFFFFF)
 }
+
+/**
+ * Hides a coming-soon character: it is drawn as a soft, one-colour silhouette (works on every
+ * Android version) and, where the system supports it (Android 12+), blurred on top.
+ */
+private fun Modifier.mascotMist(radius: androidx.compose.ui.unit.Dp): Modifier = this
+    .blur(radius)
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        drawRect(Color(0xFF9FB0CC), blendMode = BlendMode.SrcIn)
+    }
 
 /** The mascot shop: every character shown alive, sold as a permanent Google Play product. */
 @Composable
@@ -213,7 +234,7 @@ internal fun MascotStoreSection() {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         MascotStoreHero()
         if (notice.isNotBlank()) {
-            Text(notice, color = SonHarfTheme.Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(notice, color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
         WordSiegeMascotSkin.entries.forEach { skin ->
             val owned = skin in WordSiegeMascotOwnership.owned
@@ -233,12 +254,14 @@ internal fun MascotStoreSection() {
         }
         Text(
             sh(
-                "Maskotlar tek ödemeyle kalıcıdır ve yalnızca görünüm ve eşlik sağlar; oyunda puan, ipucu veya avantaj vermez.",
-                "Mascots are a one-time, permanent purchase and are purely cosmetic companions; they give no score, hint or advantage.",
+                "Maskotlar tek ödemeyle kalıcıdır. Her maçta 3 ipucu verir; puan satın alınmaz.",
+                "Mascots are a one-time, permanent purchase. They give 3 hints every match; score is never sold.",
             ),
-            color = SonHarfMuted,
-            fontSize = 10.sp,
-            lineHeight = 14.sp,
+            color = Hf.TextMuted,
+            fontSize = 11.sp,
+            lineHeight = 15.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
@@ -246,50 +269,52 @@ internal fun MascotStoreSection() {
 @Composable
 private fun MascotStoreHero() {
     Surface(
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(24.dp),
         color = Color.Transparent,
-        border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .55f)),
+        border = BorderStroke(1.5.dp, MascotShop.Border),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Box(
+        Column(
             Modifier
-                .background(Brush.linearGradient(listOf(Hf.Surface, Hf.Ground, Color(0xFFFFF3D6))))
-                .padding(16.dp),
+                .fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(MascotShop.CardTop, MascotShop.CardBottom)))
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(Modifier.fillMaxWidth()) {
-                Text(sh("MASKOTLAR", "MASCOTS"), color = Hf.GoldDeep, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
-                Spacer(Modifier.height(4.dp))
+            Text(sh("MASKOTLAR", "MASCOTS"), color = MascotShop.Gold, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                sh("Seni tanıyan, sevinen ve konuşan bir oyun arkadaşı.", "A game buddy that knows you, cheers and talks."),
+                color = MascotShop.Body,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(12.dp))
+            // Obi in front and sharp; the coming-soon friends stay misted beside him.
+            Row(Modifier.fillMaxWidth().height(120.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                listOf(WordSiegeMascotSkin.PINK, WordSiegeMascotSkin.ORB, WordSiegeMascotSkin.CAT).forEach { skin ->
+                    WordSiegeMascot(
+                        moveId = null,
+                        lastMoveMine = false,
+                        pendingCells = emptyList(),
+                        playerTurn = false,
+                        modifier = Modifier.size(if (skin.onSale) 116.dp else 86.dp)
+                            .then(if (skin.onSale) Modifier else Modifier.mascotMist(8.dp)),
+                        skin = skin,
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            // The mascot's advantage, stated up front.
+            Surface(shape = RoundedCornerShape(50), color = MascotShop.Gold.copy(alpha = .16f), border = BorderStroke(1.dp, MascotShop.Gold.copy(alpha = .6f))) {
                 Text(
-                    sh("Seni tanıyan, sevinen, üzülen ve konuşan canlı bir oyun arkadaşı.", "A living game buddy that knows you, cheers, frets and talks."),
-                    color = Hf.TextMuted,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                )
-                Spacer(Modifier.height(6.dp))
-                // The mascot's advantage, stated up front.
-                Text(
-                    sh("💡 MASKOT AVANTAJI: Her maçta 3 ipucu (Kuşatma, Son Harf, Kelime Atölyesi)", "💡 MASCOT ADVANTAGE: 3 hints every match (Siege, Last Letter, Word Workshop)"),
-                    color = Hf.GoldDeep,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
+                    sh("💡 Her maçta 3 ipucu", "💡 3 hints every match"),
+                    Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    color = MascotShop.Gold,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Black,
                 )
-                Spacer(Modifier.height(10.dp))
-                // A small parade of characters, alive.
-                Row(Modifier.fillMaxWidth().height(125.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    listOf(WordSiegeMascotSkin.PINK, WordSiegeMascotSkin.ORB, WordSiegeMascotSkin.CAT).forEachIndexed { index, skin ->
-                        WordSiegeMascot(
-                            moveId = null,
-                            lastMoveMine = false,
-                            pendingCells = emptyList(),
-                            playerTurn = false,
-                            // Obi in front and sharp; the coming-soon friends stay misted beside him.
-                            modifier = Modifier.size(if (index == 1) 120.dp else 99.dp).offset(y = if (index % 2 == 0) 8.dp else 0.dp)
-                                .then(if (skin.onSale) Modifier else Modifier.blur(6.dp)),
-                            skin = skin,
-                        )
-                    }
-                }
             }
         }
     }
@@ -305,21 +330,24 @@ private fun MascotStoreCard(
     onBuy: () -> Unit,
     onUse: () -> Unit,
 ) {
+    // Only Obi is on sale for now; the others are shown misted with "Yakında".
+    val comingSoon = !owned && !skin.onSale
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(22.dp),
         color = Color.Transparent,
-        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) Hf.Gold else Hf.Gold.copy(alpha = .55f)),
-        shadowElevation = 4.dp,
+        border = BorderStroke(if (active) 2.dp else 1.dp, if (comingSoon) MascotShop.Faint.copy(alpha = .45f) else MascotShop.Border),
+        shadowElevation = 3.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            Modifier.background(skin.cardBrush()).padding(12.dp),
+            Modifier
+                .fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(MascotShop.CardTop, MascotShop.CardBottom)))
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Only Obi is on sale for now; the others are shown misted with "Yakında".
-            val comingSoon = !owned && !skin.onSale
             Box(
-                Modifier.size(156.dp).clip(RoundedCornerShape(22.dp)).background(Hf.Text.copy(alpha = .05f)),
+                Modifier.size(118.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .06f)),
                 contentAlignment = Alignment.Center,
             ) {
                 WordSiegeMascot(
@@ -327,54 +355,68 @@ private fun MascotStoreCard(
                     lastMoveMine = false,
                     pendingCells = emptyList(),
                     playerTurn = false,
-                    modifier = Modifier.size(146.dp).then(if (comingSoon) Modifier.blur(9.dp) else Modifier),
+                    modifier = Modifier.size(108.dp).then(if (comingSoon) Modifier.mascotMist(10.dp) else Modifier),
                     skin = skin,
                 )
                 if (comingSoon) {
-                    // A frosted veil (also where blur is unavailable) and the badge.
-                    Box(Modifier.matchParentSize().background(Color.White.copy(alpha = .38f)))
-                    Surface(shape = RoundedCornerShape(50), color = Hf.Text.copy(alpha = .82f)) {
+                    Surface(shape = RoundedCornerShape(50), color = MascotShop.CardTop.copy(alpha = .9f), border = BorderStroke(1.dp, MascotShop.Gold)) {
                         Text(
                             sh("ÇOK YAKINDA", "COMING SOON"),
                             Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            color = Color.White,
-                            fontSize = 11.sp,
+                            color = MascotShop.Gold,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 1.sp,
                         )
                     }
                 }
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh(skin.titleTr, skin.titleEn), color = Hf.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                Text(sh(skin.kindTr, skin.kindEn), color = Hf.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                Spacer(Modifier.height(3.dp))
-                Text(skin.pitch(), color = Hf.Text.copy(alpha = .9f), fontSize = 11.sp, lineHeight = 15.sp)
-                Spacer(Modifier.height(4.dp))
+                // A coming-soon friend keeps its secret: no name, pitch or price yet.
                 Text(
-                    sh("Her maçta 3 ipucu • uçar • konuşur • seni hatırlar", "3 hints every match • flies • talks • remembers you"),
-                    color = Hf.Gold,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
+                    if (comingSoon) "???" else sh(skin.titleTr, skin.titleEn),
+                    color = MascotShop.Title,
+                    fontSize = 20.sp,
+                    lineHeight = 24.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (comingSoon) sh("YENİ MASKOT", "NEW MASCOT") else sh(skin.kindTr, skin.kindEn),
+                    color = MascotShop.Gold,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    maxLines = 1,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    if (comingSoon) sh("Yeni bir oyun arkadaşı yolda. Çok yakında burada!", "A new game buddy is on the way. Here very soon!") else skin.pitch(),
+                    color = MascotShop.Body,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(10.dp))
                 when {
-                    comingSoon -> Surface(shape = RoundedCornerShape(14.dp), color = Hf.Text.copy(alpha = .08f), border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .6f))) {
+                    comingSoon -> Surface(shape = RoundedCornerShape(12.dp), color = MascotShop.Chip) {
                         Text(
                             sh("YAKINDA", "COMING SOON"),
-                            Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            color = Hf.GoldDeep,
+                            Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            color = MascotShop.Faint,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = 1.sp,
+                            letterSpacing = 1.5.sp,
                         )
                     }
                     // Bought mascots are chosen in the profile; the store only says it is yours.
                     owned -> Button(
                         onClick = {},
                         enabled = false,
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             disabledContainerColor = Hf.Green,
                             disabledContentColor = Hf.OnAccent,
@@ -385,17 +427,16 @@ private fun MascotStoreCard(
                     offer != null -> Button(
                         onClick = onBuy,
                         enabled = !busy,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Hf.Ivory, contentColor = Hf.Text),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MascotShop.Gold, contentColor = Color(0xFF3A2400)),
                     ) {
                         Text(sh("SATIN AL • ", "BUY • ") + offer.formattedPrice, fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }
                     else -> Text(
-                        // The list price is shown for information only until Google Play offers the product.
-                        sh("${ProductCatalog.MASCOT_LIST_PRICE_TRY} • Google Play'de yakında", "${ProductCatalog.MASCOT_LIST_PRICE_TRY} • Coming soon on Google Play"),
-                        color = Hf.Text,
+                        sh("Google Play'de yakında", "Coming soon on Google Play"),
+                        color = MascotShop.Faint,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Black,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }

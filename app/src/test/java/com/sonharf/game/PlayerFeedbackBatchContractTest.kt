@@ -126,7 +126,9 @@ class PlayerFeedbackBatchContractTest {
 
     @Test fun mascotOwnersWinWithTheVictoryClipAndOnlyObiIsOnSale() {
         val video = source("ChromaKeyVideo.kt")
-        assertTrue(video.contains("smoothstep(0.10, 0.30, distance(c, uKey))"))
+        assertTrue(video.contains("smoothstep(0.075, 0.18, distance(chroma(c), chroma(uKey)))"))
+        // No green fringe: spill is pulled back to the other channels.
+        assertTrue(video.contains("c.g = min(c.g, max(c.r, c.b))"))
         assertTrue(video.contains("isOpaque = false"))
         assertFalse(video.contains("EGL14.eglTerminate("))
         // Victory and defeat clips for every player, on one symmetric result screen.
