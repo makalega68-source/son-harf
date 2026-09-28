@@ -315,30 +315,51 @@ internal object WordSiegePracticeEngine {
         playerRating: Int,
         playerWins: Int,
         playerLosses: Int,
+        aiWonLast: Boolean? = PracticeAiBalance.aiWonLast,
     ): Int {
         val wins = playerWins.coerceAtLeast(0)
         val losses = playerLosses.coerceAtLeast(0)
         val games = wins + losses
         val winRate = if (games == 0) 50 else (wins * 100) / games
-        // Maximum-strength AI: it always picks from the top of the legal moves. A little variety
-        // remains so it is not predictable; it never eases off when ahead.
+        // Strength follows the player's level: gentle for newcomers, sharp for strong players.
         var target = when {
-            games < 3 -> 80
-            playerRating < 1050 -> 84
-            playerRating < 1300 -> 88
-            else -> 93
+            games < 3 -> 40
+            playerRating < 900 -> 42
+            playerRating < 1050 -> 50
+            playerRating < 1200 -> 58
+            playerRating < 1400 -> 66
+            else -> 74
+        }
+        if (games >= 5 && winRate >= 60) target += 5
+        if (games >= 5 && winRate <= 35) target -= 5
+
+        // Take turns: after the AI wins, it deliberately lets the player take the next one;
+        // after the player wins, it plays to win.
+        when (aiWonLast) {
+            true -> target -= 15
+            false -> target += 10
+            null -> Unit
         }
 
-        if (games >= 5 && winRate >= 60) target += 3
-        if (games >= 5 && winRate <= 35) target -= 3
-
+        // Keep the score close all game long: ease off when ahead, push when behind.
         val botLead = totalScore(state, 2) - totalScore(state, 1)
-        when {
-            botLead <= -16 -> target += 6
-            botLead <= -8 -> target += 3
+        target += when {
+            botLead >= 20 -> -25
+            botLead >= 10 -> -14
+            botLead >= 4 -> -6
+            botLead <= -20 -> 20
+            botLead <= -10 -> 12
+            botLead <= -4 -> 5
+            else -> 0
         }
+        // Near the end, the side whose turn it is to win gets the last push.
+        if (state.bag.length <= 7) {
+            if (aiWonLast == true && botLead > 0) target -= 15
+            if (aiWonLast == false && botLead < 0) target += 10
+        }
+        if (state.moveCount < 4) target -= 5
 
-        return target.coerceIn(78, 98)
+        return target.coerceIn(12, 92)
     }
 
     /**

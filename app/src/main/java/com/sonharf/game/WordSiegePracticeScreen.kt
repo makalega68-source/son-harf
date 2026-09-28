@@ -118,9 +118,12 @@ private fun WordSiegePracticeContent(
     var actionVfxEvent by remember { mutableIntStateOf(0) }
     // The result dialog waits a moment so the mascot's celebration on the board is seen first.
     var showPracticeResult by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { PracticeAiBalance.restore(context) }
     LaunchedEffect(state.status) {
         showPracticeResult = false
         if (state.status == "finished") {
+            // Next match: the other side's turn to win.
+            PracticeAiBalance.record(context, state.winnerOwner)
             // Only an owned mascot has a celebration to show first.
             if (WordSiegeMascotOwnership.hasAny) delay(1_500L)
             showPracticeResult = true
