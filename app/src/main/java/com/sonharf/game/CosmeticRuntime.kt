@@ -18,6 +18,20 @@ object SonHarfCosmetics {
     var emojiPackId by mutableStateOf<String?>(null)
     var mascotHatId by mutableStateOf<String?>(null)
 
+    // A keyboard or theme won with a rewarded video: worn for a day, then the equipped one returns.
+    var rewardKeyboardId by mutableStateOf<String?>(null)
+    var rewardKeyboardUntil by mutableStateOf(0L)
+    var rewardThemeId by mutableStateOf<String?>(null)
+    var rewardThemeUntil by mutableStateOf(0L)
+
+    /** The keyboard in use: a live rewarded one first, otherwise the equipped one. */
+    val activeKeyboardId: String?
+        get() = rewardKeyboardId?.takeIf { System.currentTimeMillis() < rewardKeyboardUntil } ?: keyboardThemeId
+
+    /** The theme in use: a live rewarded one first, otherwise the equipped one. */
+    val activeThemeId: String?
+        get() = rewardThemeId?.takeIf { System.currentTimeMillis() < rewardThemeUntil } ?: gameThemeId
+
     fun apply(e: EquippedCosmeticsDto?) {
         profileFrameId = e?.profileFrameId?.takeIf { !it.isNullOrBlank() }
         nameStyleId = e?.nameStyleId
@@ -71,7 +85,7 @@ object SonHarfCosmetics {
 
     /** Product skins affect only letter-input presentation and never gameplay. */
     val keyboardPalette: WordKeyboardPalette
-        get() = keyboardPaletteFor(keyboardThemeId)
+        get() = keyboardPaletteFor(activeKeyboardId)
 
     /** Single palette source for the live keyboard and its store preview/art direction. */
     fun keyboardPaletteFor(themeId: String?): WordKeyboardPalette = when (themeId) {
@@ -137,14 +151,14 @@ object SonHarfCosmetics {
     }
 
     /** Black Theme is the live catalog id; dark_arena remains an ownership/cache compatibility alias. */
-    val darkArenaTheme: Boolean get() = gameThemeId in setOf("theme_black", "theme_dark_arena")
+    val darkArenaTheme: Boolean get() = activeThemeId in setOf("theme_black", "theme_dark_arena")
     /** Ceviz & Fildişi is a full theme: warm ivory surfaces and walnut ink across the app and
      *  every game, not only the siege board's wood (which WordSiegeWalnutIvory draws). */
-    val walnutTheme: Boolean get() = gameThemeId == WALNUT_IVORY_THEME_ID
+    val walnutTheme: Boolean get() = activeThemeId == WALNUT_IVORY_THEME_ID
     // Kept for compatibility with an already-equipped legacy item. It is no longer sold.
-    val monsterBlueTheme: Boolean get() = gameThemeId == "theme_monster_blue"
+    val monsterBlueTheme: Boolean get() = activeThemeId == "theme_monster_blue"
     // Retained only so older arena code compiles; Aurora is retired from sale.
-    val auroraTheme: Boolean get() = gameThemeId == "theme_aurora"
+    val auroraTheme: Boolean get() = activeThemeId == "theme_aurora"
     val crownVictory: Boolean get() = victoryEffectId == "victory_crown"
     /** The hat Obi wears everywhere, bought with Son Coin. */
     internal val mascotHat: WordSiegeMascotHat get() = MascotHats.hatFor(mascotHatId)

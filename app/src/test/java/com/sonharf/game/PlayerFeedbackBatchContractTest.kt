@@ -184,7 +184,7 @@ class PlayerFeedbackBatchContractTest {
     }
 
     @Test fun walnutIsAFullTheme() {
-        assertTrue(source("CosmeticRuntime.kt").contains("val walnutTheme: Boolean get() = gameThemeId == WALNUT_IVORY_THEME_ID"))
+        assertTrue(source("CosmeticRuntime.kt").contains("val walnutTheme: Boolean get() = activeThemeId == WALNUT_IVORY_THEME_ID"))
         assertTrue(source("HiggsfieldUi.kt").contains("else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)"))
         assertTrue(source("SonHarfTheme.kt").contains("else if (SonHarfCosmetics.walnutTheme) Color(0xFFEFE3CC)"))
         assertTrue(source("PremierWordDuelScreen.kt").contains("else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFF7E3A6)"))

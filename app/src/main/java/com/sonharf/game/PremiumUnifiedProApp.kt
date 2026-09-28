@@ -52,6 +52,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
         // Owned mascots come from verified purchases on the server.
         WordSiegeMascotOwnership.refresh(shellContext)
+        // Rewarded-video passes: banked hints and a day's keyboard or theme.
+        RewardPassState.refresh()
         shellProfile = backend.currentUserId()?.let { id -> runCatching { backend.getProfile(id) }.getOrNull() }
     }
     // A short, page-appropriate remark on the first visit of a page in this session.

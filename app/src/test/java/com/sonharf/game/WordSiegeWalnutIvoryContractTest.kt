@@ -17,7 +17,7 @@ class WordSiegeWalnutIvoryContractTest {
         assertTrue(style.contains("mine = Color(0xFF2E9A62)"))
         assertTrue(style.contains("rival = Color(0xFFC8473C)"))
         assertTrue(style.contains("val tile = Brush.verticalGradient"))
-        assertTrue(style.contains("SonHarfCosmetics.gameThemeId == WALNUT_IVORY_THEME_ID"))
+        assertTrue(style.contains("SonHarfCosmetics.walnutTheme"))
         listOf(online, practice).forEach { board ->
             assertTrue(board.contains("WordSiegeWalnutIvory.boardGrain"))
             assertTrue(board.contains("WordSiegeWalnutIvory.tile"))

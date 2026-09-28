@@ -41,7 +41,7 @@ class StoreArtRuntimeParityContractTest {
         assertTrue(source("SharedInputPrimitives.kt").contains("SkinKey(kind, enabled, 11.dp"))
         assertTrue(source("PremierWordDuelScreen.kt").contains("SkinKey(kind, enabled, 6.dp"))
         val board = source("WordSiegeWalnutIvory.kt")
-        assertTrue(board.contains("SonHarfCosmetics.gameThemeId == WALNUT_IVORY_THEME_ID || SonHarfCosmetics.darkArenaTheme"))
+        assertTrue(board.contains("SonHarfCosmetics.walnutTheme || SonHarfCosmetics.darkArenaTheme"))
         assertTrue(board.contains("ink = Color(0xFFF2C75C)"))
         assertTrue(source("MainPlayerProfileScreen.kt").contains("NameStyleEmblem(30.dp)"))
     }

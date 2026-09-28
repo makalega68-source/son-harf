@@ -13,11 +13,14 @@ const frameProducts = [
   "profile_frame_gold_crest", "profile_frame_emerald", "profile_frame_amethyst",
   "profile_frame_pink_blossom", "profile_frame_blue_royal",
 ];
-const premiumProducts = new Set(["series_game", "letter_table", "score_calculator", "pro_lifetime", ...mascotProducts, ...frameProducts]);
+// Premium keyboards (Premium White stays on Son Coin): permanent one-time products, into the inventory.
+const keyboardProducts = ["keyboard_black_gold", "keyboard_crystal", "keyboard_midnight", "keyboard_obsidian"];
+const premiumProducts = new Set(["series_game", "letter_table", "score_calculator", "pro_lifetime", ...mascotProducts, ...frameProducts, ...keyboardProducts]);
 const oneTimeProducts = new Set([
   "series_game", "letter_table", "score_calculator", "pro_lifetime",
   ...mascotProducts,
   ...frameProducts,
+  ...keyboardProducts,
   "coins_500", "coins_1500", "coins_3500", "coins_8000",
   // Historical IDs remain recognizable so the server can return an explicit
   // product_disabled response instead of silently treating an old receipt as unknown.

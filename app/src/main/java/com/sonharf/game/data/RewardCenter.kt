@@ -33,6 +33,8 @@ data class RewardClaimDto(
     @SerialName("trial_matches_remaining") val trialMatchesRemaining: Int? = null,
     @SerialName("trial_expires_at") val trialExpiresAt: String? = null,
     @SerialName("bonus_sc") val bonusSc: Int = 0,
+    /** Hints or Quick Games granted by a rewarded pass (or the doubled gift's coins). */
+    val amount: Int = 0,
     val diamonds: Int? = null,
     val balance: Int? = null,
 )

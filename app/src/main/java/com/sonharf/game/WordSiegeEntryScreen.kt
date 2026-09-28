@@ -135,6 +135,46 @@ internal fun WordSiegeEntryScreen(
     val shownGames = if (libraryTab == WordSiegeLibraryTab.ACTIVE) activeGames else finishedGames
     val access = entitlements
     val seriesOwned = access?.seriesGameAccess == true
+    // Quick Game is a paid mode; one rewarded video opens five games to try it (non-PRO only).
+    var showQuickOffer by remember { mutableStateOf(false) }
+    var quickNotice by remember { mutableStateOf<String?>(null) }
+    val quickVideo = rememberRewardedVideo(enabled = access != null && !access.isPro && !seriesOwned)
+    if (showQuickOffer) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { if (!quickVideo.busy) showQuickOffer = false },
+            title = { Text(sh("⚡ HIZLI OYUN", "⚡ QUICK GAME"), fontWeight = FontWeight.Black) },
+            text = {
+                Column {
+                    Text(sh(
+                        "3, 5 veya 10 dakikalık hamlelerle hızlı Kuşatma. Kısa bir video izle, 5 maçı ücretsiz oyna (günde 1 kez, 3 gün geçerli).",
+                        "Fast Siege with 3, 5 or 10 minute turns. Watch a short video and play 5 matches free (once a day, valid 3 days).",
+                    ))
+                    quickNotice?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, color = SonHarfTheme.ActionOrange, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = quickVideo.ready && !quickVideo.busy,
+                    onClick = {
+                        quickVideo.watch(
+                            com.sonharf.game.data.RewardKeys.QUICK_GAMES,
+                            onMessage = { quickNotice = it },
+                            onRewarded = {
+                                showQuickOffer = false
+                                retry++
+                            },
+                        )
+                    },
+                ) { Text(if (quickVideo.busy) "…" else sh("▶ VİDEO İZLE • 5 OYUN", "▶ WATCH • 5 GAMES"), fontWeight = FontWeight.Black) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showQuickOffer = false; onOpenStore() }) { Text(sh("SATIN AL", "BUY")) }
+            },
+        )
+    }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -323,7 +363,7 @@ internal fun WordSiegeEntryScreen(
                             entitlementError -> sh("PRO erişimi doğrulanamadı", "PRO access could not be verified")
                             access == null -> sh("SERİ / HIZLI OYUN • kontrol ediliyor", "SERIES / QUICK GAME • checking")
                             seriesOwned -> sh("SERİ / HIZLI OYUN • 3 / 5 / 10 dk", "SERIES / QUICK GAME • 3 / 5 / 10 min")
-                            else -> sh("SERİ / HIZLI OYUN • PRO", "SERIES / QUICK GAME • PRO")
+                            else -> sh("SERİ / HIZLI OYUN • 🎬 5 oyun ücretsiz", "SERIES / QUICK GAME • 🎬 5 free games")
                         },
                         accent = SonHarfTheme.ActionOrange,
                         enabled = access != null || entitlementError,
@@ -331,6 +371,7 @@ internal fun WordSiegeEntryScreen(
                             when {
                                 entitlementError -> retry++
                                 seriesOwned -> mode = WordSiegeEntryMode.SERIES
+                                access?.isPro == false -> { quickNotice = null; showQuickOffer = true }
                                 else -> onOpenStore()
                             }
                         },

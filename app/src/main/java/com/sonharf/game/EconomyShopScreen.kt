@@ -58,7 +58,7 @@ fun EconomyShopScreen(
         // Son Coin cosmetics are grouped by what they change; bought items are equipped from
         // Profile > Koleksiyonum. Opening the store without a tab lands on Obi's hats.
         val shown = when (tab) {
-            2, 4, 5, 6, 7, 3 -> tab
+            2, 4, 5, 6, 7, 3, 8 -> tab
             else -> 5
         }
         val categories = listOf(
@@ -68,6 +68,7 @@ fun EconomyShopScreen(
             6 to sh("Klavye & İsim", "Keys & Name"),
             4 to sh("Maskotlar", "Mascots"),
             3 to sh("PRO Üyelik", "PRO Membership"),
+            8 to sh("🎬 Video Ödülleri", "🎬 Video Rewards"),
         )
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
@@ -79,7 +80,9 @@ fun EconomyShopScreen(
         }
         Box(Modifier.weight(1f)) {
             // Mascot characters, each a permanent Google Play product.
-            if (shown == 4) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
+            // Optional rewarded videos: coins, a day's keyboard or theme, Quick Games, hints.
+            if (shown == 8) RewardCenterScreen()
+            else if (shown == 4) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
                 MascotStoreSection()
             }
             // Profile frames: ornate crests via Google Play, simple rings for Son Coin.
@@ -159,6 +162,7 @@ private fun EconomyCatalogScreen(
     var showCoins by remember { mutableStateOf(false) }
     var selectedBundle by remember { mutableStateOf<StoreBundleDto?>(null) }
     var showVip by remember { mutableStateOf(false) }
+    var keyboardOffers by remember { mutableStateOf<Map<String, com.android.billingclient.api.ProductDetails>>(emptyMap()) }
 
     suspend fun reload() {
         val b = backend
@@ -189,6 +193,43 @@ private fun EconomyCatalogScreen(
         loading = true
         reload()
         loading = false
+    }
+
+    // Premium keyboards are permanent Google Play products (Premium White stays on Son Coin).
+    val billing = remember {
+        com.sonharf.game.billing.BillingManager(
+            context = context,
+            onPurchase = { purchase ->
+                val productId = purchase.products.firstOrNull()
+                if (productId != null && productId in com.sonharf.game.billing.ProductCatalog.keyboardProducts && productId !in owned) {
+                    scope.launch {
+                        busy = productId
+                        runCatching { com.sonharf.game.billing.PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
+                            .onSuccess {
+                                notice = sh("Klavye satın alındı! Profil > Koleksiyon'dan kullanabilirsin.", "Keyboard purchased! Use it from Profile > Collection.")
+                                SonHarfSoundFx.bonus()
+                                reload()
+                            }
+                            .onFailure { error ->
+                                notice = when {
+                                    "google_play_not_configured" in error.message.orEmpty() -> sh("Google Play sunucu doğrulaması henüz etkin değil.", "Google Play server verification is not enabled yet.")
+                                    "product_disabled" in error.message.orEmpty() -> sh("Bu klavye henüz satışa açılmadı.", "This keyboard is not on sale yet.")
+                                    else -> sh("Ödeme doğrulaması tamamlanamadı; yeniden deneyebilirsin.", "Purchase verification failed; you can retry.")
+                                }
+                            }
+                        busy = null
+                    }
+                }
+            },
+            onMessage = { message -> notice = message; busy = null },
+        )
+    }
+    DisposableEffect(billing) {
+        billing.connect {
+            billing.queryOneTimeProducts(com.sonharf.game.billing.ProductCatalog.keyboardProducts) { keyboardOffers = it }
+            billing.restorePurchases(com.sonharf.game.billing.ProductCatalog.keyboardProducts.toSet())
+        }
+        onDispose { billing.close() }
     }
 
     fun isEquipped(item: ShopItemDto): Boolean = equipped.isEquipped(item)
@@ -240,16 +281,35 @@ private fun EconomyCatalogScreen(
                 row.forEach { item ->
                     val mine = item.id in owned
                     val active = isEquipped(item)
+                    val playKeyboard = item.id in com.sonharf.game.billing.ProductCatalog.keyboardProducts
                     VerifiedStoreProductCard(
                         item = item,
                         owned = mine,
                         equipped = active,
                         busy = busy != null || loading,
                         proActive = profile?.isVip == true,
+                        playPrice = if (playKeyboard) {
+                            keyboardOffers[item.id]?.oneTimePurchaseOfferDetails?.formattedPrice ?: com.sonharf.game.billing.ProductCatalog.KEYBOARD_LIST_PRICE_TRY
+                        } else null,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     ) {
                         val b = backend
                         if (b == null || busy != null) return@VerifiedStoreProductCard
+                        if (playKeyboard && !mine) {
+                            val product = keyboardOffers[item.id]
+                            val activity = context as? android.app.Activity
+                            if (activity == null || product?.oneTimePurchaseOfferDetails == null) {
+                                notice = sh("Bu klavye Google Play'de henüz satışta değil.", "This keyboard is not on Google Play yet.")
+                            } else {
+                                busy = item.id
+                                val result = billing.launchProduct(activity, product)
+                                if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
+                                    busy = null
+                                    notice = sh("Google Play ödeme ekranı açılamadı (${result.responseCode}).", "Google Play billing could not open (${result.responseCode}).")
+                                }
+                            }
+                            return@VerifiedStoreProductCard
+                        }
                         scope.launch {
                             busy = item.id
                             val displayName = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
@@ -270,6 +330,7 @@ private fun EconomyCatalogScreen(
                                             "insufficient_diamonds" in raw -> sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
                                             "vip_required" in raw -> sh("Bu ürün PRO üyelerine özel.", "This item is exclusive to PRO members.")
                                             "already_owned" in raw -> sh("Bu ürüne zaten sahipsin.", "You already own this item.")
+                                            "play_only" in raw -> sh("Bu ürün Google Play ile satılır.", "This item is sold through Google Play.")
                                             else -> sh("Satın alma tamamlanamadı.", "Purchase failed.")
                                         }
                                     }
@@ -407,6 +468,7 @@ private fun VerifiedStoreProductCard(
     equipped: Boolean,
     busy: Boolean,
     proActive: Boolean,
+    playPrice: String? = null,
     modifier: Modifier = Modifier,
     onAction: () -> Unit,
 ) {
@@ -475,6 +537,11 @@ private fun VerifiedStoreProductCard(
                                 Icon(Icons.Rounded.WorkspacePremium, null, tint = Hf.GoldDeep, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text("PRO", color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                            } else if (playPrice != null) {
+                                // A Google Play product: its store price, not Son Coin.
+                                Icon(Icons.Rounded.ShoppingCart, null, tint = Hf.GoldDeep, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(playPrice, color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Black)
                             } else {
                                 HfCoin(18.dp)
                                 Spacer(Modifier.width(6.dp))
@@ -541,7 +608,7 @@ private fun StoreCoinGuide() {
                         "🎯 " + sh("Günlük görevler", "Daily tasks"),
                         "🏆 " + sh("Haftalık Kupa", "Weekly Cup"),
                         "🐷 " + sh("Kumbara", "Piggy bank"),
-                        "📺 " + sh("Ödüllü reklam", "Rewarded ad"),
+                        "🎬 " + sh("Video ödülleri", "Video rewards"),
                     ),
                     Modifier.weight(1f),
                 )
@@ -551,7 +618,7 @@ private fun StoreCoinGuide() {
                     listOf(
                         "💡 " + sh("Ekstra ipucu · 25", "Extra hint · 25"),
                         "🎩 " + sh("Obi şapkaları", "Obi hats"),
-                        "⌨ " + sh("Klavyeler", "Keyboards"),
+                        "⌨ " + sh("Beyaz klavye", "White keyboard"),
                     ),
                     Modifier.weight(1f),
                 )

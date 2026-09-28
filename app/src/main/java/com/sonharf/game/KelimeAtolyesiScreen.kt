@@ -395,6 +395,19 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             buyingHint = false
         }
     }
+    // Hints won with a rewarded video are spent before any coins.
+    val bankedHints = RewardPassState.hints("kelime_atolyesi")
+    fun useBankedHint() {
+        if (buyingHint) return
+        buyingHint = true
+        hintScope.launch {
+            if (RewardPassState.useHint("kelime_atolyesi")) {
+                hintsLeft += 1
+                askHint()
+            }
+            buyingHint = false
+        }
+    }
 
     Box(
         Modifier
@@ -432,9 +445,15 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     hintText != null -> hintText!!
                     else -> sh("Harflere dokun, kelimeni kur.", "Tap letters to build your word.")
                 },
-                hintsLeft = if (current != null && !current.over) hintsLeft else 0,
+                hintsLeft = if (current != null && !current.over) hintsLeft + bankedHints else 0,
                 canBuyHint = current != null && !current.over,
-                onHint = { if (hintsLeft > 0) askHint() else buyHint() },
+                onHint = {
+                    when {
+                        hintsLeft > 0 -> askHint()
+                        bankedHints > 0 -> useBankedHint()
+                        else -> buyHint()
+                    }
+                },
             )
             when {
                 loadFailed -> AtelierLoadError { loadNonce += 1 }

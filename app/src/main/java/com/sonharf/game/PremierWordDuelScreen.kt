@@ -1275,6 +1275,19 @@ private fun PremierArena(
             buyingHint = false
         }
     }
+    // Hints won with a rewarded video (outside the match) are spent before any coins.
+    val bankedHints = RewardPassState.hints("son_harf")
+    fun useBankedHint() {
+        if (buyingHint) return
+        buyingHint = true
+        hintScope.launch {
+            if (RewardPassState.useHint("son_harf")) {
+                hintsLeft += 1
+                askHint()
+            }
+            buyingHint = false
+        }
+    }
 
     // Real score changes from the server (streak and long-word bonuses included).
     var gainKey by remember(room.id) { mutableIntStateOf(0) }
@@ -1578,7 +1591,7 @@ private fun PremierArena(
             }
             // One fixed-height strip for the notice and the hint chip: showing or hiding either never
             // resizes the arena above, so the centre card stays still between turns.
-            val hintVisible = myTurn && !preparing && (hintsLeft > 0 || room.isBot)
+            val hintVisible = myTurn && !preparing && (hintsLeft > 0 || bankedHints > 0 || room.isBot)
             Box(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
                 if (notice.isNotBlank()) {
                     Text(
@@ -1594,7 +1607,13 @@ private fun PremierArena(
                 }
                 if (hintVisible) {
                     Surface(
-                        onClick = { if (hintsLeft > 0) askHint() else buyHint() },
+                        onClick = {
+                            when {
+                                hintsLeft > 0 -> askHint()
+                                bankedHints > 0 -> useBankedHint()
+                                else -> buyHint()
+                            }
+                        },
                         modifier = Modifier.align(Alignment.CenterEnd),
                         shape = RoundedCornerShape(99.dp),
                         color = PremierBoard.Gold.copy(alpha = .18f),
@@ -1602,6 +1621,7 @@ private fun PremierArena(
                     ) {
                         Text(
                             if (hintsLeft > 0) pt(language, "💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)")
+                            else if (bankedHints > 0) pt(language, "💡 İpucu ($bankedHints)", "💡 Hint ($bankedHints)")
                             else pt(language, "💡 +1 İpucu · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC", "💡 +1 Hint · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC"),
                             Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                             color = PremierBoard.Ink,

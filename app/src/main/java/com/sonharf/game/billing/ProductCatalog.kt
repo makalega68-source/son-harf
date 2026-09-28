@@ -41,6 +41,16 @@ object ProductCatalog {
         MASCOT_ASTRONOT,
     )
 
+    // Premium keyboards: permanent one-time products, 50 TL each (price set in Play Console). The
+    // shop item id equals the product id; Premium White stays a Son Coin keyboard.
+    const val KEYBOARD_BLACK_GOLD = "keyboard_black_gold"
+    const val KEYBOARD_CRYSTAL = "keyboard_crystal"
+    const val KEYBOARD_MIDNIGHT = "keyboard_midnight"
+    const val KEYBOARD_OBSIDIAN = "keyboard_obsidian"
+    const val KEYBOARD_LIST_PRICE_TRY = "50 TL"
+
+    val keyboardProducts = listOf(KEYBOARD_BLACK_GOLD, KEYBOARD_CRYSTAL, KEYBOARD_MIDNIGHT, KEYBOARD_OBSIDIAN)
+
     // Premium profile frames: permanent one-time products (price set in Play Console). The shop
     // item id equals the product id; simple frames are sold for Son Coin instead.
     const val PROFILE_FRAME_GOLD_CREST = "profile_frame_gold_crest"

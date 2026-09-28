@@ -46,7 +46,7 @@ internal class BoardMaterial(
  * Both keep the emerald glow for the player's own tiles, as in the art.
  */
 internal object WordSiegeWalnutIvory {
-    val enabled: Boolean get() = SonHarfCosmetics.gameThemeId == WALNUT_IVORY_THEME_ID || SonHarfCosmetics.darkArenaTheme
+    val enabled: Boolean get() = SonHarfCosmetics.walnutTheme || SonHarfCosmetics.darkArenaTheme
 
     private val walnut = BoardMaterial(
         frame = Color(0xFF3A2417),

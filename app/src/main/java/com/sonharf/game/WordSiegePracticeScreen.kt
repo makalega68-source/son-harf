@@ -699,14 +699,20 @@ private fun WordSiegePracticeContent(
                             canPlayerAct && state.bag.isNotEmpty(), Modifier.weight(1f)) {
                             exchangeSelection = emptySet(); showExchange = true
                         }
-                        WordSiegeCompactAction(sh("İPUCU $siegeHintsLeft", "HINT $siegeHintsLeft"), Icons.Rounded.Lightbulb,
+                        val siegeHintsShown = siegeHintsLeft + RewardPassState.hints("siege")
+                        WordSiegeCompactAction(sh("İPUCU $siegeHintsShown", "HINT $siegeHintsShown"), Icons.Rounded.Lightbulb,
                             canPlayerAct && !hintSearching, Modifier.weight(1f)) {
+                            // A hint won with a rewarded video is spent once the match's own are gone.
+                            if (siegeHintsLeft <= 0 && RewardPassState.hints("siege") > 0) {
+                                siegeHintsLeft += 1
+                                hintScope.launch { RewardPassState.useHint("siege") }
+                            }
                             // Three hints a match are the mascot's advantage.
                             if (siegeHintsLeft <= 0) {
                                 notice = if (WordSiegeMascotOwnership.hasAny) {
                                     sh("Bu maçın 3 ipucunu kullandın.", "You have used this match's 3 hints.")
                                 } else {
-                                    sh("Maskot avantajı: bir maskotun olursa her maçta 3 ipucu kazanırsın. Mağaza > Maskotlar.", "Mascot advantage: own a mascot to get 3 hints every match. Store > Mascots.")
+                                    sh("İpucun kalmadı. Mağaza > Video Ödülleri'nden video izleyip +2 ipucu alabilirsin; maskot sahipleri her maçta 3 ipucu kazanır.", "No hints left. Watch a video in Store > Video Rewards for +2 hints; mascot owners get 3 every match.")
                                 }
                                 return@WordSiegeCompactAction
                             }
