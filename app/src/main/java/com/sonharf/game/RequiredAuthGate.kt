@@ -343,6 +343,22 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             success = false
                             notice = friendly("existing_confirmed_account")
                             register = false
+                        } else if (
+                            hasVerifiedMembershipSession() ||
+                            runCatching {
+                                // When the server confirms new accounts itself (no e-mail step), the
+                                // player is signed in straight away instead of waiting for a code.
+                                SupabaseProvider.client.auth.signInWith(Email) { this.email = targetEmail; this.password = password }
+                                hasVerifiedMembershipSession()
+                            }.getOrDefault(false)
+                        ) {
+                            SonHarfPreferences.setRememberLogin(context, true, targetEmail)
+                            RememberedCredentialVault.save(context, targetEmail, password)
+                            success = true
+                            notice = sh("Hesabın oluşturuldu. Hoş geldin!", "Your account was created. Welcome!")
+                            busy = false
+                            onAuthenticated()
+                            return@launch
                         } else {
                             SonHarfPreferences.rememberPendingRegistration(context, targetEmail, displayName, gender)
                             success = true
