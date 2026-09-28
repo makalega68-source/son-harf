@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.PlatformTextStyle
@@ -829,11 +830,12 @@ private fun PremierLobby(
                                 avatarPath = if (profile?.avatarVisibility == "hidden") null else profile?.avatarPath,
                                 gender = profile?.gender,
                                 name = profile?.displayName ?: pt(language, "Oyuncu", "Player"),
-                                size = 48.dp,
+                                size = 52.dp,
                                 accent = Color.White,
                                 showGenderBadge = false,
+                                frameId = SonHarfCosmetics.profileFrameId,
                             )
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Column {
                                 Text(profile?.displayName ?: pt(language, "Oyuncu", "Player"), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
                                 Text("🏆 ${profile?.rating ?: 1000} RP  •  %${profileWinRate(profile)}", color = Color.White.copy(alpha = .85f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -1039,6 +1041,7 @@ private fun PremierSearching(language: String, me: ProfileDto?, onCancel: () -> 
                         accent = Hf.Green,
                         visible = me?.avatarVisibility != "hidden",
                         showGenderBadge = false,
+                        frameId = SonHarfCosmetics.profileFrameId,
                     )
                 }
                 Spacer(Modifier.height(10.dp))
@@ -1461,9 +1464,9 @@ private fun PremierArena(
         val veryCompact = maxHeight < 610.dp
         val compact = maxHeight < 700.dp
         val tall = maxHeight > 820.dp
-        val targetSize = if (veryCompact) 74.dp else if (compact) 86.dp else if (tall) 112.dp else 100.dp
+        val targetSize = if (veryCompact) 86.dp else if (compact) 100.dp else if (tall) 128.dp else 116.dp
         val mascotSize = if (veryCompact) 64.dp else if (compact) 72.dp else if (tall) 94.dp else 84.dp
-        val keyHeight = if (veryCompact) 36.dp else if (compact) 39.dp else if (tall) 48.dp else 44.dp
+        val keyHeight = if (veryCompact) 33.dp else if (compact) 35.dp else if (tall) 42.dp else 39.dp
         val primaryGap = if (veryCompact) 4.dp else if (compact) 6.dp else 10.dp
 
         Column(
@@ -1575,7 +1578,7 @@ private fun PremierArena(
                     Text("▼", color = PremierBoard.Ink.copy(alpha = .45f), fontSize = 12.sp)
                     // The letter to play, flanked by the round's word counts (mirrored).
                     Box(
-                        modifier = Modifier.fillMaxWidth().height((if (targetSize > mascotSize) targetSize else mascotSize) + 6.dp),
+                        modifier = Modifier.fillMaxWidth().height((if (targetSize > mascotSize) targetSize else mascotSize) + 20.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         PremierTargetCard(
@@ -1598,10 +1601,21 @@ private fun PremierArena(
                     if (!veryCompact) PremierWordTrail(words, language, isPro, meId)
                 }
             }
-            // One fixed-height strip for the notice and the hint chip: showing or hiding either never
+            // Keep the live input and custom keyboard outside the flexible arena body.
+            PremierInputBar(
+                language,
+                input,
+                required,
+                myTurn && !preparing,
+                busy,
+                usedWords = words,
+                shakeKey = if (moveFeedback?.accepted == false) moveFeedback.message else null,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+            // One fixed-height strip for the notice and the hint chip, right above the keyboard: showing or hiding either never
             // resizes the arena above, so the centre card stays still between turns.
             val hintVisible = myTurn && !preparing && (hintsLeft > 0 || bankedHints > 0 || room.isBot)
-            Box(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxWidth().height(34.dp).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
                 if (notice.isNotBlank()) {
                     Text(
                         notice,
@@ -1640,17 +1654,6 @@ private fun PremierArena(
                     }
                 }
             }
-            // Keep the live input and custom keyboard outside the flexible arena body.
-            PremierInputBar(
-                language,
-                input,
-                required,
-                myTurn && !preparing,
-                busy,
-                usedWords = words,
-                shakeKey = if (moveFeedback?.accepted == false) moveFeedback.message else null,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            )
             PremierKeyboard(language, input, enabled = myTurn && !busy && !preparing, keyHeight = keyHeight, onInput = onInput, onSubmit = onSubmit)
         }
 
@@ -2460,7 +2463,7 @@ private fun PremierTargetCard(
     // A new letter settles in.
     val drop = remember(required) { Animatable(0f) }
     LaunchedEffect(required) { drop.animateTo(1f, spring(dampingRatio = .62f, stiffness = 300f)) }
-    val tile = size * .78f
+    val tile = size * .84f
     val shape = RoundedCornerShape(tile * .24f)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(size), contentAlignment = Alignment.Center) {
@@ -2491,12 +2494,23 @@ private fun PremierTargetCard(
                         .fillMaxHeight(.42f)
                         .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = if (SonHarfCosmetics.darkArenaTheme) .16f else .55f), Color.Transparent))),
                 )
+                // Sized in dp so the system font size can never push the letter out of its tile.
+                val letterSize = with(LocalDensity.current) {
+                    (tile * when {
+                        required.length > 2 -> .24f
+                        required.length > 1 -> .34f
+                        else -> .5f
+                    }).toSp()
+                }
                 Text(
                     required,
                     color = PremierBoard.TileInk,
-                    fontSize = (tile.value * if (required.length > 1) .3f else .46f).sp,
+                    fontSize = letterSize,
+                    lineHeight = letterSize,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp,
+                    letterSpacing = 0.sp,
+                    maxLines = 1,
+                    softWrap = false,
                 )
                 PremierTileShine(shine.value, Modifier.matchParentSize())
             }
@@ -2745,11 +2759,11 @@ private fun PremierKeyboard(language: String, value: String, enabled: Boolean, k
         // A painted panel adds its crown band and frame; on compact screens keep both slim so the
         // board keeps its room.
         val painted = palette.panelImage != null
-        val crownBand = if (keyHeight <= 39.dp) 22.dp else 30.dp
+        val crownBand = if (keyHeight <= 35.dp) 22.dp else 30.dp
         Column(
             Modifier.fillMaxWidth()
                 .keyboardTray(palette, RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp), crownBand)
-                .padding(horizontal = if (painted) 2.dp else 6.dp, vertical = if (painted) 3.dp else 7.dp),
+                .padding(start = if (painted) 2.dp else 6.dp, end = if (painted) 2.dp else 6.dp, top = 7.dp, bottom = if (painted) 6.dp else 7.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             val widest = rows.first().size

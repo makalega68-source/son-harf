@@ -136,7 +136,7 @@ internal fun WordSiegeScoreCard(
         }
     }
     Surface(
-        modifier = modifier.height(92.dp),
+        modifier = modifier.height(110.dp),
         color = lerp(WordSiegeGameUi.Background, accent, if (active) .30f else .20f),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(if (active) 2.dp else 1.dp, accent.copy(alpha = if (active) 1f else .55f)),
@@ -233,7 +233,7 @@ internal fun WordSiegeScoreCard(
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 WordSiegeScoreMetric(sh("Kelime Puanı", "Word Points"), wordPoints, accent, Modifier.weight(1f))
                 WordSiegeScoreMetric(sh("Bölge Puanı", "Territory Points"), territoryPoints, accent, Modifier.weight(1f))
             }
@@ -249,9 +249,22 @@ private fun WordSiegeScoreMetric(label: String, value: Int, accent: Color, modif
         color = WordSiegeGameUi.SurfaceSoft.copy(alpha = .78f),
         border = BorderStroke(1.dp, accent.copy(alpha = .10f)),
     ) {
-        Row(Modifier.padding(horizontal = 6.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(label, Modifier.weight(1f), color = WordSiegeGameUi.Muted, fontSize = 8.sp, lineHeight = 10.sp, maxLines = 1)
-            Text("$value", color = WordSiegeGameUi.Text, fontSize = 10.sp, lineHeight = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        // Label above the value, both centred: half a player card is too narrow to hold them side by side.
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 3.dp, vertical = 3.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                label,
+                color = WordSiegeGameUi.Muted,
+                fontSize = 8.sp,
+                lineHeight = 9.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text("$value", color = WordSiegeGameUi.Text, fontSize = 12.sp, lineHeight = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
 }

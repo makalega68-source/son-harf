@@ -54,6 +54,10 @@ import kotlinx.coroutines.delay
 
 /** When, before the clip ends, the Kelime Tahtı logo starts to come down (as Obi closes his eyes). */
 internal const val INTRO_LOGO_LEAD_MS = 2_600L
+
+/** The intro clip is drawn at this share of the screen; the rest is filled in its edge colour. */
+internal const val INTRO_VIDEO_SCALE = .84f
+
 internal const val INTRO_LOGO_DROP_MS = 900
 
 /** The home screen shows the logo at 320×170 dp; the intro uses it 40% smaller. */
@@ -113,6 +117,10 @@ internal fun IntroWelcomeScreen(onContinue: (String) -> Unit) {
             raw = R.raw.intro_welcome,
             muted = false,
             keying = false,
+            // A little smaller than the screen so it is not in the viewer's face, with the space
+            // around it filled in the clip's own backdrop colour so the edges disappear.
+            scale = INTRO_VIDEO_SCALE,
+            matte = true,
             controller = player,
             modifier = Modifier.fillMaxSize(),
         )

@@ -59,17 +59,19 @@ internal fun ChromaKeyVideo(
     crop: Boolean = false,
     /** Remove a plain backdrop; off plays the clip exactly as it is. */
     keying: Boolean = true,
+    /** Fill the space around a shrunken clip with the colour of the clip's own edge, so it blends in. */
+    matte: Boolean = false,
     controller: ChromaKeyVideoController? = null,
     onFinished: () -> Unit = {},
 ) {
     val finished by rememberUpdatedState(onFinished)
     AndroidView(
-        factory = { ChromaKeyVideoView(it, KeyVideoSpec(raw, loop, muted, speed, scale, crop, keying), controller) { finished() } },
+        factory = { ChromaKeyVideoView(it, KeyVideoSpec(raw, loop, muted, speed, scale, crop, keying, matte), controller) { finished() } },
         modifier = modifier,
     )
 }
 
-internal data class KeyVideoSpec(@RawRes val raw: Int, val loop: Boolean, val muted: Boolean, val speed: Float, val scale: Float, val crop: Boolean = false, val keying: Boolean = true)
+internal data class KeyVideoSpec(@RawRes val raw: Int, val loop: Boolean, val muted: Boolean, val speed: Float, val scale: Float, val crop: Boolean = false, val keying: Boolean = true, val matte: Boolean = false)
 
 internal class ChromaKeyVideoView(
     context: Context,
@@ -135,6 +137,10 @@ private class KeyRenderer(
     private var keyOn = false
     private var keyTries = 0
     private val key = floatArrayOf(0f, 0f, 0f)
+    // Edge colour of the playing clip, used to fill around it when [KeyVideoSpec.matte] is on.
+    private val matteColor = floatArrayOf(0f, 0f, 0f)
+    private var matteKnown = false
+    private var matteFrame = 0
 
     fun start() {
         thread.start()
@@ -254,9 +260,54 @@ private class KeyRenderer(
             decideKey()
         }
         val (sx, sy) = fitScale()
-        clear()
+        if (spec.matte && !keyOn) {
+            // Every few frames draw the clip once to read its edge, then fill the view with that colour.
+            if (matteFrame++ % 4 == 0) {
+                clear()
+                draw(keying = false, sx = sx, sy = sy)
+                sampleMatte(sx, sy)
+            }
+            GLES20.glClearColor(matteColor[0], matteColor[1], matteColor[2], 1f)
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+        } else {
+            clear()
+        }
         draw(keying = keyOn, sx = sx, sy = sy)
         EGL14.eglSwapBuffers(display, eglSurface)
+    }
+
+    /** Median colour of points just inside the drawn clip's border, eased so the fill never flickers. */
+    private fun sampleMatte(sx: Float, sy: Float) {
+        if (width <= 0 || height <= 0) return
+        val x0 = ((1f - sx) / 2f * width).toInt().coerceIn(0, width - 1)
+        val x1 = ((1f + sx) / 2f * width).toInt().coerceIn(0, width - 1)
+        val y0 = ((1f - sy) / 2f * height).toInt().coerceIn(0, height - 1)
+        val y1 = ((1f + sy) / 2f * height).toInt().coerceIn(0, height - 1)
+        val inset = 4
+        val left = (x0 + inset).coerceAtMost(width - 1)
+        val right = (x1 - inset).coerceAtLeast(0)
+        val bottom = (y0 + inset).coerceAtMost(height - 1)
+        val top = (y1 - inset).coerceAtLeast(0)
+        val midX = (x0 + x1) / 2
+        val midY = (y0 + y1) / 2
+        val points = listOf(
+            left to bottom, midX to bottom, right to bottom,
+            left to midY, right to midY,
+            left to top, midX to top, right to top,
+            left to (y0 + y1 * 3) / 4, right to (y0 + y1 * 3) / 4,
+            left to (y0 * 3 + y1) / 4, right to (y0 * 3 + y1) / 4,
+        )
+        val pixel = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder())
+        val samples = points.map { (px, py) ->
+            pixel.clear()
+            GLES20.glReadPixels(px, py, 1, 1, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, pixel)
+            floatArrayOf((pixel.get(0).toInt() and 0xFF) / 255f, (pixel.get(1).toInt() and 0xFF) / 255f, (pixel.get(2).toInt() and 0xFF) / 255f)
+        }
+        for (c in 0..2) {
+            val median = samples.map { it[c] }.sorted()[samples.size / 2]
+            matteColor[c] = if (matteKnown) matteColor[c] * .75f + median * .25f else median
+        }
+        matteKnown = true
     }
 
     private fun decideKey() {

@@ -48,7 +48,7 @@ internal fun EmbeddedWordKeyboard(
         border = if (palette.panelImage == null) BorderStroke(1.dp, palette.border) else null,
     ) {
         Column(
-            Modifier.fillMaxWidth().keyboardTray(palette, trayShape).padding(horizontal = 5.dp, vertical = 6.dp),
+            Modifier.fillMaxWidth().keyboardTray(palette, trayShape).padding(horizontal = 5.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             rows.forEachIndexed { index, row ->
@@ -207,7 +207,7 @@ private fun SharedKeyboardKeyButton(
 ) {
     val palette = SonHarfCosmetics.keyboardPalette
     val kind = when { action -> KeyKind.ACTION; alt -> KeyKind.ALT; else -> KeyKind.LETTER }
-    SkinKey(kind, enabled, 11.dp, modifier.height(38.dp), onClick) {
+    SkinKey(kind, enabled, 11.dp, modifier.height(35.dp), onClick) {
         Text(label, color = palette.labelColor(kind, enabled), fontSize = if (label.length > 4) 10.sp else 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }

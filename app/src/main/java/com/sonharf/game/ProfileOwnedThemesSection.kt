@@ -77,6 +77,8 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
     var collection by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
+    // Which card is being applied: only that card shows progress; the others keep their colours.
+    var pendingId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     suspend fun reloadCollection() {
@@ -112,6 +114,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
         if (busy || loading) return
         if (itemId != null && itemId !in owned) return
         busy = true
+        pendingId = itemId ?: "default_theme"
         notice = null
         scope.launch {
             try {
@@ -131,6 +134,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                 )
             } finally {
                 busy = false
+                pendingId = null
             }
         }
     }
@@ -139,6 +143,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
     fun resetSlot(kind: String) {
         if (busy || loading) return
         busy = true
+        pendingId = "default_$kind"
         notice = null
         scope.launch {
             try {
@@ -157,6 +162,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                 )
             } finally {
                 busy = false
+                pendingId = null
             }
         }
     }
@@ -204,7 +210,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                         title = sh("Ana Tema", "Main Theme"),
                         subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
                         active = SonHarfCosmetics.gameThemeId == null,
-                        enabled = !busy && !loading,
+                        enabled = true,
                         blackVariant = false,
                         modifier = m,
                         onClick = { equipStyle(null) },
@@ -215,7 +221,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                         title = "Black Theme",
                         subtitle = sh("Koleksiyonunda", "In your collection"),
                         active = darkActive,
-                        enabled = !busy && !loading,
+                        enabled = true,
                         blackVariant = true,
                         modifier = m,
                         preview = {
@@ -232,7 +238,8 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                     OwnedStyleCard(
                         item = walnutItem,
                         active = equipped.isEquipped(walnutItem),
-                        enabled = !loading && !busy,
+                        enabled = true,
+                        pending = pendingId == walnutItem.id,
                         modifier = m,
                         onEquip = { equipStyle(walnutItem.id) },
                     )
@@ -275,7 +282,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                             title = defaultStyleTitle(kind),
                             subtitle = sh("Varsayılan • Ücretsiz", "Default • Free"),
                             active = equipped != null && equipped.slotFor(kind) == null,
-                            enabled = !busy && !loading,
+                            enabled = true,
                             blackVariant = false,
                             modifier = m,
                             preview = { DefaultSlotPreview(kind) },
@@ -288,7 +295,8 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                         OwnedStyleCard(
                             item = item,
                             active = equipped.isEquipped(item),
-                            enabled = !loading && !busy,
+                            enabled = true,
+                            pending = pendingId == item.id,
                             modifier = m,
                             onEquip = { equipStyle(item.id) },
                         )
@@ -454,6 +462,7 @@ private fun OwnedStyleCard(
     item: ShopItemDto,
     active: Boolean,
     enabled: Boolean,
+    pending: Boolean = false,
     modifier: Modifier = Modifier,
     onEquip: () -> Unit,
 ) {
@@ -502,7 +511,11 @@ private fun OwnedStyleCard(
                         disabledContentColor = Hf.Text,
                     ),
                 ) {
-                    Text(if (active) sh("✓ Takılı", "✓ On") else sh("Kullan", "Equip"), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    if (pending) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = Hf.Text)
+                    } else {
+                        Text(if (active) sh("✓ Takılı", "✓ On") else sh("Kullan", "Equip"), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    }
                 }
             }
             if (active) {

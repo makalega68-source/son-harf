@@ -87,13 +87,15 @@ class PremierDuelUxRegressionTest {
         assertFalse(screen.contains("PurchasedVictoryVfx("))
         assertTrue(screen.contains("PremierTileShine(shine.value"))
 
-        // Target card and central letter remain compact on real devices.
-        assertTrue(screen.contains("if (veryCompact) 74.dp"))
-        assertTrue(screen.contains("if (compact) 86.dp"))
-        assertTrue(screen.contains("if (tall) 112.dp"))
-        assertTrue(screen.contains("else 100.dp"))
+        // The target tile is large, and its letter is sized in dp so it never leaves the tile.
+        assertTrue(screen.contains("val targetSize = if (veryCompact) 86.dp else if (compact) 100.dp else if (tall) 128.dp else 116.dp"))
         assertTrue(screen.contains("val mascotSize = if (veryCompact) 64.dp"))
-        assertTrue(screen.contains("if (required.length > 1) .3f else .46f"))
+        assertTrue(screen.contains("required.length > 1 -> .34f"))
+        assertTrue(screen.contains("}).toSp()"))
+        // The hint chip sits directly above the keyboard, and keys are shorter.
+        val strip = screen.indexOf("val hintVisible = myTurn")
+        assertTrue(strip > screen.indexOf("PremierInputBar(\n") && strip < screen.indexOf("PremierKeyboard(language, input, enabled"))
+        assertTrue(screen.contains("val keyHeight = if (veryCompact) 33.dp else if (compact) 35.dp else if (tall) 42.dp else 39.dp"))
         assertTrue(screen.contains("PremierPressureStrip("))
         assertTrue(screen.contains("KRİTİK 5 SANİYE"))
         assertTrue(screen.contains("HAMLE SIRASI SENDE"))

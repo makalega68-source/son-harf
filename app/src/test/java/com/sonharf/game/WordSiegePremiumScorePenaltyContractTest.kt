@@ -14,7 +14,7 @@ class WordSiegePremiumScorePenaltyContractTest {
         val migration = projectFile("supabase/migrations/20260923131500_word_siege_capture_loss_penalty_v8.sql").readText()
 
         assertTrue(ui.contains("size = 52.dp"))
-        assertTrue(ui.contains("modifier = modifier.height(92.dp)"))
+        assertTrue(ui.contains("modifier = modifier.height(110.dp)"))
         assertFalse(practice.contains("WordSiegeOwnershipLegend()"))
         assertFalse(pan.contains("WordSiegeOwnershipLegend()"))
         assertTrue(practice.contains("mutableIntStateOf(-1)"))
