@@ -55,17 +55,19 @@ internal fun ChromaKeyVideo(
     muted: Boolean = true,
     speed: Float = 1f,
     scale: Float = 1f,
+    /** Fill the whole view (centre-crop) instead of fitting the whole clip inside it. */
+    crop: Boolean = false,
     controller: ChromaKeyVideoController? = null,
     onFinished: () -> Unit = {},
 ) {
     val finished by rememberUpdatedState(onFinished)
     AndroidView(
-        factory = { ChromaKeyVideoView(it, KeyVideoSpec(raw, loop, muted, speed, scale), controller) { finished() } },
+        factory = { ChromaKeyVideoView(it, KeyVideoSpec(raw, loop, muted, speed, scale, crop), controller) { finished() } },
         modifier = modifier,
     )
 }
 
-internal data class KeyVideoSpec(@RawRes val raw: Int, val loop: Boolean, val muted: Boolean, val speed: Float, val scale: Float)
+internal data class KeyVideoSpec(@RawRes val raw: Int, val loop: Boolean, val muted: Boolean, val speed: Float, val scale: Float, val crop: Boolean = false)
 
 internal class ChromaKeyVideoView(
     context: Context,
@@ -223,7 +225,13 @@ private class KeyRenderer(
         if (vw <= 0f || vh <= 0f || width <= 0 || height <= 0) return spec.scale to spec.scale
         val viewAspect = width.toFloat() / height
         val videoAspect = vw / vh
-        val (sx, sy) = if (videoAspect > viewAspect) 1f to viewAspect / videoAspect else videoAspect / viewAspect to 1f
+        // Fit: the wider side touches the view edge. Crop: the narrower side does, and the rest spills over.
+        val wider = videoAspect > viewAspect
+        val (sx, sy) = if (wider != spec.crop) 1f to viewAspect / videoAspect else videoAspect / viewAspect to 1f
+        if (spec.crop) {
+            val grow = 1f / minOf(sx, sy)
+            return sx * grow * spec.scale to sy * grow * spec.scale
+        }
         return sx * spec.scale to sy * spec.scale
     }
 

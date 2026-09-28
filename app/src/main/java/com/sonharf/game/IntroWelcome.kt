@@ -61,7 +61,7 @@ private val IntroLogoWidth = (320 * .6f).dp
 private val IntroLogoHeight = (170 * .6f).dp
 
 /**
- * First meeting with the game: the welcome clip plays with sound, whole and fitted to the screen. Near the end, as the
+ * First meeting with the game: the welcome clip plays full screen with sound. Near the end, as the
  * mascot closes its eyes, the Kelime Tahtı logo glides down from the top to above the mascot
  * (never touching it). When the clip ends, the language choice and the continue button rise in
  * under the mascot.
@@ -108,15 +108,13 @@ internal fun IntroWelcomeScreen(onContinue: (String) -> Unit) {
     LaunchedEffect(player.completed) { if (player.completed) ended = true }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0B1430), Color(0xFF1B2F5E), Color(0xFF081226))))) {
-        // The whole clip is shown (fitted, not cropped) and a little smaller than the screen, with
-        // its green backdrop keyed out and the edge smoothed, so the mascot stands at a comfortable
-        // distance on the game's own background.
+        // Full screen: the clip covers the whole display (centre-cropped), with its own sound.
         ChromaKeyVideo(
             raw = R.raw.intro_welcome,
             muted = false,
-            scale = .8f,
+            crop = true,
             controller = player,
-            modifier = Modifier.fillMaxSize().padding(bottom = 40.dp),
+            modifier = Modifier.fillMaxSize(),
         )
 
         // The logo comes down from above the screen and stops high above the mascot.

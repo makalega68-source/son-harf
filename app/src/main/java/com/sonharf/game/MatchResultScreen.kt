@@ -96,9 +96,9 @@ internal fun MatchResultScreen(
                         raw = if (won) R.raw.mascot_victory else R.raw.mascot_defeat,
                         modifier = Modifier.fillMaxSize(),
                         // Smaller than the box so the mascot is not in the viewer's face; the
-                        // defeat clip runs slower so its falling letters can be read.
+                        // defeat clip runs at half speed so its falling letters can be read.
                         scale = .74f,
-                        speed = if (won) 1f else .65f,
+                        speed = if (won) 1f else .5f,
                     )
                 }
                 Column(

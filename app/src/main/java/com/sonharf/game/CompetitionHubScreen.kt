@@ -737,9 +737,9 @@ private fun WeeklyTournamentTab() {
                         Text(sh("KUPA ÖDÜLLERİ", "CUP REWARDS"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 15.sp, letterSpacing = .8.sp)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf(
-                                Triple("🥇", "1.000", HfPanel.GoldSet),
-                                Triple("🥈", "600", listOf(Color(0xFFE3E8EE), Color(0xFFAEB8C4), Color(0xFF7D8894))),
-                                Triple("🥉", "400", listOf(Color(0xFFF0B27A), Color(0xFFC77B3C), Color(0xFF8E5222))),
+                                Triple("🥇", "250", HfPanel.GoldSet),
+                                Triple("🥈", "150", listOf(Color(0xFFE3E8EE), Color(0xFFAEB8C4), Color(0xFF7D8894))),
+                                Triple("🥉", "100", listOf(Color(0xFFF0B27A), Color(0xFFC77B3C), Color(0xFF8E5222))),
                             ).forEach { (medal, amount, set) ->
                                 HfGamePanel(set, Modifier.weight(1f), corner = 14.dp, lip = 4.dp) {
                                     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
