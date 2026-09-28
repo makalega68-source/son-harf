@@ -57,17 +57,19 @@ internal fun ChromaKeyVideo(
     scale: Float = 1f,
     /** Fill the whole view (centre-crop) instead of fitting the whole clip inside it. */
     crop: Boolean = false,
+    /** Remove a plain backdrop; off plays the clip exactly as it is. */
+    keying: Boolean = true,
     controller: ChromaKeyVideoController? = null,
     onFinished: () -> Unit = {},
 ) {
     val finished by rememberUpdatedState(onFinished)
     AndroidView(
-        factory = { ChromaKeyVideoView(it, KeyVideoSpec(raw, loop, muted, speed, scale, crop), controller) { finished() } },
+        factory = { ChromaKeyVideoView(it, KeyVideoSpec(raw, loop, muted, speed, scale, crop, keying), controller) { finished() } },
         modifier = modifier,
     )
 }
 
-internal data class KeyVideoSpec(@RawRes val raw: Int, val loop: Boolean, val muted: Boolean, val speed: Float, val scale: Float, val crop: Boolean = false)
+internal data class KeyVideoSpec(@RawRes val raw: Int, val loop: Boolean, val muted: Boolean, val speed: Float, val scale: Float, val crop: Boolean = false, val keying: Boolean = true)
 
 internal class ChromaKeyVideoView(
     context: Context,
@@ -241,6 +243,10 @@ private class KeyRenderer(
         texture.updateTexImage()
         texture.getTransformMatrix(texMatrix)
         GLES20.glViewport(0, 0, width, height)
+        if (!spec.keying) {
+            keyKnown = true
+            keyOn = false
+        }
         if (!keyKnown) {
             // Draw the frame full-size and unkeyed, and read its border to learn the backdrop colour.
             clear()
