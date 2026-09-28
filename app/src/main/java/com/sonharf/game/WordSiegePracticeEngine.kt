@@ -320,28 +320,25 @@ internal object WordSiegePracticeEngine {
         val losses = playerLosses.coerceAtLeast(0)
         val games = wins + losses
         val winRate = if (games == 0) 50 else (wins * 100) / games
+        // Maximum-strength AI: it always picks from the top of the legal moves. A little variety
+        // remains so it is not predictable; it never eases off when ahead.
         var target = when {
-            games < 3 -> 32
-            playerRating < 900 -> 36
-            playerRating < 1050 -> 45
-            playerRating < 1200 -> 57
-            playerRating < 1400 -> 69
-            else -> 81
+            games < 3 -> 80
+            playerRating < 1050 -> 84
+            playerRating < 1300 -> 88
+            else -> 93
         }
 
-        if (games >= 5 && winRate >= 60) target += 7
-        if (games >= 5 && winRate <= 35) target -= 7
+        if (games >= 5 && winRate >= 60) target += 3
+        if (games >= 5 && winRate <= 35) target -= 3
 
         val botLead = totalScore(state, 2) - totalScore(state, 1)
         when {
-            botLead >= 16 -> target -= 14
-            botLead >= 8 -> target -= 8
-            botLead <= -16 -> target += 7
-            botLead <= -8 -> target += 4
+            botLead <= -16 -> target += 6
+            botLead <= -8 -> target += 3
         }
-        if (state.moveCount < 4) target -= 5
 
-        return target.coerceIn(25, 90)
+        return target.coerceIn(78, 98)
     }
 
     /**

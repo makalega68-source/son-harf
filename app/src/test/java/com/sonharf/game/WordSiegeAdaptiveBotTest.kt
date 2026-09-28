@@ -21,11 +21,12 @@ class WordSiegeAdaptiveBotTest {
         )
 
         assertTrue(beginner < strong)
-        assertTrue(beginner <= 40)
-        assertTrue(strong <= 90)
+        // The AI plays at full strength: even a newcomer faces top-band moves.
+        assertTrue(beginner >= 78)
+        assertTrue(strong <= 98)
     }
 
-    @Test fun botEasesOffWhenAheadAndPushesMoreWhenBehind() {
+    @Test fun aiNeverEasesOffAndPushesMoreWhenBehind() {
         val balanced = state(moveCount = 6)
         val ahead = state(moveCount = 6, playerWordScore = 0, botWordScore = 20)
         val behind = state(moveCount = 6, playerWordScore = 20, botWordScore = 0)
@@ -34,7 +35,7 @@ class WordSiegeAdaptiveBotTest {
         val whenAhead = WordSiegePracticeEngine.botTargetPercentile(ahead, 1100, 8, 8)
         val whenBehind = WordSiegePracticeEngine.botTargetPercentile(behind, 1100, 8, 8)
 
-        assertTrue(whenAhead < base)
+        assertTrue(whenAhead >= base)
         assertTrue(whenBehind > base)
     }
 
