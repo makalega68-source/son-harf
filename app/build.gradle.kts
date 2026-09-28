@@ -24,7 +24,7 @@ android {
         applicationId = "com.sonharf.game"
         minSdk = 26
         targetSdk = 36
-        versionCode = 36
+        versionCode = 37
         versionName = "1.0.0"
 
         val supabaseUrl = providers.gradleProperty("SON_HARF_SUPABASE_URL")
@@ -79,6 +79,13 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
+        }
+        // Same shrunk build as the store release, signed with the debug key: CI builds it on every
+        // push so R8/resource-shrinking problems show up before the real store upload.
+        create("releaseCheck") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
         }
     }
 

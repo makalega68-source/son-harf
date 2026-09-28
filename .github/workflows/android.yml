@@ -130,6 +130,20 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # The store build (R8 + resource shrinking) signed with the debug key, so the shrunk app is
+      # built and can be tried on a phone before the real signed upload.
+      - name: Build store-shrunk check APK
+        run: ./gradlew :app:assembleReleaseCheck --stacktrace --warning-mode all
+
+      - name: Upload store-shrunk check APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kelime-Tahti-Yayin-Kontrol
+          path: app/build/outputs/apk/releaseCheck/app-releaseCheck.apk
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Build signed release APK and AAB
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'
         env:

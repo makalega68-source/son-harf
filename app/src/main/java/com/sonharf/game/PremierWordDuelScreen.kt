@@ -812,7 +812,7 @@ private fun PremierLobby(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val owned = WordSiegeMascotOwnership.owned
-    val skin = remember { WordSiegeMascotBond(context).skinChoice?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } }
+    val skin = remember(MascotSkinChoice.version) { WordSiegeMascotBond(context).skinChoice?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } }
     var waveKey by remember { mutableStateOf(0L) }
     LaunchedEffect(Unit) { delay(600); waveKey = 1L }
     Column(

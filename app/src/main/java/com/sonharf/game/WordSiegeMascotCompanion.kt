@@ -227,6 +227,8 @@ internal class WordSiegeMascotBond(context: Context) {
         }
         set(value) {
             prefs.edit().putString(KEY_SKIN, value?.id.orEmpty()).apply()
+            // Every mascot on screen follows a new choice at once (profile, picker or store).
+            MascotSkinChoice.version += 1
         }
 
     private fun today(): Long = System.currentTimeMillis() / 86_400_000L
@@ -638,7 +640,8 @@ internal fun WordSiegeMascotCompanion(
     }
 
     // Long-pressing the mascot switches between the blue orb and the pink girl; the choice is kept.
-    var skinChoice by remember { mutableStateOf(bond.skinChoice) }
+    // Re-read whenever the choice changes anywhere (e.g. the profile's "Kullan"), not only at start.
+    val skinChoice = remember(MascotSkinChoice.version) { bond.skinChoice }
     var showPicker by remember { mutableStateOf(false) }
     val preferred = skinChoice ?: if (playerGender?.trim()?.lowercase() in FEMALE_GENDERS) {
         WordSiegeMascotSkin.PINK
@@ -1305,7 +1308,6 @@ internal fun WordSiegeMascotCompanion(
                 onPick = { next ->
                     showPicker = false
                     if (next != skin) {
-                        skinChoice = next
                         bond.skinChoice = next
                         perform(WordSiegeMascotAction.SPARKLE)
                         // The newly chosen character introduces itself in its own voice.
@@ -1497,4 +1499,10 @@ private fun WordSiegeMascotSpeechBubble(
             maxLines = 3,
         )
     }
+}
+
+
+/** Bumped on every mascot change so all mascots on screen switch to the new choice at once. */
+internal object MascotSkinChoice {
+    var version by androidx.compose.runtime.mutableIntStateOf(0)
 }
