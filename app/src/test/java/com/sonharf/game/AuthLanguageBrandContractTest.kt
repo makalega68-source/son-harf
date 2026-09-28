@@ -35,8 +35,8 @@ class AuthLanguageBrandContractTest {
         assertTrue(auth.contains("sh(\"E-POSTA ADRESİNİ DEĞİŞTİR\", \"CHANGE EMAIL ADDRESS\")"))
         assertFalse(auth.contains("Son Harf otomatik açılır"))
 
-        assertTrue(startup.contains("text = \"KELİME TAHTI\""))
-        assertTrue(startup.contains("text = \"WORD BOARD\""))
+        // The first-run brand is the Kelime Tahtı logo that drops into the welcome clip.
+        assertTrue(File("src/main/java/com/sonharf/game/IntroWelcome.kt").readText().contains("R.drawable.kelime_tahti_brand_logo"))
         assertFalse(startup.contains("SonHarfOfficialLogo(modifier"))
     }
 

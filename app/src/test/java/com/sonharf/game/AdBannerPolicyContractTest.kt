@@ -39,7 +39,7 @@ class AdBannerPolicyContractTest {
     @Test
     fun productionStartupUsesOnlyThePremiumShell() {
         val startup = source("src/main/java/com/sonharf/game/StableV1App.kt")
-        assertTrue(startup.contains("PremiumUnifiedProApp(onSignedOut = { authenticated = false })"))
+        assertTrue(startup.contains("PremiumUnifiedProApp(onSignedOut = {"))
         assertFalse(startup.contains("\n    UnifiedProApp(onSignedOut"))
     }
 

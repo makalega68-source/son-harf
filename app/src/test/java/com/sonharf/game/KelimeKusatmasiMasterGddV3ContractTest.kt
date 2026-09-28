@@ -30,7 +30,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
     fun modeHierarchyAndLanguageScopeStayFocused() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
-        val firstRun = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
+        val firstRun = File("src/main/java/com/sonharf/game/IntroWelcome.kt").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
 
         assertTrue(shell.contains("title = sh(\"KELİME TAHTI\", \"KELİME TAHTI\")"))
