@@ -152,6 +152,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The TR/EN dictionaries ship inside the app; they are read from here, never downloaded.
+        com.sonharf.game.data.SharedDictionaryService.attach(this)
         passwordRecoveryRequested = savedInstanceState?.getBoolean(PASSWORD_RECOVERY_STATE_KEY) == true
 
         // Nothing optional is allowed to prevent the first frame from being rendered. Audio,
