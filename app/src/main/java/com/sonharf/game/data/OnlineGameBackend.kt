@@ -267,6 +267,16 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
             buildJsonObject { put("p_room_id", roomId) },
         ).decodeSingle()
 
+    /**
+     * Starts the untouched opening turn's 15 seconds now (once per match). Matchmaking and the VS
+     * screen used to eat the first turn, so it expired before the arena was even on screen.
+     */
+    suspend fun activatePremierOpeningTurn(roomId: String): GameRoomDto =
+        supabase.postgrest.rpc(
+            "activate_premier_opening_turn_v1",
+            buildJsonObject { put("p_room_id", roomId) },
+        ).decodeSingle()
+
     suspend fun botAnswerTrivia(roomId: String): GameRoomDto =
         supabase.postgrest.rpc("bot_answer_trivia", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()
 

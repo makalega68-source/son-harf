@@ -149,8 +149,14 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     var success by remember { mutableStateOf(false) }
     var pendingVerificationEmail by remember { mutableStateOf<String?>(null) }
     var otpCode by remember { mutableStateOf("") }
+    // Each new code cancels the previous one, so "send again" waits a minute between sends.
+    var lastResendAt by remember { mutableStateOf(0L) }
     val scrollState = rememberScrollState()
     fun friendly(raw: String): String = when {
+        "otp_expired" in raw || "Token has expired" in raw -> sh(
+            "Kod geçersiz ya da süresi dolmuş. Yalnızca EN SON gelen e-postadaki kodu gir; gerekirse bir dakika sonra yeni kod iste.",
+            "The code is invalid or expired. Enter the code from the LATEST email only; request a new one after a minute if needed.",
+        )
         "Email not confirmed" in raw || "email_not_confirmed" in raw -> sh("E-posta adresini onaylamadan giriş yapamazsın. Gelen kutunu kontrol et.", "Confirm your email before signing in. Check your inbox.")
         "Invalid login credentials" in raw -> sh("E-posta veya şifre hatalı.", "Incorrect email or password.")
         "existing_confirmed_account" in raw -> sh("Bu e-posta zaten kayıtlı ve doğrulanmış. Giriş Yap bölümünü kullan; şifreni unuttuysan Şifremi unuttum'a dokun.", "This email is already registered and verified. Use Sign In, or Forgot password if needed.")
@@ -207,6 +213,16 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     fun resendPendingCode() {
         val targetEmail = pendingVerificationEmail ?: return
         if (busy) return
+        val waitSeconds = ((lastResendAt + 60_000L - System.currentTimeMillis()) / 1000L).toInt()
+        if (waitSeconds > 0) {
+            success = false
+            notice = sh(
+                "Yeni kod için $waitSeconds sn bekle. Her yeni kod bir öncekini iptal eder; son gelen e-postadaki kodu kullan.",
+                "Wait $waitSeconds s for a new code. Each new code cancels the previous one; use the latest email's code.",
+            )
+            return
+        }
+        lastResendAt = System.currentTimeMillis()
         scope.launch {
             busy = true
             notice = ""
@@ -219,7 +235,11 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 )
             }.onSuccess {
                 success = true
-                notice = sh("Yeni doğrulama e-postası gönderildi. Gelen kutunu ve spam klasörünü kontrol et.", "A new verification email was sent. Check your inbox and spam folder.")
+                otpCode = ""
+                notice = sh(
+                    "Yeni kod gönderildi. Eski kodlar artık geçersiz: yalnızca bu son e-postadaki kodu gir.",
+                    "A new code was sent. Older codes no longer work: enter only the code from this latest email.",
+                )
             }.onFailure {
                 notice = friendly(it.message.orEmpty())
             }

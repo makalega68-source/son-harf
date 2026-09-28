@@ -336,9 +336,11 @@ fun PremierWordDuelScreen() {
     // turn (e.g. the bot opening a round right after it missed) still runs. The polled word list
     // is not a key: it lands a moment after the room row and used to restart the AI's round
     // break and "thinking" pause half-way.
-    LaunchedEffect(room?.id, room?.botTurn, room?.status, room?.roundNo, room?.validWordCount) {
+    LaunchedEffect(stage, room?.id, room?.botTurn, room?.status, room?.roundNo, room?.validWordCount) {
         val active = room ?: return@LaunchedEffect
         val botPlayable = active.status in setOf("playing", "final", "sudden_death")
+        // The AI moves only once the arena is on screen (never behind the VS screen).
+        if (stage != PremierStage.Playing) return@LaunchedEffect
         if (!active.isBot || !active.botTurn || !botPlayable) return@LaunchedEffect
 
         // A new round that the bot opens starts with the same preparation break as any other.
@@ -386,7 +388,21 @@ fun PremierWordDuelScreen() {
         }
     }
 
+    // The match's first turn gets its full 15 seconds from the moment the arena shows.
+    LaunchedEffect(stage, room?.id) {
+        val active = room ?: return@LaunchedEffect
+        if (stage != PremierStage.Playing) return@LaunchedEffect
+        if (active.roundNo == 1 && active.validWordCount == 0 && !active.botTurn &&
+            active.status in setOf("playing", "final", "sudden_death")
+        ) {
+            runCatching { backend.activatePremierOpeningTurn(active.id) }.getOrNull()?.let { opened ->
+                if (room?.id == opened.id) room = opened
+            }
+        }
+    }
+
     LaunchedEffect(
+        stage,
         room?.id,
         room?.turnDeadline,
         room?.currentPlayerId,
@@ -397,6 +413,11 @@ fun PremierWordDuelScreen() {
     ) {
         val active = room ?: return@LaunchedEffect
         prepSeconds = 0
+        // No clock (and no timeout claim) until the arena is on screen.
+        if (stage != PremierStage.Playing) {
+            turnSeconds = PREMIER_TURN_SECONDS
+            return@LaunchedEffect
+        }
         if (active.status !in setOf("playing", "final", "sudden_death") || active.botTurn) {
             turnSeconds = PREMIER_TURN_SECONDS
             return@LaunchedEffect
@@ -937,14 +958,16 @@ private fun PremierHowToPlay(language: String) {
                                         .shadow(2.dp, RoundedCornerShape(6.dp))
                                         .background(
                                             Brush.verticalGradient(
-                                                if (link) listOf(Color(0xFFF7D774), PremierBoard.Gold) else listOf(Color(0xFFFFF8E1), PremierBoard.Tile),
+                                                if (link) listOf(Color(0xFFF7D774), PremierBoard.Gold)
+                                                else if (SonHarfCosmetics.darkArenaTheme) listOf(Color(0xFF2A2C33), PremierBoard.Tile)
+                                                else listOf(Color(0xFFFFF8E1), PremierBoard.Tile),
                                             ),
                                             RoundedCornerShape(6.dp),
                                         )
                                         .border(1.dp, if (link) PremierBoard.GoldEdge else PremierBoard.TileEdge, RoundedCornerShape(6.dp)),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    Text(ch.toString(), color = PremierBoard.TileInk, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                                    Text(ch.toString(), color = if (link) PremierBoard.OnGold else PremierBoard.TileInk, fontSize = 12.sp, fontWeight = FontWeight.Black)
                                 }
                             }
                         }
@@ -1174,6 +1197,8 @@ private object PremierBoard {
     val TileInk: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFF2C75C) else if (SonHarfCosmetics.walnutTheme) Color(0xFF2A2018) else Color(0xFF4A3217)
     val Gold = Color(0xFFE0A82E)
     val GoldEdge = Color(0xFFB07F1E)
+    /** Text on a gold surface: always dark, so it reads in every theme. */
+    val OnGold = Color(0xFF3A2400)
     val Ink: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else if (SonHarfCosmetics.walnutTheme) Color(0xFF3A2417) else Color(0xFF243142)
     val Muted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else if (SonHarfCosmetics.walnutTheme) Color(0xFF7A6650) else Color(0xFF6B7A8C)
     val Mine = Color(0xFF3E9F4D)
@@ -2266,7 +2291,8 @@ private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String, 
         Text(
             label,
             Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
-            color = if (myTurn) PremierBoard.TileInk else PremierBoard.Ink,
+            // Dark ink on the gold badge in every theme (the Black Theme's gold ink vanished on gold).
+            color = if (myTurn) PremierBoard.OnGold else PremierBoard.Ink,
             fontSize = 11.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = .6.sp,
@@ -2403,19 +2429,30 @@ private fun PremierLetterTile(
     modifier: Modifier = Modifier,
     fontScale: Float = .5f,
 ) {
+    // One face with a thin, even rim on all four sides (the old tile had only a bottom lip, so
+    // its top edge looked faded) and the letter centred on the face's own middle.
+    val shape = RoundedCornerShape(size * .2f)
     Box(
         modifier
             .size(size)
-            .background(if (gold) PremierBoard.GoldEdge else PremierBoard.TileEdge, RoundedCornerShape(size * .2f))
-            .padding(bottom = size * .07f),
+            .background(if (gold) PremierBoard.Gold else PremierBoard.Tile, shape)
+            .border(1.2.dp, if (gold) PremierBoard.GoldEdge else PremierBoard.TileEdge, shape),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            Modifier.fillMaxSize().background(if (gold) PremierBoard.Gold else PremierBoard.Tile, RoundedCornerShape(size * .2f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(letter, color = PremierBoard.TileInk, fontSize = (size.value * fontScale).sp, fontWeight = FontWeight.Black)
-        }
+        val letterSize = (size.value * fontScale).sp
+        Text(
+            letter,
+            color = if (gold) PremierBoard.OnGold else PremierBoard.TileInk,
+            fontSize = letterSize,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            style = TextStyle(
+                lineHeight = letterSize,
+                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+            ),
+        )
     }
 }
 

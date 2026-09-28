@@ -119,24 +119,42 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
 
     LaunchedEffect(selectedGameId, showChat) {
         val gameId = selectedGameId ?: return@LaunchedEffect
+        // The clock ticks every second, but the server is read every 2 s and the board is only
+        // redrawn when something actually changed (a fresh copy of the same game used to redraw
+        // the whole board every second, which made the match stutter).
+        var tick = 0
+        var movesFor = -1
         while (currentCoroutineContext().isActive) {
-            runCatching { backend.refreshWordSiegeGame(gameId) }
-                .onSuccess { next ->
-                    val changed = currentGame?.moveCount != next.moveCount || currentGame?.currentPlayerId != next.currentPlayerId
-                    currentGame = next
-                    games = (games.filterNot { it.id == next.id } + next).sortedWith(seriesGameComparator(me))
-                    loadProfiles(listOf(next.playerOneId, next.playerTwoId))
-                    if (changed) {
-                        placements = emptyMap()
-                        selectedRackIndex = null
+            if (tick % 2 == 0) {
+                runCatching { backend.refreshWordSiegeGame(gameId) }
+                    .onSuccess { next ->
+                        if (next != currentGame) {
+                            val changed = currentGame?.moveCount != next.moveCount || currentGame?.currentPlayerId != next.currentPlayerId
+                            currentGame = next
+                            games = (games.filterNot { it.id == next.id } + next).sortedWith(seriesGameComparator(me))
+                            loadProfiles(listOf(next.playerOneId, next.playerTwoId))
+                            if (changed) {
+                                placements = emptyMap()
+                                selectedRackIndex = null
+                            }
+                        }
+                    }
+                    .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
+                val moveCount = currentGame?.moveCount ?: -1
+                if (moveCount != movesFor) {
+                    runCatching { backend.getWordSiegeMoves(gameId) }.getOrNull()?.let {
+                        if (it != moves) moves = it
+                        movesFor = moveCount
                     }
                 }
-                .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
-            moves = runCatching { backend.getWordSiegeMoves(gameId) }.getOrDefault(moves)
+            }
             // Chat is read in the background too, so the chat button can show new messages.
-            messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
-            GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
+            if (tick % 4 == 0 || showChat) {
+                runCatching { backend.getWordSiegeMessages(gameId) }.getOrNull()?.let { if (it != messages) messages = it }
+                GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
+            }
             clockTick = System.currentTimeMillis()
+            tick += 1
             delay(1_000)
         }
     }

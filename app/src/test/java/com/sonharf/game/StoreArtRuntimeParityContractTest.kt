@@ -8,7 +8,9 @@ import org.junit.Test
 /** What the store shows is what the player gets: the in-use look is built from the same art. */
 class StoreArtRuntimeParityContractTest {
     private fun source(name: String) = File("src/main/java/com/sonharf/game/$name").readText()
-    private fun art(name: String) = File("src/main/res/drawable-nodpi/$name.png")
+    // Art may be stored as PNG or as lossless WebP (same pixels, smaller file).
+    private fun art(name: String) = listOf("png", "webp").map { File("src/main/res/drawable-nodpi/$name.$it") }
+        .firstOrNull(File::isFile) ?: File("src/main/res/drawable-nodpi/$name.png")
 
     @Test fun everyProductWithoutPaintedArtNowHasIt() {
         listOf(

@@ -149,28 +149,39 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         refreshGames(showProgress = true)
         while (currentCoroutineContext().isActive) {
             delay(5_000)
-            refreshGames()
+            // The game list is not on screen during a match; refreshing it there only costs frames.
+            if (selectedGameId == null) refreshGames()
         }
     }
 
     LaunchedEffect(selectedGameId, showChat) {
         val gameId = selectedGameId ?: return@LaunchedEffect
+        // Only a real change redraws the board; moves are re-read only after a new move.
+        var movesFor = -1
         while (currentCoroutineContext().isActive) {
             runCatching { backend.refreshWordSiegeGame(gameId) }
                 .onSuccess { next ->
-                    val turnChanged = currentGame?.moveCount != next.moveCount ||
-                        currentGame?.currentPlayerId != next.currentPlayerId
-                    currentGame = next
-                    loadProfiles(listOf(next.playerOneId, next.playerTwoId))
-                    if (turnChanged) {
-                        placements = emptyMap()
-                        selectedRackIndex = null
+                    if (next != currentGame) {
+                        val turnChanged = currentGame?.moveCount != next.moveCount ||
+                            currentGame?.currentPlayerId != next.currentPlayerId
+                        currentGame = next
+                        loadProfiles(listOf(next.playerOneId, next.playerTwoId))
+                        if (turnChanged) {
+                            placements = emptyMap()
+                            selectedRackIndex = null
+                        }
                     }
                 }
                 .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
-            moves = runCatching { backend.getWordSiegeMoves(gameId) }.getOrDefault(moves)
+            val moveCount = currentGame?.moveCount ?: -1
+            if (moveCount != movesFor) {
+                runCatching { backend.getWordSiegeMoves(gameId) }.getOrNull()?.let {
+                    if (it != moves) moves = it
+                    movesFor = moveCount
+                }
+            }
             // Chat is read in the background too, so the chat button can show new messages.
-            messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
+            runCatching { backend.getWordSiegeMessages(gameId) }.getOrNull()?.let { if (it != messages) messages = it }
             GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
             delay(2_500)
         }
