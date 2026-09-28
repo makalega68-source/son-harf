@@ -15,6 +15,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -70,69 +71,92 @@ private fun HomeStatusRow(
     onPro: () -> Unit,
     onSettings: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Row(
-            Modifier.weight(1.25f).clickable(onClick = onProfile),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            FramedProfilePhotoAvatar(
-                avatarPath = profile?.avatarPath,
-                gender = profile?.gender,
-                name = profile?.displayName ?: sh("Oyuncu", "Player"),
-                size = 46.dp,
-                frameId = SonHarfCosmetics.profileFrameId,
-                accent = Hf.Gold,
-                visible = profile?.avatarVisibility != "hidden",
-                isPro = profile?.isVip == true,
-            )
-            Spacer(Modifier.width(4.dp))
-            Surface(shape = Hf.PillShape, color = Hf.Gold.copy(alpha = .22f), border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .8f))) {
-                Row(Modifier.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.WorkspacePremium, null, tint = Hf.Gold, modifier = Modifier.size(15.dp))
-                    Spacer(Modifier.width(4.dp))
+    val pro = profile?.isVip == true
+    // Premium header: a navy card with a gold rim holding the player, league, coins, PRO and settings.
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .shadow(10.dp, RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(22.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF22345C), Color(0xFF14213F), Color(0xFF0E1830))))
+            .border(1.5.dp, Brush.linearGradient(listOf(Color(0xFFFFE08A), Color(0xFFC9962A), Color(0xFFFFE08A))), RoundedCornerShape(22.dp))
+            .padding(horizontal = 10.dp, vertical = 9.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.clickable(onClick = onProfile)) {
+                FramedProfilePhotoAvatar(
+                    avatarPath = profile?.avatarPath,
+                    gender = profile?.gender,
+                    name = profile?.displayName ?: sh("Oyuncu", "Player"),
+                    size = 50.dp,
+                    frameId = SonHarfCosmetics.profileFrameId,
+                    accent = Hf.Gold,
+                    visible = profile?.avatarVisibility != "hidden",
+                    isPro = pro,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f).clickable(onClick = onProfile), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    profile?.displayName?.ifBlank { null } ?: sh("Oyuncu", "Player"),
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.WorkspacePremium, null, tint = Color(0xFFFFD36B), modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(3.dp))
                     Text(
                         profile?.let { homeLeagueName(ratingLeagueProgress(it.rating).leagueName) + sh(" Lig", " League") } ?: sh("Lig", "League"),
-                        color = Hf.Text,
+                        color = Color(0xFFFFD36B),
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
-        }
-        HfPill(onClick = onShop, modifier = Modifier.padding(horizontal = 6.dp)) {
-            HfCoin(20.dp)
-            Spacer(Modifier.width(7.dp))
-            Text(
-                profile?.diamonds?.let { homeGrouped(it) } ?: "—",
-                color = Hf.Text,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                maxLines = 1,
-            )
-        }
-        // A compact pill: a clickable Surface would stretch its gold background to the 48 dp touch height.
-        Box(
-            Modifier
-                .clip(Hf.PillShape)
-                .background(Hf.Gold)
-                .border(1.dp, Hf.GoldLight, Hf.PillShape)
-                .clickable(onClick = onPro),
-        ) {
-            Row(Modifier.padding(horizontal = 9.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.WorkspacePremium, null, tint = Hf.Ink, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(3.dp))
-                Text(
-                    "PRO",
-                    color = Hf.Ink,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Black,
-                )
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                // Coins: tap to open the store.
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = .10f))
+                        .border(1.dp, Color(0xFFFFD36B).copy(alpha = .7f), RoundedCornerShape(50))
+                        .clickable(onClick = onShop)
+                        .padding(horizontal = 9.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    HfCoin(17.dp)
+                    Spacer(Modifier.width(5.dp))
+                    Text(profile?.diamonds?.let { homeGrouped(it) } ?: "—", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                }
+                // PRO: a compact gold badge when active, an invitation otherwise.
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Brush.verticalGradient(listOf(Color(0xFFFFE08A), Color(0xFFD4A21F))))
+                        .clickable(onClick = onPro)
+                        .padding(horizontal = 9.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Rounded.WorkspacePremium, null, tint = Color(0xFF3A2400), modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        if (pro) "PRO" else sh("PRO OL", "GO PRO"),
+                        color = Color(0xFF3A2400),
+                        fontSize = 11.sp,
+                        lineHeight = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                    )
+                }
             }
-        }
-        IconButton(onClick = onSettings, modifier = Modifier.size(44.dp)) {
-            Icon(painterResource(R.drawable.hf_ic_settings), sh("Ayarlar", "Settings"), tint = Hf.Gold, modifier = Modifier.size(28.dp))
+            IconButton(onClick = onSettings, modifier = Modifier.size(42.dp)) {
+                Icon(Icons.Rounded.Settings, sh("Ayarlar", "Settings"), tint = Color(0xFFFFD36B), modifier = Modifier.size(26.dp))
+            }
         }
     }
 }

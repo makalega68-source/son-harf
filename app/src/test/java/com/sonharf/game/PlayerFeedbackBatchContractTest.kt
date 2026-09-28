@@ -31,7 +31,7 @@ class PlayerFeedbackBatchContractTest {
         assertTrue(source("WordSiegePanMatch.kt").contains("frameId = rememberPlayerFrame(profile?.id)"))
         assertTrue(source("PremierWordDuelScreen.kt").contains("frameId = if (room.isBot) null else rememberPlayerFrame(opponent?.id)"))
         assertTrue(source("CompetitionRankingView.kt").contains("frameId = rememberPlayerFrame(userId)"))
-        assertTrue(source("PremiumHomeV3.kt").contains("a clickable Surface would stretch its gold background"))
+        assertTrue(source("PremiumHomeV3.kt").contains("PRO: a compact gold badge when active, an invitation otherwise."))
     }
 
     @Test fun rivalsMascotIsVisibleWithoutOwningOne() {

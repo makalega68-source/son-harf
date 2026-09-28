@@ -888,7 +888,7 @@ private fun PremierLobby(
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(pt(language, "Rakip bulunamazsa seviye uyumlu bot devreye girer.", "If no rival is found, a level-appropriate bot takes over."), Modifier.fillMaxWidth(), color = PremierUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+        Text(pt(language, "Rakip bulunamazsa seviye uyumlu AI devreye girer.", "If no rival is found, a level-appropriate AI takes over."), Modifier.fillMaxWidth(), color = PremierUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
     }
 }
 
@@ -1077,7 +1077,7 @@ private fun PremierSearching(language: String, me: ProfileDto?, onCancel: () -> 
         }
         Spacer(Modifier.height(22.dp))
         Text(pt(language, "Seviyene uygun rakip bulunuyor", "Finding a rival at your level"), color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-        Text(pt(language, "Bulunamazsa seviyene uygun bir bot oynar.", "If none is found, a bot at your level plays."), color = Hf.TextMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
+        Text(pt(language, "Bulunamazsa seviyene uygun bir AI oynar.", "If none is found, an AI at your level plays."), color = Hf.TextMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.weight(1f))
         HfSecondaryButton(pt(language, "Vazgeç", "Cancel"), onClick = onCancel, modifier = Modifier.fillMaxWidth(.8f))
     }
@@ -1102,7 +1102,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
         }
         Spacer(Modifier.height(16.dp))
         if (room.isBot) {
-            PremierVsPlayerCard(language, room.botName ?: pt(language, "KelimeBot", "WordBot"), null, null, true, (me?.rating ?: 1000), 50, PremierUi.OceanDeep, bot = true)
+            PremierVsPlayerCard(language, room.botName?.replace("KelimeBot", "KelimeAI")?.replace("WordBot", "WordAI") ?: pt(language, "KelimeAI", "WordAI"), null, null, true, (me?.rating ?: 1000), 50, PremierUi.OceanDeep, bot = true)
         } else {
             PremierVsPlayerCard(language, opponent?.displayName ?: pt(language, "Rakip", "Rival"), opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", opponent?.rating ?: 1000, profileWinRate(opponent), PremierUi.OceanDeep, frameId = rememberPlayerFrame(opponent?.id))
         }
@@ -1135,7 +1135,7 @@ private fun PremierVsPlayerCard(language: String, name: String, avatar: String?,
                         NameStyleEmblem(20.dp)
                     }
                 }
-                Text(if (bot) pt(language, "ADAPTİF BOT", "ADAPTIVE BOT") else pt(language, "PREMIER OYUNCU", "PREMIER PLAYER"), color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text(if (bot) pt(language, "ADAPTİF AI", "ADAPTIVE AI") else pt(language, "PREMIER OYUNCU", "PREMIER PLAYER"), color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(7.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     PremierStatPill("🏆 $rating RP", accent)
@@ -1235,7 +1235,7 @@ private fun PremierArena(
         room.status in setOf("playing", "final", "sudden_death")
     val preparing = prepSeconds > 0
     val live = room.status in setOf("playing", "final", "sudden_death")
-    val rivalName = if (room.isBot) room.botName ?: pt(language, "KelimeBot", "WordBot") else opponent?.displayName ?: pt(language, "Rakip", "Rival")
+    val rivalName = if (room.isBot) room.botName?.replace("KelimeBot", "KelimeAI")?.replace("WordBot", "WordAI") ?: pt(language, "KelimeAI", "WordAI") else opponent?.displayName ?: pt(language, "Rakip", "Rival")
     val required = premierRequiredToken(room, words)
     val latestMove = words.lastOrNull()
     val latestPlayedWord = latestMove?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
@@ -1244,7 +1244,7 @@ private fun PremierArena(
     // Mascot hints: three per match. Against a bot the mascot shows the start of a real word;
     // against a real opponent it only gives strategy tips (fair play).
     val hintContext = androidx.compose.ui.platform.LocalContext.current
-    var hintsLeft by remember(room.id) { mutableIntStateOf(MascotHints.HINTS_PER_MATCH) }
+    var hintsLeft by remember(room.id) { mutableIntStateOf(MascotHints.freeHints) }
     var hintRequest by remember(room.id) { mutableStateOf<Pair<Int, String>?>(null) }
     fun askHint() {
         if (hintsLeft <= 0) return
@@ -2206,7 +2206,7 @@ private fun PremierBotAvatar(size: Dp, accent: Color) {
         Box(contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Rounded.SmartToy, null, tint = accent, modifier = Modifier.size(size * .42f))
-                Text("BOT", color = accent, fontSize = (size.value * .12f).sp, fontWeight = FontWeight.Black)
+                Text("AI", color = accent, fontSize = (size.value * .12f).sp, fontWeight = FontWeight.Black)
             }
         }
     }
@@ -2549,9 +2549,21 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
         Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierBoard.Ink.copy(alpha = .6f), fontSize = 10.sp)
         return
     }
-    // Pro users see the full played-word history so they can avoid repeats;
-    // everyone else keeps the compact trailing preview.
-    val ordered = if (isPro) words.reversed() else words.takeLast(12).reversed()
+    // Seeing the words played in the match is a PRO perk; others see how many and a lock.
+    if (!isPro) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Lock, null, tint = PremierBoard.Ink.copy(alpha = .5f), modifier = Modifier.size(12.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(
+                pt(language, "Çıkan ${words.size} kelimeyi görmek PRO'ya özel", "Seeing the ${words.size} played words is PRO"),
+                color = PremierBoard.Ink.copy(alpha = .55f),
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        return
+    }
+    val ordered = words.reversed()
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (isPro) {
             Text(
@@ -2819,7 +2831,7 @@ private fun PremierChatSheet(
                 Column(Modifier.weight(1f)) {
                     Text(pt(language, "Maç Sohbeti", "Match Chat"), color = PremierBoard.Ink, fontSize = 18.sp, fontWeight = FontWeight.Black)
                     Text(
-                        if (isBot) pt(language, "Bot ile serbestçe yazış.", "Chat freely with the bot.")
+                        if (isBot) pt(language, "AI ile serbestçe yazış.", "Chat freely with the AI.")
                         else pt(language, "Rakibinle gerçek zamanlı mesajlaş.", "Message your rival in real time."),
                         color = PremierBoard.Muted,
                         fontSize = 10.sp,
@@ -3090,7 +3102,7 @@ private fun premierBotChatReply(language: String, message: String): String {
             )
         "bot" in tokens || "robot" in tokens || lower.contains("yapay") || "ai" in tokens ->
             pick(
-                "Evet, botum. Ama kelimelere gönülden bağlıyım. 🤖💙" to "Yes, I'm a bot. But I truly love words. 🤖💙",
+                "Evet, yapay zekâyım. Ama kelimelere gönülden bağlıyım. 🤖💙" to "Yes, I'm an AI. But I truly love words. 🤖💙",
                 "Yapay zekâyım ama kaybetmekten gerçekten nefret ederim. 😅" to "I'm an AI, but I truly hate losing. 😅",
             )
         lead >= 10 ->

@@ -385,7 +385,8 @@ private fun SiegeLibraryTabButton(
         modifier = modifier.height(38.dp),
         shape = SiegeEntryControlShape,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) SonHarfTheme.HeroStart else SonHarfTheme.SurfaceSecondary,
+            // Solid brand green when selected so the white label always reads.
+            containerColor = if (selected) Color(0xFF2E8B45) else SonHarfTheme.SurfaceSecondary,
             contentColor = if (selected) Color.White else SonHarfTheme.TextPrimary,
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),

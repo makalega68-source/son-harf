@@ -468,7 +468,7 @@ private fun WordSiegeGamesList(
                         loading = busy,
                     )
                     WordSiegeModeCard(
-                        title = sh("BOT İLE\nALIŞTIR", "PRACTICE\nWITH BOT"),
+                        title = sh("AI İLE\nALIŞTIR", "PRACTICE\nWITH AI"),
                         subtitle = sh("Hemen başla", "Start now"),
                         icon = Icons.Rounded.SmartToy,
                         color = MainUi.BlueSoft,
@@ -1111,7 +1111,7 @@ private fun WordSiegeChatDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(sh("SOHBET", "CHAT"), fontWeight = FontWeight.Black) },
+        title = { ChatDialogTitle(sh("SOHBET", "CHAT"), onDismiss) },
         text = {
             Column(Modifier.heightIn(min = 220.dp, max = 430.dp)) {
                 if (messages.isEmpty()) {
@@ -1171,7 +1171,8 @@ private fun WordSiegeChatDialog(
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(sh("KAPAT", "CLOSE")) } },
+        // Closed with the X in the top-left corner.
+        confirmButton = {},
     )
 }
 

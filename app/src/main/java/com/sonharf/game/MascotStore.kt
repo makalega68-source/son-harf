@@ -263,6 +263,15 @@ private fun MascotStoreHero() {
                     fontSize = 12.sp,
                     lineHeight = 16.sp,
                 )
+                Spacer(Modifier.height(6.dp))
+                // The mascot's advantage, stated up front.
+                Text(
+                    sh("💡 MASKOT AVANTAJI: Her maçta 3 ipucu (Kuşatma, Son Harf, Kelime Atölyesi)", "💡 MASCOT ADVANTAGE: 3 hints every match (Siege, Last Letter, Word Workshop)"),
+                    color = Hf.GoldDeep,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.Black,
+                )
                 Spacer(Modifier.height(10.dp))
                 // A small parade of characters, alive.
                 Row(Modifier.fillMaxWidth().height(125.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
@@ -324,7 +333,7 @@ private fun MascotStoreCard(
                 Text(skin.pitch(), color = Hf.Text.copy(alpha = .9f), fontSize = 11.sp, lineHeight = 15.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    sh("Uçar • konuşur • seni hatırlar", "Flies • talks • remembers you"),
+                    sh("Her maçta 3 ipucu • uçar • konuşur • seni hatırlar", "3 hints every match • flies • talks • remembers you"),
                     color = Hf.Gold,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,

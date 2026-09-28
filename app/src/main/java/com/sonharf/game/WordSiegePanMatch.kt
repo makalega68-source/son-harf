@@ -355,8 +355,8 @@ internal fun WordSiegePanMatch(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         sh(
-                            "15 saniye içinde rakip bulunmazsa geçici bot maçı hemen başlayacak. Gerçek rakip araması arka planda sürecek.",
-                            "If no rival is found within 15 seconds, a temporary bot match starts immediately while real matchmaking continues in the background.",
+                            "15 saniye içinde rakip bulunmazsa geçici AI maçı hemen başlayacak. Gerçek rakip araması arka planda sürecek.",
+                            "If no rival is found within 15 seconds, a temporary AI match starts immediately while real matchmaking continues in the background.",
                         ),
                         color = WordSiegeGameUi.Muted,
                         fontSize = 12.sp,

@@ -177,14 +177,6 @@ private fun PremiumCompletedMatchList(
 private fun PremiumLockedAnalysisCopy() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(sh("Maç-sonu derin analiz Premium özelliğidir.", "Deep post-match analysis is a Premium feature."), color = SonHarfText, fontWeight = FontWeight.Bold)
-        Text(
-            sh(
-                "Adil rekabet: Premium kelime önerisi, alan önizlemesi, ek süre, rating veya canlı hamle avantajı vermez.",
-                "Fair play: Premium gives no word suggestions, territory preview, extra time, rating, or live-move advantage.",
-            ),
-            color = SonHarfGreen,
-            fontSize = 10.sp,
-        )
     }
 }
 

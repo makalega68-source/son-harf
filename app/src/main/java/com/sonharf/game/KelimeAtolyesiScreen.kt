@@ -148,7 +148,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var best by remember(language) { mutableIntStateOf(AtelierRecords.best(context, language)) }
     var newBest by remember { mutableStateOf(false) }
     // Mascot hints: three per round, only when the player taps the hint button.
-    var hintsLeft by remember { mutableIntStateOf(MascotHints.HINTS_PER_MATCH) }
+    var hintsLeft by remember { mutableIntStateOf(MascotHints.freeHints) }
     // Action: quick words chain into a combo, finished tasks add time.
     var combo by remember { mutableIntStateOf(0) }
     var comboNonce by remember { mutableIntStateOf(0) }
@@ -221,7 +221,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             state = fresh
             feedback = null
             newBest = false
-            hintsLeft = MascotHints.HINTS_PER_MATCH
+            hintsLeft = MascotHints.freeHints
             hintText = null
             combo = 0
             lastWordAt = 0L

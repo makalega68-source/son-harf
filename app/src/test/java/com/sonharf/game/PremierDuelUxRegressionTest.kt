@@ -122,7 +122,7 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("backend.sendChat(active.id, message)"))
         assertTrue(screen.contains("backend.getChat(active.id)"))
         assertTrue(screen.contains("premierBotChatReply(language, message)"))
-        assertTrue(screen.contains("Bot ile serbestçe yazış."))
+        assertTrue(screen.contains("AI ile serbestçe yazış."))
         assertFalse(screen.contains("quickMessages"))
         assertFalse(screen.contains("Hızlı reaksiyonlar"))
         assertFalse(screen.contains("Bot maçında gerçek mesajlaşma kapalıdır."))

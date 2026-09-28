@@ -116,13 +116,23 @@ private fun ProFramePlate(size: Dp) {
             .padding(horizontal = (9f * scale).dp, vertical = (1.5f * scale).dp),
         contentAlignment = Alignment.Center,
     ) {
+        // Tight line box: the default body line height made the plate tall on small avatars.
+        val fontSize = (13f * scale).coerceAtLeast(6f).sp
         Text(
             "PRO",
             color = Color(0xFFFFE6A0),
-            fontSize = (13f * scale).coerceAtLeast(6f).sp,
+            fontSize = fontSize,
+            lineHeight = fontSize,
             fontWeight = FontWeight.Black,
             letterSpacing = (1.2f * scale).sp,
             maxLines = 1,
+            style = androidx.compose.ui.text.TextStyle(
+                platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false),
+                lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
+                    alignment = androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+                    trim = androidx.compose.ui.text.style.LineHeightStyle.Trim.Both,
+                ),
+            ),
         )
     }
 }

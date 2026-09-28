@@ -14,6 +14,9 @@ import kotlin.random.Random
 internal object MascotHints {
     const val HINTS_PER_MATCH = 3
 
+    /** Mascot advantage: owning a mascot gives three free hints every match; others buy them. */
+    val freeHints: Int get() = if (WordSiegeMascotOwnership.hasAny) HINTS_PER_MATCH else 0
+
     @Volatile private var commonTr: Set<String>? = null
 
     private fun common(context: Context, language: String): Set<String> {

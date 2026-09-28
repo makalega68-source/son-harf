@@ -164,7 +164,6 @@ internal fun MonsterStyleStoreScreen() {
                     ::buyAndEquip,
                 )
             }
-            item { FairPlayCard() }
         }
     }
 }
@@ -344,16 +343,3 @@ private fun EmptyCatalogCard() {
     }
 }
 
-@Composable
-private fun FairPlayCard() {
-    Surface(shape = RoundedCornerShape(18.dp), color = StoreAlt, border = BorderStroke(1.dp, StoreBorder)) {
-        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.VerifiedUser, null, Modifier.size(24.dp), tint = StoreGreen)
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(sh("ADİL OYUN SÖZÜ", "FAIR PLAY PROMISE"), color = StoreText, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                Text(sh("Mağazadaki tüm ürünler kozmetiktir; maç gücü veya puan avantajı sağlamaz.", "Every store item is cosmetic; it provides no match power or score advantage."), color = StoreMuted, fontSize = 11.sp)
-            }
-        }
-    }
-}

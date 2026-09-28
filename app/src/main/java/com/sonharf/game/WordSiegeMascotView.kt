@@ -1109,8 +1109,14 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.restore()
         // The tuft is attached at the crown. Only its own small pivot sway may lag;
         // its root must share the body's exact transform on every frame.
-        if (hat != WordSiegeMascotHat.NONE) drawHat(canvas, now) else decor.drawTuft(canvas, now)
         decor.drawFront(canvas)
+        // A worn hat covers the head top: no tuft and no antenna under it.
+        if (hat != WordSiegeMascotHat.NONE) {
+            drawHat(canvas, now)
+        } else {
+            decor.drawTuft(canvas, now)
+            decor.drawCrown(canvas)
+        }
         if (sleeping) drawSleepZ(canvas, now)
         drawAnimeMarks(canvas, now, mood)
         drawSparkles(canvas, now)

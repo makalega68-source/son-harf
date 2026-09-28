@@ -77,6 +77,9 @@ internal fun StoreProBenefits() {
     val uri = LocalUriHandler.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(8.dp)) {
         listOf(
+            sh("Kuşatmada hamle puanını onaylamadan gör", "See a siege move's score before confirming"),
+            sh("Torbada kalan harfleri gör", "See the letters left in the bag"),
+            sh("Son Harf'te maçta çıkan kelimeleri gör", "See the words played in a Last Letter match"),
             sh("Zorunlu reklamsız kullanım", "No mandatory ads"),
             sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"),
             sh("Gelişmiş maç analizi", "Advanced match analysis"),
@@ -87,9 +90,6 @@ internal fun StoreProBenefits() {
                 Spacer(Modifier.width(10.dp))
                 Text(benefit, fontSize = 13.sp, lineHeight = 18.sp, color = SonHarfText)
             }
-        }
-        TextButton(onClick = { uri.openUri("https://play.google.com/store/account/subscriptions?package=${BuildConfig.APPLICATION_ID}") }) {
-            Text(sh("Aboneliği yönet", "Manage subscription"))
         }
     }
 }

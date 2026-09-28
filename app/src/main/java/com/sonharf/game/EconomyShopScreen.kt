@@ -322,19 +322,6 @@ private fun EconomyCatalogScreen(
             }
         }
 
-        item {
-            HfCard(modifier = Modifier.fillMaxWidth(), borderColor = Hf.Gold.copy(alpha = .4f)) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.VerifiedUser, null, tint = Hf.Gold, modifier = Modifier.size(25.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Column {
-                        Text(sh("ADİL OYUN SÖZÜ", "FAIR PLAY PROMISE"), color = Hf.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz.", "Store products never provide match power, score, or rating advantages."), color = Hf.TextMuted, fontSize = 11.sp)
-                    }
-                }
-            }
-        }
-
         if (!notice.isNullOrBlank()) item {
             HfCard(modifier = Modifier.fillMaxWidth(), color = Hf.Surface) {
                 Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = Hf.Text, fontSize = 13.sp, textAlign = TextAlign.Center)
@@ -499,8 +486,7 @@ private fun ProShopCard(active: Boolean, onClick: () -> Unit) {
                 }
                 Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) Hf.GreenLight else Hf.Gold, fontWeight = FontWeight.Black)
             }
-            Text(sh("Özel oda • PRO profil rozeti • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar", "Private rooms • PRO profile badge • advanced stats • ad-free experience • social benefits"), color = Hf.Text, fontSize = 13.sp)
-            Text(sh("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez.", "PRO provides no score, word-hint, or rating advantage in ranked matches."), color = Hf.GreenLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(sh("Kuşatmada hamle puanı • torbadaki harfler • Son Harf'te çıkan kelimeler • özel oda • PRO profil • reklamsız", "Siege move score • letters left in the bag • Last Letter played words • private rooms • PRO profile • ad-free"), color = Hf.Text, fontSize = 13.sp)
         }
     }
 }
@@ -543,10 +529,8 @@ private fun StoreCoinGuide() {
                     Color(0xFFFFC46B),
                     listOf(
                         "💡 " + sh("Ekstra ipucu · 25", "Extra hint · 25"),
-                        "🍓 " + sh("Maskot meyvesi", "Mascot fruit"),
                         "🎩 " + sh("Obi şapkaları", "Obi hats"),
                         "⌨ " + sh("Klavyeler", "Keyboards"),
-                        "🛡 " + sh("Kulüp kur · 1.000", "Found a club · 1,000"),
                     ),
                     Modifier.weight(1f),
                 )

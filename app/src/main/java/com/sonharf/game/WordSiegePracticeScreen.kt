@@ -92,8 +92,8 @@ private fun WordSiegePracticeContent(
         mutableStateOf(
             if (matchmakingFallback) {
                 sh(
-                    "Geçici bot maçı başladı. Gerçek rakip araması arka planda sürüyor.",
-                    "Temporary bot match started. Real matchmaking continues in the background.",
+                    "Geçici AI maçı başladı. Gerçek rakip araması arka planda sürüyor.",
+                    "Temporary AI match started. Real matchmaking continues in the background.",
                 )
             } else null,
         )
@@ -108,7 +108,7 @@ private fun WordSiegePracticeContent(
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var shuffleSeed by remember { mutableIntStateOf(0) }
     // Mascot hints against the practice bot: three per match.
-    var siegeHintsLeft by remember { mutableIntStateOf(MascotHints.HINTS_PER_MATCH) }
+    var siegeHintsLeft by remember { mutableIntStateOf(MascotHints.freeHints) }
     var siegeHint by remember { mutableStateOf<Pair<Int, String>?>(null) }
     // The hint move's cells: the mascot flies there; the tiles are already placed for the player.
     var siegeHintCells by remember { mutableStateOf<List<Int>>(emptyList()) }
@@ -200,8 +200,8 @@ private fun WordSiegePracticeContent(
                 if (!restored) {
                     notice = if (matchmakingFallback) {
                         sh(
-                            "Sözlük hazır. Bot maçı sürerken gerçek rakip araması devam ediyor.",
-                            "Dictionary ready. Real matchmaking continues during the bot match.",
+                            "Sözlük hazır. AI maçı sürerken gerçek rakip araması devam ediyor.",
+                            "Dictionary ready. Real matchmaking continues during the AI match.",
                         )
                     } else {
                         sh(
@@ -269,7 +269,7 @@ private fun WordSiegePracticeContent(
     }
 
     fun resetMatch(changeOpponent: Boolean) {
-        siegeHintsLeft = MascotHints.HINTS_PER_MATCH
+        siegeHintsLeft = MascotHints.freeHints
         siegeHint = null
         state = WordSiegePracticeEngine.newGame(state.language)
         if (changeOpponent) botProfile = WordSiegePracticeBots.random()
@@ -289,8 +289,8 @@ private fun WordSiegePracticeContent(
         botScoreLossTick = 0
         notice = if (matchmakingFallback) {
             sh(
-                "Yeni bot maçı başladı. Gerçek rakip araması sürüyor.",
-                "New bot match started. Real matchmaking is still running.",
+                "Yeni AI maçı başladı. Gerçek rakip araması sürüyor.",
+                "New AI match started. Real matchmaking is still running.",
             )
         } else {
             sh(
@@ -457,8 +457,8 @@ private fun WordSiegePracticeContent(
                         )
                         Text(
                             when {
-                                matchmakingFallback && dictionaryReady -> sh("BOT MAÇI • GERÇEK RAKİP ARANIYOR", "BOT MATCH • FINDING REAL RIVAL")
-                                matchmakingFallback -> sh("BOT MAÇI", "BOT MATCH")
+                                matchmakingFallback && dictionaryReady -> sh("AI MAÇI • GERÇEK RAKİP ARANIYOR", "AI MATCH • FINDING REAL RIVAL")
+                                matchmakingFallback -> sh("AI MAÇI", "AI MATCH")
                                 dictionaryLoading -> sh("ALIŞTIRMA • HAZIRLANIYOR", "PRACTICE • PREPARING")
                                 else -> sh("ALIŞTIRMA", "PRACTICE")
                             },
@@ -697,7 +697,16 @@ private fun WordSiegePracticeContent(
                             exchangeSelection = emptySet(); showExchange = true
                         }
                         WordSiegeCompactAction(sh("İPUCU $siegeHintsLeft", "HINT $siegeHintsLeft"), Icons.Rounded.Lightbulb,
-                            canPlayerAct && siegeHintsLeft > 0 && !hintSearching, Modifier.weight(1f)) {
+                            canPlayerAct && !hintSearching, Modifier.weight(1f)) {
+                            // Three hints a match are the mascot's advantage.
+                            if (siegeHintsLeft <= 0) {
+                                notice = if (WordSiegeMascotOwnership.hasAny) {
+                                    sh("Bu maçın 3 ipucunu kullandın.", "You have used this match's 3 hints.")
+                                } else {
+                                    sh("Maskot avantajı: bir maskotun olursa her maçta 3 ipucu kazanırsın. Mağaza > Maskotlar.", "Mascot advantage: own a mascot to get 3 hints every match. Store > Mascots.")
+                                }
+                                return@WordSiegeCompactAction
+                            }
                             // A hint is the clear answer: the best move the rack can play, placed on
                             // the board, with the mascot flying to it and saying the word.
                             siegeHintsLeft -= 1
@@ -815,7 +824,7 @@ private fun WordSiegePracticeContent(
                 if (boardViewportMode == WordSiegeBoardViewportMode.FIT) WordSiegePracticeStatusBar(statusMessage, compact)
                 WordSiegeTurnStrip(
                     text = when {
-                        state.status == "finished" && matchmakingFallback -> sh("BOT MAÇI BİTTİ • RAKİP ARAMASI SÜRÜYOR", "BOT MATCH FINISHED • MATCHMAKING CONTINUES")
+                        state.status == "finished" && matchmakingFallback -> sh("AI MAÇI BİTTİ • RAKİP ARAMASI SÜRÜYOR", "AI MATCH FINISHED • MATCHMAKING CONTINUES")
                         state.status == "finished" -> sh("ALIŞTIRMA BİTTİ", "PRACTICE FINISHED")
                         botThinking -> sh("${botProfile.name.uppercase()} HAMLESİNİ HAZIRLIYOR", "${botProfile.name.uppercase()} IS PREPARING A MOVE")
                         displayedOwner == 1 -> sh("SIRA SENDE • Kelimeni oluştur", "YOUR TURN • Build your word")
@@ -834,7 +843,7 @@ private fun WordSiegePracticeContent(
         HfConfirmDialog(
             title = sh("Yeni oyun başlat?", "Start a new game?"),
             message = if (matchmakingFallback) {
-                sh("Bot maçı sıfırlanacak. Gerçek rakip araması devam edecek.", "The bot match will reset. Real matchmaking will continue.")
+                sh("AI maçı sıfırlanacak. Gerçek rakip araması devam edecek.", "The AI match will reset. Real matchmaking will continue.")
             } else {
                 sh("Mevcut alıştırmadaki ilerleme sıfırlanacak.", "Current practice progress will be reset.")
             },
@@ -922,7 +931,7 @@ private fun WordSiegePracticeContent(
     if (showChat) {
         AlertDialog(
             onDismissRequest = { showChat = false },
-            title = { Text(sh("SOHBET • ${botProfile.name}", "CHAT • ${botProfile.name}"), fontWeight = FontWeight.Black) },
+            title = { ChatDialogTitle(sh("SOHBET • ${botProfile.name}", "CHAT • ${botProfile.name}")) { showChat = false } },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val chatListState = rememberLazyListState()
@@ -932,7 +941,7 @@ private fun WordSiegePracticeContent(
                     }
                     if (chatMessages.isEmpty()) {
                         Text(
-                            sh("Botla kısa mesajlaşabilirsin.", "You can exchange short messages with the bot."),
+                            sh("AI ile kısa mesajlaşabilirsin.", "You can exchange short messages with the AI."),
                             color = WordSiegeGameUi.Muted,
                             fontSize = 12.sp,
                         )
@@ -976,7 +985,7 @@ private fun WordSiegePracticeContent(
                                     val message = chatDraft.trim()
                                     if (message.isNotEmpty()) {
                                         chatMessages = chatMessages + (true to message) +
-                                            (false to sh("İyi oyunlar!", "Good game!"))
+                                            (false to practiceAiChatReply(message, chatMessages.size))
                                         chatDraft = ""
                                     }
                                 },
@@ -985,11 +994,8 @@ private fun WordSiegePracticeContent(
                     )
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showChat = false }) {
-                    Text(sh("KAPAT", "CLOSE"), fontWeight = FontWeight.Black)
-                }
-            },
+            // Closed with the X in the top-left corner.
+            confirmButton = {},
         )
     }
 
@@ -1144,4 +1150,28 @@ private fun WordSiegePracticeScoreCard(
         // Practice is you against a bot: your own frame on your card.
         frameId = if (isBot) null else SonHarfCosmetics.profileFrameId,
     )
+}
+
+/** The AI rival answers what was said instead of repeating one line. */
+internal fun practiceAiChatReply(message: String, turn: Int): String {
+    val m = message.lowercase(java.util.Locale.forLanguageTag("tr-TR"))
+    fun pick(vararg options: Pair<String, String>): String = options[turn % options.size].let { sh(it.first, it.second) }
+    return when {
+        listOf("selam", "merhaba", "slm", "hello").any { it in m } ->
+            pick("Selam! Tahtayı kim alacak, görelim." to "Hi! Let's see who takes the board.", "Merhaba, bol şans!" to "Hello, good luck!")
+        listOf("nasılsın", "naber", "how are") .any { it in m } ->
+            pick("İyiyim, hamlemi düşünüyorum. Sen?" to "Good, thinking about my move. You?", "Harika, bu tahtayı sevdim." to "Great, I like this board.")
+        listOf("tebrik", "bravo", "güzel", "nice", "well played", "wp", "helal") .any { it in m } ->
+            pick("Teşekkürler! Sıradaki hamlen de güzel olur eminim." to "Thanks! Your next move will be good too.", "Sağ ol, sen de iyi oynuyorsun." to "Thanks, you play well too.")
+        listOf("kolay", "yeneceğim", "yenerim", "kazanacağım", "easy", "win") .any { it in m } ->
+            pick("Göreceğiz, ben de hazırım!" to "We'll see, I'm ready too!", "Bölgeler henüz bitmedi." to "The territory isn't settled yet.")
+        listOf("şans", "hile", "luck", "cheat") .any { it in m } ->
+            pick("Şans değil, strateji!" to "Not luck, strategy!", "Harf torbası herkese adil." to "The bag is fair to everyone.")
+        listOf("bye", "görüşürüz", "hoşça", "gg", "iyi oyunlar") .any { it in m } ->
+            pick("İyi oyunlar, keyifliydi!" to "Good game, that was fun!", "Görüşürüz, rövanşı bekliyorum." to "See you, I'm waiting for the rematch.")
+        m.endsWith("?") ->
+            pick("Güzel soru, hamlemden sonra söylerim." to "Good question, I'll tell you after my move.", "Hmm, önce şu kelimeyi bir bulayım." to "Hmm, let me find this word first.")
+        else ->
+            pick("Anladım, oyuna odaklanıyorum." to "Got it, focusing on the game.", "Haha, güzel. Şimdi sıra bende." to "Haha, nice. My turn now.", "Tahta ısınıyor!" to "The board is heating up!")
+    }
 }

@@ -81,7 +81,9 @@ class MascotAnimationRegressionTest {
         assertTrue(draw.contains("stepSprings(bodyTarget, bodyValue, bodyVelocity"))
         assertTrue(draw.contains("delayedBodyPose(now - 90L, followTarget)"))
         assertFalse("The tuft's root must not trail the head", draw.contains("tuftTarget"))
-        assertTrue(draw.contains("if (hat != WordSiegeMascotHat.NONE) drawHat(canvas, now) else decor.drawTuft(canvas, now)"))
+        // A worn hat hides the tuft and the robot's antenna.
+        assertTrue(draw.contains("drawHat(canvas, now)"))
+        assertTrue(draw.contains("decor.drawTuft(canvas, now)\n            decor.drawCrown(canvas)"))
         assertTrue(draw.contains("rotation.coerceIn(-8f, 8f)"))
         for (allocation in listOf("floatArrayOf(", "intArrayOf(", "listOf(", "Paint(", "Path(", "RectF(", "Matrix(")) {
             assertFalse(allocation, Regex("(?<![A-Za-z0-9_])" + Regex.escape(allocation)).containsMatchIn(draw))

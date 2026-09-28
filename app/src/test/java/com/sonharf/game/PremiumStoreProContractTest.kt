@@ -85,7 +85,7 @@ class PremiumStoreProContractTest {
 
         val screen = repoFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
         assertTrue(screen.contains("PRO • Tüm oynanan kelimeler"))
-        assertTrue(screen.contains("val ordered = if (isPro) words.reversed()"))
+        assertTrue(screen.contains("val ordered = words.reversed()"))
     }
 
     @Test

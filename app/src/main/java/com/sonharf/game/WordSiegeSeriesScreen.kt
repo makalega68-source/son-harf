@@ -370,7 +370,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
     if (showChat && dialogGame != null) {
         AlertDialog(
             onDismissRequest = { showChat = false },
-            title = { Text(sh("Oyun sohbeti", "Game chat"), fontWeight = FontWeight.Black) },
+            title = { ChatDialogTitle(sh("Oyun sohbeti", "Game chat")) { showChat = false } },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     LazyColumn(Modifier.fillMaxWidth().heightIn(min = 80.dp, max = 260.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -412,7 +412,6 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                     },
                 ) { Text(sh("GÖNDER", "SEND")) }
             },
-            dismissButton = { TextButton(onClick = { showChat = false }) { Text(sh("KAPAT", "CLOSE")) } },
         )
     }
 }

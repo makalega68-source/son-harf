@@ -165,7 +165,7 @@ internal fun WordSiegeScoreCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        if (isBot) sh("$area küp • BOT", "$area cubes • BOT") else sh("$area küp", "$area cubes"),
+                        if (isBot) sh("$area küp • AI", "$area cubes • AI") else sh("$area küp", "$area cubes"),
                         color = WordSiegeGameUi.Muted,
                         fontSize = 9.sp,
                         lineHeight = 11.sp,

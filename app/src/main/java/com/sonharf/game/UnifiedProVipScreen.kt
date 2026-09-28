@@ -160,40 +160,20 @@ internal fun UnifiedProVipScreen(
         item {
             Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
                 Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    ProLine("🎯", sh("Kuşatmada hamle puanını onaylamadan gör", "See a siege move's score before confirming"))
+                    ProLine("🎒", sh("Torbada kalan harfleri gör", "See the letters left in the bag"))
+                    ProLine("📜", sh("Son Harf'te maçta çıkan kelimeleri gör", "See the words played in a Last Letter match"))
                     ProLine("🚫", sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
                     ProLine("🏷️", sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
                     ProLine("📊", sh("Tamamlanmış maçlar için gelişmiş analiz", "Advanced analysis for completed matches"))
                     ProLine("♛", sh("Son Harf davet kodlu özel oda", "Last Letter invite-code private room"))
                     ProLine("👥", sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))
-                    Surface(shape = RoundedCornerShape(12.dp), color = UProGreen.copy(alpha = .10f), border = BorderStroke(1.dp, UProGreen.copy(alpha = .35f))) {
-                        Text(
-                            sh(
-                                "ADİL REKABET: PRO, dereceli maçlarda skor, hedef harf, kelime ipucu, ek süre veya rating avantajı vermez.",
-                                "FAIR PLAY: PRO gives no score, target-letter, word-hint, extra-time, or rating advantage in ranked matches.",
-                            ),
-                            Modifier.fillMaxWidth().padding(10.dp), color = UProGreen, fontSize = 9.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
-                        )
-                    }
                 }
             }
         }
 
         item {
-            if (active) {
-                OutlinedButton(
-                    onClick = {
-                        val url = "https://play.google.com/store/account/subscriptions?package=${BuildConfig.APPLICATION_ID}"
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, UProBlue),
-                ) {
-                    Icon(Icons.Rounded.OpenInNew, null, tint = UProBlue)
-                    Spacer(Modifier.width(7.dp))
-                    Text(sh("GOOGLE PLAY'DE YÖNET", "MANAGE ON GOOGLE PLAY"), color = UProBlue, fontWeight = FontWeight.Black)
-                }
-            } else {
+            if (!active) {
                 Button(
                     onClick = { showPurchase = true },
                     modifier = Modifier.fillMaxWidth().height(56.dp),

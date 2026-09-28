@@ -39,10 +39,7 @@ class PremiumPostMatchAnalysisContractTest {
     @Test
     fun `premium analysis cannot become a live tactical assist`() {
         assertTrue(center.contains("Completed matches only"))
-        assertTrue(center.contains("no word suggestions"))
-        assertTrue(center.contains("territory preview"))
-        assertTrue(center.contains("extra time"))
-        assertTrue(center.contains("rating"))
+        assertFalse(center.contains("Adil rekabet:"))
         assertTrue(migration.contains("get_vip_recent_completed_matches_v1"))
         assertFalse(migration.contains("status = 'playing'"))
         assertFalse(center.contains("recommendedMove"))

@@ -107,6 +107,8 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
     private val face = ArrayList<Op>()
     private val tuft = ArrayList<Op>()
     private val front = ArrayList<Op>()
+    /** Head-top pieces (the robot's antenna) that a hat covers. */
+    private val crown = ArrayList<Op>()
     private var target = front
     private val m = Matrix()
 
@@ -193,6 +195,9 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
     fun drawBehind(canvas: Canvas) = draw(canvas, behind)
 
     fun drawFront(canvas: Canvas) = draw(canvas, front)
+
+    /** Drawn only without a hat: a worn hat hides the antenna. */
+    fun drawCrown(canvas: Canvas) = draw(canvas, crown)
 
     /** Face details that ride with the features; fangs follow the top of the (animated) mouth. */
     fun drawFace(canvas: Canvas, mouthTop: Float, mouthOpen: Float) {
@@ -454,12 +459,14 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
         resetMatrix()
         // Antenna stands a little left of centre so the magic tuft has room.
         val ax = 600f
+        target = crown
         add(Path().apply { addRect(ax - 14f, 70f, ax + 14f, 175f, Path.Direction.CW) }, fill(metal(ax - 14f, 0f, ax + 14f, 0f), shadow = true), line(0xFF140A2A, 6f))
         add(Path().apply { moveTo(ax - 60f, 190f); cubicTo(ax - 60f, 142f, ax + 60f, 142f, ax + 60f, 190f); close() },
             fill(metal(ax - 60f, 150f, ax + 60f, 190f), shadow = true), line(0xFF140A2A, 7f))
         val bulb = Path().apply { addCircle(ax, 60f, 34f, Path.Direction.CW) }
         add(bulb, fill(rad(ax - 10f, 50f, 40f, 0f to 0xFFFFF1F1, .35f to 0xFFFF6B6B, 1f to 0xFFB3121C), glow = 0xF2FF4646), line(0xFF140A2A, 7f))
         glint(ax - 12f, 46f, 12f, .9f)
+        target = front
         for (s in floatArrayOf(-1f, 1f)) {
             val cx = 660f + s * 455f
             val cy = 640f

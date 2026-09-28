@@ -58,7 +58,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(home.contains("profile?.isVip == true"))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
         assertTrue(home.contains("\"${'$'}{it.rating} RP\""))
-        assertTrue(home.contains("R.drawable.hf_ic_settings"))
+        assertTrue(home.contains("Icons.Rounded.Settings"))
         assertTrue(home.contains("onClick = onSettings"))
         assertTrue(home.contains("sh(\"Ayarlar\", \"Settings\")"))
     }
@@ -129,8 +129,8 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         ).forEach { id -> assertTrue("Missing profile frame $id", economy.contains("\"$id\"")) }
 
         assertTrue(economy.contains("vip_pro_frame_access"))
-        assertTrue(shop.contains("ADİL OYUN SÖZÜ"))
-        assertTrue(shop.contains("Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz."))
+        assertFalse(shop.contains("ADİL OYUN SÖZÜ"))
+        assertFalse(shop.contains("ADİL OYUN SÖZÜ"))
     }
 
     @Test

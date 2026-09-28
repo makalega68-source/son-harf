@@ -31,12 +31,12 @@ class UnifiedProBoosterContractTest {
 
         assertFalse(vip.contains("2x Skor"))
         assertFalse(vip.contains("claimVipDailyHelpers"))
-        assertTrue(vip.contains("ADİL REKABET"))
+        assertFalse(vip.contains("ADİL REKABET"))
         assertTrue(entitlements.contains("rankedLiveAssist: Boolean = false"))
 
         // Store messaging must describe only fair PRO value, never a paid ranked advantage.
-        assertTrue(shop.contains("Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz."))
-        assertTrue(shop.contains("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez."))
+        assertFalse(shop.contains("ADİL OYUN SÖZÜ"))
+        assertTrue(shop.contains("Kuşatmada hamle puanı • torbadaki harfler"))
         assertFalse(shop.contains("günlük İpucu, Harf Değiştirici ve 2x Skor"))
         assertFalse(shop.contains("daily Hint, Letter Swap and 2x Score"))
         assertFalse(shop.contains("helper boosters with PRO"))

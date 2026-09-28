@@ -355,21 +355,7 @@ internal fun MainVipScreen(
         }
 
         item {
-            if (active) {
-                OutlinedButton(
-                    onClick = {
-                        val url = "https://play.google.com/store/account/subscriptions?package=${BuildConfig.APPLICATION_ID}"
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .40f)),
-                ) {
-                    Icon(Icons.Rounded.OpenInNew, null, tint = MainUi.Blue)
-                    Spacer(Modifier.width(7.dp))
-                    Text(sh("GOOGLE PLAY'DE YÖNET", "MANAGE ON GOOGLE PLAY"), color = MainUi.Blue, fontWeight = FontWeight.Black)
-                }
-            } else {
+            if (!active) {
                 Button(
                     onClick = { showPurchase = true },
                     modifier = Modifier.fillMaxWidth().height(56.dp),

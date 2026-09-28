@@ -115,21 +115,15 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                     TextButton(onClick = onDismiss, enabled = !busy) { Text("✕", color = ProText, fontSize = 18.sp) }
                 }
 
+                ProBenefit(Icons.Rounded.Calculate, sh("PUAN ÖNİZLEME", "SCORE PREVIEW"), sh("Kuşatmada hamlenin puanını onaylamadan gör", "See a siege move's score before confirming"))
+                ProBenefit(Icons.Rounded.Inventory2, sh("TORBA", "BAG"), sh("Torbada kalan harfleri gör", "See the letters left in the bag"))
+                ProBenefit(Icons.Rounded.History, sh("ÇIKAN KELİMELER", "PLAYED WORDS"), sh("Son Harf'te maçta çıkan kelimeleri gör", "See the words played in a Last Letter match"))
                 ProBenefit(Icons.Rounded.Block, sh("REKLAMSIZ", "AD-FREE"), sh("Menü ve mağazada reklamsız deneyim", "Ad-free menus and shop"))
                 ProBenefit(Icons.Rounded.Badge, sh("PRO PROFİL", "PRO PROFILE"), sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
                 ProBenefit(Icons.Rounded.MeetingRoom, sh("ÖZEL ODALAR", "PRIVATE ROOMS"), sh("Arkadaşlarınla özel oyun alanları", "Private play spaces with friends"))
                 ProBenefit(Icons.Rounded.Insights, sh("GELİŞMİŞ İSTATİSTİK", "ADVANCED STATS"), sh("Detaylı maç analizi ve performans", "Detailed match analysis and performance"))
                 ProBenefit(Icons.Rounded.Groups, sh("SOSYAL AYRICALIKLAR", "SOCIAL BENEFITS"), sh("Kaydedilmiş arkadaş listesi ve PRO profil değeri", "Saved friend list and PRO profile value"))
 
-                Surface(shape = RoundedCornerShape(14.dp), color = ProGreen.copy(alpha = .10f), border = BorderStroke(1.dp, ProGreen.copy(alpha = .35f))) {
-                    Text(
-                        sh(
-                            "ADİL REKABET: PRO, dereceli Premier maçlarda skor, hedef harf veya kelime avantajı vermez.",
-                            "FAIR PLAY: PRO gives no score, target-letter, or word advantage in ranked Premier matches.",
-                        ),
-                        Modifier.fillMaxWidth().padding(11.dp), color = ProGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-                    )
-                }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     ProPlan(
