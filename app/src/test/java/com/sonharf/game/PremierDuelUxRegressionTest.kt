@@ -52,7 +52,8 @@ class PremierDuelUxRegressionTest {
         assertFalse(screen.contains("timeoutClaimKey"))
         assertTrue(backend.contains("submitWord(roomId, word)"))
         assertTrue(backend.contains("getRoom(roomId)"))
-        assertTrue(backend.contains("botTakeTurn(roomId)"))
+        // The AI reply is requested only by the arena (after its pause / the round break).
+        assertFalse(backend.contains("runCatching { botTakeTurn(roomId) }"))
         assertFalse(backend.contains("submit_word_v4"))
 
         // Returning to a live bot room must refresh the server deadline instead of charging offline time.

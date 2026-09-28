@@ -133,7 +133,9 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                 }
                 .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
             moves = runCatching { backend.getWordSiegeMoves(gameId) }.getOrDefault(moves)
-            if (showChat) messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
+            // Chat is read in the background too, so the chat button can show new messages.
+            messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
+            GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
             clockTick = System.currentTimeMillis()
             delay(1_000)
         }
@@ -276,6 +278,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                             onExchange = { exchangeSelection = emptySet(); showExchange = true },
                             onChat = {
                                 showChat = true
+                                GameChatBadge.markRead()
                                 scope.launch { messages = runCatching { backend.getWordSiegeMessages(game.id) }.getOrDefault(emptyList()) }
                             },
                             onForfeit = { showForfeit = true },

@@ -198,24 +198,26 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
         }
 
         if (category == null || category == "game_theme") {
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ProfileThemeCard(
-                    title = sh("Ana Tema", "Main Theme"),
-                    subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
-                    active = SonHarfCosmetics.gameThemeId == null,
-                    enabled = !busy && !loading,
-                    blackVariant = false,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    onClick = { equipStyle(null) },
-                )
-                if (showBlackTheme) {
+            val themeTiles = buildList<@Composable (Modifier) -> Unit> {
+                add { m ->
+                    ProfileThemeCard(
+                        title = sh("Ana Tema", "Main Theme"),
+                        subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
+                        active = SonHarfCosmetics.gameThemeId == null,
+                        enabled = !busy && !loading,
+                        blackVariant = false,
+                        modifier = m,
+                        onClick = { equipStyle(null) },
+                    )
+                }
+                if (showBlackTheme) add { m ->
                     ProfileThemeCard(
                         title = "Black Theme",
                         subtitle = sh("Koleksiyonunda", "In your collection"),
                         active = darkActive,
                         enabled = !busy && !loading,
                         blackVariant = true,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        modifier = m,
                         preview = {
                             androidx.compose.foundation.Image(
                                 painter = androidx.compose.ui.res.painterResource(R.drawable.store_art_theme_black),
@@ -225,22 +227,18 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                         },
                         onClick = { equipStyle(ownedDarkThemeId ?: BlackThemeId) },
                     )
-                } else {
-                    Spacer(Modifier.weight(1f))
                 }
-            }
-            if (walnutItem != null) {
-                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (walnutItem != null) add { m ->
                     OwnedStyleCard(
                         item = walnutItem,
                         active = equipped.isEquipped(walnutItem),
                         enabled = !loading && !busy,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        modifier = m,
                         onEquip = { equipStyle(walnutItem.id) },
                     )
-                    Spacer(Modifier.weight(1f))
                 }
             }
+            CollectionGrid(themeTiles)
         }
 
         notice?.let {
@@ -258,21 +256,6 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
         if (category != "game_theme") {
             // Every slot the player can dress up also offers the free standard look to go back to.
             val defaultKinds = if (category == null) ResettableKinds.filter { kind -> styles.any { it.kind == kind } } else ResettableKinds.filter { kind -> inCategory(kind) && (kind == category || styles.any { it.kind == kind }) }
-            defaultKinds.forEach { kind ->
-                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ProfileThemeCard(
-                        title = defaultStyleTitle(kind),
-                        subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
-                        active = equipped != null && equipped.slotFor(kind) == null,
-                        enabled = !busy && !loading,
-                        blackVariant = false,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        preview = { DefaultSlotPreview(kind) },
-                        onClick = { resetSlot(kind) },
-                    )
-                    Spacer(Modifier.weight(1f))
-                }
-            }
             if (!loading && notice == null && shown.isEmpty()) {
                 HfCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
@@ -284,20 +267,35 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                     )
                 }
             }
-            shown.chunked(2).forEach { row ->
-                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    row.forEach { item ->
+            // The free standard look sits in the same grid as the owned items, first in line.
+            val tiles = buildList<@Composable (Modifier) -> Unit> {
+                defaultKinds.forEach { kind ->
+                    add { m ->
+                        ProfileThemeCard(
+                            title = defaultStyleTitle(kind),
+                            subtitle = sh("Varsayılan • Ücretsiz", "Default • Free"),
+                            active = equipped != null && equipped.slotFor(kind) == null,
+                            enabled = !busy && !loading,
+                            blackVariant = false,
+                            modifier = m,
+                            preview = { DefaultSlotPreview(kind) },
+                            onClick = { resetSlot(kind) },
+                        )
+                    }
+                }
+                shown.forEach { item ->
+                    add { m ->
                         OwnedStyleCard(
                             item = item,
                             active = equipped.isEquipped(item),
                             enabled = !loading && !busy,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            modifier = m,
                             onEquip = { equipStyle(item.id) },
                         )
                     }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
+            CollectionGrid(tiles)
         }
     }
 }
@@ -319,9 +317,9 @@ private fun ProfileThemeCard(
         color = Hf.Ground,
         border = BorderStroke(if (active) 2.dp else 1.5.dp, if (active) Hf.Green else Hf.Gold.copy(alpha = .75f)),
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(
-                Modifier.fillMaxWidth().height(84.dp).background(
+                Modifier.fillMaxWidth().height(72.dp).background(
                     brush = if (blackVariant) {
                         Brush.linearGradient(listOf(Color(0xFF050608), Color(0xFF111318), Color(0xFF20242B)))
                     } else {
@@ -340,8 +338,8 @@ private fun ProfileThemeCard(
                     )
                 }
             }
-            Text(title, color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = Hf.TextMuted, fontSize = 12.sp)
+            Text(title, color = Hf.Text, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(subtitle, color = Hf.TextMuted, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             Spacer(Modifier.weight(1f))
             ProfileUseButton(active = active, enabled = enabled, onClick = onClick)
         }
@@ -358,38 +356,48 @@ private fun OwnedMascotsPicker() {
     var chosen by remember { mutableStateOf(bond.skinChoice?.takeIf { it in owned } ?: owned.first()) }
     val scope = rememberCoroutineScope()
     Text(sh("MASKOTLARIM", "MY MASCOTS"), color = Hf.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
-    owned.chunked(2).forEach { row ->
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            row.forEach { skin ->
-                val active = chosen == skin
-                Surface(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    shape = Hf.CardShape,
-                    color = Hf.Ground,
-                    border = BorderStroke(if (active) 2.dp else 1.5.dp, if (active) Hf.Green else Hf.Gold.copy(alpha = .75f)),
-                ) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(Modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.Center) {
-                            WordSiegeMascot(
-                                moveId = null,
-                                lastMoveMine = false,
-                                pendingCells = emptyList(),
-                                playerTurn = false,
-                                modifier = Modifier.size(106.dp),
-                                skin = skin,
-                            )
-                        }
-                        Text(sh(skin.titleTr, skin.titleEn), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                        Spacer(Modifier.weight(1f))
-                        ProfileUseButton(active = active, enabled = true) {
-                            bond.skinChoice = skin
-                            chosen = skin
-                            scope.launch { PlayerMascots.publish(skin) }
-                        }
+    CollectionGrid(owned.map { skin ->
+        @Composable { m: Modifier ->
+            val active = chosen == skin
+            Surface(
+                modifier = m,
+                shape = Hf.CardShape,
+                color = Hf.Ground,
+                border = BorderStroke(if (active) 2.dp else 1.5.dp, if (active) Hf.Green else Hf.Gold.copy(alpha = .75f)),
+            ) {
+                Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
+                        WordSiegeMascot(
+                            moveId = null,
+                            lastMoveMine = false,
+                            pendingCells = emptyList(),
+                            playerTurn = false,
+                            modifier = Modifier.size(70.dp),
+                            skin = skin,
+                        )
+                    }
+                    Text(sh(skin.titleTr, skin.titleEn), color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Spacer(Modifier.weight(1f))
+                    ProfileUseButton(active = active, enabled = true) {
+                        bond.skinChoice = skin
+                        chosen = skin
+                        scope.launch { PlayerMascots.publish(skin) }
                     }
                 }
             }
-            if (row.size == 1) Spacer(Modifier.weight(1f))
+        }
+    })
+}
+
+/** Three even columns; a short last row keeps its cards the same width as the rest. */
+@Composable
+private fun CollectionGrid(tiles: List<@Composable (Modifier) -> Unit>) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        tiles.chunked(3).forEach { row ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { tile -> tile(Modifier.weight(1f).fillMaxHeight()) }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
         }
     }
 }
@@ -425,16 +433,16 @@ private fun ProfileUseButton(active: Boolean, enabled: Boolean, onClick: () -> U
     Surface(
         onClick = onClick,
         enabled = enabled && !active,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp),
         shape = Hf.PillShape,
         color = if (active) Hf.Green else Hf.Ivory,
         border = if (active) BorderStroke(1.5.dp, Hf.GreenLight) else null,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
-                if (active) sh("Kullanılıyor", "Equipped") else sh("Kullan", "Equip"),
+                if (active) sh("✓ Takılı", "✓ On") else sh("Kullan", "Equip"),
                 color = if (active) Hf.OnAccent else Hf.Text,
-                fontSize = 15.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -457,19 +465,18 @@ private fun OwnedStyleCard(
         border = BorderStroke(if (active) 2.dp else 1.5.dp, if (active) Hf.Green else Hf.Gold.copy(alpha = .75f)),
     ) {
         Box {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.Center) {
+            Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
                     if (item.kind == "profile_frame" && supported) {
-                        Icon(Icons.Rounded.Person, null, Modifier.size(40.dp), tint = Hf.TextMuted)
-                        ProfileFrameArt(frameId = item.id, size = 64.dp)
+                        Icon(Icons.Rounded.Person, null, Modifier.size(30.dp), tint = Hf.TextMuted)
+                        ProfileFrameArt(frameId = item.id, size = 52.dp)
                     } else {
                         StoreProductPreview(item, Modifier.fillMaxSize())
                     }
                 }
-                Text(sh(item.nameTr, item.nameEn), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                storeItemEffect(item)?.let { Text(it, color = Hf.TextMuted, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 3) }
+                Text(sh(item.nameTr, item.nameEn), color = Hf.Text, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 if (!item.active) {
-                    Text(sh("Arşiv ürünü • Koleksiyonunda", "Retired item • In your collection"), color = Hf.TextMuted, fontSize = 11.sp)
+                    Text(sh("Arşiv ürünü", "Retired item"), color = Hf.TextMuted, fontSize = 10.sp)
                 }
                 if (!supported) {
                     Text(
@@ -478,14 +485,15 @@ private fun OwnedStyleCard(
                             "Unavailable in this version. You still own this item.",
                         ),
                         color = Hf.TextMuted,
-                        fontSize = 12.sp,
+                        fontSize = 10.sp,
                     )
                 }
-                Spacer(Modifier.weight(1f, fill = false))
+                Spacer(Modifier.weight(1f))
                 Button(
                     onClick = onEquip,
                     enabled = enabled && supported && !active,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                     shape = Hf.PillShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Hf.Ivory,
@@ -494,11 +502,11 @@ private fun OwnedStyleCard(
                         disabledContentColor = Hf.Text,
                     ),
                 ) {
-                    Text(if (active) sh("Kullanılıyor", "Equipped") else sh("Kullan", "Equip"), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(if (active) sh("✓ Takılı", "✓ On") else sh("Kullan", "Equip"), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
             }
             if (active) {
-                Surface(Modifier.align(Alignment.TopEnd).padding(8.dp).size(28.dp), shape = androidx.compose.foundation.shape.CircleShape, color = Hf.Green, border = BorderStroke(1.5.dp, Hf.GreenLight)) {
+                Surface(Modifier.align(Alignment.TopEnd).padding(5.dp).size(22.dp), shape = androidx.compose.foundation.shape.CircleShape, color = Hf.Green, border = BorderStroke(1.5.dp, Hf.GreenLight)) {
                     Icon(Icons.Rounded.CheckCircle, null, tint = Hf.OnAccent, modifier = Modifier.padding(3.dp))
                 }
             }

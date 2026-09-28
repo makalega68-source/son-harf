@@ -169,9 +169,9 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                 }
                 .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
             moves = runCatching { backend.getWordSiegeMoves(gameId) }.getOrDefault(moves)
-            if (showChat) {
-                messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
-            }
+            // Chat is read in the background too, so the chat button can show new messages.
+            messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
+            GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
             delay(2_500)
         }
     }
@@ -278,6 +278,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     },
                     onChat = {
                         showChat = true
+                        GameChatBadge.markRead()
                         scope.launch {
                             messages = runCatching { backend.getWordSiegeMessages(game.id) }.getOrDefault(emptyList())
                         }

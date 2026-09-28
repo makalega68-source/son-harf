@@ -239,13 +239,36 @@ fun RewardCenterScreen() {
         }
 
         if (!isPro) {
+            if (storefront?.rewardedEnabled == false) item {
+                Text(
+                    sh("Video ödülleri çok yakında açılıyor. Hepsi aşağıda hazır.", "Video rewards open very soon. Everything is ready below."),
+                    color = Hf.GoldDeep,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        } else {
+            item {
+                Text(
+                    sh("PRO hesabında reklam yok; video ödülleri PRO olmayan oyunculara açıktır. Önizleme:", "No ads on PRO; video rewards are for non-PRO players. Preview:"),
+                    color = Hf.TextMuted,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+        // Every reward is listed for everyone; only non-PRO players can start a video.
+        run {
             item {
                 RewardVideoCard(
                     icon = "🪙",
                     title = sh("+${s?.coinPerAd ?: 10} SON COIN", "+${s?.coinPerAd ?: 10} SON COIN"),
                     description = sh("Her video Son Coin verir.", "Each video gives Son Coin."),
                     progress = sh("Bugün ${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 3}", "Today ${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 3}"),
-                    enabled = adReady && (s?.coinAdsUsed ?: 0) < (s?.coinAdsLimit ?: 3) && busy == null,
+                    enabled = !isPro && adReady && (s?.coinAdsUsed ?: 0) < (s?.coinAdsLimit ?: 3) && busy == null,
                     busy = busy == RewardKeys.COINS,
                     onClick = { showRewarded(RewardKeys.COINS) },
                 )
@@ -258,7 +281,7 @@ fun RewardCenterScreen() {
                     description = if (claimed) sh("Bugünkü giriş hediyeni bir kez daha al.", "Get today's login gift once more.")
                         else sh("Önce bugünkü giriş hediyeni al, sonra ikiye katla.", "Claim today's login gift first, then double it."),
                     progress = periodLabel(RewardKeys.DAILY_DOUBLE),
-                    enabled = claimed && canWatch(RewardKeys.DAILY_DOUBLE),
+                    enabled = !isPro && claimed && canWatch(RewardKeys.DAILY_DOUBLE),
                     busy = busy == RewardKeys.DAILY_DOUBLE,
                     onClick = { showRewarded(RewardKeys.DAILY_DOUBLE) },
                 )
@@ -269,7 +292,7 @@ fun RewardCenterScreen() {
                     title = sh("PREMIUM KLAVYE • 1 GÜN", "PREMIUM KEYBOARD • 1 DAY"),
                     description = sh("Seçtiğin klavye 24 saat boyunca tüm oyunlarda senin.", "The keyboard you pick is yours in every game for 24 hours."),
                     progress = periodLabel(RewardKeys.KEYBOARD_DAY),
-                    enabled = chosenKeyboard != null && passes?.keyboard == null && canWatch(RewardKeys.KEYBOARD_DAY),
+                    enabled = !isPro && chosenKeyboard != null && passes?.keyboard == null && canWatch(RewardKeys.KEYBOARD_DAY),
                     busy = busy == RewardKeys.KEYBOARD_DAY,
                     onClick = { showRewarded(RewardKeys.KEYBOARD_DAY, chosenKeyboard) },
                 ) {
@@ -282,7 +305,7 @@ fun RewardCenterScreen() {
                     title = sh("OYUN TEMASI • 1 GÜN", "GAME THEME • 1 DAY"),
                     description = sh("Seçtiğin tema 24 saat boyunca senin.", "The theme you pick is yours for 24 hours."),
                     progress = periodLabel(RewardKeys.THEME_DAY),
-                    enabled = chosenTheme != null && passes?.theme == null && canWatch(RewardKeys.THEME_DAY),
+                    enabled = !isPro && chosenTheme != null && passes?.theme == null && canWatch(RewardKeys.THEME_DAY),
                     busy = busy == RewardKeys.THEME_DAY,
                     onClick = { showRewarded(RewardKeys.THEME_DAY, chosenTheme) },
                 ) {
@@ -296,7 +319,7 @@ fun RewardCenterScreen() {
                     title = sh("5 HIZLI OYUN", "5 QUICK GAMES"),
                     description = sh("Kuşatma'nın Hızlı Oyun modunu 5 maç boyunca aç (3 gün geçerli).", "Unlock Siege Quick Game for 5 matches (valid 3 days)."),
                     progress = periodLabel(RewardKeys.QUICK_GAMES),
-                    enabled = !seriesAccess && canWatch(RewardKeys.QUICK_GAMES),
+                    enabled = !isPro && !seriesAccess && canWatch(RewardKeys.QUICK_GAMES),
                     busy = busy == RewardKeys.QUICK_GAMES,
                     onClick = { showRewarded(RewardKeys.QUICK_GAMES) },
                 )
@@ -314,7 +337,7 @@ fun RewardCenterScreen() {
                             title = title,
                             description = sh("İpuçları bankana eklenir, maçta ipucu düğmesiyle kullanırsın (7 gün geçerli).", "Hints go to your bank; use them with the hint button in a match (valid 7 days)."),
                             progress = periodLabel(key),
-                            enabled = canWatch(key),
+                            enabled = !isPro && canWatch(key),
                             busy = busy == key,
                             onClick = { showRewarded(key) },
                         )

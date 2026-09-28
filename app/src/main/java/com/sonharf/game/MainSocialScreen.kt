@@ -101,10 +101,6 @@ internal fun MainSocialScreen(
             )
         }
 
-        if (loading) {
-            item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = MainUi.Blue, trackColor = MainUi.BlueSoft) }
-        }
-
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MainMetricCard(friends.size.toString(), sh("Arkadaş", "Friends"), Modifier.weight(1f))

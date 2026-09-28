@@ -251,13 +251,10 @@ private fun EconomyCatalogScreen(
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (section == 0) {
             item { StoreProBanner(profile?.isVip == true) { onSection(3) } }
-        }
-        if (section == 0 || section == 5) {
-            item { StoreCoinGuide() }
         }
 
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Gold, trackColor = Hf.Surface) }
@@ -276,8 +273,8 @@ private fun EconomyCatalogScreen(
             }
         }
 
-        items(filtered.chunked(2), key = { row -> row.joinToString { it.id } }) { row ->
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(filtered.chunked(3), key = { row -> row.joinToString { it.id } }) { row ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { item ->
                     val mine = item.id in owned
                     val active = isEquipped(item)
@@ -339,7 +336,7 @@ private fun EconomyCatalogScreen(
                         }
                     }
                 }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
 
@@ -478,7 +475,7 @@ private fun VerifiedStoreProductCard(
     Surface(
         onClick = onAction,
         enabled = !busy && !owned && !equipped && !lockedByPro,
-        modifier = modifier.heightIn(min = 198.dp),
+        modifier = modifier,
         shape = Hf.CardShape,
         color = Hf.Ivory,
         border = BorderStroke(1.5.dp, if (owned || equipped) Hf.Green else Hf.Gold),
@@ -487,52 +484,49 @@ private fun VerifiedStoreProductCard(
         Box {
             // Same order on every card: picture, name, one short line, then the price at the bottom,
             // all centred so neighbouring cards line up.
-            Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                StoreProductPreview(item, Modifier.fillMaxWidth().height(104.dp))
-                Spacer(Modifier.height(10.dp))
+            Column(Modifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                StoreProductPreview(item, Modifier.fillMaxWidth().height(72.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
                     name,
                     color = Hf.Text,
-                    fontSize = 15.sp,
-                    lineHeight = 19.sp,
+                    fontSize = 13.sp,
+                    lineHeight = 16.sp,
                     fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 storeItemEffect(item)?.let { effect ->
-                    Spacer(Modifier.height(3.dp))
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         effect,
                         color = Hf.TextMuted,
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp,
+                        fontSize = 10.sp,
+                        lineHeight = 13.sp,
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                Spacer(Modifier.weight(1f).heightIn(min = 8.dp))
-                Box(Modifier.fillMaxWidth(.6f).height(1.dp).background(Hf.Gold.copy(alpha = .35f)))
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.weight(1f).heightIn(min = 6.dp))
                 if (owned || equipped) {
                     Surface(shape = Hf.PillShape, color = Hf.Green) {
-                        Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Check, null, tint = Hf.OnAccent, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
+                        Row(Modifier.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 sh("SATIN ALINDI", "PURCHASED"),
                                 color = Hf.OnAccent,
-                                fontSize = 12.sp,
+                                fontSize = 10.sp,
+                                maxLines = 1,
                                 fontWeight = FontWeight.Black,
                             )
                         }
                     }
                 } else {
                     Surface(shape = Hf.PillShape, color = Hf.Gold.copy(alpha = .14f), border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .7f))) {
-                        Row(Modifier.padding(horizontal = 14.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             if (lockedByPro) {
                                 Icon(Icons.Rounded.WorkspacePremium, null, tint = Hf.GoldDeep, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
@@ -541,11 +535,11 @@ private fun VerifiedStoreProductCard(
                                 // A Google Play product: its store price, not Son Coin.
                                 Icon(Icons.Rounded.ShoppingCart, null, tint = Hf.GoldDeep, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(playPrice, color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                                Text(playPrice, color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
                             } else {
                                 HfCoin(18.dp)
                                 Spacer(Modifier.width(6.dp))
-                                Text(storeGrouped(item.diamondPrice), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                                Text(storeGrouped(item.diamondPrice), color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
                             }
                         }
                     }
@@ -589,51 +583,3 @@ private fun storeKindLabel(kind: String?): String = when (kind) {
     else -> kind.replace('_', ' ').replaceFirstChar { it.uppercase() }
 }
 
-/** Where Son Coin comes from and where it goes: the whole loop on one card. */
-@Composable
-private fun StoreCoinGuide() {
-    HfGamePanel(HfPanel.NavySet, Modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                HfCoin(26.dp)
-                Spacer(Modifier.width(10.dp))
-                Text(sh("SON COIN REHBERİ", "SON COIN GUIDE"), color = Hf.GoldLight, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StoreGuideColumn(
-                    sh("KAZAN", "EARN"),
-                    Color(0xFF8BE39A),
-                    listOf(
-                        "📅 " + sh("Günlük giriş", "Daily login"),
-                        "🎯 " + sh("Günlük görevler", "Daily tasks"),
-                        "🏆 " + sh("Haftalık Kupa", "Weekly Cup"),
-                        "🐷 " + sh("Kumbara", "Piggy bank"),
-                        "🎬 " + sh("Video ödülleri", "Video rewards"),
-                    ),
-                    Modifier.weight(1f),
-                )
-                StoreGuideColumn(
-                    sh("HARCA", "SPEND"),
-                    Color(0xFFFFC46B),
-                    listOf(
-                        "💡 " + sh("Ekstra ipucu · 25", "Extra hint · 25"),
-                        "🎩 " + sh("Obi şapkaları", "Obi hats"),
-                        "⌨ " + sh("Beyaz klavye", "White keyboard"),
-                    ),
-                    Modifier.weight(1f),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StoreGuideColumn(title: String, accent: Color, rows: List<String>, modifier: Modifier) {
-    Column(
-        modifier.background(Color.White.copy(alpha = .08f), RoundedCornerShape(14.dp)).padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        Text(title, color = accent, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-        rows.forEach { Text(it, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
-    }
-}

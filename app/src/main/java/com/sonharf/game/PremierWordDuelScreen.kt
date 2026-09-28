@@ -331,9 +331,11 @@ fun PremierWordDuelScreen() {
         }
     }
 
-    // Keyed on the round and word count too, so a bot turn that follows
-    // another bot turn, e.g. the bot opening a round right after it missed, still runs.
-    LaunchedEffect(room?.id, room?.botTurn, room?.status, room?.roundNo, words.size) {
+    // Keyed on the round and the room's own word count, so a bot turn that follows another bot
+    // turn (e.g. the bot opening a round right after it missed) still runs. The polled word list
+    // is not a key: it lands a moment after the room row and used to restart the AI's round
+    // break and "thinking" pause half-way.
+    LaunchedEffect(room?.id, room?.botTurn, room?.status, room?.roundNo, room?.validWordCount) {
         val active = room ?: return@LaunchedEffect
         val botPlayable = active.status in setOf("playing", "final", "sudden_death")
         if (!active.isBot || !active.botTurn || !botPlayable) return@LaunchedEffect
@@ -1680,21 +1682,6 @@ private fun PremierArena(
         // Turn and accepted-word feedback live on the target tile itself (a light sweep), so no
         // screen-centred rings are drawn over the board.
 
-        AnimatedVisibility(
-            visible = floatingMessage != null,
-            enter = fadeIn() + slideInVertically { -it },
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 118.dp, start = 22.dp, end = 22.dp),
-        ) {
-            Surface(shape = RoundedCornerShape(16.dp), color = PremierBoard.Card, border = BorderStroke(1.dp, PremierBoard.CardBorder), shadowElevation = 8.dp) {
-                Row(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.ChatBubbleOutline, null, tint = PremierBoard.Rival, modifier = Modifier.size(15.dp))
-                    Spacer(Modifier.width(7.dp))
-                    Text(floatingMessage?.body.orEmpty(), color = PremierBoard.Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-            }
-        }
-
         // Between rounds: a breather with a countdown and quick chat.
         AnimatedVisibility(
             visible = preparing,
@@ -1715,6 +1702,22 @@ private fun PremierArena(
                 onOpenChat = onQuickChat,
             )
         }
+        // Drawn after the round break so a message is read on top of it, never behind it.
+        AnimatedVisibility(
+            visible = floatingMessage != null,
+            enter = fadeIn() + slideInVertically { -it },
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 118.dp, start = 22.dp, end = 22.dp),
+        ) {
+            Surface(shape = RoundedCornerShape(16.dp), color = PremierBoard.Card, border = BorderStroke(1.dp, PremierBoard.CardBorder), shadowElevation = 8.dp) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.ChatBubbleOutline, null, tint = PremierBoard.Rival, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text(floatingMessage?.body.orEmpty(), color = PremierBoard.Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+            }
+        }
+
         // Tension: the screen edge beats red on the player's last five seconds.
         PremierHeartbeatEdge(active = myTurn && live && !preparing && turnSeconds in 1..5, seconds = turnSeconds)
         // Excitement: a flame badge while the player is on a word streak.
@@ -1916,7 +1919,7 @@ private fun PremierRoundPrep(
 ) {
     val pulse = rememberInfiniteTransition(label = "prep")
     val beat by pulse.animateFloat(1f, 1.08f, infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "prep-beat")
-    Box(Modifier.fillMaxSize().background(Color(0xE62C3E55)), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF22324A), Color(0xFF2C3E55)))).pointerInput(Unit) {}, contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 24.dp)) {
             if (lastRoundWon != null) {
                 Text(

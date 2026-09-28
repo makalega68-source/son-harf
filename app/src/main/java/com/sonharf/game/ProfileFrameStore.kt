@@ -153,7 +153,7 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Un
         }
     }
 
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (notice.isNotBlank()) {
             Text(notice, color = Hf.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         }
@@ -191,10 +191,10 @@ private fun FrameSectionTitle(title: String, subtitle: String) {
 
 @Composable
 private fun FrameGrid(frames: List<ProfileFrameCollection.Frame>, card: @Composable (ProfileFrameCollection.Frame) -> Unit) {
-    frames.chunked(2).forEach { row ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    frames.chunked(3).forEach { row ->
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             row.forEach { frame -> Box(Modifier.weight(1f)) { card(frame) } }
-            if (row.size == 1) Spacer(Modifier.weight(1f))
+            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
         }
     }
 }
@@ -216,19 +216,19 @@ private fun FrameCard(
         border = BorderStroke(if (equipped) 2.dp else 1.dp, if (equipped) Hf.Green else Hf.Gold.copy(alpha = if (premium) .9f else .45f)),
         shadowElevation = 3.dp,
     ) {
-        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.fillMaxWidth().height(118.dp), contentAlignment = Alignment.Center) {
+        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.fillMaxWidth().height(76.dp), contentAlignment = Alignment.Center) {
                 Box(
-                    Modifier.size(70.dp).background(Brush.linearGradient(listOf(Hf.Ground, Hf.Surface)), CircleShape),
+                    Modifier.size(54.dp).background(Brush.linearGradient(listOf(Hf.Ground, Hf.Surface)), CircleShape),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Person, null, tint = Hf.TextMuted, modifier = Modifier.size(38.dp)) }
-                ProfileFrameArt(frame.id, 70.dp)
+                ) { Icon(Icons.Rounded.Person, null, tint = Hf.TextMuted, modifier = Modifier.size(30.dp)) }
+                ProfileFrameArt(frame.id, 54.dp)
             }
-            Text(sh(frame.nameTr, frame.nameEn), color = Hf.Text, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(sh(frame.nameTr, frame.nameEn), color = Hf.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             Surface(
                 onClick = onClick,
                 enabled = !busy && !equipped && !owned,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp),
                 shape = Hf.PillShape,
                 color = when {
                     equipped || owned -> Hf.Green
@@ -236,13 +236,14 @@ private fun FrameCard(
                     else -> Hf.Ivory
                 },
             ) {
-                Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    if (!owned && !premium) { HfCoin(16.dp); Spacer(Modifier.width(6.dp)) }
+                Row(Modifier.padding(horizontal = 6.dp, vertical = 6.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    if (!owned && !premium) { HfCoin(14.dp); Spacer(Modifier.width(4.dp)) }
                     Text(
                         if (equipped || owned) sh("SATIN ALINDI", "PURCHASED") else price,
                         color = if (equipped || owned) Hf.OnAccent else Hf.Text,
-                        fontSize = 14.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Black,
+                        maxLines = 1,
                     )
                 }
             }

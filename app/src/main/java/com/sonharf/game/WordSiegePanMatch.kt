@@ -479,12 +479,15 @@ internal fun WordSiegePanMatch(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                WordSiegeSideAction(
-                    sh("SOHBET", "CHAT"),
-                    Icons.Rounded.Chat,
-                    modifier = Modifier.width(74.dp),
-                    onClick = onChat,
-                )
+                Box {
+                    WordSiegeSideAction(
+                        sh("SOHBET", "CHAT"),
+                        Icons.Rounded.Chat,
+                        modifier = Modifier.width(74.dp),
+                        onClick = onChat,
+                    )
+                    ChatUnreadDot(GameChatBadge.unread)
+                }
                 Button(
                     onClick = onSubmit,
                     shape = RoundedCornerShape(10.dp),
@@ -840,8 +843,11 @@ private fun PanSiegeBoard(
                 containerColor = WordSiegeGameUi.Surface.copy(alpha = .95f),
                 contentColor = Color(0xFF2C3E55),
             ) {
-                Icon(Icons.Rounded.Chat, sh("Oyun içi sohbet", "In-game chat"), Modifier.size(20.dp))
+                Box {
+                    Icon(Icons.Rounded.Chat, sh("Oyun içi sohbet", "In-game chat"), Modifier.size(20.dp))
+                }
             }
+            if (GameChatBadge.unread > 0) Box(Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp)) { ChatUnreadDot(GameChatBadge.unread) }
         }
     }
 }
