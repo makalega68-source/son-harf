@@ -69,27 +69,34 @@ data class AtelierWeeklyClaimDto(
  * everyone), today's and this week's leaderboards, and last week's top-10 Son Coin reward.
  */
 object AtelierCompetitionBackend {
-    suspend fun startDaily(language: String): AtelierDailyStartDto =
-        SupabaseProvider.client.postgrest.rpc("start_atelier_daily_v1", buildJsonObject { put("p_language", language) })
-            .decodeAs<AtelierDailyStartDto>()
-
-    suspend fun finishDaily(language: String, score: Int, words: Int, tasks: Int): AtelierDailyFinishDto =
+    suspend fun startDaily(language: String, seconds: Int): AtelierDailyStartDto =
         SupabaseProvider.client.postgrest.rpc(
-            "finish_atelier_daily_v1",
+            "start_atelier_daily_v2",
             buildJsonObject {
                 put("p_language", language)
+                put("p_duration", seconds)
+            },
+        ).decodeAs<AtelierDailyStartDto>()
+
+    suspend fun finishDaily(language: String, seconds: Int, score: Int, words: Int, tasks: Int): AtelierDailyFinishDto =
+        SupabaseProvider.client.postgrest.rpc(
+            "finish_atelier_daily_v2",
+            buildJsonObject {
+                put("p_language", language)
+                put("p_duration", seconds)
                 put("p_score", score)
                 put("p_words", words)
                 put("p_tasks", tasks)
             },
         ).decodeAs<AtelierDailyFinishDto>()
 
-    suspend fun board(language: String, weekly: Boolean): AtelierBoardDto =
+    suspend fun board(language: String, weekly: Boolean, seconds: Int): AtelierBoardDto =
         SupabaseProvider.client.postgrest.rpc(
-            "get_atelier_board_v1",
+            "get_atelier_board_v2",
             buildJsonObject {
                 put("p_language", language)
                 put("p_scope", if (weekly) "weekly" else "daily")
+                put("p_duration", seconds)
             },
         ).decodeAs<AtelierBoardDto>()
 

@@ -79,7 +79,6 @@ import kotlinx.coroutines.withContext
 private const val COMBO_WINDOW_MS = 6_000L
 private const val COMBO_STEP_POINTS = 10
 private const val COMBO_MAX_BONUS = 30
-private const val TASK_TIME_BONUS_SECONDS = 5
 
 /** Light natural-wood table palette for Kelime Atölyesi. */
 /** Word Workshop palette: warm wood by default, a matching night palette on the Black Theme. */
@@ -141,6 +140,8 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var loadFailed by remember(language) { mutableStateOf(false) }
     var loadNonce by remember { mutableIntStateOf(0) }
     var roundKey by remember { mutableIntStateOf(0) }
+    // Round length chosen in the lobby: 1 or 2 minutes.
+    var roundSeconds by remember { mutableIntStateOf(KelimeAtolyesiEngine.ROUND_SECONDS) }
     var secondsLeft by remember { mutableIntStateOf(KelimeAtolyesiEngine.ROUND_SECONDS) }
     var busy by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<AtelierFeedback?>(null) }
@@ -151,11 +152,9 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var newBest by remember { mutableStateOf(false) }
     // Mascot hints: three per round, only when the player taps the hint button.
     var hintsLeft by remember { mutableIntStateOf(MascotHints.freeHints) }
-    // Action: quick words chain into a combo, finished tasks add time.
+    // Action: quick words chain into a combo.
     var combo by remember { mutableIntStateOf(0) }
     var comboNonce by remember { mutableIntStateOf(0) }
-    var timeBonusNonce by remember { mutableIntStateOf(0) }
-    var lastTimeBonus by remember { mutableIntStateOf(0) }
     var confettiNonce by remember { mutableIntStateOf(0) }
     var shakeNonce by remember { mutableIntStateOf(0) }
     var lastWordAt by remember { mutableStateOf(0L) }
@@ -183,10 +182,10 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
 
     BackHandler { if (mode == AtelierMode.LOBBY) onExit() else toLobby() }
 
-    LaunchedEffect(mode, weeklyBoard, boardNonce, language) {
+    LaunchedEffect(mode, weeklyBoard, boardNonce, language, roundSeconds) {
         if (mode != AtelierMode.LOBBY || !online) return@LaunchedEffect
         loadingBoard = true
-        runCatching { AtelierCompetitionBackend.board(language, weeklyBoard) }.onSuccess { board = it }
+        runCatching { AtelierCompetitionBackend.board(language, weeklyBoard, roundSeconds) }.onSuccess { board = it }
         runCatching { AtelierCompetitionBackend.weeklyReward(language) }.onSuccess { reward = it }
         loadingBoard = false
     }
@@ -195,12 +194,12 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         state = finished
         newBest = finished.score > best
         best = AtelierRecords.save(context, language, finished.score)
-        if (finished.allTasksDone) SonHarfSoundFx.victory() else SonHarfSoundFx.softNotify()
+        if (finished.everySetDone) SonHarfSoundFx.victory() else SonHarfSoundFx.softNotify()
         if (mode == AtelierMode.DAILY) {
             dailyLine = sh("Puanın kaydediliyor…", "Saving your score…")
             scope.launch {
                 runCatching {
-                    AtelierCompetitionBackend.finishDaily(language, finished.score, finished.words.size, finished.completedTasks)
+                    AtelierCompetitionBackend.finishDaily(language, roundSeconds, finished.score, finished.words.size, finished.completedTasks)
                 }.onSuccess { r ->
                     dailyLine = if (r.rank == 1) sh("🥇 Bugünün lideri sensin! (${r.total} oyuncu)", "🥇 You lead today! (${r.total} players)")
                         else sh("Bugün ${r.rank}. sıradasın · ${r.total} oyuncu", "You're #${r.rank} today · ${r.total} players")
@@ -215,7 +214,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         val e = engine ?: return
         e.reseed(seed ?: System.nanoTime())
         scope.launch {
-            val fresh = withContext(Dispatchers.Default) { runCatching { e.newRound() }.getOrNull() }
+            val fresh = withContext(Dispatchers.Default) { runCatching { e.newRound(roundSeconds) }.getOrNull() }
             if (fresh == null) {
                 loadFailed = true
                 return@launch
@@ -227,7 +226,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             hintText = null
             combo = 0
             lastWordAt = 0L
-            secondsLeft = KelimeAtolyesiEngine.ROUND_SECONDS
+            secondsLeft = roundSeconds
             roundKey += 1
         }
     }
@@ -260,7 +259,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         startingDaily = true
         lobbyNotice = null
         scope.launch {
-            val started = runCatching { AtelierCompetitionBackend.startDaily(language) }.getOrNull()
+            val started = runCatching { AtelierCompetitionBackend.startDaily(language, roundSeconds) }.getOrNull()
             when {
                 started == null -> lobbyNotice = sh("Yarış başlatılamadı. Bağlantını kontrol et.", "Could not start the race. Check your connection.")
                 !started.started -> {
@@ -268,7 +267,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     boardNonce += 1
                 }
                 else -> {
-                    raceBoard = runCatching { AtelierCompetitionBackend.board(language, weekly = false) }.getOrNull()
+                    raceBoard = runCatching { AtelierCompetitionBackend.board(language, weekly = false, seconds = roundSeconds) }.getOrNull()
                     mode = AtelierMode.DAILY
                     dailyLine = null
                     startRound(KelimeAtolyesiEngine.dailySeed(language, started.day))
@@ -291,7 +290,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         }
     }
 
-    // The 60-second round clock.
+    // The round clock (1 or 2 minutes); the round always runs until it stops.
     LaunchedEffect(roundKey) {
         if (roundKey == 0) return@LaunchedEffect
         while (true) {
@@ -300,7 +299,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             if (current.over) break
             secondsLeft = (secondsLeft - 1).coerceAtLeast(0)
             if (secondsLeft == 0) {
-                engine?.let { endRound(it.finish(current, 0)) }
+                engine?.let { endRound(it.finish(current)) }
                 break
             }
         }
@@ -327,13 +326,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     combo = if (lastWordAt > 0L && now - lastWordAt <= COMBO_WINDOW_MS) combo + 1 else 1
                     lastWordAt = now
                     val comboBonus = if (combo >= 2) (COMBO_STEP_POINTS * (combo - 1)).coerceAtMost(COMBO_MAX_BONUS) else 0
-                    val timeBonus = result.completed.size * TASK_TIME_BONUS_SECONDS
-                    if (timeBonus > 0) {
-                        secondsLeft += timeBonus
-                        lastTimeBonus = timeBonus
-                        timeBonusNonce += 1
-                        confettiNonce += 1
-                    }
+                    if (result.completed.isNotEmpty()) confettiNonce += 1
                     if (comboBonus > 0) comboNonce += 1
                     state = result.state.copy(score = result.state.score + comboBonus)
                     hintText = null
@@ -342,7 +335,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     gain = result.gained + comboBonus
                     gainNonce += 1
                     val taskNote = if (result.completed.isNotEmpty()) {
-                        sh(" · Görev +${result.taskPoints} · +$timeBonus sn", " · Task +${result.taskPoints} · +$timeBonus s")
+                        sh(" · Görev +${result.taskPoints}", " · Task +${result.taskPoints}")
                     } else ""
                     val comboNote = if (comboBonus > 0) sh(" · KOMBO x$combo", " · COMBO x$combo") else ""
                     feedback = AtelierFeedback("$shown +${result.wordPoints}$taskNote$comboNote", true, nonce)
@@ -355,7 +348,6 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     } else {
                         SonHarfSoundFx.puzzleSuccess()
                     }
-                    if (result.state.allTasksDone) endRound(e.finish(result.state, secondsLeft))
                     return@launch
                 }
             }
@@ -370,7 +362,9 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         if (hintsLeft <= 0 || current.over) return
         val open = current.tasks.filter { !it.done }
         val options = e.formable(current.pool.map { it.letter }, current.words.toSet())
-        val word = open.firstNotNullOfOrNull { task -> options.filter { task.matches(it) }.minByOrNull { it.length } }
+        // With every task set done, the hint is simply the best-scoring word on the table.
+        val word = if (open.isEmpty()) options.maxByOrNull { it.length }
+            else open.firstNotNullOfOrNull { task -> options.filter { task.matches(it) }.minByOrNull { it.length } }
         hintsLeft -= 1
         mascotAction = WordSiegeMascotAction.POINT
         mascotActionKey += 1
@@ -434,7 +428,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             AtelierMascotRow(
                 skin = mascotSkin,
                 mood = when {
-                    happyUntil > System.currentTimeMillis() || current?.over == true && current.allTasksDone -> WordSiegeMascotEmotion.HAPPY
+                    happyUntil > System.currentTimeMillis() || current?.over == true && current.everySetDone -> WordSiegeMascotEmotion.HAPPY
                     current != null && !current.over && secondsLeft <= 10 -> WordSiegeMascotEmotion.STRESSED
                     combo >= 2 && System.currentTimeMillis() - lastWordAt <= COMBO_WINDOW_MS -> WordSiegeMascotEmotion.EXCITED
                     else -> WordSiegeMascotEmotion.CALM
@@ -467,6 +461,8 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     reward = reward,
                     notice = lobbyNotice,
                     starting = startingDaily || engine == null,
+                    seconds = roundSeconds,
+                    onSeconds = { roundSeconds = it },
                     onWeekly = { weeklyBoard = it },
                     onDaily = { startDaily() },
                     onPractice = { if (engine != null) startPractice() },
@@ -493,7 +489,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     // Tasks and the word slot on top; the letter pool sits at the bottom right above
                     // Temizle / Gönder, where the thumbs are.
                     if (mode == AtelierMode.DAILY) AtelierRivalStrip(raceBoard, current.score)
-                    AtelierTasks(current.tasks, language)
+                    AtelierTasks(current, language)
                     AtelierSlot(current, language, gain = gain, gainNonce = gainNonce, shakeNonce = shakeNonce) { index ->
                         SonHarfSoundFx.puzzleKey()
                         state = current.unpickAt(index)
@@ -519,7 +515,6 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         }
         AtelierConfetti(confettiNonce, Modifier.fillMaxSize())
         AtelierComboBanner(comboNonce, combo, Modifier.align(Alignment.Center))
-        AtelierTimeBonus(timeBonusNonce, lastTimeBonus, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 64.dp, end = 90.dp))
     }
 }
 
@@ -546,25 +541,6 @@ private fun AtelierComboBanner(nonce: Int, combo: Int, modifier: Modifier) {
         style = androidx.compose.ui.text.TextStyle(
             shadow = androidx.compose.ui.graphics.Shadow(Color(0x66000000), androidx.compose.ui.geometry.Offset(0f, 4f), 8f),
         ),
-    )
-}
-
-/** "+5 sn" floats up next to the timer when a task adds time. */
-@Composable
-private fun AtelierTimeBonus(nonce: Int, seconds: Int, modifier: Modifier) {
-    if (nonce == 0) return
-    val t = remember(nonce) { Animatable(0f) }
-    LaunchedEffect(nonce) { t.animateTo(1f, tween(1_000, easing = FastOutSlowInEasing)) }
-    if (t.value >= 1f) return
-    Text(
-        sh("+$seconds sn", "+$seconds s"),
-        modifier = modifier.graphicsLayer {
-            translationY = -40f * t.value
-            alpha = 1f - t.value
-        },
-        color = AtelierUi.Green,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Black,
     )
 }
 
@@ -616,7 +592,7 @@ private fun AtelierTopBar(seconds: Int, score: Int, onBack: () -> Unit) {
         )
         AtelierChip(
             label = sh("Süre", "Time"),
-            value = "0:${seconds.toString().padStart(2, '0')}",
+            value = "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}",
             accent = if (seconds <= 10) AtelierUi.Danger else AtelierUi.Ink,
             pulse = seconds in 1..10,
         )
@@ -743,9 +719,16 @@ private fun AtelierPoolTile(letter: String, tileId: Long, size: Dp, used: Boolea
 }
 
 @Composable
-private fun AtelierTasks(tasks: List<AtelierTask>, language: String) {
+private fun AtelierTasks(state: AtelierState, language: String) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        tasks.forEachIndexed { index, task -> AtelierTaskCard(index, task, language) }
+        Text(
+            if (state.everySetDone) sh("Tüm görevler tamam! Süre bitene kadar kelime kurmaya devam.", "All tasks done! Keep building words until time runs out.")
+            else sh("Görev seti ${state.taskSet}/${state.taskSets} · ${state.completedTasks}/${state.totalTasks} görev", "Task set ${state.taskSet}/${state.taskSets} · ${state.completedTasks}/${state.totalTasks} tasks"),
+            color = AtelierUi.Gold,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Black,
+        )
+        state.tasks.forEachIndexed { index, task -> AtelierTaskCard(index, task, language) }
         Text(
             sh("Bir kelime, uyduğu tüm görevleri aynı anda tamamlar.", "One word completes every task it fits at once."),
             color = AtelierUi.InkMuted,
@@ -941,7 +924,7 @@ private fun AtelierResult(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(
-            if (state.allTasksDone) sh("Tüm görevler tamam!", "All tasks done!") else sh("Süre doldu!", "Time's up!"),
+            if (state.everySetDone) sh("Süre doldu · Tüm görevler tamam!", "Time's up · All tasks done!") else sh("Süre doldu!", "Time's up!"),
             color = AtelierUi.Ink,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
@@ -958,7 +941,7 @@ private fun AtelierResult(
             fontWeight = FontWeight.SemiBold,
         )
         Text(
-            sh("Tamamlanan görevler: ${state.completedTasks}/3", "Tasks completed: ${state.completedTasks}/3"),
+            sh("Tamamlanan görevler: ${state.completedTasks}/${state.totalTasks}", "Tasks completed: ${state.completedTasks}/${state.totalTasks}"),
             color = AtelierUi.Ink,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,

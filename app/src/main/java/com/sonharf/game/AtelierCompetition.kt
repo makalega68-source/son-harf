@@ -93,12 +93,40 @@ internal fun AtelierLobby(
     reward: AtelierWeeklyRewardDto?,
     notice: String?,
     starting: Boolean,
+    seconds: Int,
+    onSeconds: (Int) -> Unit,
     onWeekly: (Boolean) -> Unit,
     onDaily: () -> Unit,
     onPractice: () -> Unit,
     onClaim: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Round length for both the race and practice; each length has its own daily race and board.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(60 to sh("1 Dakika · 6 görev", "1 Minute · 6 tasks"), 120 to sh("2 Dakika · 15 görev", "2 Minutes · 15 tasks")).forEach { (value, label) ->
+                val selected = seconds == value
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (selected) CompUi.Night else CompUi.Cream)
+                        .border(1.dp, if (selected) Color(0xFFFFC94A) else CompUi.Edge, RoundedCornerShape(14.dp))
+                        .clickable(enabled = !starting) { onSeconds(value) }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(label, color = if (selected) Color(0xFFFFD98A) else CompUi.Ink, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                }
+            }
+        }
+        Text(
+            sh("Görevler üçerli setler hâlinde gelir. Süre bitene kadar oyna; görevler dahil en çok puanı alan kazanır.",
+                "Tasks come in sets of three. Play until time runs out; the highest score, tasks included, wins."),
+            color = CompUi.Ink.copy(alpha = .75f),
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
         val today = board?.today
         // Official daily race card.
         Column(

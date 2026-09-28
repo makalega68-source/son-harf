@@ -24,7 +24,7 @@ class KelimeAtolyesiEngineTest {
         val engine = KelimeAtolyesiEngine(dictionary, language, Random(5))
         assertTrue(engine.playable)
         repeat(40) {
-            var state = engine.newRound()
+            var state = engine.newRound(if (it % 2 == 0) KelimeAtolyesiEngine.ROUND_SECONDS else KelimeAtolyesiEngine.LONG_ROUND_SECONDS)
             assertEquals(7, state.pool.size)
             assertEquals(3, state.tasks.size)
             assertTrue("new round tasks solvable", engine.solvable(state.pool.map { it.letter }, state.tasks, emptySet()))
@@ -46,7 +46,7 @@ class KelimeAtolyesiEngineTest {
             }
 
             var guard = 0
-            while (!state.allTasksDone && guard++ < 12) {
+            while (!state.everySetDone && guard++ < 40) {
                 val open = state.tasks.filter { !it.done }
                 val options = engine.formable(state.pool.map { it.letter }, state.words.toSet())
                 val word = options.firstOrNull { w -> open.any { it.matches(w) } } ?: options.first()
@@ -60,24 +60,40 @@ class KelimeAtolyesiEngineTest {
                 assertTrue(result.state.picked.isEmpty())
                 assertTrue("remaining tasks stay solvable after the refill",
                     engine.solvable(result.state.pool.map { it.letter }, result.state.tasks, result.state.words.toSet()))
+                // Finishing a set brings the next one instead of ending the round.
+                if (result.state.taskSet > state.taskSet) {
+                    assertEquals(3, result.state.tasks.size)
+                    assertTrue(result.state.tasks.none { it.done })
+                    assertFalse(result.state.over)
+                }
                 state = result.state
                 // The same word never scores twice in a round.
                 state.lay(word)?.let { assertEquals(AtelierReject.ALREADY_USED, engine.submit(it).reject) }
             }
-            assertTrue("all three tasks completed", state.allTasksDone)
-            val finished = engine.finish(state, 12)
+            assertTrue("every task set completed", state.everySetDone)
+            assertEquals(state.totalTasks, state.completedTasks)
+            // The round only ends when the clock stops; the score is what was earned.
+            val finished = engine.finish(state)
             assertTrue(finished.over)
-            assertEquals(state.score + 12 * KelimeAtolyesiEngine.TIME_BONUS_PER_SECOND, finished.score)
+            assertEquals(state.score, finished.score)
             assertEquals(AtelierReject.ROUND_OVER, engine.submit(finished).reject)
 
-            // Time running out ends the round with no bonus.
-            val timedOut = engine.finish(engine.newRound(), 0)
+            val timedOut = engine.finish(engine.newRound())
             assertTrue(timedOut.over)
             assertEquals(0, timedOut.score)
         }
     }
 
     @Test fun turkishRoundsArePlayableEndToEnd() = playRounds("tr", TR_WORDS)
+
+    @Test fun twoMinuteRoundsHaveMoreTaskSets() {
+        val engine = KelimeAtolyesiEngine(TR_WORDS, "tr", Random(9))
+        val short = engine.newRound(KelimeAtolyesiEngine.ROUND_SECONDS)
+        val long = engine.newRound(KelimeAtolyesiEngine.LONG_ROUND_SECONDS)
+        assertEquals(6, short.totalTasks)
+        assertEquals(15, long.totalTasks)
+        assertEquals(1, long.taskSet)
+    }
 
     @Test fun englishRoundsArePlayableEndToEnd() = playRounds("en", EN_WORDS)
 

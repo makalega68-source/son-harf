@@ -4,7 +4,9 @@ import java.util.Locale
 import kotlin.random.Random
 
 /*
- * Kelime Atölyesi (Word Workshop): a 60-second round with a 7-letter pool and three short tasks.
+ * Kelime Atölyesi (Word Workshop): a 1- or 2-minute round with a 7-letter pool. Tasks come in
+ * sets of three; when a set is done the next one appears (2 sets in 1 minute, 5 in 2 minutes).
+ * The round always runs until the clock stops, and the highest score wins.
  * The engine is plain Kotlin so every rule is unit-tested without a device.
  *
  * Rules the engine guarantees:
@@ -43,11 +45,21 @@ internal data class AtelierState(
     val words: List<String> = emptyList(),
     val nextTileId: Long,
     val over: Boolean = false,
+    /** Current task set (1-based) and how many sets this round has. */
+    val taskSet: Int = 1,
+    val taskSets: Int = 1,
+    /** Tasks finished in earlier sets. */
+    val earlierTasksDone: Int = 0,
 ) {
     /** The word currently laid in the slot, in the order the tiles were picked. */
     val word: String get() = picked.mapNotNull { id -> pool.firstOrNull { it.id == id }?.letter }.joinToString("")
+    /** True when the current set is finished. */
     val allTasksDone: Boolean get() = tasks.all { it.done }
-    val completedTasks: Int get() = tasks.count { it.done }
+    /** Every set of the round is finished. */
+    val everySetDone: Boolean get() = allTasksDone && taskSet >= taskSets
+    /** Tasks finished in the whole round, across every set. */
+    val completedTasks: Int get() = earlierTasksDone + tasks.count { it.done }
+    val totalTasks: Int get() = taskSets * KelimeAtolyesiEngine.TASKS_PER_SET
 
     fun pick(tileId: Long): AtelierState =
         if (over || tileId in picked || pool.none { it.id == tileId }) this else copy(picked = picked + tileId)
@@ -99,8 +111,11 @@ internal class KelimeAtolyesiEngine(
 
     fun isWord(word: String): Boolean = word in words
 
-    /** A fresh round: pool and tasks built from real words, all three tasks solvable. */
-    fun newRound(): AtelierState {
+    /** A fresh round of [seconds] (60 or 120): pool and first task set built from real words. */
+    fun newRound(seconds: Int = ROUND_SECONDS): AtelierState =
+        freshRound().copy(taskSets = setsFor(seconds))
+
+    private fun freshRound(): AtelierState {
         repeat(ROUND_TRIES) {
             val letters = seedLetters() ?: return@repeat
             val formable = formable(letters, emptySet())
@@ -141,7 +156,7 @@ internal class KelimeAtolyesiEngine(
             val letters = poolFor(open, used.toSet()) ?: seedLetters().orEmpty()
             pool = letters.map { AtelierTile(nextId++, it).also { tile -> fresh += tile.id } }
         }
-        val next = state.copy(
+        var next = state.copy(
             pool = pool,
             tasks = tasks,
             picked = emptyList(),
@@ -149,14 +164,36 @@ internal class KelimeAtolyesiEngine(
             words = used,
             nextTileId = nextId,
         )
+        if (next.allTasksDone && next.taskSet < next.taskSets) next = nextTaskSet(next, fresh)
         return AtelierSubmit(next, null, word, wordPoints, taskPoints, completed, fresh)
     }
 
-    /** Ends the round (time up or all tasks done); remaining seconds become a bonus when all tasks are done. */
-    fun finish(state: AtelierState, secondsLeft: Int): AtelierState {
-        if (state.over) return state
-        val bonus = if (state.allTasksDone) secondsLeft.coerceAtLeast(0) * TIME_BONUS_PER_SECOND else 0
-        return state.copy(over = true, picked = emptyList(), score = state.score + bonus)
+    /** Ends the round when the clock stops. */
+    fun finish(state: AtelierState): AtelierState =
+        if (state.over) state else state.copy(over = true, picked = emptyList())
+
+    /**
+     * The next set of three tasks, solvable from the current letters; when they cannot carry a new
+     * set, a whole new pool is laid (its tiles are added to [fresh] for the refill animation).
+     */
+    private fun nextTaskSet(state: AtelierState, fresh: MutableSet<Long>): AtelierState {
+        val used = state.words.toSet()
+        val letters = state.pool.map { it.letter }
+        val tasks = pickTasks(letters, formable(letters, used))
+        val base = state.copy(taskSet = state.taskSet + 1, earlierTasksDone = state.earlierTasksDone + state.tasks.size)
+        if (tasks != null) return base.copy(tasks = tasks)
+        var nextId = state.nextTileId
+        repeat(ROUND_TRIES) {
+            val seed = seedLetters() ?: return@repeat
+            val options = formable(seed, used)
+            if (options.size < MIN_FORMABLE) return@repeat
+            val seedTasks = pickTasks(seed, options) ?: return@repeat
+            fresh.clear()
+            val pool = seed.map { AtelierTile(nextId++, it).also { tile -> fresh += tile.id } }
+            return base.copy(pool = pool, tasks = seedTasks, nextTileId = nextId)
+        }
+        // No new set could be built: the round goes on with words only.
+        return state.copy(taskSets = state.taskSet)
     }
 
     /** Words that can be built from [letters] and have not been played yet. */
@@ -258,9 +295,13 @@ internal class KelimeAtolyesiEngine(
         const val POOL_SIZE = 7
         const val MIN_WORD = 3
         const val ROUND_SECONDS = 60
+        const val LONG_ROUND_SECONDS = 120
+        const val TASKS_PER_SET = 3
         const val WORD_LETTER_POINTS = 10
         const val TASK_POINTS = 50
-        const val TIME_BONUS_PER_SECOND = 5
+
+        /** Task sets per round: 2 in the 1-minute round (6 tasks), 5 in the 2-minute round (15 tasks). */
+        fun setsFor(seconds: Int): Int = if (seconds >= LONG_ROUND_SECONDS) 5 else 2
         private const val MIN_FORMABLE = 6
         private const val ROUND_TRIES = 600
         private const val REFILL_TRIES = 120
