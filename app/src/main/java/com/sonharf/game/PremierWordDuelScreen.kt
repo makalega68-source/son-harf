@@ -2964,14 +2964,17 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
             WordSiegeMascotOutcome.DRAW -> SonHarfSoundFx.bonus()
         }
     }
-    if (won && showMascotVictory) {
-        // Mascot owners: the victory clip full screen, the result written underneath.
-        MascotVictoryScreen(
-            title = pt(language, "KAZANDIN!", "YOU WON!"),
-            lines = listOf(pt(language, "Skor", "Score") + ": $myScore  —  $rivalScore"),
+    if (mascotOutcome != WordSiegeMascotOutcome.DRAW) {
+        // Every player: the victory or defeat clip full screen, the result underneath.
+        MatchResultScreen(
+            won = won,
+            title = if (won) pt(language, "KAZANDIN!", "YOU WON!") else pt(language, "KAYBETTİN", "YOU LOST"),
+            subtitle = notice.ifBlank { null },
+            mine = ResultScore(pt(language, "SEN", "YOU"), "$myScore"),
+            rival = ResultScore(pt(language, "RAKİP", "RIVAL"), "$rivalScore"),
             primaryLabel = if (busy) "…" else pt(language, "RÖVANŞ", "REMATCH"),
             onPrimary = { if (!busy) onRematch() },
-            secondaryLabel = pt(language, "Ana sayfa", "Home"),
+            secondaryLabel = pt(language, "ANA SAYFA", "HOME"),
             onSecondary = onHome,
         )
         return

@@ -129,14 +129,20 @@ class PlayerFeedbackBatchContractTest {
         assertTrue(video.contains("smoothstep(0.10, 0.30, distance(c, uKey))"))
         assertTrue(video.contains("isOpaque = false"))
         assertFalse(video.contains("EGL14.eglTerminate("))
-        val victory = source("MascotVictoryScreen.kt")
-        assertTrue(victory.contains("raw = R.raw.mascot_victory"))
-        assertTrue(victory.contains("usePlatformDefaultWidth = false"))
+        // Victory and defeat clips for every player, on one symmetric result screen.
+        val result = source("MatchResultScreen.kt")
+        assertTrue(result.contains("raw = if (won) R.raw.mascot_victory else R.raw.mascot_defeat"))
+        assertTrue(result.contains("usePlatformDefaultWidth = false"))
+        assertTrue(result.contains("ResultScoreColumn(mine, if (won) accent else Color.White, Modifier.weight(1f))"))
         for (screen in listOf("WordSiegePracticeScreen.kt", "PremierWordDuelScreen.kt", "WordSiegePanMatch.kt")) {
-            assertTrue(screen, source(screen).contains("MascotVictoryScreen("))
+            val s = source(screen)
+            assertTrue(screen, s.contains("MatchResultScreen("))
+            assertFalse(screen, s.contains("showMascotVictory"))
         }
-        val raw = listOf(File("src/main/res/raw/mascot_victory.mp4"), File("app/src/main/res/raw/mascot_victory.mp4")).first { it.exists() }
-        assertTrue(raw.length() > 1_000_000L)
+        for (name in listOf("mascot_victory.mp4", "mascot_defeat.mp4")) {
+            val raw = listOf(File("src/main/res/raw/$name"), File("app/src/main/res/raw/$name")).first { it.exists() }
+            assertTrue(name, raw.length() > 1_000_000L)
+        }
         val skins = source("WordSiegeMascotSkins.kt")
         assertTrue(skins.contains("val onSale: Boolean get() = this == ORB"))
         for (name in listOf("\"Pofi\"", "\"Buzo\"", "\"Zıpo\"", "\"Mino\"", "\"Bibo\"", "\"Novi\"")) assertTrue(name, skins.contains(name))

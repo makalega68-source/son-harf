@@ -1003,17 +1003,19 @@ private fun WordSiegePracticeContent(
     }
 
     if (state.status == "finished" && showPracticeResult) {
-        if (state.winnerOwner == 1 && showMascotVictory) {
-            // Mascot owners: the victory clip, full screen, with the result underneath.
-            MascotVictoryScreen(
-                title = sh("KAZANDIN!", "YOU WON!"),
-                lines = listOf(
-                    sh("${botProfile.name} karşısında taht senin.", "The throne is yours against ${botProfile.name}."),
-                    "${WordSiegePracticeEngine.totalScore(state, 1)}  —  ${WordSiegePracticeEngine.totalScore(state, 2)}",
-                ),
+        if (state.winnerOwner != null) {
+            // Every player: the victory or defeat clip full screen, the result underneath.
+            val won = state.winnerOwner == 1
+            MatchResultScreen(
+                won = won,
+                title = if (won) sh("KAZANDIN!", "YOU WON!") else sh("KAYBETTİN", "YOU LOST"),
+                subtitle = if (won) sh("${botProfile.name} karşısında taht senin.", "The throne is yours against ${botProfile.name}.")
+                else sh("${botProfile.name} bu sefer kazandı. Rövanşa ne dersin?", "${botProfile.name} won this time. How about a rematch?"),
+                mine = ResultScore(sh("SEN", "YOU"), "${WordSiegePracticeEngine.totalScore(state, 1)}"),
+                rival = ResultScore(botProfile.name.uppercase(), "${WordSiegePracticeEngine.totalScore(state, 2)}"),
                 primaryLabel = sh("RÖVANŞ", "REMATCH"),
                 onPrimary = ::startRematch,
-                secondaryLabel = sh("Çıkış", "Exit"),
+                secondaryLabel = sh("ÇIKIŞ", "EXIT"),
                 onSecondary = onExit,
             )
         } else {
