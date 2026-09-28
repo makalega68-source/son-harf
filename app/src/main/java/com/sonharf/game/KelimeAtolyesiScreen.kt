@@ -82,19 +82,21 @@ private const val COMBO_MAX_BONUS = 30
 private const val TASK_TIME_BONUS_SECONDS = 5
 
 /** Light natural-wood table palette for Kelime Atölyesi. */
+/** Word Workshop palette: warm wood by default, a matching night palette on the Black Theme. */
 private object AtelierUi {
-    val WoodTop = Color(0xFFF3E8D3)
-    val WoodBottom = Color(0xFFE6D3B0)
-    val Cream = Color(0xFFFCF8F0)
-    val TileEdge = Color(0xFFCDB387)
-    val TileUsed = Color(0xFFE9DCC3)
-    val Ink = Color(0xFF2B2720)
-    val InkMuted = Color(0xFF6E665A)
-    val Green = Color(0xFF2E7A53)
-    val GreenSoft = Color(0xFFDDEDE1)
-    val Gold = Color(0xFFB08D45)
-    val GoldSoft = Color(0xFFF1E4C3)
-    val Danger = Color(0xFFA9453D)
+    private val dark: Boolean get() = SonHarfCosmetics.darkArenaTheme
+    val WoodTop: Color get() = if (dark) Color(0xFF1A2029) else Color(0xFFF3E8D3)
+    val WoodBottom: Color get() = if (dark) Color(0xFF0F1318) else Color(0xFFE6D3B0)
+    val Cream: Color get() = if (dark) Color(0xFF1F2630) else Color(0xFFFCF8F0)
+    val TileEdge: Color get() = if (dark) Color(0xFF3A4452) else Color(0xFFCDB387)
+    val TileUsed: Color get() = if (dark) Color(0xFF2A313B) else Color(0xFFE9DCC3)
+    val Ink: Color get() = if (dark) Color(0xFFEEF2F6) else Color(0xFF2B2720)
+    val InkMuted: Color get() = if (dark) Color(0xFFA3AFBD) else Color(0xFF6E665A)
+    val Green: Color get() = if (dark) Color(0xFF3E9F6A) else Color(0xFF2E7A53)
+    val GreenSoft: Color get() = if (dark) Color(0xFF1E3A2B) else Color(0xFFDDEDE1)
+    val Gold: Color get() = if (dark) Color(0xFFE0B45C) else Color(0xFFB08D45)
+    val GoldSoft: Color get() = if (dark) Color(0xFF3A3222) else Color(0xFFF1E4C3)
+    val Danger: Color get() = if (dark) Color(0xFFE57A73) else Color(0xFFA9453D)
 }
 
 private data class AtelierFeedback(val text: String, val positive: Boolean, val nonce: Int)
@@ -601,7 +603,7 @@ private fun AtelierTopBar(seconds: Int, score: Int, onBack: () -> Unit) {
         IconButton(onClick = onBack) {
             Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = AtelierUi.Ink)
         }
-        HfGameArt(R.drawable.kelime_atolyesi_game_icon, 40.dp, 40.dp, description = "Kelime Atölyesi")
+        HfGameArt(R.drawable.kelime_atolyesi_game_icon, 56.dp, 56.dp, description = "Kelime Atölyesi")
         Spacer(Modifier.width(6.dp))
         Text(
             sh("Atölye", "Workshop"),

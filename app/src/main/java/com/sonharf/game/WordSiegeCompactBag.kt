@@ -37,7 +37,7 @@ internal fun WordSiegeSideAction(
         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
         border = BorderStroke(1.dp, WordSiegeGameUi.Border),
     ) {
-        Icon(icon, null, Modifier.size(15.dp))
+        Icon(icon, null, Modifier.size(19.dp))
         Spacer(Modifier.width(3.dp))
         Text(label, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
     }

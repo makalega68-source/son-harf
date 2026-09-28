@@ -267,7 +267,7 @@ internal fun WordSiegeCompactAction(
     TextButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(40.dp).padding(horizontal = 1.dp),
+        modifier = modifier.height(44.dp).padding(horizontal = 1.dp),
         shape = RoundedCornerShape(10.dp),
         contentPadding = PaddingValues(1.dp),
         colors = ButtonDefaults.textButtonColors(
@@ -277,7 +277,7 @@ internal fun WordSiegeCompactAction(
         border = BorderStroke(1.dp, if (enabled) WordSiegeGameUi.Border else WordSiegeGameUi.Border.copy(alpha = .45f)),
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Icon(icon, null, Modifier.size(15.dp))
+            Icon(icon, null, Modifier.size(19.dp))
             Text(label, fontSize = 9.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }

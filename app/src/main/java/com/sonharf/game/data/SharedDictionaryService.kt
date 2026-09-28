@@ -191,7 +191,13 @@ object SharedDictionaryService {
         writeAtomically(snapshotFile(context, lang), words.sorted().joinToString("\n"))
     }
 
-    private suspend fun fetchCanonical(language: String): Set<String> {
+    // The dictionary is tens of thousands of words: decoding and indexing it happens off the
+    // main thread (it used to freeze the screen), and it is refreshed from the network at most
+    // every few hours instead of on every game.
+    private const val REFRESH_INTERVAL_MS = 6L * 60 * 60 * 1000
+    private val refreshedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    private suspend fun fetchCanonical(language: String): Set<String> = withContext(Dispatchers.Default) {
         val lang = canonicalLanguage(language)
         val payload = SupabaseProvider.client.postgrest.rpc(
             "get_dictionary_snapshot_v5",
@@ -207,7 +213,8 @@ object SharedDictionaryService {
 
         require(indexed.isNotEmpty()) { "canonical_dictionary_empty" }
         install(lang, indexed)
-        return indexed
+        refreshedAt[lang] = System.currentTimeMillis()
+        indexed
     }
 
     suspend fun preload(language: String): Set<String> {
@@ -223,6 +230,12 @@ object SharedDictionaryService {
     suspend fun preloadCanonical(context: Context, language: String): Set<String> {
         val lang = canonicalLanguage(language)
         withContext(Dispatchers.IO) { restorePersisted(context, lang) }
+        // Fresh enough in memory or on disk: use it now, no network round trip.
+        snapshots[lang]?.takeIf { it.isNotEmpty() }?.let { cached ->
+            val file = snapshotFile(context, lang)
+            val age = System.currentTimeMillis() - maxOf(refreshedAt[lang] ?: 0L, if (file.isFile) file.lastModified() else 0L)
+            if (age < REFRESH_INTERVAL_MS) return cached
+        }
         val refreshed = runCatching { fetchCanonical(lang) }.getOrNull()
         val canonical = refreshed
             ?: snapshots[lang]

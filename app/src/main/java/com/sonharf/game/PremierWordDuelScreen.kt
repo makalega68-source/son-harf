@@ -563,8 +563,11 @@ fun PremierWordDuelScreen() {
                         busy = true
                         notice = ""
                         runCatching {
-                            ensureMe()
-                            backend.startRandomMatchmaking(language)
+                            // A stalled connection must never leave the play button locked.
+                            kotlinx.coroutines.withTimeout(15_000) {
+                                ensureMe()
+                                backend.startRandomMatchmaking(language)
+                            }
                             stage = PremierStage.Searching
                             while (stage == PremierStage.Searching) {
                                 val found = backend.pollRandomMatchmakingRoom()
@@ -577,7 +580,11 @@ fun PremierWordDuelScreen() {
                             }
                         }.onFailure {
                             stage = PremierStage.Lobby
-                            notice = premierError(language, it.message.orEmpty())
+                            notice = if (it is kotlinx.coroutines.TimeoutCancellationException) {
+                                pt(language, "Bağlantı yavaş. Tekrar OYNA'ya bas.", "Slow connection. Tap PLAY again.")
+                            } else {
+                                premierError(language, it.message.orEmpty())
+                            }
                         }
                         busy = false
                     }
@@ -791,7 +798,7 @@ private fun PremierLobby(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onHome) { Icon(Icons.Rounded.ArrowBack, null, tint = PremierUi.Ink) }
-            HfGameArt(R.drawable.son_harf_game_icon, 48.dp, 48.dp, description = "Son Harf")
+            HfGameArt(R.drawable.son_harf_game_icon, 64.dp, 64.dp, description = "Son Harf")
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text("SON HARF", color = PremierUi.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)

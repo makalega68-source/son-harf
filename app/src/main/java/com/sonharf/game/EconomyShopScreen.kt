@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -176,14 +177,22 @@ private fun EconomyCatalogScreen(
             return
         }
         runCatching {
-            profile = b.getProfile(id)
-            items = b.getShopItems().filter { it.isRuntimeReadyStyle() }
-            owned = b.getInventory()
-            equipped = b.getEquippedCosmetics()
+            // The five reads are independent: fetch them together so the store fills at once.
+            kotlinx.coroutines.coroutineScope {
+                val profileTask = async { b.getProfile(id) }
+                val itemsTask = async { b.getShopItems() }
+                val ownedTask = async { b.getInventory() }
+                val equippedTask = async { b.getEquippedCosmetics() }
+                val storefrontTask = async { runCatching { b.getStorefront() }.getOrNull() }
+                profile = profileTask.await()
+                items = itemsTask.await().filter { it.isRuntimeReadyStyle() }
+                owned = ownedTask.await()
+                equipped = equippedTask.await()
+                storefront = storefrontTask.await()
+            }
             SonHarfCosmetics.apply(equipped)
             onMembershipChanged(profile?.isVip == true)
             onBalance(profile?.diamonds)
-            storefront = b.getStorefront()
         }.onFailure {
             notice = sh("Mağaza verileri yüklenemedi.", "Shop data could not be loaded.")
         }
