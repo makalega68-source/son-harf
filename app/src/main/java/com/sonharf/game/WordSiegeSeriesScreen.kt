@@ -238,7 +238,6 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                         },
                     )
                 } else {
-                    val deadlineText = seriesDeadlineText(game.turnDeadline, clockTick)
                     val myMisses = if (me == game.playerOneId) game.playerOneMissedTurns else game.playerTwoMissedTurns
                     Box(Modifier.fillMaxSize()) {
                         WordSiegePanMatch(
@@ -302,8 +301,11 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                             onForfeit = { showForfeit = true },
                             onCancelWaiting = {},
                         )
-                        SeriesTimerPill(
-                            text = deadlineText,
+                        // The clock is read inside the pill only: a tick every second used to redraw the
+                        // whole board with it.
+                        SeriesDeadlinePill(
+                            deadline = game.turnDeadline,
+                            tick = { clockTick },
                             misses = myMisses,
                             modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 48.dp),
                         )
@@ -709,4 +711,11 @@ private fun seriesFriendlyError(raw: String): String = when {
     "matchmaking_disabled" in raw -> sh("Eşleştirme geçici olarak kapalı.", "Matchmaking is temporarily disabled.")
     "maintenance_mode" in raw -> sh("Bakım modu etkin.", "Maintenance mode is active.")
     else -> sh("İşlem tamamlanamadı. Bağlantını kontrol edip tekrar dene.", "The action could not be completed. Check your connection and try again.")
+}
+
+
+/** The turn clock pill; reads the per-second tick itself so only this pill redraws each second. */
+@Composable
+private fun SeriesDeadlinePill(deadline: String?, tick: () -> Long, misses: Int, modifier: Modifier = Modifier) {
+    SeriesTimerPill(text = seriesDeadlineText(deadline, tick()), misses = misses, modifier = modifier)
 }

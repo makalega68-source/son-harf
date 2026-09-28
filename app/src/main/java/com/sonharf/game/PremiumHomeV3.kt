@@ -372,7 +372,7 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
         while (true) {
             failed = false
             runCatching { activeBackend.getWeeklyTopV210(limit = 3) }
-                .onSuccess { players = it.take(3) }
+                .onSuccess { next -> next.take(3).let { if (it != players) players = it } }
                 .onFailure { if (players.isEmpty()) failed = true }
             loading = false
             delay(WEEKLY_PODIUM_REFRESH_MS)

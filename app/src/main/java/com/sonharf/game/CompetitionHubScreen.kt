@@ -957,8 +957,9 @@ private fun RivalHistoryTab() {
         runCatching {
             val nextRivals = b.getRivalHistory(30)
             val nextMatches = b.getMatchHistory(30)
-            rivals = nextRivals
-            matchHistory = nextMatches
+            // Only a real change redraws the list (it is re-read every 12 s).
+            if (nextRivals != rivals) rivals = nextRivals
+            if (nextMatches != matchHistory) matchHistory = nextMatches
             val nextProfiles = playerProfiles.toMutableMap()
             val activeIds = (nextRivals.map { it.opponentId } + nextMatches.map { it.opponentId }).toSet()
             for (userId in activeIds) {
@@ -966,7 +967,8 @@ private fun RivalHistoryTab() {
                     nextProfiles[userId] = runCatching { b.getProfile(userId) }.getOrNull()
                 }
             }
-            playerProfiles = nextProfiles.filterKeys { it in activeIds }
+            val kept = nextProfiles.filterKeys { it in activeIds }
+            if (kept != playerProfiles) playerProfiles = kept
         }.onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
         if (showLoading) loading = false
     }

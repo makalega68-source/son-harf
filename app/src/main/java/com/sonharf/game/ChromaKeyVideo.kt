@@ -95,9 +95,13 @@ internal class ChromaKeyVideoView(
     }
 
     override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-        renderer?.quit()
+        // The render thread may still be drawing into this surface: it is released there, after
+        // the player and GL are torn down (releasing it here at once could freeze or crash).
+        val active = renderer
         renderer = null
-        return true
+        if (active == null) return true
+        active.quit { runCatching { surface.release() } }
+        return false
     }
 
     override fun onSurfaceTextureUpdated(surface: SurfaceTexture) = Unit
@@ -153,9 +157,10 @@ private class KeyRenderer(
         height = h
     }
 
-    fun quit() {
+    fun quit(afterTearDown: () -> Unit = {}) {
         handler.post {
-            tearDown()
+            runCatching { tearDown() }
+            afterTearDown()
             thread.quitSafely()
         }
     }
@@ -199,7 +204,8 @@ private class KeyRenderer(
         EGL14.eglSwapBuffers(display, eglSurface)
 
         val texture = SurfaceTexture(videoTex)
-        texture.setOnFrameAvailableListener({ drawFrame() }, handler)
+        // A frame that fails to draw (e.g. the surface going away) is skipped, never fatal.
+        texture.setOnFrameAvailableListener({ runCatching { drawFrame() } }, handler)
         videoTexture = texture
         val surface = Surface(texture)
         videoSurface = surface

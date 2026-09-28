@@ -699,6 +699,11 @@ private fun PanSiegeBoard(
                     viewportOriginInWindow = it.localToWindow(Offset.Zero)
                 }
                 .wordSiegeMascotTouchWatcher(mascotTouches)
+                .wordSiegeBoardDoubleTap(
+                    key = Triple(gameId, viewportMode, transform),
+                    cellAt = { wordSiegeCellAt(it, transform, tilePx) },
+                    onDoubleTap = { toggleViewport(it) },
+                )
                 .pointerInput(gameId, viewportMode, viewport, boardPx, closeScale) {
                     if (viewportMode == WordSiegeBoardViewportMode.CLOSE) {
                         detectDragGestures(

@@ -175,6 +175,24 @@ internal fun WordSiegePracticeBoard(
         onViewportModeChange(nextMode)
     }
 
+    /** Double tap anywhere: zooming in centres on the tapped cell. */
+    fun toggleModeAt(index: Int) {
+        val nextMode = mode.toggle()
+        if (nextMode == WordSiegeBoardViewportMode.CLOSE) {
+            closeScale = WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE
+            closePan = wordSiegeCenteredClosePan(
+                index = index,
+                viewportWidthPx = viewport.width.toFloat(),
+                viewportHeightPx = viewport.height.toFloat(),
+                boardWidthPx = boardPx,
+                cellSizePx = tilePx,
+                scale = closeScale,
+            )
+        }
+        mode = nextMode
+        onViewportModeChange(nextMode)
+    }
+
     WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx)
     // Only the hovered cell matters, so the board recomposes when it changes, not every finger move.
     val dragHover by remember(tileDrag) { derivedStateOf { tileDrag?.hoverCell } }
@@ -211,6 +229,11 @@ internal fun WordSiegePracticeBoard(
                     viewportOriginInWindow = it.localToWindow(Offset.Zero)
                 }
                 .wordSiegeMascotTouchWatcher(mascotTouches)
+                .wordSiegeBoardDoubleTap(
+                    key = Pair(mode, transform),
+                    cellAt = { wordSiegeCellAt(it, transform, tilePx) },
+                    onDoubleTap = { toggleModeAt(it) },
+                )
                 .pointerInput(mode, viewport, boardPx, closeScale) {
                     if (mode == WordSiegeBoardViewportMode.CLOSE) {
                         detectTransformGestures { centroid, pan, zoom, _ ->

@@ -555,7 +555,9 @@ private fun WordSiegePracticeContent(
                         moveCell = lastMove?.placements?.keys?.firstOrNull(),
                         resolvedIndices = lastMove?.placements?.keys ?: emptySet(),
                         captureEffect = captureEffect,
-                        modifier = if (boardViewportMode == WordSiegeBoardViewportMode.CLOSE) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(1f),
+                        // The board always takes the space it is given; FIT scales it to fit that space.
+                        // (Width-based square sizing pushed the board off wide tablet screens.)
+                        modifier = Modifier.fillMaxSize(),
                         mascotSignal = lastMove?.takeIf { actionVfxEvent > 0 }?.let { move ->
                             val mineMove = state.currentOwner == 2
                             when {

@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * Deliberately compact profile surface.
@@ -56,6 +57,7 @@ internal fun MainPlayerProfileScreen(
     var friendCount by remember { mutableIntStateOf(0) }
     var onlineFriendCount by remember { mutableIntStateOf(0) }
     var loading by remember { mutableStateOf(true) }
+    var renaming by remember { mutableStateOf(false) }
 
     suspend fun reload() = coroutineScope {
         loading = true
@@ -81,6 +83,17 @@ internal fun MainPlayerProfileScreen(
     }
 
     LaunchedEffect(Unit) { reload() }
+
+    if (renaming) {
+        ChangeNameDialog(
+            current = profile?.displayName.orEmpty(),
+            onDismiss = { renaming = false },
+            onChanged = { newName ->
+                profile = profile?.copy(displayName = newName)
+                renaming = false
+            },
+        )
+    }
 
     val p = profile
     val g = growth
@@ -181,6 +194,10 @@ internal fun MainPlayerProfileScreen(
                         Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp), tint = Hf.Gold)
                         Spacer(Modifier.width(5.dp))
                         Text(sh("Profili düzenle", "Edit profile"), color = Hf.TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    TextButton(onClick = { renaming = true }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp)) {
+                        Text(sh("Adı değiştir", "Change name"), color = Hf.Gold, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                     }
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = onSettings, modifier = Modifier.size(44.dp)) {
@@ -312,4 +329,58 @@ private fun InlineProfileStat(value: String, label: String) {
         Text(value, color = SonHarfTheme.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Black)
         Text(label, color = SonHarfTheme.TextSecondary, fontSize = 8.sp, textAlign = TextAlign.Center)
     }
+}
+
+
+/** Player-name change; the server checks length, characters, uniqueness and the daily limit. */
+@Composable
+private fun ChangeNameDialog(current: String, onDismiss: () -> Unit, onChanged: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
+    var name by remember { mutableStateOf(current) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text(sh("Oyuncu adını değiştir", "Change player name"), fontWeight = FontWeight.Black) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(24); error = null },
+                    singleLine = true,
+                    label = { Text(sh("Yeni ad", "New name")) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    error ?: sh("2-24 karakter. Günde bir kez değiştirilebilir.", "2-24 characters. Can be changed once a day."),
+                    color = if (error != null) Color(0xFFD9534F) else Hf.TextMuted,
+                    fontSize = 12.sp,
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = !busy && name.trim().length >= 2 && name.trim() != current,
+                onClick = {
+                    busy = true
+                    scope.launch {
+                        runCatching { DisplayNameBackend.change(name.trim()) }
+                            .onSuccess { onChanged(it.displayName.ifBlank { name.trim() }) }
+                            .onFailure { failure ->
+                                val raw = failure.message.orEmpty()
+                                error = when {
+                                    "display_name_taken" in raw -> sh("Bu ad başka bir oyuncuda. Başka bir ad dene.", "That name is taken. Try another.")
+                                    "display_name_cooldown" in raw -> sh("Adını en fazla günde bir kez değiştirebilirsin.", "You can change your name once a day.")
+                                    "invalid_display_name_chars" in raw -> sh("Sadece harf, rakam, boşluk ve . - _ kullanılabilir.", "Only letters, digits, spaces and . - _ are allowed.")
+                                    "invalid_display_name" in raw -> sh("Ad 2-24 karakter olmalı.", "The name must be 2-24 characters.")
+                                    else -> sh("Ad değiştirilemedi. Bağlantını kontrol edip tekrar dene.", "Could not change the name. Check your connection and try again.")
+                                }
+                            }
+                        busy = false
+                    }
+                },
+            ) { Text(if (busy) sh("Kaydediliyor…", "Saving…") else sh("Kaydet", "Save")) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(sh("Vazgeç", "Cancel")) } },
+    )
 }
