@@ -73,7 +73,11 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            // Store build: R8 drops library code the app never calls (e.g. the unused part of the
+            // icon set) and resource shrinking drops unused resources. App classes are kept whole.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
         }
     }
