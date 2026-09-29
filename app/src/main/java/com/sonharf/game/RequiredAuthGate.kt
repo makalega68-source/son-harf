@@ -46,6 +46,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
+private const val OTP_MIN_LENGTH = 6
+private const val OTP_MAX_LENGTH = 8
+
 fun hasVerifiedMembershipSession(): Boolean =
     runCatching { SupabaseProvider.client.auth.currentUserOrNull()?.email?.isNotBlank() == true }.getOrDefault(false)
 
@@ -172,8 +175,8 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     fun verifyPendingEmail() {
         val targetEmail = pendingVerificationEmail ?: return
         if (busy) return
-        if (otpCode.length != 6) {
-            notice = sh("E-postana gelen 6 haneli kodu gir.", "Enter the 6-digit code sent to your email.")
+        if (otpCode.length !in OTP_MIN_LENGTH..OTP_MAX_LENGTH) {
+            notice = sh("E-postana gelen doğrulama kodunu gir.", "Enter the verification code sent to your email.")
             success = false
             return
         }
@@ -364,7 +367,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             success = true
                             pendingVerificationEmail = targetEmail
                             otpCode = ""
-                            notice = sh("Doğrulama e-postası gönderildi. Maildeki doğrulama bağlantısına dokun veya 6 haneli kodu buraya gir.", "Verification email sent. Tap the verification link or enter the 6-digit code here.")
+                            notice = sh("Doğrulama e-postası gönderildi. Maildeki doğrulama bağlantısına dokun veya e-postana gelen doğrulama kodunu buraya gir.", "Verification email sent. Tap the verification link or enter the verification code from your email here.")
                         }
                     }.onFailure {
                         notice = friendly(it.message.orEmpty())
@@ -447,7 +450,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     EmailVerificationCard(
                         email = pendingVerificationEmail.orEmpty(),
                         otpCode = otpCode,
-                        onOtpChange = { otpCode = it.filter(Char::isDigit).take(6) },
+                        onOtpChange = { otpCode = it.filter(Char::isDigit).take(OTP_MAX_LENGTH) },
                         busy = busy,
                         notice = notice,
                         success = success,
@@ -750,8 +753,8 @@ private fun EmailVerificationCard(
             )
             Text(
                 sh(
-                    "Maildeki doğrulama bağlantısına dokunduğunda Kelime Tahtı otomatik açılır. Bağlantı çalışmazsa e-postadaki 6 haneli kodu gir.",
-                    "Tap the verification link in the email to reopen Word Throne. If the link does not work, enter the 6-digit code from the email.",
+                    "Maildeki doğrulama bağlantısına dokunduğunda Kelime Tahtı otomatik açılır. Bağlantı çalışmazsa e-postana gelen doğrulama kodunu gir.",
+                    "Tap the verification link in the email to reopen Word Throne. If the link does not work, enter the verification code from your email.",
                 ),
                 color = AuthUi.Muted,
                 fontSize = 13.sp,
@@ -762,8 +765,9 @@ private fun EmailVerificationCard(
                 onValueChange = onOtpChange,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text(sh("6 haneli doğrulama kodu", "6-digit verification code")) },
-                placeholder = { Text("000000") },
+                maxLines = 1,
+                label = { Text(sh("Doğrulama kodu", "Verification code")) },
+                placeholder = { Text("00000000") },
                 textStyle = LocalTextStyle.current.copy(
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Black,
@@ -773,7 +777,7 @@ private fun EmailVerificationCard(
             )
             Button(
                 onClick = onVerify,
-                enabled = !busy && otpCode.length == 6,
+                enabled = !busy && otpCode.length in OTP_MIN_LENGTH..OTP_MAX_LENGTH,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AuthUi.Primary, contentColor = AuthUi.Ivory),
