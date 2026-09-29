@@ -959,16 +959,10 @@ private fun PanSiegeBoardCell(
             )
             .padding(regionGap)
             .graphicsLayer { scaleX = if (WordSiegeWalnutIvory.enabled) pressScale else 1f; scaleY = if (WordSiegeWalnutIvory.enabled) pressScale else 1f }
+            // Raised stones cast a short soft shadow; empty recesses cast none.
+            .shadow(if (letter != null && !WordSiegeWalnutIvory.enabled) 2.dp else 0.dp, RoundedCornerShape(7.dp), clip = false)
             .clip(RoundedCornerShape(7.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        androidx.compose.ui.graphics.lerp(displayBase, Color.White, if (WordSiegeWalnutIvory.enabled) .08f else .18f),
-                        displayBase,
-                        androidx.compose.ui.graphics.lerp(displayBase, Color.Black, if (WordSiegeWalnutIvory.enabled) .10f else .07f),
-                    )
-                )
-            )
+            .background(wordSiegeCellBrush(displayBase, raised = letter != null, walnut = WordSiegeWalnutIvory.enabled))
             .border(
                 width = if (dropTarget) 3.dp else if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
                 color = if (dropTarget) Color(0xFF2FB36A) else PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),
@@ -983,7 +977,7 @@ private fun PanSiegeBoardCell(
             shape = RoundedCornerShape(7.dp),
             border = BorderStroke(
                 if (pending) maxOf(if (WordSiegeWalnutIvory.enabled) 1.6.dp else 1.4.dp, borderWidth) else if (WordSiegeWalnutIvory.enabled) .65.dp else .45.dp,
-                if (WordSiegeWalnutIvory.enabled) (if (pending) WordSiegeWalnutIvory.selection else if (letter != null) WordSiegeWalnutIvory.bevel else if (activeBonus != null) border else WordSiegeWalnutIvory.emptyEdge) else (if (pending) border.copy(alpha = .92f) else Color(0xFFCDBF9F)),
+                if (WordSiegeWalnutIvory.enabled) (if (pending) WordSiegeWalnutIvory.selection else if (letter != null) WordSiegeWalnutIvory.bevel else if (activeBonus != null) border else WordSiegeWalnutIvory.emptyEdge) else (if (pending) border.copy(alpha = .92f) else if (letter != null) Color(0xFFCDBF9F).copy(alpha = .55f) else Color.Transparent),
             ),
         ) {
             Box(

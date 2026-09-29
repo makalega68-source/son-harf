@@ -96,8 +96,13 @@ internal fun WordSiegeBonusMark(
         Modifier.fillMaxSize()
             .padding(if (overview) 5.dp else 3.5.dp)
             .clip(shape)
-            .background(ink.copy(alpha = if (seal) .10f else .08f))
-            .border(if (strong) 1.6.dp else 1.dp, ink.copy(alpha = if (strong) .85f else .55f), shape)
+            // A soft embossed chip: gentle glow in the middle, a faint rim, no hard ring.
+            .background(
+                androidx.compose.ui.graphics.Brush.radialGradient(
+                    listOf(ink.copy(alpha = if (seal) .16f else .12f), ink.copy(alpha = if (strong) .07f else .04f)),
+                ),
+            )
+            .border(1.dp, ink.copy(alpha = if (strong) .32f else .20f), shape)
             .padding(if (round) 5.dp else 3.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -123,3 +128,27 @@ internal fun WordSiegeBonusMark(
         }
     }
 }
+
+/**
+ * Board cell surface. Empty cells read as shallow recesses in stone (a hair darker at the top-left
+ * rim, no hard outline) so 225 of them rest the eye; tiles with a letter read as raised stones
+ * with a soft top light and a darker lower edge.
+ */
+internal fun wordSiegeCellBrush(base: Color, raised: Boolean, walnut: Boolean): androidx.compose.ui.graphics.Brush =
+    if (raised) {
+        androidx.compose.ui.graphics.Brush.verticalGradient(
+            listOf(
+                androidx.compose.ui.graphics.lerp(base, Color.White, if (walnut) .10f else .16f),
+                base,
+                androidx.compose.ui.graphics.lerp(base, Color.Black, .12f),
+            ),
+        )
+    } else {
+        androidx.compose.ui.graphics.Brush.linearGradient(
+            listOf(
+                androidx.compose.ui.graphics.lerp(base, Color.Black, if (walnut) .06f else .035f),
+                base,
+                androidx.compose.ui.graphics.lerp(base, Color.White, if (walnut) .03f else .05f),
+            ),
+        )
+    }

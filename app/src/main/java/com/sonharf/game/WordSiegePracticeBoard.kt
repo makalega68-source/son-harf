@@ -508,16 +508,10 @@ private fun WordSiegePracticeBoardCell(
             }
             .padding(regionGap)
             .graphicsLayer { scaleX = if (WordSiegeWalnutIvory.enabled) pressScale else 1f; scaleY = if (WordSiegeWalnutIvory.enabled) pressScale else 1f }
+            // Raised stones cast a short soft shadow; empty recesses cast none.
+            .shadow(if (letter != null && !WordSiegeWalnutIvory.enabled) 2.dp else 0.dp, RoundedCornerShape(8.dp), clip = false)
             .clip(RoundedCornerShape(8.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        androidx.compose.ui.graphics.lerp(displayCellColor, Color.White, .18f),
-                        displayCellColor,
-                        androidx.compose.ui.graphics.lerp(displayCellColor, Color.Black, .07f),
-                    )
-                )
-            )
+            .background(wordSiegeCellBrush(displayCellColor, raised = letter != null, walnut = WordSiegeWalnutIvory.enabled))
             .border(
                 width = if (dropTarget) 3.dp else if (hintGlow != null) 2.2.dp else if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
                 color = if (dropTarget) {
@@ -526,7 +520,10 @@ private fun WordSiegePracticeBoardCell(
                     Color(0xFFFFE082)
                 } else if (lastMoveHighlight > 0f) {
                     PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
-                } else if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.emptyEdge else Color(0xFFCDBF9F),
+                } else if (letter == null) {
+                    // Empty cells have no outline: the recess shading separates them without a grid of lines.
+                    Color.Transparent
+                } else if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.emptyEdge else Color(0xFFCDBF9F).copy(alpha = .55f),
                 shape = RoundedCornerShape(8.dp),
             ),
         contentAlignment = Alignment.Center,

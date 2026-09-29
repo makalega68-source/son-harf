@@ -13,6 +13,14 @@ Tasarım dili, isimler ve renkler `kusatma-tahta-3b-komutlari.md` ile aynıdır.
   3. Oyun 15×15 ızgarayı bu plakayla kodda, milimetrik hizalı kurar. Böylece kareler asla kaymaz.
 - **Şeffaf arka plan:** Canva görseli şeffaf üretmez. Bonus ikonlarını üret, sonra **Düzenle → Arka Plan Kaldırıcı** (BG Remover) ile arka planı sil ve **PNG, şeffaf arka plan** olarak indir. Bu özellik Canva Pro ister.
 
+## Göz yormaması için
+
+Açık kareleri koyu çizgilerle ayırmak, çizgilerin kesiştiği yerlerde yanıp sönen noktalar gibi görünür (Hermann ızgara yanılsaması) ve baş döndürür. Bu yüzden:
+
+- Plakalar mat ve yumuşak kenarlı olacak.
+- Oyun plakaları aralarında **plakayla aynı renkte, çok ince** boşlukla dizecek; koyu çizgi ve kesişim noktasında ışık olmayacak.
+- Plakada parlak kenar ışığı istemiyoruz.
+
 ## Canva ayarları
 
 - Oluştur: **Görsel**
@@ -29,22 +37,22 @@ Tasarım dili, isimler ve renkler `kusatma-tahta-3b-komutlari.md` ile aynıdır.
 
 **Taş Kale**, dosya adı `plate_stone_keep.png`:
 ```
-Top-down 3D render of one square limestone floor plate, warm beige-grey, soft bevelled edges, subtle cracks, calm flat top, soft light from top-left, plain dark background. No text, no letters, no symbols.
+Top-down 3D render of one square limestone floor plate, warm beige-grey, matte, very soft rounded edges, faint cracks, calm flat top, soft overcast light, no shiny edges, plain beige background. No text, no letters, no symbols.
 ```
 
 **Vadi Nehri**, dosya adı `plate_river_valley.png`:
 ```
-Top-down 3D render of one square pale granite floor plate, faint green moss only at the edges, soft bevel, calm flat top, soft light from top-left, plain dark background. No text, no letters, no symbols.
+Top-down 3D render of one square pale granite floor plate, matte, very soft rounded edges, calm flat top, soft overcast light, no shiny edges, plain pale grey background. No text, no letters, no symbols.
 ```
 
 **Kar Kalesi**, dosya adı `plate_frost_citadel.png`:
 ```
-Top-down 3D render of one square frosted blue-white stone plate, thin powder snow only on the edges, smooth clear top, soft bevel, cold daylight from top-left, plain dark background. No text, no letters.
+Top-down 3D render of one square frosted blue-white stone plate, matte, very soft rounded edges, smooth clear top, soft overcast light, no shiny edges, plain pale blue background. No text, no letters.
 ```
 
 **Obsidyen Kale**, dosya adı `plate_obsidian.png`:
 ```
-Top-down 3D render of one square matte dark basalt plate, thin warm gold bevel line on the edges, smooth dark top, no reflections, soft light from top-left, plain black background. No text, no letters.
+Top-down 3D render of one square matte dark basalt plate, matte, very soft rounded edges, no gold lines, no reflections, soft light, plain dark grey background. No text, no letters.
 ```
 
 ## 2. Çerçeve ve zemin (her tema için 1 adet)

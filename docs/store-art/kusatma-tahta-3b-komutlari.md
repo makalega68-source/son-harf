@@ -20,26 +20,37 @@ Renkli bonus kareleri, "2K / 3H" yazıları, ahşap raf ve düz bej tahta bu gö
 | Dış çerçeve | her kenarda 64 px (süsler yalnız burada) |
 | Oyun alanı | 1920 × 1920 px, sol üst köşe (64, 64) |
 | Kare adımı | 128 px (1920 / 15) |
-| Taş plaka | 116 × 116 px, her karenin tam ortasında |
-| Plakalar arası derz | 12 px (her taraf 6 px) |
+| Taş plaka | 120 × 120 px, her karenin tam ortasında |
+| Plakalar arası derz | 8 px (her taraf 4 px), **plakayla neredeyse aynı renk** |
 | Merkez kare | 8. satır, 8. sütun: (960, 960) merkezli plaka |
-| Işık | sol üstten, 45°, yumuşak; bütün plakalarda aynı gölge yönü |
+| Işık | yumuşak, bulutlu gün ışığı; kısa ve silik gölge |
 | Kamera | tam tepeden (orthographic top-down), **perspektif yok** |
 
 Plaka merkezleri: x = 128 + 128·i, y = 128 + 128·j (i, j = 0…14).
+
+## Göz yormaması için (en önemli kural)
+
+225 açık kareyi koyu, keskin çizgilerle ayırınca çizgilerin kesiştiği yerlerde gri noktalar yanıp söner gibi görünür (Hermann ızgara yanılsaması). Göz kayar, baş döner. Kesişimlerde parlayan nokta varsa etki çok daha güçlü olur. Bunu önlemek için:
+
+- Derzler koyu çizgi olmayacak. Plakayla **aynı renk ailesinde, en fazla %8–10 daha koyu**, ince ve yumuşak olacak.
+- Kesişim noktalarında ışık, parıltı, nokta, çivi ya da süs **olmayacak**.
+- Plakalar **mat** olacak. Parlak kenar ışığı ve sert beyaz bevel çizgisi olmayacak.
+- Plakalar arasında **hafif doğal ton farkı** olacak, çünkü birebir aynı kareler tekrarı artırır.
+- Gölgeler kısa ve silik olacak (bulutlu gün ışığı).
+- Uygulama oyunda da aynı kuralı uyguluyor: boş karelerde çizgi yok, yalnız hafif gölge var.
 
 ---
 
 ## Ortak kurallar (her tahta komutunun başına aynen ekle)
 
 ```
-Top-down orthographic 3D render of a game board, 2048x2048 px, exactly square. Camera perfectly overhead, zero perspective, zero lens distortion, zero tilt. The playing field is a perfect 15 by 15 grid of identical square stone plates: each plate 116x116 px, plate centres on an exact 128 px pitch starting at (128,128), 12 px joints between plates, all plates the same size, perfectly aligned in straight rows and columns, none missing, none covered, none rotated. Outer frame band of 64 px on every side; decorative elements (rocks, plants, water, snow, ruins) are allowed ONLY inside this outer frame band and must never overlap any plate. Plates are flat-topped with a subtle 3D bevel (about 6 px), physically based materials, soft ambient occlusion in the joints, one soft key light from the top-left at 45 degrees so every plate casts the same short shadow. Plate tops are mostly calm and low-contrast so letters drawn on top stay readable: keep texture detail subtle in the centre of each plate. NO letters, NO numbers, NO symbols, NO coloured bonus squares, NO text, NO logos, NO watermark, NO wooden rack, NO game pieces. Must not resemble Scrabble or any existing word-game board: no red, pink, light-blue or dark-blue premium squares, no star in the centre, no beige cardboard look. Style: premium mobile strategy-game terrain, like a miniature fortified landscape seen from above.
+Top-down orthographic 3D render of a game board, 2048x2048 px, exactly square. Camera perfectly overhead, zero perspective, zero lens distortion, zero tilt. The playing field is a perfect 15 by 15 grid of identical square stone plates: each plate 116x116 px, plate centres on an exact 128 px pitch starting at (128,128), 12 px joints between plates, all plates the same size, perfectly aligned in straight rows and columns, none missing, none covered, none rotated. Outer frame band of 64 px on every side; decorative elements (rocks, plants, water, snow, ruins) are allowed ONLY inside this outer frame band and must never overlap any plate. Plates are 120x120 px with 8 px joints. EYE COMFORT IS CRITICAL: the joints must be very low contrast, the same colour family as the plates and only 8-10% darker, soft and thin, never dark lines, never black grout; absolutely no lights, glows, dots, studs or ornaments where joints cross. Plates are matte with a very soft rounded bevel (no bright edge highlights), gentle natural tone variation from plate to plate, realistic physically based stone, soft overcast daylight with short faint shadows. Plate tops are calm and low-contrast so letters drawn on top stay readable. NO letters, NO numbers, NO symbols, NO coloured bonus squares, NO text, NO logos, NO watermark, NO wooden rack, NO game pieces. Must not resemble Scrabble or any existing word-game board: no red, pink, light-blue or dark-blue premium squares, no star in the centre, no beige cardboard look. Style: premium mobile strategy-game terrain, like a miniature fortified landscape seen from above.
 ```
 
 Olumsuz komut (Higgsfield "negative prompt" alanı):
 
 ```
-perspective, tilted camera, fisheye, uneven grid, missing tiles, merged tiles, different tile sizes, text, letters, numbers, logo, watermark, scrabble, red squares, pink squares, blue squares, star, wooden rack, cardboard, people, animals, blurry, low resolution
+perspective, tilted camera, fisheye, uneven grid, missing tiles, merged tiles, different tile sizes, dark grout lines, black joints, high contrast grid, glowing dots, lights at intersections, shiny bevels, glossy tiles, text, letters, numbers, logo, watermark, scrabble, red squares, pink squares, blue squares, star, wooden rack, cardboard, people, animals, blurry, low resolution
 ```
 
 **Higgsfield ayarları:** kare oran (1:1), en yüksek çözünürlük, "structure / reference" gücü yüksek (0.7–0.85). Sabit bir seed kullan, böylece dört tema aynı dilde çıkar.
@@ -53,7 +64,7 @@ Dosya adı: `board_stone_keep.png`
 
 ```
 [ORTAK KURALLAR]
-Theme: sunlit ancient stone keep. Plates are warm limestone (#D9D0BC to #CFC5AE) with faint natural cracks and very soft moss in the joints. The outer frame band is a low weathered castle wall of rough grey-beige blocks with small tufts of grass and a few pebbles tucked against it; four corner towers seen from above as round stone caps. Overall palette calm, warm and light so dark ink letters read clearly.
+Theme: sunlit ancient stone keep. Plates are warm limestone (#D9D0BC to #CFC5AE) with faint natural cracks; joints are the same limestone tone only slightly darker (#C4B99F), with a hint of moss, never dark. The outer frame band is a low weathered castle wall of rough grey-beige blocks with small tufts of grass and a few pebbles tucked against it; four corner towers seen from above as round stone caps. Overall palette calm, warm and light so dark ink letters read clearly.
 ```
 
 ### 2. Vadi Nehri (yeşil tema)
@@ -61,7 +72,7 @@ Dosya adı: `board_river_valley.png`
 
 ```
 [ORTAK KURALLAR]
-Theme: green river valley fortress. Plates are pale granite (#CFCBBE) with a faint green patina in the joints. In the outer frame band only: a thin turquoise stream running around the four sides, mossy boulders in each corner, small shrubs. The stream and boulders never cross into the 15x15 plate area. Palette fresh and natural, plate tops stay light and calm.
+Theme: green river valley fortress. Plates are pale granite (#CFCBBE); joints are soft grey-green (#B9B7A8), only slightly darker than the plates, never dark. In the outer frame band only: a thin turquoise stream running around the four sides, mossy boulders in each corner, small shrubs. The stream and boulders never cross into the 15x15 plate area. Palette fresh and natural, plate tops stay light and calm.
 ```
 
 ### 3. Kar Kalesi (kış teması)
@@ -69,7 +80,7 @@ Dosya adı: `board_frost_citadel.png`
 
 ```
 [ORTAK KURALLAR]
-Theme: frozen mountain citadel. Plates are frosted blue-white stone (#E6ECF2 to #D8E0EA) with a thin layer of powder snow at the edges of each plate only, plate centres clear and smooth. Outer frame band: dark slate wall (#3E4652) with snow on top, small snowy pine trees and ice rocks in the corners. Cold daylight from the top-left, crisp soft shadows. Plate tops must stay evenly light so letters read clearly; no ice glare on plates.
+Theme: frozen mountain citadel. Plates are frosted blue-white stone (#E6ECF2 to #D8E0EA), plate centres clear and smooth; joints are filled with soft snow in a slightly darker blue-grey (#C9D3DF), never dark slate lines. Outer frame band: dark slate wall (#3E4652) with snow on top, small snowy pine trees and ice rocks in the corners. Cold daylight from the top-left, crisp soft shadows. Plate tops must stay evenly light so letters read clearly; no ice glare on plates.
 ```
 
 ### 4. Obsidyen Kale (siyah tema)
@@ -77,7 +88,7 @@ Dosya adı: `board_obsidian_bastion.png`
 
 ```
 [ORTAK KURALLAR]
-Theme: night obsidian bastion. Plates are matte dark basalt (#2A2D33 to #33373F) with a very subtle warm gold hairline bevel on each plate edge. Joints glow faintly with a dim amber light (very low intensity). Outer frame band: black volcanic stone wall with thin gold inlay lines and four small brazier-like corner caps (unlit or softly glowing). Plate tops stay uniformly dark and matte so light ivory letters read clearly; no reflections on plates.
+Theme: night obsidian bastion. Plates are matte dark basalt (#2A2D33 to #33373F); joints are only slightly darker basalt (#23262B), no gold lines on the plates, no glowing joints, no lights or dots at intersections. Outer frame band: black volcanic stone wall with thin gold inlay lines and four small brazier-like corner caps (unlit or softly glowing). Plate tops stay uniformly dark and matte so light ivory letters read clearly; no reflections on plates.
 ```
 
 ---
