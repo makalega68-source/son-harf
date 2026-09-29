@@ -251,8 +251,8 @@ internal fun WordSiegePracticeBoard(
                         scaleY = transform.scale
                         transformOrigin = TransformOrigin(0f, 0f)
                     }
-                    // The skin's frame belongs to the board: it zooms and pans with the cells.
-                    .wordSiegeBoardFrame(boardSkin, LocalWordSiegeFrame.current),
+                    // The skin's slab belongs to the board: it zooms and pans with the cells.
+                    .wordSiegeBoardFrame(boardSkin, LocalWordSiegePlate.current),
             ) {
                 // The mascot's answer tiles pulse gold while they sit on the board, so it is clear
                 // which letters the hint placed.

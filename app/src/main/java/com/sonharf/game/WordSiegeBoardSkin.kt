@@ -17,8 +17,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageShader
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.imageResource
@@ -28,41 +36,51 @@ import androidx.compose.ui.unit.IntSize
 
 /**
  * Word Siege board looks. Stone Keep is the free default board; the others are cosmetic products.
- * A skin draws the frame around the board and the stone texture of empty cells only: letters, bonus
- * marks, territory colours and tap targets are drawn by the board as before, on the same grid.
+ * A skin is a tabletop slab drawn in code (so it stays sharp at every zoom): a bevelled rim with a
+ * metal inlay line and corner studs, a recessed field, and the stone grain of the skin on empty
+ * cells. Letters, bonus marks, territory colours and tap targets stay on the same grid.
  */
 internal enum class WordSiegeBoardSkin(
     val id: String,
-    @param:DrawableRes val frameRes: Int,
     @param:DrawableRes val plateRes: Int,
     @param:DrawableRes val artRes: Int,
-    /** Frame band on each side as a share of the frame image (left, top, right, bottom). */
-    val inset: List<Float>,
+    /** Rim of the slab: light edge, body, shaded edge. */
+    val rim: List<Color>,
+    /** Thin metal inlay line and corner studs on the rim. */
+    val inlay: Color,
     /** Field colour between cells: the plate tone itself, so no dark grid lines tire the eye. */
     val field: Color,
     val dark: Boolean,
-    /** Ground around the frame when the board is zoomed out: the frame image's own outer tone. */
-    val ground: Color,
+    /** Table under the slab when zoomed out: centre and edge of a soft vignette. */
+    val ground: List<Color>,
 ) {
     STONE_KEEP(
-        "board_stone_keep", R.drawable.board_frame_stone_keep, R.drawable.board_plate_stone_keep, R.drawable.store_art_board_stone_keep,
-        listOf(.085f, .085f, .09f, .088f), Color(0xFFD6C8AA), dark = false, ground = Color(0xFF8A7C67),
+        "board_stone_keep", R.drawable.board_plate_stone_keep, R.drawable.store_art_board_stone_keep,
+        listOf(Color(0xFFC9B48D), Color(0xFFA58C66), Color(0xFF76603F)), Color(0xFFD8B25E),
+        Color(0xFFD6C8AA), dark = false, ground = listOf(Color(0xFF5B5044), Color(0xFF2F2821)),
     ),
     RIVER_VALLEY(
-        "board_river_valley", R.drawable.board_frame_river_valley, R.drawable.board_plate_river_valley, R.drawable.store_art_board_river_valley,
-        listOf(.09f, .05f, .09f, .06f), Color(0xFFCFCCBE), dark = false, ground = Color(0xFF55621B),
+        "board_river_valley", R.drawable.board_plate_river_valley, R.drawable.store_art_board_river_valley,
+        listOf(Color(0xFF6F9C82), Color(0xFF41705A), Color(0xFF244536)), Color(0xFFBFE3D2),
+        Color(0xFFCFCCBE), dark = false, ground = listOf(Color(0xFF34473B), Color(0xFF18221C)),
     ),
     FROST_CITADEL(
-        "board_frost_citadel", R.drawable.board_frame_frost_citadel, R.drawable.board_plate_frost_citadel, R.drawable.store_art_board_frost_citadel,
-        listOf(.045f, .05f, .045f, .06f), Color(0xFFD5E0EC), dark = false, ground = Color(0xFF99A6B9),
+        "board_frost_citadel", R.drawable.board_plate_frost_citadel, R.drawable.store_art_board_frost_citadel,
+        listOf(Color(0xFF9FB2C9), Color(0xFF6D819C), Color(0xFF45566F)), Color(0xFFF1F6FB),
+        Color(0xFFD5E0EC), dark = false, ground = listOf(Color(0xFF45526A), Color(0xFF222A38)),
     ),
     OBSIDIAN(
-        "board_obsidian", R.drawable.board_frame_obsidian, R.drawable.board_plate_obsidian, R.drawable.store_art_board_obsidian,
-        listOf(.05f, .055f, .05f, .055f), Color(0xFF2A2F37), dark = true, ground = Color(0xFF171919),
+        "board_obsidian", R.drawable.board_plate_obsidian, R.drawable.store_art_board_obsidian,
+        listOf(Color(0xFF454952), Color(0xFF25282E), Color(0xFF101114)), Color(0xFFD4AF37),
+        Color(0xFF2A2F37), dark = true, ground = listOf(Color(0xFF1E1F23), Color(0xFF060607)),
     ),
     ;
 
+    /** Rim band on each side as a share of the whole slab (left, top, right, bottom). */
+    val inset: List<Float> get() = RimShare
+
     companion object {
+        private val RimShare = listOf(.055f, .055f, .055f, .055f)
         val DEFAULT = STONE_KEEP
         /** Skins sold in the store (Stone Keep is free and needs no product). */
         val productIds: Set<String> = setOf(RIVER_VALLEY.id, FROST_CITADEL.id, OBSIDIAN.id)
@@ -102,9 +120,6 @@ internal object WordSiegeBoardSkins {
 /** Stone texture for empty cells, provided once per board so cells do not decode it 225 times. */
 internal val LocalWordSiegePlate = staticCompositionLocalOf<ImageBitmap?> { null }
 
-/** The skin's frame image, provided once per board and drawn around the 15x15 grid. */
-internal val LocalWordSiegeFrame = staticCompositionLocalOf<ImageBitmap?> { null }
-
 /**
  * Size of the board plus its frame, in the board's own pixels. The grid keeps its origin at (0,0);
  * the frame extends [left]/[top] before it and to [width]/[height] in total.
@@ -140,8 +155,8 @@ internal fun clampWordSiegeSkinnedPan(
 }
 
 /**
- * Board area with a skin: the viewport is filled with the ground tone; the frame itself is drawn by
- * the board layer ([wordSiegeBoardFrame]) so it zooms and pans together with the cells.
+ * Board area with a skin: the viewport is the table under the slab; the slab itself is drawn by the
+ * board layer ([wordSiegeBoardFrame]) so it zooms and pans together with the cells.
  */
 @Composable
 internal fun WordSiegeSkinnedBoard(
@@ -154,29 +169,94 @@ internal fun WordSiegeSkinnedBoard(
         return
     }
     val plate = ImageBitmap.imageResource(skin.plateRes)
-    val frame = ImageBitmap.imageResource(skin.frameRes)
-    Box(modifier.background(skin.ground)) {
-        CompositionLocalProvider(LocalWordSiegePlate provides plate, LocalWordSiegeFrame provides frame) {
+    Box(modifier.background(Brush.radialGradient(skin.ground))) {
+        CompositionLocalProvider(LocalWordSiegePlate provides plate) {
             content(Modifier.fillMaxSize())
         }
     }
 }
 
 /**
- * Drawn on the transformed board layer: the frame around the grid, then the plate-tone field under
- * the cells so the frame picture's own tiles never show through.
+ * Drawn on the transformed board layer, behind the 15x15 grid (whose origin stays at 0,0): a soft
+ * shadow on the table, the bevelled slab with its stone grain, a metal inlay line with studs at the
+ * corners and side centres, then the recessed field under the cells.
  */
-internal fun Modifier.wordSiegeBoardFrame(skin: WordSiegeBoardSkin?, frame: ImageBitmap?): Modifier =
-    if (skin == null || frame == null) this else drawBehind {
+internal fun Modifier.wordSiegeBoardFrame(skin: WordSiegeBoardSkin?, plate: ImageBitmap?): Modifier =
+    if (skin == null) this else drawBehind {
         val e = skin.extent(size.width)
-        drawImage(
-            image = frame,
-            srcOffset = IntOffset.Zero,
-            srcSize = IntSize(frame.width, frame.height),
-            dstOffset = IntOffset(-e.left.toInt(), -e.top.toInt()),
-            dstSize = IntSize(e.width.toInt(), e.height.toInt()),
+        val band = e.left
+        val origin = Offset(-e.left, -e.top)
+        val slab = Size(e.width, e.height)
+        val radius = CornerRadius(band * .6f)
+
+        // Shadow on the table: a few widening, fading layers below the slab.
+        for (step in 1..5) {
+            val grow = band * .07f * step
+            drawRoundRect(
+                Color.Black.copy(alpha = .09f),
+                topLeft = origin + Offset(-grow, -grow + band * .12f * step),
+                size = Size(slab.width + grow * 2, slab.height + grow * 2),
+                cornerRadius = CornerRadius(radius.x + grow),
+            )
+        }
+        // Slab body, lit from the top left.
+        drawRoundRect(
+            Brush.linearGradient(skin.rim, start = origin, end = origin + Offset(slab.width, slab.height)),
+            topLeft = origin, size = slab, cornerRadius = radius,
+        )
+        if (plate != null) {
+            drawRoundRect(
+                ShaderBrush(ImageShader(plate, TileMode.Mirror, TileMode.Mirror)),
+                topLeft = origin, size = slab, cornerRadius = radius,
+                alpha = if (skin.dark) .35f else .45f, blendMode = BlendMode.Multiply,
+            )
+        }
+        // Outer chamfer: bright top-left edge, dark bottom-right edge.
+        val edge = band * .09f
+        drawRoundRect(
+            Brush.linearGradient(
+                listOf(Color.White.copy(alpha = .42f), Color.Transparent, Color.Black.copy(alpha = .38f)),
+                start = origin, end = origin + Offset(slab.width, slab.height),
+            ),
+            topLeft = origin + Offset(edge / 2, edge / 2), size = Size(slab.width - edge, slab.height - edge),
+            cornerRadius = radius, style = Stroke(edge),
+        )
+        // Metal inlay line with studs.
+        val inlayAt = band * .36f
+        val inlayOrigin = origin + Offset(inlayAt, inlayAt)
+        val inlaySize = Size(slab.width - inlayAt * 2, slab.height - inlayAt * 2)
+        drawRoundRect(
+            skin.inlay.copy(alpha = .9f), topLeft = inlayOrigin, size = inlaySize,
+            cornerRadius = CornerRadius(band * .25f), style = Stroke(maxOf(1.5f, band * .05f)),
+        )
+        val studs = listOf(
+            inlayOrigin, inlayOrigin + Offset(inlaySize.width, 0f),
+            inlayOrigin + Offset(0f, inlaySize.height), inlayOrigin + Offset(inlaySize.width, inlaySize.height),
+            inlayOrigin + Offset(inlaySize.width / 2, 0f), inlayOrigin + Offset(inlaySize.width / 2, inlaySize.height),
+            inlayOrigin + Offset(0f, inlaySize.height / 2), inlayOrigin + Offset(inlaySize.width, inlaySize.height / 2),
+        )
+        studs.forEachIndexed { i, c ->
+            val r = band * (if (i < 4) .16f else .11f)
+            drawCircle(Color.Black.copy(alpha = .35f), r, c + Offset(r * .15f, r * .3f))
+            drawCircle(
+                Brush.radialGradient(listOf(Color.White.copy(alpha = .9f), skin.inlay, skin.inlay.copy(red = skin.inlay.red * .55f, green = skin.inlay.green * .55f, blue = skin.inlay.blue * .55f)), center = c - Offset(r * .35f, r * .35f), radius = r * 1.3f),
+                r, c,
+            )
+        }
+        // Recessed field: a dark lip on the inner edge, the plate tone, and shade falling from the rim.
+        val lip = band * .12f
+        drawRoundRect(
+            Brush.linearGradient(
+                listOf(Color.Black.copy(alpha = .45f), Color.Black.copy(alpha = .2f), Color.White.copy(alpha = .3f)),
+                start = Offset(-lip, -lip), end = Offset(size.width + lip, size.height + lip),
+            ),
+            topLeft = Offset(-lip, -lip), size = Size(size.width + lip * 2, size.height + lip * 2),
+            cornerRadius = CornerRadius(lip),
         )
         drawRect(skin.field, size = size)
+        val fall = band * .35f
+        drawRect(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .22f), Color.Transparent), 0f, fall), size = Size(size.width, fall))
+        drawRect(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = .14f), Color.Transparent), 0f, fall), size = Size(fall, size.height))
     }
 
 /** Draws the skin's stone texture across an empty cell (after the cell is clipped to its shape). */
@@ -199,5 +279,5 @@ internal fun wordSiegeSkinCellOverlay(bonusSurface: Color?): androidx.compose.ui
     if (bonusSurface != null) {
         androidx.compose.ui.graphics.Brush.linearGradient(listOf(bonusSurface.copy(alpha = .40f), bonusSurface.copy(alpha = .28f)))
     } else {
-        androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color.Black.copy(alpha = .07f), Color.Transparent, Color.White.copy(alpha = .06f)))
+        androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Black.copy(alpha = .13f), Color.Transparent, Color.White.copy(alpha = .10f)))
     }

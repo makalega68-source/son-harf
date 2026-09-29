@@ -758,8 +758,8 @@ private fun PanSiegeBoard(
                         scaleY = transform.scale
                         transformOrigin = TransformOrigin(0f, 0f)
                     }
-                    // The skin's frame belongs to the board: it zooms and pans with the cells.
-                    .wordSiegeBoardFrame(boardSkin, LocalWordSiegeFrame.current),
+                    // The skin's slab belongs to the board: it zooms and pans with the cells.
+                    .wordSiegeBoardFrame(boardSkin, LocalWordSiegePlate.current),
             ) {
                 repeat(WordSiegeBoardSpec.Size) { row ->
                     Row {

@@ -14,7 +14,7 @@ class WordSiegeBoardSkinContractTest {
         assertTrue(skin.contains("setOf(RIVER_VALLEY.id, FROST_CITADEL.id, OBSIDIAN.id)"))
         assertTrue(skin.contains("?: if (WordSiegeWalnutIvory.enabled) null else WordSiegeBoardSkin.DEFAULT"))
         listOf("stone_keep", "river_valley", "frost_citadel", "obsidian").forEach { name ->
-            listOf("board_frame_$name", "board_plate_$name", "store_art_board_$name").forEach { res ->
+            listOf("board_plate_$name", "store_art_board_$name").forEach { res ->
                 assertTrue("$res missing", File("src/main/res/drawable-nodpi/$res.jpg").exists() || File("app/src/main/res/drawable-nodpi/$res.jpg").exists())
             }
         }
