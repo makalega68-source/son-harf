@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -570,18 +571,26 @@ private fun PanSiegeBoard(
     var actionVfxMoveId by remember(gameId) { mutableStateOf<Long?>(null) }
     var highlightedIndices by remember(gameId) { mutableStateOf<Set<Int>>(emptySet()) }
     val highlightAlpha = remember(gameId) { Animatable(0f) }
-    val closeScale = remember(viewport, boardPx) {
-        wordSiegeOnlineCloseScale(
+    // Two-finger pinch sets the zoom freely between "whole board" and the close view; there is no
+    // double-tap toggle any more. FIT from the parent means "start zoomed out".
+    var userScale by remember(gameId) { mutableStateOf<Float?>(null) }
+    val fitScale = remember(viewport, boardPx) {
+        wordSiegeFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx)
+    }
+    val maxScale = maxOf(WORD_SIEGE_ONLINE_MAX_CLOSE_SCALE * 1.15f, fitScale)
+    val closeScale = remember(viewport, boardPx, userScale, viewportMode) {
+        val start = if (viewportMode == WordSiegeBoardViewportMode.FIT) fitScale else wordSiegeOnlineCloseScale(
             viewportWidthPx = viewport.width.toFloat(),
             viewportHeightPx = viewport.height.toFloat(),
             boardWidthPx = boardPx,
         )
+        (userScale ?: start).coerceIn(fitScale, maxScale)
     }
 
-    val transform by remember(viewportMode, viewport, boardPx, closePan, closeScale) {
+    val transform by remember(viewport, boardPx, closePan, closeScale) {
         derivedStateOf {
             wordSiegeBoardTransform(
-                mode = viewportMode,
+                mode = WordSiegeBoardViewportMode.CLOSE,
                 viewportWidthPx = viewport.width.toFloat(),
                 viewportHeightPx = viewport.height.toFloat(),
                 boardWidthPx = boardPx,
@@ -613,12 +622,24 @@ private fun PanSiegeBoard(
             scale = closeScale,
         )
 
-    fun toggleViewport(focusIndex: Int) {
-        val nextMode = viewportMode.toggle()
-        if (nextMode == WordSiegeBoardViewportMode.CLOSE) {
-            closePan = centerCloseOn(focusIndex)
-        }
-        onViewportModeChange(nextMode)
+    // The gesture handler outlives recompositions: it reads the latest scale, pan and mode.
+    val gestureScale by rememberUpdatedState(closeScale)
+    val gesturePan by rememberUpdatedState(transform.pan)
+    val gestureMode by rememberUpdatedState(viewportMode)
+
+    /** Centre button: back to the close view around a cell. */
+    fun recenterOn(focusIndex: Int) {
+        val target = wordSiegeOnlineCloseScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx).coerceIn(fitScale, maxScale)
+        userScale = target
+        closePan = wordSiegeCenteredClosePan(
+            index = focusIndex,
+            viewportWidthPx = viewport.width.toFloat(),
+            viewportHeightPx = viewport.height.toFloat(),
+            boardWidthPx = boardPx,
+            cellSizePx = tilePx,
+            scale = target,
+        )
+        onViewportModeChange(WordSiegeBoardViewportMode.CLOSE)
     }
 
     LaunchedEffect(viewport, gameId, boardPx, closeScale) {
@@ -705,21 +726,23 @@ private fun PanSiegeBoard(
                     viewportOriginInWindow = it.localToWindow(Offset.Zero)
                 }
                 .wordSiegeMascotTouchWatcher(mascotTouches)
-                .wordSiegeBoardDoubleTap(
-                    key = Triple(gameId, viewportMode, transform),
-                    cellAt = { wordSiegeCellAt(it, transform, tilePx) },
-                    onDoubleTap = { toggleViewport(it) },
-                )
-                .pointerInput(gameId, viewportMode, viewport, boardPx, closeScale) {
-                    if (viewportMode == WordSiegeBoardViewportMode.CLOSE) {
-                        detectDragGestures(
-                            onDragStart = { dragging = true },
-                            onDragCancel = { dragging = false },
-                            onDragEnd = { dragging = false },
-                        ) { change, dragAmount ->
-                            change.consume()
-                            closePan = clampClosePan(closePan + dragAmount)
-                        }
+                // One finger pans, two fingers pinch to zoom around the fingers.
+                .pointerInput(gameId, viewport, boardPx, fitScale, maxScale) {
+                    detectTransformGestures { centroid, pan, zoom, _ ->
+                        val oldScale = gestureScale
+                        val newScale = (oldScale * zoom).coerceIn(fitScale, maxScale)
+                        val ratio = if (oldScale > 0f) newScale / oldScale else 1f
+                        userScale = newScale
+                        closePan = clampWordSiegeBoardPan(
+                            centroid + (gesturePan - centroid) * ratio + pan,
+                            viewport.width.toFloat(),
+                            viewport.height.toFloat(),
+                            boardPx,
+                            newScale,
+                        )
+                        val zoomedOut = newScale <= fitScale * 1.02f
+                        val nextMode = if (zoomedOut) WordSiegeBoardViewportMode.FIT else WordSiegeBoardViewportMode.CLOSE
+                        if (nextMode != gestureMode) onViewportModeChange(nextMode)
                     }
                 },
         ) {
@@ -749,12 +772,11 @@ private fun PanSiegeBoard(
                                 pending = pending,
                                 myOwner = myOwner,
                                 enabled = enabled,
-                                overview = viewportMode == WordSiegeBoardViewportMode.FIT,
+                                overview = closeScale <= fitScale * 1.3f,
                                 size = PanSiegeCellSize,
                                 borderWidth = boardBorderWidth,
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
                                 onClick = { onCell(index) },
-                                onDoubleClick = { toggleViewport(index) },
                                 dropTarget = dragHover == index && boardCell.letter == null,
                                 // Keyed on the placed tile so the gesture survives the tile hiding while carried.
                                 dragSource = if (placedRackIndex != null) {
@@ -838,7 +860,7 @@ private fun PanSiegeBoard(
             )
 
             SmallFloatingActionButton(
-                onClick = { toggleViewport(WordSiegeBoardSpec.CenterIndex) },
+                onClick = { recenterOn(WordSiegeBoardSpec.CenterIndex) },
                 modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
                 shape = CircleShape,
                 containerColor = WordSiegeGameUi.Surface.copy(alpha = .95f),
@@ -898,7 +920,6 @@ private fun PanSiegeBoardCell(
     borderWidth: Dp,
     lastMoveHighlight: Float,
     onClick: () -> Unit,
-    onDoubleClick: () -> Unit,
     dropTarget: Boolean = false,
     dragSource: Modifier = Modifier,
 ) {
@@ -948,20 +969,13 @@ private fun PanSiegeBoardCell(
             .combinedClickable(
                 interactionSource = boardInteraction,
                 indication = null,
+                // No double tap: a single tap places at once, zoom is a two-finger pinch.
                 onClick = {
                     dispatchWordSiegeBoardTap(
                         WordSiegeBoardTapAction.PLACE,
                         canPlace,
                         onClick,
-                        onDoubleClick,
-                    )
-                },
-                onDoubleClick = {
-                    dispatchWordSiegeBoardTap(
-                        WordSiegeBoardTapAction.TOGGLE_VIEWPORT,
-                        canPlace,
-                        onClick,
-                        onDoubleClick,
+                        {},
                     )
                 },
             )

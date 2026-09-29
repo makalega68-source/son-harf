@@ -23,7 +23,7 @@ class SimpleKelimeKusatmasiRestoreContractTest {
         assertTrue(online.contains("PanSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival"))
         assertTrue(board.contains("PracticeSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine"))
         assertTrue(board.contains("PracticeSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival"))
-        assertTrue(board.contains("if (mode == WordSiegeBoardViewportMode.CLOSE)"))
+        assertTrue(board.contains("detectTransformGestures"))
         assertFalse(board.contains("WordSiegeBoardViewportMode.CLOSE && !enabled"))
 
         assertTrue(logo.contains("R.drawable.kelime_kusatma_logo_hd"))

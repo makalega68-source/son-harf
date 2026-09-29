@@ -15,7 +15,7 @@ class WordSiegePracticeBoardContractTest {
         assertTrue(board.contains("WordSiegeBoardSpec.Size"))
         assertTrue(board.contains("detectTransformGestures"))
         assertTrue(board.contains("combinedClickable"))
-        assertTrue(board.contains("WordSiegeBoardTapAction.TOGGLE_VIEWPORT"))
+        assertFalse(board.contains("WordSiegeBoardTapAction.TOGGLE_VIEWPORT"))
         assertFalse(board.contains("boardIndexAt"))
         assertFalse(board.contains("Çift dokun:"))
         assertTrue(board.contains("wordSiegeBoardTransform"))

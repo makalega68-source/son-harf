@@ -111,11 +111,16 @@ internal fun WordSiegePracticeBoard(
     var initialized by remember { mutableStateOf(false) }
     var viewportOriginInWindow by remember { mutableStateOf(Offset.Unspecified) }
     val mascotTouches = remember { WordSiegeMascotTouchState() }
+    // The board always pans and pinches freely; "FIT" is simply the most zoomed-out scale.
     var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
-    val transform by remember(mode, viewport, boardPx, closePan, closeScale) {
+    val fitScale = remember(viewport, boardPx) {
+        wordSiegeFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx)
+    }
+    val minScale = minOf(fitScale, WORD_SIEGE_PRACTICE_MAX_SCALE)
+    val transform by remember(viewport, boardPx, closePan, closeScale) {
         derivedStateOf {
             wordSiegeBoardTransform(
-                mode = mode,
+                mode = WordSiegeBoardViewportMode.CLOSE,
                 viewportWidthPx = viewport.width.toFloat(),
                 viewportHeightPx = viewport.height.toFloat(),
                 boardWidthPx = boardPx,
@@ -165,32 +170,13 @@ internal fun WordSiegePracticeBoard(
         scale = closeScale,
     )
 
-    fun toggleMode() {
-        val nextMode = mode.toggle()
-        if (nextMode == WordSiegeBoardViewportMode.CLOSE) {
-            closeScale = WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE
-            closePan = centerClose()
+    /** Pinching all the way out is the whole-board view; the screen hears about it for its layout. */
+    fun reportZoom(scale: Float) {
+        val next = if (scale <= fitScale * 1.02f) WordSiegeBoardViewportMode.FIT else WordSiegeBoardViewportMode.CLOSE
+        if (next != mode) {
+            mode = next
+            onViewportModeChange(next)
         }
-        mode = nextMode
-        onViewportModeChange(nextMode)
-    }
-
-    /** Double tap anywhere: zooming in centres on the tapped cell. */
-    fun toggleModeAt(index: Int) {
-        val nextMode = mode.toggle()
-        if (nextMode == WordSiegeBoardViewportMode.CLOSE) {
-            closeScale = WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE
-            closePan = wordSiegeCenteredClosePan(
-                index = index,
-                viewportWidthPx = viewport.width.toFloat(),
-                viewportHeightPx = viewport.height.toFloat(),
-                boardWidthPx = boardPx,
-                cellSizePx = tilePx,
-                scale = closeScale,
-            )
-        }
-        mode = nextMode
-        onViewportModeChange(nextMode)
     }
 
     WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx)
@@ -203,6 +189,8 @@ internal fun WordSiegePracticeBoard(
 
     LaunchedEffect(viewport, boardPx) {
         if (!initialized && viewport.width > 0 && viewport.height > 0) {
+            // Start with the whole board in view, as before.
+            closeScale = fitScale.coerceAtMost(WORD_SIEGE_PRACTICE_MAX_SCALE)
             closePan = centerClose()
             initialized = true
         } else if (initialized) {
@@ -235,19 +223,16 @@ internal fun WordSiegePracticeBoard(
                     viewportOriginInWindow = it.localToWindow(Offset.Zero)
                 }
                 .wordSiegeMascotTouchWatcher(mascotTouches)
-                .wordSiegeBoardDoubleTap(
-                    key = Pair(mode, transform),
-                    cellAt = { wordSiegeCellAt(it, transform, tilePx) },
-                    onDoubleTap = { toggleModeAt(it) },
-                )
-                .pointerInput(mode, viewport, boardPx, closeScale) {
-                    if (mode == WordSiegeBoardViewportMode.CLOSE) {
+                // One finger pans, two fingers pinch to zoom; no double tap.
+                .pointerInput(viewport, boardPx, minScale) {
+                    run {
                         detectTransformGestures { centroid, pan, zoom, _ ->
                             val oldScale = closeScale
-                            val newScale = (oldScale * zoom).coerceIn(WORD_SIEGE_PRACTICE_MIN_SCALE, WORD_SIEGE_PRACTICE_MAX_SCALE)
+                            val newScale = (oldScale * zoom).coerceIn(minScale, WORD_SIEGE_PRACTICE_MAX_SCALE)
                             val ratio = if (oldScale > 0f) newScale / oldScale else 1f
                             val candidate = centroid + (closePan - centroid) * ratio + pan
                             closeScale = newScale
+                            reportZoom(newScale)
                             closePan = clampWordSiegeBoardPan(
                                 candidate,
                                 viewport.width.toFloat(),
@@ -295,13 +280,12 @@ internal fun WordSiegePracticeBoard(
                                 pending = pendingRackIndex != null,
                                 myOwner = myOwner,
                                 enabled = enabled,
-                                overview = mode == WordSiegeBoardViewportMode.FIT,
+                                overview = closeScale <= fitScale * 1.3f,
                                 threatened = false,
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
                                 showDefinitionBadge = resolvedWord?.badgeIndex == index,
                                 onDefinitionClick = { resolvedWord?.word?.let { definitionWord = it } },
                                 onClick = { onCell(index) },
-                                onDoubleClick = ::toggleMode,
                                 hintGlow = if (index in hintSet) ({ hintPulse.value }) else null,
                                 dropTarget = dragHover == index && (cell.letter == null),
                                 // Keyed on the placed tile, not the shown one: the tile hides while it is being
@@ -434,7 +418,6 @@ private fun WordSiegePracticeBoardCell(
     showDefinitionBadge: Boolean,
     onDefinitionClick: () -> Unit,
     onClick: () -> Unit,
-    onDoubleClick: () -> Unit,
     hintGlow: (() -> Float)? = null,
     dropTarget: Boolean = false,
     dragSource: Modifier = Modifier,
@@ -488,20 +471,13 @@ private fun WordSiegePracticeBoardCell(
             .combinedClickable(
                 interactionSource = cellInteraction,
                 indication = null,
+                // No double tap: a single tap places at once, zoom is a two-finger pinch.
                 onClick = {
                     dispatchWordSiegeBoardTap(
                         WordSiegeBoardTapAction.PLACE,
                         canPlace,
                         onClick,
-                        onDoubleClick,
-                    )
-                },
-                onDoubleClick = {
-                    dispatchWordSiegeBoardTap(
-                        WordSiegeBoardTapAction.TOGGLE_VIEWPORT,
-                        canPlace,
-                        onClick,
-                        onDoubleClick,
+                        {},
                     )
                 },
             )

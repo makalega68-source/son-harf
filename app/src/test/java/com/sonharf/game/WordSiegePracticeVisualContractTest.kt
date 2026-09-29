@@ -38,7 +38,7 @@ class WordSiegePracticeVisualContractTest {
         assertTrue(text.contains("WordSiegeBoardViewportMode.CLOSE"))
         assertTrue(text.contains("wordSiegeBoardTransform("))
         assertTrue(text.contains("detectTransformGestures"))
-        assertTrue(text.contains("WordSiegeBoardTapAction.TOGGLE_VIEWPORT"))
+        assertFalse(text.contains("WordSiegeBoardTapAction.TOGGLE_VIEWPORT"))
         assertTrue(text.contains("WordSiegeBoardTapAction.PLACE"))
     }
 }

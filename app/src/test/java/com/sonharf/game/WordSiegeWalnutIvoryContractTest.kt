@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -25,7 +26,7 @@ class WordSiegeWalnutIvoryContractTest {
             assertTrue(board.contains("collectIsPressedAsState()"))
             assertTrue(board.contains("val regionGap = 1.25.dp"))
             assertTrue(board.contains("WordSiegeBoardTapAction.PLACE"))
-            assertTrue(board.contains("WordSiegeBoardTapAction.TOGGLE_VIEWPORT"))
+            assertFalse(board.contains("WordSiegeBoardTapAction.TOGGLE_VIEWPORT"))
         }
         assertTrue(online.contains("if (owner == myOwner) Alignment.TopStart else Alignment.TopEnd"))
         assertTrue(practice.contains("if (WordSiegeWalnutIvory.enabled && owner != myOwner) Alignment.TopEnd else Alignment.TopStart"))

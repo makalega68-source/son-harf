@@ -16,9 +16,11 @@ class WordSiege15x15InteractionContractTest {
         )
         assertTrue(source.contains("val index = WordSiegeBoardSpec.index(row, column)"))
         assertTrue(source.contains("onClick = { onCell(index) }"))
-        assertTrue(source.contains("onDoubleClick = { toggleViewport(index) }"))
-        assertTrue(source.contains("fun toggleViewport(focusIndex: Int)"))
-        assertTrue(source.contains("closePan = centerCloseOn(focusIndex)"))
+        // No double tap on the board: single taps place at once, zoom is a two-finger pinch.
+        assertFalse(source.contains("onDoubleClick"))
+        assertFalse(source.contains("wordSiegeBoardDoubleTap("))
+        assertTrue(source.contains("detectTransformGestures"))
+        assertTrue(source.contains("fun recenterOn(focusIndex: Int)"))
         assertTrue(source.contains(".combinedClickable("))
         assertFalse(source.contains("detectTapGestures"))
         assertFalse(source.contains("Çift dokun:"))
@@ -35,7 +37,9 @@ class WordSiege15x15InteractionContractTest {
         )
         assertTrue(source.contains("val index = WordSiegeBoardSpec.index(row, column)"))
         assertTrue(source.contains("onClick = { onCell(index) }"))
-        assertTrue(source.contains("onDoubleClick = ::toggleMode"))
+        assertFalse(source.contains("onDoubleClick"))
+        assertFalse(source.contains("wordSiegeBoardDoubleTap("))
+        assertTrue(source.contains(".coerceIn(minScale, WORD_SIEGE_PRACTICE_MAX_SCALE)"))
         assertFalse(source.contains("Çift dokun:"))
     }
 
