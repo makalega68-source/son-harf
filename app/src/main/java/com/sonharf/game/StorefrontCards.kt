@@ -77,13 +77,11 @@ internal fun StoreProBenefits() {
     val uri = LocalUriHandler.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(8.dp)) {
         listOf(
-            sh("Kuşatmada hamle puanını onaylamadan gör", "See a siege move's score before confirming"),
-            sh("Torbada kalan harfleri gör", "See the letters left in the bag"),
-            sh("Son Harf'te maçta çıkan kelimeleri gör", "See the words played in a Last Letter match"),
-            sh("Zorunlu reklamsız kullanım", "No mandatory ads"),
+            sh("Reklamsız deneyim", "Ad-free experience"),
             sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"),
-            sh("Gelişmiş maç analizi", "Advanced match analysis"),
-            sh("Özel odalar ve kayıtlı arkadaş listesi", "Private rooms and saved friends"),
+            sh("Özel masalar ve kayıtlı arkadaş listesi", "Private tables and saved friends"),
+            sh("Biten maçların ayrıntılı özeti", "Detailed recap of finished matches"),
+            sh("Konfor araçları: Hamle Önizleme ve Kalan Harfler", "Comfort tools: Move Preview and Letters Left"),
         ).forEach { benefit ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Check, null, Modifier.size(18.dp), tint = SonHarfTheme.Primary)

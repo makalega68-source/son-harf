@@ -14,7 +14,7 @@ class WordSiegeEntryModesContractTest {
         assertTrue(entry.contains("\"BİTEN\""))
         assertTrue(entry.contains("\"12 SAAT\""))
         assertTrue(entry.contains("\"24 SAAT\""))
-        assertTrue(entry.contains("\"HIZLI OYUN\""))
+        assertTrue(entry.contains("\"HIZLI DÜELLO\""))
         assertTrue(entry.contains("\"AI İLE OYNA\""))
         assertTrue(entry.contains("WordSiegeEntryMode.SERIES"))
         assertTrue(entry.contains("WordSiegeEntryMode.AI"))

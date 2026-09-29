@@ -5,7 +5,7 @@ import kotlin.math.floor
 
 /**
  * Kuşatma board viewport policy.
- * Close mode keeps a Kelimelik-style mobile overview: more cells are visible at once while
+ * Close mode keeps a mobile overview: more cells are visible at once while
  * preserving readable letters and free 2D panning. Fit mode shows the complete 15x15 board.
  * Double-tap toggles between the two modes.
  */

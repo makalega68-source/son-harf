@@ -81,7 +81,7 @@ fun EconomyShopScreen(
         }
         Box(Modifier.weight(1f)) {
             // Mascot characters, each a permanent Google Play product.
-            // Optional rewarded videos: coins, a day's keyboard or theme, Quick Games, hints.
+            // Optional rewarded videos: coins, a day's keyboard or theme, Quick Duels, hints.
             if (shown == 8) RewardCenterScreen()
             else if (shown == 4) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
                 MascotStoreSection()

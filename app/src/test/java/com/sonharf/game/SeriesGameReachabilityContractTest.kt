@@ -16,7 +16,7 @@ class SeriesGameReachabilityContractTest {
         assertTrue(series.contains("internal fun WordSiegeSeriesScreen"))
         assertTrue(series.contains("verifiedAccess: Boolean = false"))
         assertTrue(series.contains("findOrCreateWordSiegeSeriesGame"))
-        assertTrue(entry.contains("SERİ / HIZLI OYUN"))
+        assertTrue(entry.contains("HIZLI DÜELLO"))
         assertTrue(entry.contains("mode = WordSiegeEntryMode.SERIES"))
         assertTrue(entry.contains("WordSiegeSeriesScreen(verifiedAccess = true)"))
         assertTrue(entry.contains("onOpenStore"))

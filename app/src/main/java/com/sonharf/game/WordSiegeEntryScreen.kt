@@ -135,14 +135,14 @@ internal fun WordSiegeEntryScreen(
     val shownGames = if (libraryTab == WordSiegeLibraryTab.ACTIVE) activeGames else finishedGames
     val access = entitlements
     val seriesOwned = access?.seriesGameAccess == true
-    // Quick Game is a paid mode; one rewarded video opens five games to try it (non-PRO only).
+    // Quick Duel is a paid mode; one rewarded video opens five games to try it (non-PRO only).
     var showQuickOffer by remember { mutableStateOf(false) }
     var quickNotice by remember { mutableStateOf<String?>(null) }
     val quickVideo = rememberRewardedVideo(enabled = access != null && !access.isPro && !seriesOwned)
     if (showQuickOffer) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { if (!quickVideo.busy) showQuickOffer = false },
-            title = { Text(sh("⚡ HIZLI OYUN", "⚡ QUICK GAME"), fontWeight = FontWeight.Black) },
+            title = { Text(sh("⚡ HIZLI DÜELLO", "⚡ QUICK DUEL"), fontWeight = FontWeight.Black) },
             text = {
                 Column {
                     Text(sh(
@@ -358,12 +358,12 @@ internal fun WordSiegeEntryScreen(
                                 tint = SonHarfTheme.ActionOrange,
                             )
                         },
-                        title = sh("HIZLI OYUN", "QUICK GAME"),
+                        title = sh("HIZLI DÜELLO", "QUICK DUEL"),
                         subtitle = when {
                             entitlementError -> sh("PRO erişimi doğrulanamadı", "PRO access could not be verified")
-                            access == null -> sh("SERİ / HIZLI OYUN • kontrol ediliyor", "SERIES / QUICK GAME • checking")
-                            seriesOwned -> sh("SERİ / HIZLI OYUN • 3 / 5 / 10 dk", "SERIES / QUICK GAME • 3 / 5 / 10 min")
-                            else -> sh("SERİ / HIZLI OYUN • 🎬 5 oyun ücretsiz", "SERIES / QUICK GAME • 🎬 5 free games")
+                            access == null -> sh("HIZLI DÜELLO • kontrol ediliyor", "QUICK DUEL • checking")
+                            seriesOwned -> sh("HIZLI DÜELLO • 3 / 5 / 10 dk", "QUICK DUEL • 3 / 5 / 10 min")
+                            else -> sh("HIZLI DÜELLO • 🎬 5 oyun ücretsiz", "QUICK DUEL • 🎬 5 free games")
                         },
                         accent = SonHarfTheme.ActionOrange,
                         enabled = access != null || entitlementError,
@@ -398,8 +398,8 @@ internal fun WordSiegeEntryScreen(
                         Spacer(Modifier.width(8.dp))
                         Text(
                             sh(
-                                "PRO: Puan hesaplama ve kalan harf tablosu oyun içinde açılır.",
-                                "PRO: Score calculation and remaining-letter table unlock in the match.",
+                                "PRO: Hamle Önizleme ve Kalan Harfler maç içinde konfor aracı olarak açılır.",
+                                "PRO: Move Preview and Letters Left open in the match as comfort tools.",
                             ),
                             color = SonHarfTheme.TextSecondary,
                             fontSize = 9.sp,
@@ -490,7 +490,7 @@ private fun SiegeGameLibraryRow(game: WordSiegeGameDto, onClick: () -> Unit) {
             Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    if (isSeries) sh("Hızlı Oyun", "Quick Game") else sh("Klasik Oyun", "Classic Game"),
+                    if (isSeries) sh("Hızlı Düello", "Quick Duel") else sh("Klasik Oyun", "Classic Game"),
                     color = SonHarfTheme.TextPrimary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,

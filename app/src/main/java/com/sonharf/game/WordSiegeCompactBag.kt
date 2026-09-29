@@ -188,7 +188,7 @@ private fun WordSiegeBagDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(if (proAccess == false) Icons.Rounded.Lock else Icons.Rounded.GridView, null, tint = WordSiegeGameUi.Gold) },
-        title = { Text(sh("Torbada Kalan Harfler", "Letters Remaining"), fontWeight = FontWeight.Black) },
+        title = { Text(sh("Kalan Harfler", "Letters Left"), fontWeight = FontWeight.Black) },
         text = {
             when {
                 failed && proAccess == null -> Text(sh("PRO erişimi şu anda doğrulanamadı.", "PRO access could not be verified right now."), color = WordSiegeGameUi.Muted)

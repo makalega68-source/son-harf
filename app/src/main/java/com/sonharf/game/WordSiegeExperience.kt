@@ -310,7 +310,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     if (showPass && currentGame != null) {
         WordSiegeConfirmDialog(
             title = sh("Turu geç?", "Pass this turn?"),
-            body = sh("Pas hakkın turunu bitirir. İki oyuncu art arda pas verirse oyun biter.", "Passing ends your turn. Two consecutive passes end the game."),
+            body = sh("Sıra rakibine geçer. İki taraf da üst üste pas geçerse maç kapanır; taş değişimi bu sayacı sıfırlar.", "Your rival takes the turn. If both sides pass back to back the match closes; a tile exchange resets that count."),
             confirm = sh("PAS VER", "PASS"),
             accent = MainUi.Gold,
             onDismiss = { showPass = false },
@@ -346,7 +346,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        sh("Değiştireceğin harfleri seç. Bu işlem turunu bitirir.", "Choose tiles to exchange. This ends your turn."),
+                        sh("Torbaya geri vereceğin taşları işaretle; yerlerine yenileri gelir ve sıra rakibine geçer.", "Mark the tiles to hand back; fresh ones replace them and your rival takes the turn."),
                         color = MainUi.Muted,
                         fontSize = 13.sp,
                     )
@@ -512,7 +512,7 @@ private fun WordSiegeGamesList(
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text(sh("İlk kuşatmanı kur", "Build your first siege"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
                             Text(
-                                sh("Bonuslar sadece yeni harfte çalışır; rakibin karesini kelimene katarsan alan sana geçer.", "Bonuses work on new tiles; use a rival tile in your word to capture its territory."),
+                                sh("Güç hücreleri yalnız yeni koyduğun taşta işler; rakibin taşını kelimene katarsan o küp sana geçer.", "Power cells only work under a tile you just placed; pull a rival tile into your word and that cube turns yours."),
                                 color = MainUi.Muted,
                                 fontSize = 10.sp,
                             )
@@ -1271,13 +1271,13 @@ internal fun wordSiegeFriendlyError(raw: String): String {
         invalidWord.isNotBlank() -> sh("$invalidWord sözlükte bulunamadı.", "$invalidWord is not in the dictionary.")
         "word_siege_active_limit" in raw -> sh("Aynı anda en fazla 10 devam eden oyunun olabilir.", "You can have at most 10 ongoing games.")
         "word_siege_not_your_turn" in raw -> sh("Şu anda sıra rakibinde.", "It is your rival's turn.")
-        "word_siege_first_word_must_cover_center" in raw -> sh("İlk kelime ortadaki 2K karesinden geçmeli.", "The first word must cover the center 2W cell.")
+        "word_siege_first_word_must_cover_center" in raw -> sh("Açılış kelimesi Başlangıç Mührü'nden geçmeli.", "The opening word must pass through the Starting Seal.")
         "word_siege_move_must_connect" in raw -> sh("Yeni kelime tahtadaki harflerden birine bağlanmalı.", "The new word must connect to the board.")
-        "word_siege_gap_between_tiles" in raw -> sh("Harflerin arasında boş kare bırakamazsın.", "You cannot leave a gap between tiles.")
+        "word_siege_gap_between_tiles" in raw -> sh("Taşların arasında boş hücre kalmamalı.", "Leave no empty cell between your tiles.")
         "word_siege_not_in_one_row" in raw -> sh("Harfleri aynı yatay sıraya yerleştir.", "Place tiles in one horizontal row.")
         "word_siege_not_in_one_column" in raw -> sh("Harfleri aynı dikey sütuna yerleştir.", "Place tiles in one vertical column.")
         "word_siege_cell_occupied" in raw -> sh("Bu karede zaten bir harf var.", "That cell already has a tile.")
-        "word_siege_not_enough_tiles" in raw -> sh("Torbada bu değişim için yeterli harf yok.", "The bag does not have enough tiles for this exchange.")
+        "word_siege_not_enough_tiles" in raw -> sh("Torbada bu kadar taşı yenilemeye yetecek harf kalmadı.", "The bag no longer holds enough tiles to refresh that many.")
         "word_siege_word_required" in raw -> sh("En az iki harfli geçerli bir kelime oluşturmalısın.", "You must form a valid word of at least two letters.")
         "word_siege_not_playing" in raw -> sh("Bu oyun artık aktif değil.", "This game is no longer active.")
         "chat" in raw.lowercase() && "suspend" in raw.lowercase() -> sh("Sohbet erişimin geçici olarak kapalı.", "Your chat access is temporarily suspended.")

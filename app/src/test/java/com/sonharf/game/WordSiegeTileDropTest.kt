@@ -3,9 +3,9 @@ package com.sonharf.game
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Kelimelik-style dragging: where pending tiles end up after a drop. */
+/** Drag-and-drop: where pending tiles end up after a drop. */
 class WordSiegeTileDropTest {
-    @Test fun droppingTilesFollowsKelimelikRules() {
+    @Test fun droppingTilesFollowsDragRules() {
         val board = List(WordSiegeBoardSpec.CellCount) { com.sonharf.game.data.WordSiegeCellDto() }
         // Rack → empty cell.
         assertEquals(mapOf(10 to 2), wordSiegeDropTile(emptyMap(), board, 2, null, 10))

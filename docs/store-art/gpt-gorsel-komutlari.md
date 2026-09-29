@@ -36,7 +36,7 @@ Subject: a small, luxurious game board tile set in a MIDNIGHT BLACK theme. A flo
 
 ```
 [ortak kurallar]
-Subject: a premium WALNUT AND IVORY game board piece. A floating square board section carved from dark polished walnut wood (visible fine wood grain, warm brown #3A2417 to #553624) with a slightly raised bevelled frame. Three chunky ivory letter tiles (#FAF3E3, like old piano keys, subtle ivory texture) sit in a row with deep brown engraved letters "C", "F", "T" (only these three letters). The middle tile has a soft emerald-green (#2E9A62) glowing underside to show it is the player's move. Warm, cosy, classic board-game luxury, like a hand-made wooden Scrabble set in a library.
+Subject: a premium WALNUT AND IVORY game board piece. A floating square board section carved from dark polished walnut wood (visible fine wood grain, warm brown #3A2417 to #553624) with a slightly raised bevelled frame. Three chunky ivory letter tiles (#FAF3E3, like old piano keys, subtle ivory texture) sit in a row with deep brown engraved letters "C", "F", "T" (only these three letters). The middle tile has a soft emerald-green (#2E9A62) glowing underside to show it is the player's move. Warm, cosy, classic board-game luxury, like a hand-made wooden board game in a library.
 ```
 
 ### 3. Kristal Tuşlar: `store_art_keyboard_crystal.png`

@@ -61,11 +61,11 @@ private val PanSiegeNeutralBorder get() = if (WordSiegeWalnutIvory.enabled) Word
 private val PanSiegeBonusBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusBorder else Color(0xFFC9BFA5)
 private val PanSiegeMineBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF7FC391)
 private val PanSiegeRivalBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFEB9E97)
-private val PanSiegeBonus2H get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2H else Color(0xFFCFE6F5)
-private val PanSiegeBonus3H get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3H else Color(0xFFF6D3E2)
-private val PanSiegeBonus2K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2K else Color(0xFFD6ECCB)
-private val PanSiegeBonus3K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3K else Color(0xFFF8DCC3)
-private val PanSiegeBonus4K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus4K else Color(0xFFE2D6F2)
+private val PanSiegeBonus2H get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2H else Color(0xFFE0F3EF)
+private val PanSiegeBonus3H get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3H else Color(0xFFC3E7DF)
+private val PanSiegeBonus2K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2K else Color(0xFFFFF0D3)
+private val PanSiegeBonus3K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3K else Color(0xFFF6D596)
+private val PanSiegeBonus4K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus4K else Color(0xFF24304B)
 private val PanSiegeBonusStar get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusStar else Color(0xFFFBEBB5)
 private val PanSiegeLastMove = Color(0xFFE0A82E)
 private val PanSiegeBonusLabel get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusLabel else Color(0xFF3F4A5A)
@@ -91,7 +91,7 @@ internal fun WordSiegePanMatch(
     onChat: () -> Unit,
     onForfeit: () -> Unit,
     onCancelWaiting: () -> Unit,
-    /** Finger-dragged tiles replace the pending placements (Kelimelik-style). */
+    /** Finger-dragged tiles replace the pending placements (drag-and-drop). */
     onPlacementsChange: (Map<Int, Int>) -> Unit = {},
 ) {
     val mine = me?.let(profiles::get)
@@ -1016,26 +1016,8 @@ private fun PanSiegeBoardCell(
                         modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
                     )
                 } else if (activeBonus != null) {
-                    Text(
-                        androidx.compose.ui.text.buildAnnotatedString {
-                            val label = WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)
-                            val parts = label.split("\n")
-                            if (parts.size > 1 && overview) {
-                                withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 20.sp)) {
-                                    append(parts.first().take(1)); append(parts.last())
-                                }
-                            } else if (parts.size > 1) {
-                                withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 10.sp)) { append(parts.first()) }
-                                append("\n")
-                                append(parts.last())
-                            } else append(label)
-                        },
-                        color = PanSiegeBonusLabel,
-                        fontSize = WordSiegeBoardAccessibility.BoardBonus,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        lineHeight = 17.sp,
-                        fontWeight = if (overview) FontWeight.SemiBold else FontWeight.Medium,
-                    )
+                    val label = WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)
+                    WordSiegeBonusMark(activeBonus, label, overview, PanSiegeBonusLabel, WordSiegeBoardAccessibility.BoardBonus)
                 }
             }
         }

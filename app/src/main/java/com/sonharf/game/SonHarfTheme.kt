@@ -57,7 +57,7 @@ internal object KelimeKusatmasiPalette {
 internal object SonHarfTheme {
     private val alternateDark: Boolean get() = SonHarfCosmetics.darkArenaTheme
 
-    // Light "Kelimelik tarzı" board-game UI (theme D): light ground, dark text, green actions.
+    // Light board-game UI (theme D): light ground, dark text, green actions.
     val IsDark: Boolean get() = false
 
     // Foundation layers.

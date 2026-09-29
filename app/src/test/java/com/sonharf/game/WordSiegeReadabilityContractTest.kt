@@ -25,10 +25,8 @@ class WordSiegeReadabilityContractTest {
         assertTrue(online.contains("WordSiegeWalnutIvory.bonusLabel else Color(0xFF3F4A5A)"))
         assertTrue(practice.contains("PracticeSiegeBonusLabel get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusLabel else Color(0xFF3F4A5A)"))
         listOf(online, practice).forEach { board ->
-            assertTrue(board.contains("SpanStyle(fontSize = 20.sp)"))
-            assertTrue(board.contains("SpanStyle(fontSize = 10.sp)"))
-            assertTrue(board.contains("lineHeight = 17.sp"))
-            assertTrue(board.contains("fontWeight = if (overview) FontWeight.SemiBold else FontWeight.Medium"))
+            assertTrue(board.contains("WordSiegeBonusMark("))
+            assertTrue(board.contains("WordSiegeBoardAccessibility.BoardBonus)"))
         }
     }
 }

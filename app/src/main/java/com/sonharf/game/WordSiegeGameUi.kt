@@ -164,8 +164,10 @@ internal fun WordSiegeScoreCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    // Territory control: share of the board's cells this player holds (display only).
+                    val control = (area.coerceAtLeast(0) * 100) / WordSiegeBoardSpec.CellCount
                     Text(
-                        if (isBot) sh("$area küp • AI", "$area cubes • AI") else sh("$area küp", "$area cubes"),
+                        if (isBot) sh("$area küp • %$control kontrol • AI", "$area cubes • $control% control • AI") else sh("$area küp • %$control kontrol", "$area cubes • $control% control"),
                         color = WordSiegeGameUi.Muted,
                         fontSize = 9.sp,
                         lineHeight = 11.sp,

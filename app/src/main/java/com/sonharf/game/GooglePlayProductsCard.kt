@@ -64,9 +64,9 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                         runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
                             .onSuccess {
                                 notice = when (productId) {
-                                    ProductCatalog.SERIES_GAME -> sh("Seri Oyun kalıcı olarak açıldı.", "Series Game unlocked permanently.")
-                                    ProductCatalog.LETTER_TABLE -> sh("Harf Tablosu kalıcı olarak açıldı.", "Letter Table unlocked permanently.")
-                                    ProductCatalog.SCORE_CALCULATOR -> sh("Puan Hesaplayıcı kalıcı olarak açıldı.", "Score Calculator unlocked permanently.")
+                                    ProductCatalog.SERIES_GAME -> sh("Hızlı Düello kalıcı olarak açıldı.", "Quick Duel unlocked permanently.")
+                                    ProductCatalog.LETTER_TABLE -> sh("Kalan Harfler kalıcı olarak açıldı.", "Letters Left unlocked permanently.")
+                                    ProductCatalog.SCORE_CALCULATOR -> sh("Hamle Önizleme kalıcı olarak açıldı.", "Move Preview unlocked permanently.")
                                     ProductCatalog.PRO_LIFETIME -> sh("PRO kalıcı olarak açıldı. 100 Son Coin hesabına eklendi.", "PRO unlocked permanently. 100 Son Coins were added.")
                                     ProductCatalog.COINS_500 -> sh("500 Son Coin hesabına eklendi.", "500 Son Coins added to your account.")
                                     ProductCatalog.COINS_1500 -> sh("1500 Son Coin hesabına eklendi.", "1500 Son Coins added to your account.")
@@ -118,14 +118,14 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(sh("PREMİUM ÖZELLİKLER", "PREMIUM FEATURES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 16.sp)
             Text(
-                sh("Tek ödeme ile kalıcı kullanım. PRO; tüm premium özellikleri, reklamsız kullanımı, arkadaş listesini, Son Harf kelime geçmişini, 50 aktif oyun limitini ve 100 Son Coin'i açar.", "One payment, permanent access. PRO unlocks all premium features, ad-free play, friends list, Son Harf word history, a 50 active-game limit, and 100 Son Coins."),
+                sh("Tek ödeme ile kalıcı kullanım. PRO; reklamsız kullanım, prestij profil, arkadaş listesi, konfor araçları, 50 aktif oyun limiti ve 100 Son Coin sunar.", "One payment, permanent access. PRO gives ad-free play, a prestige profile, friends list, comfort tools, a 50 active-game limit and 100 Son Coins."),
                 color = SonHarfMuted,
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
             )
 
             PremiumProductRow(
-                title = sh("Seri Oyun", "Series Game"),
+                title = sh("Hızlı Düello", "Quick Duel"),
                 subtitle = sh("3/5/10 dk tur • otomatik pas • 3 kaçırma = mağlubiyet", "3/5/10 min turns • auto-pass • 3 misses = defeat"),
                 imageRes = R.drawable.premium_series_game,
                 product = products[ProductCatalog.SERIES_GAME],
@@ -134,16 +134,16 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 onOpen = { showSeriesGame = true },
             ) { buy(ProductCatalog.SERIES_GAME) }
             PremiumProductRow(
-                title = sh("Harf Tablosu", "Letter Table"),
-                subtitle = sh("Kalan harfleri gör", "See remaining letters"),
+                title = sh("Kalan Harfler", "Letters Left"),
+                subtitle = sh("Torbada hangi harflerin kaldığını gör", "See which letters are still in the bag"),
                 imageRes = R.drawable.premium_letter_table,
                 product = products[ProductCatalog.LETTER_TABLE],
                 busy = busy != null,
                 owned = entitlements.letterTableAccess,
             ) { buy(ProductCatalog.LETTER_TABLE) }
             PremiumProductRow(
-                title = sh("Puan Hesaplayıcı", "Score Calculator"),
-                subtitle = sh("Hamle puanını önceden gör", "Preview move score"),
+                title = sh("Hamle Önizleme", "Move Preview"),
+                subtitle = sh("Hamlen onaylanmadan ne getireceğini gör", "See what a move brings before you confirm"),
                 imageRes = R.drawable.premium_score_calculator,
                 product = products[ProductCatalog.SCORE_CALCULATOR],
                 busy = busy != null,

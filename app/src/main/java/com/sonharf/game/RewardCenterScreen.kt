@@ -110,7 +110,7 @@ fun RewardCenterScreen() {
         RewardKeys.DAILY_DOUBLE -> sh("Günlük hediyen ikiye katlandı: +${claim.diamondsAwarded} Son Coin!", "Daily gift doubled: +${claim.diamondsAwarded} Son Coin!")
         RewardKeys.KEYBOARD_DAY -> sh("${itemName(claim.trialItemId)} 24 saat senin! Tüm oyunlarda kullanılıyor.", "${itemName(claim.trialItemId)} is yours for 24 hours, in every game.")
         RewardKeys.THEME_DAY -> sh("${itemName(claim.trialItemId)} 24 saat senin!", "${itemName(claim.trialItemId)} is yours for 24 hours!")
-        RewardKeys.QUICK_GAMES -> sh("${claim.amount} Hızlı Oyun hakkı açıldı! Kuşatma > Hızlı Oyun.", "${claim.amount} Quick Games unlocked! Siege > Quick Game.")
+        RewardKeys.QUICK_GAMES -> sh("${claim.amount} Hızlı Düello hakkı açıldı! Kuşatma > Hızlı Düello.", "${claim.amount} Quick Duels unlocked! Siege > Quick Duel.")
         else -> sh("+${claim.amount} ipucu bankana eklendi.", "+${claim.amount} hints added to your bank.")
     }
 
@@ -221,7 +221,7 @@ fun RewardCenterScreen() {
         val bankLines = buildList {
             passes?.keyboard?.itemId?.let { add("⌨ " + sh("${itemName(it)} aktif (24 saat)", "${itemName(it)} active (24 h)")) }
             passes?.theme?.itemId?.let { add("🎨 " + sh("${itemName(it)} aktif (24 saat)", "${itemName(it)} active (24 h)")) }
-            passes?.quickGamesLeft?.takeIf { it > 0 }?.let { add("⚡ " + sh("$it Hızlı Oyun hakkın var", "$it Quick Games left")) }
+            passes?.quickGamesLeft?.takeIf { it > 0 }?.let { add("⚡ " + sh("$it Hızlı Düello hakkın var", "$it Quick Duels left")) }
             val hints = listOf(
                 sh("Son Harf", "Last Letter") to (passes?.hintsSonHarf ?: 0),
                 sh("Kuşatma", "Siege") to (passes?.hintsSiege ?: 0),
@@ -312,12 +312,12 @@ fun RewardCenterScreen() {
                     RewardPicker(themes.map { it.id to itemName(it.id) }, chosenTheme) { themePick = it }
                 }
             }
-            // Quick Game is a paid mode: a video opens five games to try it.
+            // Quick Duel is a paid mode: a video opens five games to try it.
             if (!seriesAccess || (passes?.quickGamesLeft ?: 0) > 0) item {
                 RewardVideoCard(
                     icon = "⚡",
-                    title = sh("5 HIZLI OYUN", "5 QUICK GAMES"),
-                    description = sh("Kuşatma'nın Hızlı Oyun modunu 5 maç boyunca aç (3 gün geçerli).", "Unlock Siege Quick Game for 5 matches (valid 3 days)."),
+                    title = sh("5 HIZLI DÜELLO", "5 QUICK DUELS"),
+                    description = sh("Kuşatma'nın Hızlı Düello modunu 5 maç boyunca aç (3 gün geçerli).", "Unlock Siege Quick Duel for 5 matches (valid 3 days)."),
                     progress = periodLabel(RewardKeys.QUICK_GAMES),
                     enabled = !isPro && !seriesAccess && canWatch(RewardKeys.QUICK_GAMES),
                     busy = busy == RewardKeys.QUICK_GAMES,

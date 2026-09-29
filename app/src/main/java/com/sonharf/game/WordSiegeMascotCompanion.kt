@@ -403,7 +403,7 @@ internal object WordSiegeMascotLines {
         "Bayrağı diktik! 🚩" to "Flag planted! 🚩",
     )
     val hint = listOf(
-        "Şuradaki bonus kareye bir bak 👀" to "Take a look at this bonus square 👀",
+        "Şuradaki güç hücresine bir bak 👀" to "Take a look at this power cell 👀",
         "Burası puanı katlayabilir…" to "This spot could multiply your points…",
     )
     val chaseCatch = listOf(

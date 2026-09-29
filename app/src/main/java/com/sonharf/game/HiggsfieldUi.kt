@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.sp
 
 /** Higgsfield theme components; sizes and colours follow the package's SVG components. */
 internal object Hf {
-    // "Kelimelik tarzı" light board-game palette (theme D).
+    // Light board-game palette (theme D).
     val Ground: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEFE3CC) else Color(0xFFE6ECF2)
     val Surface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
     val Navy = Color(0xFF2C3E55)

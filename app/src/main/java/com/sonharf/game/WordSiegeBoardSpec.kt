@@ -55,23 +55,23 @@ internal object WordSiegeBoardSpec {
         return bonuses
     }
 
-    /** Player-facing strategic-map label. Never expose persisted multiplier codes in the UI. */
+    /** Player-facing in-cell label. Never expose persisted multiplier codes in the UI. */
     fun displayBonusLabel(bonus: String?, turkish: Boolean = true): String = when (bonus) {
-        "2H" -> if (turkish) "Harf\n×2" else "Letter\n×2"
-        "3H" -> if (turkish) "Harf\n×3" else "Letter\n×3"
-        "2K" -> if (turkish) "Kelime\n×2" else "Word\n×2"
-        "3K" -> if (turkish) "Kelime\n×3" else "Word\n×3"
-        CenterBonus -> if (turkish) "Kelime\n×4" else "Word\n×4"
+        "2H" -> if (turkish) "Harf\nGücü" else "Letter\nBoost"
+        "3H" -> if (turkish) "Harf\nGücü+" else "Letter\nBoost+"
+        "2K" -> if (turkish) "Kelime\nAkımı" else "Word\nSurge"
+        "3K" -> if (turkish) "Kelime\nAkımı+" else "Word\nSurge+"
+        CenterBonus -> if (turkish) "Başlangıç\nMührü" else "Starting\nSeal"
         StarBonus -> "+25"
         else -> ""
     }
 
     fun bonusLongName(bonus: String?, turkish: Boolean): String = when (bonus) {
-        "2H" -> if (turkish) "Harf ×2" else "Letter ×2"
-        "3H" -> if (turkish) "Harf ×3" else "Letter ×3"
-        "2K" -> if (turkish) "Kelime ×2" else "Word ×2"
-        "3K" -> if (turkish) "Kelime ×3" else "Word ×3"
-        CenterBonus -> if (turkish) "Başlangıç • Kelime ×4" else "Start • Word ×4"
+        "2H" -> if (turkish) "Harf Gücü" else "Letter Boost"
+        "3H" -> if (turkish) "Harf Gücü+" else "Letter Boost+"
+        "2K" -> if (turkish) "Kelime Akımı" else "Word Surge"
+        "3K" -> if (turkish) "Kelime Akımı+" else "Word Surge+"
+        CenterBonus -> if (turkish) "Başlangıç Mührü" else "Starting Seal"
         StarBonus -> if (turkish) "Sürpriz Ödül" else "Surprise Reward"
         else -> ""
     }

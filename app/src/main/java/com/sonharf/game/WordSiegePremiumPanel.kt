@@ -215,7 +215,7 @@ internal fun WordSiegePremiumPanel(
                         Spacer(Modifier.width(6.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                sh("TOPLAM PUAN", "TOTAL SCORE"),
+                                sh("HAMLE ÖNİZLEME", "MOVE PREVIEW"),
                                 color = WordSiegeGameUi.Text,
                                 fontSize = 8.sp,
                                 fontWeight = FontWeight.Black,
@@ -223,10 +223,10 @@ internal fun WordSiegePremiumPanel(
                             Text(
                                 when {
                                     !resolvedAccess.scoreCalculatorAccess -> sh("PRO özelliği", "PRO feature")
-                                    placements.isEmpty() -> sh("Harf yerleştir", "Place tiles")
+                                    placements.isEmpty() -> sh("Taş koy, hamleni gör", "Place tiles to see your move")
                                     preview != null -> sh(
-                                        "Toplam ${preview!!.totalScore} • Kelime ${preview!!.wordScore} • Bölge ${preview!!.areaScore}",
-                                        "Total ${preview!!.totalScore} • Word ${preview!!.wordScore} • Territory ${preview!!.areaScore}",
+                                        "+${preview!!.totalScore} • kelime ${preview!!.wordScore} + bölge ${preview!!.areaScore}",
+                                        "+${preview!!.totalScore} • word ${preview!!.wordScore} + territory ${preview!!.areaScore}",
                                     )
                                     previewError -> sh("Önizleme alınamadı", "Preview unavailable")
                                     else -> sh("Hesaplanıyor…", "Calculating…")
@@ -256,7 +256,7 @@ internal fun WordSiegePremiumPanel(
                         contentDescription = null,
                         modifier = Modifier.padding(end = 4.dp),
                     )
-                    Text(sh("KALAN HARFLER", "REMAINING"), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(sh("KALAN HARFLER", "LETTERS LEFT"), fontSize = 9.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -266,7 +266,7 @@ internal fun WordSiegePremiumPanel(
         AlertDialog(
             onDismissRequest = { showLetterTable = false },
             icon = { Icon(Icons.Rounded.GridView, null, tint = WordSiegeGameUi.Gold) },
-            title = { Text(sh("Kalan Harfler", "Remaining Letters"), fontWeight = FontWeight.Black) },
+            title = { Text(sh("Kalan Harfler", "Letters Left"), fontWeight = FontWeight.Black) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -279,7 +279,7 @@ internal fun WordSiegePremiumPanel(
                     )
                     if (letterTableError) {
                         Text(
-                            sh("Harf tablosu şu anda alınamadı. Pencereyi kapatıp yeniden deneyebilirsin.", "Letter counts are temporarily unavailable. Close and retry."),
+                            sh("Kalan harfler şu anda alınamadı. Pencereyi kapatıp yeniden deneyebilirsin.", "Letters left are temporarily unavailable. Close and retry."),
                             color = WordSiegeGameUi.Text,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,

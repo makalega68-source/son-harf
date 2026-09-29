@@ -52,11 +52,11 @@ private val PracticeSiegeMineBorder get() = if (WordSiegeWalnutIvory.enabled) Wo
 private val PracticeSiegeRivalBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFEB9E97)
 private val PracticeSiegeThreat = Color(0xFFD8903D)
 private val PracticeSiegeLightTileText = Color(0xFF4A3217)
-private val PracticeZoneWatch get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2H else Color(0xFFCFE6F5)
-private val PracticeZoneCritical get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3H else Color(0xFFF6D3E2)
-private val PracticeZoneFort get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2K else Color(0xFFD6ECCB)
-private val PracticeZoneSiege get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3K else Color(0xFFF8DCC3)
-private val PracticeZoneCrown get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus4K else Color(0xFFE2D6F2)
+private val PracticeZoneWatch get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2H else Color(0xFFE0F3EF)
+private val PracticeZoneCritical get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3H else Color(0xFFC3E7DF)
+private val PracticeZoneFort get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2K else Color(0xFFFFF0D3)
+private val PracticeZoneSiege get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3K else Color(0xFFF6D596)
+private val PracticeZoneCrown get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus4K else Color(0xFF24304B)
 private val PracticeZoneReward get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusStar else Color(0xFFFBEBB5)
 private val PracticeLastMove = Color(0xFFE0A82E)
 private val PracticeDefinitionBadge = Color(0xFF5C8299)
@@ -590,26 +590,8 @@ private fun WordSiegePracticeBoardCell(
                 }
             }
         } else if (activeZone != null) {
-            Text(
-                androidx.compose.ui.text.buildAnnotatedString {
-                    val label = WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)
-                    val parts = label.split("\n")
-                    if (parts.size > 1 && overview) {
-                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 20.sp)) {
-                            append(parts.first().take(1)); append(parts.last())
-                        }
-                    } else if (parts.size > 1) {
-                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 10.sp)) { append(parts.first()) }
-                        append("\n")
-                        append(parts.last())
-                    } else append(label)
-                },
-                color = PracticeSiegeBonusLabel,
-                fontSize = WordSiegeBoardAccessibility.BoardBonus,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 17.sp,
-                fontWeight = if (overview) FontWeight.SemiBold else FontWeight.Medium,
-            )
+            val label = WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)
+            WordSiegeBonusMark(activeZone, label, overview, PracticeSiegeBonusLabel, WordSiegeBoardAccessibility.BoardBonus)
         }
     }
 }

@@ -191,7 +191,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                         runCatching { backend.findOrCreateWordSiegeSeriesGame(SonHarfUiState.language, turnMinutes) }
                             .onSuccess { next ->
                                 applyGame(next)
-                                notice = if (next.status == "waiting") sh("Seri rakibi aranıyor.", "Searching for a Series rival.") else null
+                                notice = if (next.status == "waiting") sh("Düello rakibi aranıyor.", "Searching for a duel rival.") else null
                             }
                             .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
                         busy = false
@@ -325,7 +325,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                     busy = true
                     runCatching { backend.inviteFriendToWordSiegeSeries(friend.id, SonHarfUiState.language, turnMinutes) }
                         .onSuccess {
-                            notice = sh("${friend.displayName} Seri Oyun'a davet edildi.", "${friend.displayName} was invited to Series Game.")
+                            notice = sh("${friend.displayName} Hızlı Düello'ya davet edildi.", "${friend.displayName} was invited to Quick Duel.")
                             inviteFriend = false
                         }
                         .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
@@ -363,7 +363,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
             title = { Text(sh("Harf değiştir", "Exchange tiles"), fontWeight = FontWeight.Black) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(sh("Değiştireceğin harfleri seç.", "Select the tiles to exchange."))
+                    Text(sh("Torbaya geri vereceğin taşları işaretle.", "Mark the tiles to hand back to the bag."))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         rack.forEachIndexed { index, letter ->
                             FilterChip(
@@ -467,7 +467,7 @@ private fun SeriesLobby(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back")) }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("SERİ OYUN", "SERIES GAME"), color = SonHarfTheme.TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text(sh("HIZLI DÜELLO", "QUICK DUEL"), color = SonHarfTheme.TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     Text(sh("Dakikalık tur • Kaçan tur otomatik pas • 3 ardışık kaçırma = mağlubiyet", "Minute turns • Missed turn auto-passes • 3 consecutive misses = defeat"), color = SonHarfTheme.TextSecondary, fontSize = 9.sp)
                 }
                 IconButton(onClick = onRefresh, enabled = !busy) { Icon(Icons.Rounded.Refresh, sh("Yenile", "Refresh")) }
@@ -523,7 +523,7 @@ private fun SeriesLobby(
         }
 
         if (invites.isNotEmpty()) {
-            item { Text(sh("SERİ OYUN DAVETLERİ", "SERIES INVITES"), color = SonHarfTheme.PremiumGold, fontSize = 10.sp, fontWeight = FontWeight.Black) }
+            item { Text(sh("HIZLI DÜELLO DAVETLERİ", "QUICK DUEL INVITES"), color = SonHarfTheme.PremiumGold, fontSize = 10.sp, fontWeight = FontWeight.Black) }
             items(invites, key = { it.id }) { invite ->
                 val sender = profiles[invite.senderId]
                 Surface(shape = RoundedCornerShape(16.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
@@ -541,11 +541,11 @@ private fun SeriesLobby(
             }
         }
 
-        item { Text(sh("SERİ OYUNLARIN", "YOUR SERIES GAMES"), color = SonHarfTheme.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Black) }
+        item { Text(sh("HIZLI DÜELLOLARIN", "YOUR QUICK DUELS"), color = SonHarfTheme.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Black) }
         if (games.isEmpty()) {
             item {
                 Surface(shape = RoundedCornerShape(18.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
-                    Text(sh("Henüz Seri Oyun yok. Rakip bul veya bir arkadaşını davet et.", "No Series Game yet. Find a rival or invite a friend."), Modifier.fillMaxWidth().padding(18.dp), color = SonHarfTheme.TextSecondary, textAlign = TextAlign.Center)
+                    Text(sh("Henüz Hızlı Düello yok. Rakip bul veya bir arkadaşını davet et.", "No Quick Duel yet. Find a rival or invite a friend."), Modifier.fillMaxWidth().padding(18.dp), color = SonHarfTheme.TextSecondary, textAlign = TextAlign.Center)
                 }
             }
         }
@@ -631,7 +631,7 @@ private fun SeriesFriendInviteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(sh("Seri Oyun daveti", "Series Game invite"), fontWeight = FontWeight.Black) },
+        title = { Text(sh("Hızlı Düello daveti", "Quick Duel invite"), fontWeight = FontWeight.Black) },
         text = {
             if (friends.isEmpty()) {
                 Text(sh("Davet edebileceğin arkadaş bulunamadı.", "No friend is available to invite."))
@@ -667,8 +667,8 @@ private fun SeriesLocked(onExit: () -> Unit) {
     ) {
         Icon(Icons.Rounded.Lock, null, tint = SonHarfTheme.PremiumGold, modifier = Modifier.size(48.dp))
         Spacer(Modifier.height(12.dp))
-        Text(sh("Seri Oyun kilitli", "Series Game is locked"), color = SonHarfTheme.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
-        Text(sh("Seri Oyun veya PRO satın alındığında kalıcı olarak açılır.", "It unlocks permanently with Series Game or PRO."), color = SonHarfTheme.TextSecondary, textAlign = TextAlign.Center)
+        Text(sh("Hızlı Düello kilitli", "Quick Duel is locked"), color = SonHarfTheme.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
+        Text(sh("Hızlı Düello veya PRO satın alındığında kalıcı olarak açılır.", "It unlocks permanently with Quick Duel or PRO."), color = SonHarfTheme.TextSecondary, textAlign = TextAlign.Center)
         Spacer(Modifier.height(16.dp))
         Button(onClick = onExit) { Text(sh("MAĞAZAYA DÖN", "BACK TO STORE")) }
     }
@@ -702,8 +702,8 @@ private fun seriesDeadlineText(deadline: String?, tick: Long): String {
 }
 
 private fun seriesFriendlyError(raw: String): String = when {
-    "series_game_required" in raw -> sh("Seri Oyun veya PRO erişimi gerekli.", "Series Game or PRO access is required.")
-    "series_game_friend_required" in raw -> sh("Davet ettiğin arkadaşın da Seri Oyun erişimi olmalı.", "Your friend also needs Series Game access.")
+    "series_game_required" in raw -> sh("Hızlı Düello veya PRO erişimi gerekli.", "Quick Duel or PRO access is required.")
+    "series_game_friend_required" in raw -> sh("Davet ettiğin arkadaşın da Hızlı Düello erişimi olmalı.", "Your friend also needs Quick Duel access.")
     "word_siege_active_limit" in raw -> sh("Aktif oyun limitine ulaştın.", "You reached your active-game limit.")
     "word_siege_invite_pending" in raw -> sh("Bu oyuncuyla zaten bekleyen bir davet var.", "There is already a pending invite with this player.")
     "word_siege_invalid_word" in raw -> sh("Kelime sözlükte bulunamadı.", "The word is not in the dictionary.")

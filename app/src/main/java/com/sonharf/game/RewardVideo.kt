@@ -26,7 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * The player's rewarded-video passes (banked hints, a day's keyboard or theme, Quick Games) as
+ * The player's rewarded-video passes (banked hints, a day's keyboard or theme, Quick Duels) as
  * the server reports them. A day's keyboard or theme is applied on this device until it expires.
  */
 internal object RewardPassState {
@@ -168,7 +168,7 @@ internal fun rewardErrorMessage(raw: String): String = when {
     "weekly_limit_reached" in raw -> sh("Bu haftaki hakkın doldu.", "This week's limit is used up.")
     "mascot_owner" in raw -> sh("Maskotun zaten her maçta 3 ipucu veriyor.", "Your mascot already gives 3 hints every match.")
     "already_owned" in raw -> sh("Bu sende zaten var.", "You already have this.")
-    "pass_active" in raw -> sh("Hızlı Oyun hakların hâlâ duruyor.", "You still have Quick Games left.")
+    "pass_active" in raw -> sh("Hızlı Düello hakların hâlâ duruyor.", "You still have Quick Duels left.")
     "daily_not_claimed" in raw -> sh("Önce bugünkü hediyeni al.", "Claim today's gift first.")
     "trial_item_unavailable" in raw -> sh("Bu ürün şu anda denenemiyor.", "This item can't be tried right now.")
     "rewarded_ads_unavailable" in raw -> sh("Ödüllü videolar yakında açılacak.", "Rewarded videos are coming soon.")

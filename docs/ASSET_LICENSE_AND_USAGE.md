@@ -28,3 +28,19 @@
 - OYNA remains primary CTA.
 - Warm Beginnings remains the sole background music.
 - Third-party provenance must remain documented for future due diligence/transfer.
+
+## Originality audit (2026-09-29)
+Items the repository can vouch for, and items only the owner can confirm. No license terms are invented here.
+
+| Asset | Where | Provenance in the repo |
+|---|---|---|
+| Sound effects `sfx_*.wav` | `res/raw` | Rendered for this project (commits `1c31bed5`, `8d22f433`); no third-party samples recorded. |
+| Background music `warm_beginnings.mp3` | `res/raw` | **Not recorded.** Owner must keep the purchase/license record. |
+| Mascot clips `mascot_victory.mp4`, `mascot_defeat.mp4`, `intro_welcome.mp4` | `res/raw` | Produced for this project (commits `412e9c54`, `b5f66869`); source tool/licence of the base art **not recorded**. |
+| Mascot (Obi) art, launcher icons `obi_launcher_*` | `drawable-nodpi`, `mipmap-*` | Project art; source tool/licence **not recorded**. |
+| Profile frames `style_frame_*`, `profile_frame_*` | `drawable-nodpi` | LAYERLAB Avatar Frame (see above), pinned by `scripts/verify_frame_provenance.py`. |
+| Icons | `drawable*` | Nieobie Game Icon Pack (CC0) and Mobile Game UI FREE subset (see above). |
+| Fonts | — | No bundled font files; the system font (`FontFamily.SansSerif`) is used. |
+| Dictionaries `assets/dictionary/*.txt` | `assets` | See `DICTIONARY_AND_FRAME_SOURCES.md`. They contain ordinary words such as "kelimelik" and "scrabble"; these are dictionary entries, not brand use. |
+
+No asset file name or content refers to Kelimelik, He2 Apps or Scrabble. Board bonus cells, the Starting Seal, tiles and the HUD are drawn natively in Compose (no bitmap copied from another game).

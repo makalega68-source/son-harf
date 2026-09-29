@@ -8,9 +8,9 @@ import org.junit.Test
 class KelimeTahtiDifferentiationContractTest {
     @Test
     fun bonusLabelsExplainTheActualEffectInBothLanguages() {
-        org.junit.Assert.assertEquals("Harf\n×2", WordSiegeBoardSpec.displayBonusLabel("2H"))
-        org.junit.Assert.assertEquals("Kelime\n×3", WordSiegeBoardSpec.displayBonusLabel("3K"))
-        org.junit.Assert.assertEquals("Word\n×4", WordSiegeBoardSpec.displayBonusLabel("4K", false))
+        org.junit.Assert.assertEquals("Harf\nGücü", WordSiegeBoardSpec.displayBonusLabel("2H"))
+        org.junit.Assert.assertEquals("Kelime\nAkımı+", WordSiegeBoardSpec.displayBonusLabel("3K"))
+        org.junit.Assert.assertEquals("Starting\nSeal", WordSiegeBoardSpec.displayBonusLabel("4K", false))
         org.junit.Assert.assertEquals("+25", WordSiegeBoardSpec.displayBonusLabel("3Y"))
     }
 

@@ -85,7 +85,7 @@ private fun WordSiegePracticeContent(
     var dictionaryRetryKey by remember { mutableIntStateOf(0) }
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
-    // Tiles are carried with the finger like Kelimelik; hint tiles fly from the rack to the board.
+    // Tiles are carried with the finger; hint tiles fly from the rack to the board.
     val tileDrag = remember { WordSiegeTileDrag() }
     val rackCenters = remember { mutableStateMapOf<Int, Offset>() }
     var notice by remember(matchmakingFallback) {
@@ -208,8 +208,8 @@ private fun WordSiegePracticeContent(
                         )
                     } else {
                         sh(
-                            "Sözlük hazır. İlk hamlede merkezden geç.",
-                            "Dictionary ready. Your first move must cross the Crown Zone.",
+                            "Sözlük hazır. Açılış kelimen merkezden, Başlangıç Mührü'nden geçsin.",
+                            "Dictionary ready. Open through the Starting Seal.",
                         )
                     }
                 }
@@ -297,8 +297,8 @@ private fun WordSiegePracticeContent(
             )
         } else {
             sh(
-                "İlk hamle sende. Kelimeni merkezden geçir.",
-                "Your first move is yours. Cross the Crown Zone.",
+                "Açılış sende. Kelimeni merkezden, Başlangıç Mührü'nden geçir.",
+                "You open. Lead your word through the Starting Seal.",
             )
         }
         showChat = false
@@ -869,7 +869,7 @@ private fun WordSiegePracticeContent(
     if (showPass) {
         HfConfirmDialog(
             title = sh("Turu geç?", "Pass this turn?"),
-            message = sh("Torbada 20’den az harf varken art arda 4 pas ve/veya değişim maçı bitirir.", "When fewer than 20 tiles remain, 4 consecutive passes and/or exchanges end the match."),
+            message = sh("Sıra rakibine geçer. Torbada 20 taşın altına inildiğinde, kelime yazılmadan geçen 4 sessiz tur (pas ya da değişim) maçı kapatır.", "Your rival takes the turn. Once the bag drops below 20 tiles, 4 quiet turns in a row (passes or exchanges, no words) close the match."),
             confirmText = sh("PAS VER", "PASS"),
             dismissText = sh("VAZGEÇ", "CANCEL"),
             onDismiss = { showPass = false },
@@ -904,7 +904,7 @@ private fun WordSiegePracticeContent(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        sh("Seçtiğin harfler torbaya döner ve turun biter.", "Selected tiles return to the bag and your turn ends."),
+                        sh("İşaretlediğin taşlar torbaya karışır, yerlerine yenileri gelir. Bu tur sessiz tur sayılır.", "Marked tiles are shuffled back into the bag and replaced. This counts as a quiet turn."),
                         color = WordSiegeGameUi.Muted,
                         fontSize = 12.sp,
                     )

@@ -56,7 +56,7 @@ internal data class WordSiegeTileFlight(
 )
 
 /**
- * Kelimelik-style tile handling for the siege board: a tile is picked up with the finger, rides a
+ * Finger-drag tile handling for the siege board: a tile is picked up with the finger, rides a
  * little above it (so the finger never hides it) and lands on the cell under the tile. The board
  * supplies the hit test; the screen draws [WordSiegeTileDragOverlay] on top of everything.
  */
@@ -292,7 +292,7 @@ internal fun WordSiegeRegisterBoardHitTest(
 }
 
 /**
- * Kelimelik-style move feedback on the board: a green check on the last tile of a valid word and,
+ * Move feedback on the board: a green check on the last tile of a valid word and,
  * when [score] is given, the move's points floating above the word. Draw inside the board viewport.
  */
 @Composable

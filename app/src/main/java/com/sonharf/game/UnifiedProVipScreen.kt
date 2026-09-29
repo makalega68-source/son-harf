@@ -160,14 +160,12 @@ internal fun UnifiedProVipScreen(
         item {
             Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
                 Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ProLine("🎯", sh("Kuşatmada hamle puanını onaylamadan gör", "See a siege move's score before confirming"))
-                    ProLine("🎒", sh("Torbada kalan harfleri gör", "See the letters left in the bag"))
-                    ProLine("📜", sh("Son Harf'te maçta çıkan kelimeleri gör", "See the words played in a Last Letter match"))
                     ProLine("🚫", sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
-                    ProLine("🏷️", sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
-                    ProLine("📊", sh("Tamamlanmış maçlar için gelişmiş analiz", "Advanced analysis for completed matches"))
-                    ProLine("♛", sh("Son Harf davet kodlu özel oda", "Last Letter invite-code private room"))
-                    ProLine("👥", sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))
+                    ProLine("🏷️", sh("Altın PRO çerçevesi, rozet ve öne çıkan profil", "Gold PRO frame, badge and a standout profile"))
+                    ProLine("♛", sh("Davet kodlu özel masalar", "Invite-code private tables"))
+                    ProLine("👥", sh("Kayıtlı arkadaş listesi", "Saved friend list"))
+                    ProLine("📊", sh("Biten maçların ayrıntılı özeti", "Detailed recap of finished matches"))
+                    ProLine("🧭", sh("Konfor araçları: Hamle Önizleme, Kalan Harfler, Son Harf kelime geçmişi", "Comfort tools: Move Preview, Letters Left, Last Letter word history"))
                 }
             }
         }

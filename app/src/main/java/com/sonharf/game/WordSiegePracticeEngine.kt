@@ -149,7 +149,7 @@ internal object WordSiegePracticeEngine {
         if (words.isEmpty()) fail("word_siege_word_required")
         if (hasBoardLetter && !connected) fail("word_siege_move_must_connect")
 
-        // The Kelimelik-style three-star reward is a move bonus, not a word multiplier.
+        // The +25 surprise reward is a move bonus, not a word multiplier.
         // Count it once even when the placed tile also creates cross words.
         val starBonus = placements.keys.count { index ->
             val cell = state.board[index]

@@ -65,7 +65,7 @@ class WordSiegePracticeUxAndBotRegressionTest {
         assertFalse(screen.contains("onZoneClick = { zoneInfoCode = it }"))
         assertTrue(guidance.contains("WordSiegeBoardSpec.StarBonus"))
         assertTrue(guidance.contains("WordSiegePracticeStatusBar"))
-        assertTrue(guidance.contains("BAŞLANGIÇ • İlk kelime bu bölgeden geçmelidir"))
+        assertTrue(guidance.contains("BAŞLANGIÇ MÜHRÜ • Oyunu açan kelime mühürden geçer"))
         assertTrue(guidance.contains("ÖDÜL • Bu sürpriz bölge hamlene +"))
         assertTrue(guidance.contains("maxLines = 2"))
     }
