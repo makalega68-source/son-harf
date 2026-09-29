@@ -211,7 +211,7 @@ internal fun WordSiegePracticeBoard(
                     else Modifier
                         .padding(4.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.boardGrain else Brush.linearGradient(listOf(Color(0xFFEFE7D2), Color(0xFFECE3CB), Color(0xFFEFE7D2), Color(0xFFE9DFC5)))),
+                        .background(if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.boardGrain else Brush.linearGradient(listOf(Color(0xFFD6CFC1), Color(0xFFD1CABB), Color(0xFFD6CFC1), Color(0xFFCEC6B6)))),
                 )
                 .clipToBounds()
                 .onGloballyPositioned {
@@ -497,6 +497,8 @@ private fun WordSiegePracticeBoardCell(
                 // On a board skin an empty cell is a stone plate of that skin, bonus tint on top.
                 if (skinPlate != null && letter == null) Modifier.wordSiegePlateTexture(skinPlate).background(wordSiegeSkinCellOverlay(zoneSurface)).wordSiegeCellBevel(WordSiegeBoardSkins.active?.dark == true)
                 else Modifier.background(wordSiegeCellBrush(displayCellColor, raised = letter != null, walnut = WordSiegeWalnutIvory.enabled))
+                    // Classic board: empty and bonus squares are soft framed tiles.
+                    .then(if (letter == null && !pending && !WordSiegeWalnutIvory.enabled) Modifier.wordSiegeClassicTileRim(displayCellColor) else Modifier)
                     .then(if (letter != null && !pending && !WordSiegeWalnutIvory.enabled) Modifier.wordSiegeCellBevel(dark = false) else Modifier),
             )
             .border(

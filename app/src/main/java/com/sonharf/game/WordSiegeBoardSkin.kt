@@ -305,3 +305,21 @@ internal fun Modifier.wordSiegeCellBevel(dark: Boolean): Modifier = drawBehind {
         cornerRadius = CornerRadius(corner * .7f),
     )
 }
+
+/**
+ * Classic board cell: a soft framed tile. A slightly darker rim of the cell's own colour, a thicker
+ * shade along the bottom edge and a thin light line on top, so each square reads as a calm raised
+ * tile on the grey-beige board without hard grid lines.
+ */
+internal fun Modifier.wordSiegeClassicTileRim(base: Color): Modifier = drawBehind {
+    val rim = size.minDimension * .05f
+    val corner = size.minDimension * .135f
+    val shade = androidx.compose.ui.graphics.lerp(base, Color.Black, .13f)
+    drawRoundRect(shade, topLeft = Offset(rim / 2, rim / 2), size = Size(size.width - rim, size.height - rim), cornerRadius = CornerRadius(corner), style = Stroke(rim))
+    val bottom = size.minDimension * .085f
+    drawRect(
+        Brush.verticalGradient(listOf(shade.copy(alpha = 0f), shade), size.height - bottom * 1.6f, size.height),
+        topLeft = Offset(0f, size.height - bottom * 1.6f), size = Size(size.width, bottom * 1.6f),
+    )
+    drawLine(Color.White.copy(alpha = .55f), Offset(corner, rim * 1.2f), Offset(size.width - corner, rim * 1.2f), strokeWidth = rim * .6f)
+}
