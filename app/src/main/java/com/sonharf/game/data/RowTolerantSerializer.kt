@@ -18,9 +18,9 @@ class RowTolerantSerializer(
     private val delegate: SupabaseSerializer = KotlinXSerializer(Json { ignoreUnknownKeys = true }),
 ) : SupabaseSerializer {
 
-    override fun <T : Any> encode(type: KType, value: T): String = delegate.encode(type, value)
+    override fun <T> encode(type: KType, value: T): String = delegate.encode(type, value)
 
-    override fun <T : Any> decode(type: KType, value: String): T =
+    override fun <T> decode(type: KType, value: String): T =
         delegate.decode(type, normalizeForType(type, value))
 
     companion object {
