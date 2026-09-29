@@ -197,7 +197,7 @@ internal fun Modifier.wordSiegePlateTexture(plate: ImageBitmap?): Modifier =
  */
 internal fun wordSiegeSkinCellOverlay(bonusSurface: Color?): androidx.compose.ui.graphics.Brush =
     if (bonusSurface != null) {
-        androidx.compose.ui.graphics.Brush.linearGradient(listOf(bonusSurface.copy(alpha = .66f), bonusSurface.copy(alpha = .52f)))
+        androidx.compose.ui.graphics.Brush.linearGradient(listOf(bonusSurface.copy(alpha = .40f), bonusSurface.copy(alpha = .28f)))
     } else {
         androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color.Black.copy(alpha = .07f), Color.Transparent, Color.White.copy(alpha = .06f)))
     }

@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
@@ -82,6 +83,12 @@ internal fun WordSiegeBonusMark(
 ) {
     val glyph = WordSiegeBonusStyle.glyph(code)
     val ink = WordSiegeBonusStyle.ink(code, themeLabel)
+    // Rendered 3D object for the bonus (top-down, transparent). Falls back to the drawn mark.
+    val icon = WordSiegeBonusIcons.bitmap(code)
+    if (icon != null) {
+        WordSiegeBonusIconMark(code, icon, label, overview, ink)
+        return
+    }
     if (glyph.isEmpty()) {
         Text(label, color = ink, fontSize = glyphSize, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
         return
@@ -226,6 +233,79 @@ internal fun WordSiegeBonusLegend(compact: Boolean, modifier: Modifier = Modifie
                     }
                 }
             }
+        }
+    }
+}
+
+
+/** 3D bonus objects (rendered top-down, transparent PNG), decoded once for the whole app. */
+internal object WordSiegeBonusIcons {
+    private val cache = mutableMapOf<Int, androidx.compose.ui.graphics.ImageBitmap>()
+    private var resources: android.content.res.Resources? = null
+
+    fun res(code: String?): Int? = when (code) {
+        "2H" -> R.drawable.bonus_letter_boost
+        "3H" -> R.drawable.bonus_letter_boost_plus
+        "2K" -> R.drawable.bonus_word_surge
+        "3K" -> R.drawable.bonus_word_surge_plus
+        WordSiegeBoardSpec.CenterBonus -> R.drawable.bonus_starting_seal
+        WordSiegeBoardSpec.StarBonus -> R.drawable.bonus_surprise_reward
+        else -> null
+    }
+
+    fun init(context: android.content.Context) { resources = context.applicationContext.resources }
+
+    fun bitmap(code: String?): androidx.compose.ui.graphics.ImageBitmap? {
+        val id = res(code) ?: return null
+        cache[id]?.let { return it }
+        val r = resources ?: return null
+        return runCatching { android.graphics.BitmapFactory.decodeResource(r, id) }
+            .getOrNull()?.asImageBitmap()
+            ?.also { cache[id] = it }
+    }
+}
+
+@Composable
+private fun WordSiegeBonusIconMark(
+    code: String,
+    icon: androidx.compose.ui.graphics.ImageBitmap,
+    label: String,
+    overview: Boolean,
+    ink: Color,
+) {
+    val seal = code == WordSiegeBoardSpec.CenterBonus
+    val star = code == WordSiegeBoardSpec.StarBonus
+    if (overview) {
+        androidx.compose.foundation.Image(
+            bitmap = icon,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize().padding(3.dp),
+        )
+        return
+    }
+    val words = when {
+        star -> listOf(label)
+        seal -> label.split("\n").takeLast(1)
+        else -> listOf(label.replace("\n", " "))
+    }
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 1.dp, vertical = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
+    ) {
+        androidx.compose.foundation.Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(30.dp))
+        words.forEach { word ->
+            Text(
+                word,
+                style = BonusMarkText,
+                color = ink,
+                fontSize = 7.sp,
+                lineHeight = 8.sp,
+                maxLines = 1,
+                softWrap = false,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

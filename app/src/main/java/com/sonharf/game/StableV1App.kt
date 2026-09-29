@@ -55,6 +55,7 @@ fun StableV1App() {
     remember(context) {
         SonHarfCosmetics.restore(context)
         WordSiegeBoardSkins.restore(context)
+        WordSiegeBonusIcons.init(context)
         WordSiegeMascotOwnership.restore(context)
         true
     }
