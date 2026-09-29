@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 
 /**
- * Word Siege board looks. Stone Keep is the free default board; the others are cosmetic products.
+ * Word Siege board looks sold as cosmetic products. Without one the classic light board is used.
  * A skin is a tabletop slab drawn in code (so it stays sharp at every zoom): a bevelled rim with a
  * metal inlay line and corner studs, a recessed field, and the stone grain of the skin on empty
  * cells. Letters, bonus marks, territory colours and tap targets stay on the same grid.
@@ -81,8 +81,7 @@ internal enum class WordSiegeBoardSkin(
 
     companion object {
         private val RimShare = listOf(.055f, .055f, .055f, .055f)
-        val DEFAULT = STONE_KEEP
-        /** Skins sold in the store (Stone Keep is free and needs no product). */
+        /** Skins sold in the store. */
         val productIds: Set<String> = setOf(RIVER_VALLEY.id, FROST_CITADEL.id, OBSIDIAN.id)
         fun fromId(id: String?): WordSiegeBoardSkin? = entries.firstOrNull { it.id == id }
     }
@@ -109,12 +108,11 @@ internal object WordSiegeBoardSkins {
     }
 
     /**
-     * The board look in play: a chosen skin always wins; otherwise the Walnut & Ivory / Black app
-     * themes keep their own boards, and everyone else gets the Stone Keep.
+     * The board look in play: a bought skin the player chose; otherwise null, the classic light
+     * board (or the Walnut & Ivory board when that theme is on).
      */
     val active: WordSiegeBoardSkin?
         get() = WordSiegeBoardSkin.fromId(selectedId)
-            ?: if (WordSiegeWalnutIvory.enabled) null else WordSiegeBoardSkin.DEFAULT
 }
 
 /** Stone texture for empty cells, provided once per board so cells do not decode it 225 times. */

@@ -573,7 +573,7 @@ private fun PanSiegeBoard(
     val highlightAlpha = remember(gameId) { Animatable(0f) }
     // Two-finger pinch sets the zoom freely between "whole framed board" and the close view; there is
     // no double-tap toggle any more. FIT from the parent means "start zoomed out".
-    // Stone Keep is the default board; a bought skin replaces it; Walnut/Black themes keep their own.
+    // The classic light board is the default; a bought skin replaces it; Walnut/Black themes keep their own.
     val boardSkin = WordSiegeBoardSkins.active
     var userScale by remember(gameId) { mutableStateOf<Float?>(null) }
     val fitScale = remember(viewport, boardPx, boardSkin) {

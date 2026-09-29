@@ -55,24 +55,25 @@ internal object WordSiegeBoardSpec {
         return bonuses
     }
 
-    /** Player-facing in-cell label. Never expose persisted multiplier codes in the UI. */
+    /** Player-facing in-cell label: short bonus tags (HB² = letter bonus ×2, KB³ = word bonus ×3). */
     fun displayBonusLabel(bonus: String?, turkish: Boolean = true): String = when (bonus) {
-        "2H" -> if (turkish) "Harf\nGücü" else "Letter\nBoost"
-        "3H" -> if (turkish) "Harf\nGücü+" else "Letter\nBoost+"
-        "2K" -> if (turkish) "Kelime\nAkımı" else "Word\nSurge"
-        "3K" -> if (turkish) "Kelime\nAkımı+" else "Word\nSurge+"
-        CenterBonus -> if (turkish) "Başlangıç\nMührü" else "Starting\nSeal"
+        "2H" -> if (turkish) "HB²" else "LB²"
+        "3H" -> if (turkish) "HB³" else "LB³"
+        "2K" -> if (turkish) "KB²" else "WB²"
+        "3K" -> if (turkish) "KB³" else "WB³"
+        // The centre cell shows only its picture.
+        CenterBonus -> ""
         StarBonus -> "+25"
         else -> ""
     }
 
     fun bonusLongName(bonus: String?, turkish: Boolean): String = when (bonus) {
-        "2H" -> if (turkish) "Harf Gücü" else "Letter Boost"
-        "3H" -> if (turkish) "Harf Gücü+" else "Letter Boost+"
-        "2K" -> if (turkish) "Kelime Akımı" else "Word Surge"
-        "3K" -> if (turkish) "Kelime Akımı+" else "Word Surge+"
-        CenterBonus -> if (turkish) "Başlangıç Mührü" else "Starting Seal"
-        StarBonus -> if (turkish) "Sürpriz Ödül" else "Surprise Reward"
+        "2H" -> if (turkish) "Harf Bonus ×2" else "Letter Bonus ×2"
+        "3H" -> if (turkish) "Harf Bonus ×3" else "Letter Bonus ×3"
+        "2K" -> if (turkish) "Kelime Bonus ×2" else "Word Bonus ×2"
+        "3K" -> if (turkish) "Kelime Bonus ×3" else "Word Bonus ×3"
+        CenterBonus -> if (turkish) "Başlangıç ×4" else "Start ×4"
+        StarBonus -> if (turkish) "Yıldız +25" else "Star +25"
         else -> ""
     }
 

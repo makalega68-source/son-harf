@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Shape
@@ -235,15 +236,11 @@ internal fun WordSiegeBonusLegend(compact: Boolean, modifier: Modifier = Modifie
     }
 }
 
-/** The legend's plain meaning of each bonus picture: "picture = what it gives". */
+/** The legend's text next to each bonus picture: "picture = Harf Bonus ×2". */
 internal fun wordSiegeBonusEquation(code: String, turkish: Boolean): String = when (code) {
-    "2H" -> if (turkish) "2 kat harf puanı" else "2x letter points"
-    "3H" -> if (turkish) "3 kat harf puanı" else "3x letter points"
-    "2K" -> if (turkish) "2 kat kelime puanı" else "2x word points"
-    "3K" -> if (turkish) "3 kat kelime puanı" else "3x word points"
-    WordSiegeBoardSpec.CenterBonus -> if (turkish) "İlk kelime; 4 kat kelime puanı" else "First word; 4x word points"
+    WordSiegeBoardSpec.CenterBonus -> if (turkish) "İlk kelime, Kelime Bonus ×4" else "First word, Word Bonus ×4"
     WordSiegeBoardSpec.StarBonus -> if (turkish) "+25 puan" else "+25 points"
-    else -> ""
+    else -> WordSiegeBoardSpec.bonusLongName(code, turkish)
 }
 
 
@@ -258,7 +255,7 @@ internal object WordSiegeBonusIcons {
         "2K" -> R.drawable.bonus_word_surge
         "3K" -> R.drawable.bonus_word_surge_plus
         WordSiegeBoardSpec.CenterBonus -> R.drawable.bonus_starting_seal
-        WordSiegeBoardSpec.StarBonus -> R.drawable.bonus_surprise_reward
+        WordSiegeBoardSpec.StarBonus -> R.drawable.bonus_premium_star
         else -> null
     }
 
@@ -282,39 +279,62 @@ private fun WordSiegeBonusIconMark(
     overview: Boolean,
     ink: Color,
 ) {
-    val seal = code == WordSiegeBoardSpec.CenterBonus
     val star = code == WordSiegeBoardSpec.StarBonus
-    if (overview) {
-        androidx.compose.foundation.Image(
-            bitmap = icon,
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize().padding(3.dp),
+    // The +25 star cell glows softly so it is noticed at once.
+    val glow = if (star) {
+        val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "star cell glow")
+        pulse.animateFloat(
+            initialValue = .35f,
+            targetValue = 1f,
+            animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                androidx.compose.animation.core.tween(900),
+                androidx.compose.animation.core.RepeatMode.Reverse,
+            ),
+            label = "star cell glow alpha",
         )
-        return
-    }
-    val words = when {
-        star -> listOf(label)
-        seal -> label.split("\n").takeLast(1)
-        else -> listOf(label.replace("\n", " "))
-    }
-    Column(
-        Modifier.fillMaxSize().padding(horizontal = 1.dp, vertical = 2.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
+    } else null
+    Box(
+        Modifier.fillMaxSize().then(
+            if (glow != null) Modifier.drawBehind {
+                drawRect(
+                    androidx.compose.ui.graphics.Brush.radialGradient(
+                        listOf(Color(0xFFFFE082).copy(alpha = .95f * glow.value), Color(0xFFFFC107).copy(alpha = .45f * glow.value), Color.Transparent),
+                        center = center,
+                        radius = size.minDimension * .75f,
+                    ),
+                )
+            } else Modifier,
+        ),
+        contentAlignment = Alignment.Center,
     ) {
-        androidx.compose.foundation.Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(30.dp))
-        words.forEach { word ->
-            Text(
-                word,
-                style = BonusMarkText,
-                color = ink,
-                fontSize = 7.sp,
-                lineHeight = 8.sp,
-                maxLines = 1,
-                softWrap = false,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
+        if (overview) {
+            androidx.compose.foundation.Image(
+                bitmap = icon,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().padding(3.dp),
             )
+        } else {
+            val word = label.replace("\n", " ").trim()
+            Column(
+                Modifier.fillMaxSize().padding(horizontal = 1.dp, vertical = 2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
+            ) {
+                androidx.compose.foundation.Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(if (word.isEmpty()) 38.dp else 30.dp))
+                if (word.isNotEmpty()) {
+                    Text(
+                        word,
+                        style = BonusMarkText,
+                        color = ink,
+                        fontSize = 9.sp,
+                        lineHeight = 10.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        fontWeight = FontWeight.Black,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
         }
     }
 }

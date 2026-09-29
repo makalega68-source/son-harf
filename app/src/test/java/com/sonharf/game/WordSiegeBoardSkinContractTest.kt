@@ -8,11 +8,12 @@ import org.junit.Test
 class WordSiegeBoardSkinContractTest {
     private fun read(path: String) = listOf(File(path), File("../$path"), File("app/$path")).first(File::exists).readText()
 
-    @Test fun stoneKeepIsTheDefaultAndTheOthersAreProducts() {
+    @Test fun classicBoardIsTheDefaultAndSkinsAreProducts() {
         val skin = read("src/main/java/com/sonharf/game/WordSiegeBoardSkin.kt")
-        assertTrue(skin.contains("val DEFAULT = STONE_KEEP"))
+        assertFalse(skin.contains("val DEFAULT = STONE_KEEP"))
         assertTrue(skin.contains("setOf(RIVER_VALLEY.id, FROST_CITADEL.id, OBSIDIAN.id)"))
-        assertTrue(skin.contains("?: if (WordSiegeWalnutIvory.enabled) null else WordSiegeBoardSkin.DEFAULT"))
+        assertTrue(skin.contains("get() = WordSiegeBoardSkin.fromId(selectedId)\n"))
+        assertTrue(File("src/main/res/drawable-nodpi/store_art_board_classic.jpg").exists() || File("app/src/main/res/drawable-nodpi/store_art_board_classic.jpg").exists())
         listOf("stone_keep", "river_valley", "frost_citadel", "obsidian").forEach { name ->
             listOf("board_plate_$name", "store_art_board_$name").forEach { res ->
                 assertTrue("$res missing", File("src/main/res/drawable-nodpi/$res.jpg").exists() || File("app/src/main/res/drawable-nodpi/$res.jpg").exists())

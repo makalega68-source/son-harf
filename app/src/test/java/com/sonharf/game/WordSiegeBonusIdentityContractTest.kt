@@ -8,16 +8,15 @@ import org.junit.Test
 
 class WordSiegeBonusIdentityContractTest {
     @Test fun bonusCellsUseTheBoardsOwnNamesInBothLanguages() {
-        assertEquals("Harf Gücü", WordSiegeBoardSpec.bonusLongName("2H", true))
-        assertEquals("Harf Gücü+", WordSiegeBoardSpec.bonusLongName("3H", true))
-        assertEquals("Kelime Akımı", WordSiegeBoardSpec.bonusLongName("2K", true))
-        assertEquals("Kelime Akımı+", WordSiegeBoardSpec.bonusLongName("3K", true))
-        assertEquals("Başlangıç Mührü", WordSiegeBoardSpec.bonusLongName("4K", true))
-        assertEquals("Word Surge+", WordSiegeBoardSpec.bonusLongName("3K", false))
+        assertEquals("Harf Bonus ×2", WordSiegeBoardSpec.bonusLongName("2H", true))
+        assertEquals("Harf Bonus ×3", WordSiegeBoardSpec.bonusLongName("3H", true))
+        assertEquals("Kelime Bonus ×2", WordSiegeBoardSpec.bonusLongName("2K", true))
+        assertEquals("Kelime Bonus ×3", WordSiegeBoardSpec.bonusLongName("3K", true))
+        assertEquals("Başlangıç ×4", WordSiegeBoardSpec.bonusLongName("4K", true))
+        assertEquals("Word Bonus ×3", WordSiegeBoardSpec.bonusLongName("3K", false))
         listOf("2H", "3H", "2K", "3K", "4K").forEach { code ->
             listOf(true, false).forEach { tr ->
                 assertFalse(WordSiegeBoardSpec.displayBonusLabel(code, tr).contains("×"))
-                assertFalse(WordSiegeBoardSpec.bonusLongName(code, tr).contains("×"))
             }
         }
     }

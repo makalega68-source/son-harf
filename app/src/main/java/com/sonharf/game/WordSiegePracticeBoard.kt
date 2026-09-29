@@ -113,7 +113,7 @@ internal fun WordSiegePracticeBoard(
     val mascotTouches = remember { WordSiegeMascotTouchState() }
     // The board always pans and pinches freely; "FIT" is simply the most zoomed-out scale.
     var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
-    // Stone Keep is the default board; a bought skin replaces it; Walnut/Black themes keep their own.
+    // The classic light board is the default; a bought skin replaces it; Walnut/Black themes keep their own.
     val boardSkin = WordSiegeBoardSkins.active
     val fitScale = remember(viewport, boardPx, boardSkin) {
         wordSiegeSkinnedFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx, boardSkin)

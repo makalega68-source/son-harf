@@ -63,7 +63,7 @@ private fun defaultStyleTitle(kind: String) = when (kind) {
     "mascot_hat" -> sh("Şapkasız Obi", "Obi, no hat")
     "profile_frame" -> sh("Çerçevesiz", "No frame")
     "victory_effect" -> sh("Standart Zafer", "Standard Victory")
-    "board_skin" -> sh("Taş Kale Tahtası", "Stone Keep Board")
+    "board_skin" -> sh("Klasik Tahta", "Classic Board")
     else -> sh("Standart İsim Rengi", "Standard Name Color")
 }
 
@@ -152,7 +152,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
         if (busy || loading) return
         if (kind == "board_skin") {
             WordSiegeBoardSkins.select(context, null)
-            notice = sh("Taş Kale tahtasına dönüldü.", "Back to the Stone Keep board.")
+            notice = sh("Klasik tahtaya dönüldü.", "Back to the classic board.")
             return
         }
         busy = true
@@ -435,7 +435,7 @@ private fun BoxScope.DefaultSlotPreview(kind: String) {
         }
         "mascot_hat" -> ObiHatPreview(hatId = "", modifier = Modifier.align(Alignment.Center).padding(6.dp))
         "board_skin" -> androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(WordSiegeBoardSkin.DEFAULT.artRes),
+            painter = androidx.compose.ui.res.painterResource(R.drawable.store_art_board_classic),
             contentDescription = null,
             modifier = Modifier.matchParentSize().padding(4.dp),
         )

@@ -56,7 +56,8 @@ No asset file name or content refers to Kelimelik, He2 Apps or Scrabble. Board b
 
 ## Kuşatma 3D bonus icons (2026-09-29)
 - `bonus_letter_boost`, `bonus_letter_boost_plus`, `bonus_word_surge`, `bonus_word_surge_plus`,
-  `bonus_starting_seal`, `bonus_surprise_reward` (PNG, `drawable-nodpi`): generated with Canva AI image
+  `bonus_starting_seal`, `bonus_premium_star` (PNG, `drawable-nodpi`): generated with Canva AI image
   generation in the owner's connected Canva account on the owner's instruction (media ids MAHWmMPo7v4,
-  MAHWmIvt1Bw, MAHWmKiM4ZA, MAHWmN97_Yg, MAHWmDL1ydk, MAHWmAt6Pdw); white background removed in-repo.
+  MAHWmIvt1Bw, MAHWmKiM4ZA, MAHWmN97_Yg, MAHWmDL1ydk, MAHWm1TyFHg); white background removed in-repo.
   Commercial use follows the owner's Canva plan terms.
+- `store_art_board_classic` (JPEG, 384 px): rendered in-repo from the classic board colours and the bonus icons.

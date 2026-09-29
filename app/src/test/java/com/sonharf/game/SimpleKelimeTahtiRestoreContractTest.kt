@@ -16,8 +16,8 @@ class SimpleKelimeKusatmasiRestoreContractTest {
         assertFalse(online.contains("PanSiegeMapControl("))
         assertFalse(practice.contains("HARİTA KONTROLÜ"))
         assertTrue(online.contains("modifier = Modifier.weight(1f).height(40.dp)"))
-        assertTrue(spec.contains("Harf\\nGücü"))
-        assertTrue(spec.contains("Kelime\\nAkımı"))
+        assertTrue(spec.contains("\"HB²\""))
+        assertTrue(spec.contains("\"KB²\""))
 
         assertTrue(online.contains("PanSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine"))
         assertTrue(online.contains("PanSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival"))
