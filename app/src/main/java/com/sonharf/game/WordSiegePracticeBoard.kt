@@ -113,22 +113,28 @@ internal fun WordSiegePracticeBoard(
     val mascotTouches = remember { WordSiegeMascotTouchState() }
     // The board always pans and pinches freely; "FIT" is simply the most zoomed-out scale.
     var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
-    val fitScale = remember(viewport, boardPx) {
-        wordSiegeFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx)
+    // Stone Keep is the default board; a bought skin replaces it; Walnut/Black themes keep their own.
+    val boardSkin = WordSiegeBoardSkins.active
+    val fitScale = remember(viewport, boardPx, boardSkin) {
+        wordSiegeSkinnedFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx, boardSkin)
     }
     val minScale = minOf(fitScale, WORD_SIEGE_PRACTICE_MAX_SCALE)
-    val transform by remember(viewport, boardPx, closePan, closeScale) {
+    val transform by remember(viewport, boardPx, closePan, closeScale, boardSkin) {
         derivedStateOf {
-            wordSiegeBoardTransform(
-                mode = WordSiegeBoardViewportMode.CLOSE,
-                viewportWidthPx = viewport.width.toFloat(),
-                viewportHeightPx = viewport.height.toFloat(),
-                boardWidthPx = boardPx,
-                closeScale = closeScale,
-                closePan = closePan,
+            // Pan limits include the skin's frame, so the frame can be seen and never covers cells.
+            WordSiegeBoardTransform(
+                scale = closeScale,
+                pan = clampWordSiegeSkinnedPan(closePan, viewport.width.toFloat(), viewport.height.toFloat(), boardPx, closeScale, boardSkin),
+                renderedWidthPx = boardPx * closeScale,
+                renderedHeightPx = boardPx * closeScale,
             )
         }
     }
+    // The gesture handler is never restarted mid-pinch; it reads the latest values instead.
+    val gestureMin by rememberUpdatedState(minScale)
+    val gestureViewport by rememberUpdatedState(viewport)
+    val gestureSkin by rememberUpdatedState(boardSkin)
+    val gesturePan by rememberUpdatedState(transform.pan)
     var consumedHighlightKey by remember { mutableStateOf(moveEventKey) }
     var highlightedIndices by remember { mutableStateOf<Set<Int>>(emptySet()) }
     val highlightAlpha = remember { Animatable(0f) }
@@ -153,12 +159,13 @@ internal fun WordSiegePracticeBoard(
 
     val actionVfxEvents = emptyList<PurchasedBoardVfxEvent>()
 
-    fun clampClosePan(candidate: Offset): Offset = clampWordSiegeBoardPan(
+    fun clampClosePan(candidate: Offset): Offset = clampWordSiegeSkinnedPan(
         candidate,
         viewport.width.toFloat(),
         viewport.height.toFloat(),
         boardPx,
         closeScale,
+        boardSkin,
     )
 
     fun centerClose(): Offset = wordSiegeCenteredClosePan(
@@ -169,15 +176,6 @@ internal fun WordSiegePracticeBoard(
         cellSizePx = tilePx,
         scale = closeScale,
     )
-
-    /** Pinching all the way out is the whole-board view; the screen hears about it for its layout. */
-    fun reportZoom(scale: Float) {
-        val next = if (scale <= fitScale * 1.02f) WordSiegeBoardViewportMode.FIT else WordSiegeBoardViewportMode.CLOSE
-        if (next != mode) {
-            mode = next
-            onViewportModeChange(next)
-        }
-    }
 
     WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx)
     // Only the hovered cell matters, so the board recomposes when it changes, not every finger move.
@@ -198,8 +196,6 @@ internal fun WordSiegePracticeBoard(
         }
     }
 
-    // Stone Keep is the default board; a bought skin replaces it; Walnut/Black themes keep their own.
-    val boardSkin = WordSiegeBoardSkins.active
     Surface(
         modifier = modifier,
         color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frame else Color.White,
@@ -224,21 +220,21 @@ internal fun WordSiegePracticeBoard(
                 }
                 .wordSiegeMascotTouchWatcher(mascotTouches)
                 // One finger pans, two fingers pinch to zoom; no double tap.
-                .pointerInput(viewport, boardPx, minScale) {
+                .pointerInput(Unit) {
                     run {
                         detectTransformGestures { centroid, pan, zoom, _ ->
                             val oldScale = closeScale
-                            val newScale = (oldScale * zoom).coerceIn(minScale, WORD_SIEGE_PRACTICE_MAX_SCALE)
+                            val newScale = (oldScale * zoom).coerceIn(gestureMin, WORD_SIEGE_PRACTICE_MAX_SCALE)
                             val ratio = if (oldScale > 0f) newScale / oldScale else 1f
-                            val candidate = centroid + (closePan - centroid) * ratio + pan
+                            val candidate = centroid + (gesturePan - centroid) * ratio + pan
                             closeScale = newScale
-                            reportZoom(newScale)
-                            closePan = clampWordSiegeBoardPan(
+                            closePan = clampWordSiegeSkinnedPan(
                                 candidate,
-                                viewport.width.toFloat(),
-                                viewport.height.toFloat(),
+                                gestureViewport.width.toFloat(),
+                                gestureViewport.height.toFloat(),
                                 boardPx,
                                 newScale,
+                                gestureSkin,
                             )
                         }
                     }
@@ -254,7 +250,9 @@ internal fun WordSiegePracticeBoard(
                         scaleX = transform.scale
                         scaleY = transform.scale
                         transformOrigin = TransformOrigin(0f, 0f)
-                    },
+                    }
+                    // The skin's frame belongs to the board: it zooms and pans with the cells.
+                    .wordSiegeBoardFrame(boardSkin, LocalWordSiegeFrame.current),
             ) {
                 // The mascot's answer tiles pulse gold while they sit on the board, so it is clear
                 // which letters the hint placed.

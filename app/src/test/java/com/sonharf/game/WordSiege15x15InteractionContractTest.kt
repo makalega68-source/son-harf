@@ -24,7 +24,7 @@ class WordSiege15x15InteractionContractTest {
         assertTrue(source.contains(".combinedClickable("))
         assertFalse(source.contains("detectTapGestures"))
         assertFalse(source.contains("Çift dokun:"))
-        assertTrue(source.contains("clampWordSiegeBoardPan"))
+        assertTrue(source.contains("clampWordSiegeSkinnedPan"))
         assertTrue(source.contains("WordSiegeBoardSpec.CenterIndex"))
     }
 
@@ -39,7 +39,7 @@ class WordSiege15x15InteractionContractTest {
         assertTrue(source.contains("onClick = { onCell(index) }"))
         assertFalse(source.contains("onDoubleClick"))
         assertFalse(source.contains("wordSiegeBoardDoubleTap("))
-        assertTrue(source.contains(".coerceIn(minScale, WORD_SIEGE_PRACTICE_MAX_SCALE)"))
+        assertTrue(source.contains(".coerceIn(gestureMin, WORD_SIEGE_PRACTICE_MAX_SCALE)"))
         assertFalse(source.contains("Çift dokun:"))
     }
 

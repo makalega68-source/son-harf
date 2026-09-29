@@ -571,14 +571,16 @@ private fun PanSiegeBoard(
     var actionVfxMoveId by remember(gameId) { mutableStateOf<Long?>(null) }
     var highlightedIndices by remember(gameId) { mutableStateOf<Set<Int>>(emptySet()) }
     val highlightAlpha = remember(gameId) { Animatable(0f) }
-    // Two-finger pinch sets the zoom freely between "whole board" and the close view; there is no
-    // double-tap toggle any more. FIT from the parent means "start zoomed out".
+    // Two-finger pinch sets the zoom freely between "whole framed board" and the close view; there is
+    // no double-tap toggle any more. FIT from the parent means "start zoomed out".
+    // Stone Keep is the default board; a bought skin replaces it; Walnut/Black themes keep their own.
+    val boardSkin = WordSiegeBoardSkins.active
     var userScale by remember(gameId) { mutableStateOf<Float?>(null) }
-    val fitScale = remember(viewport, boardPx) {
-        wordSiegeFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx)
+    val fitScale = remember(viewport, boardPx, boardSkin) {
+        wordSiegeSkinnedFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx, boardSkin)
     }
     val maxScale = maxOf(WORD_SIEGE_ONLINE_MAX_CLOSE_SCALE * 1.15f, fitScale)
-    val closeScale = remember(viewport, boardPx, userScale, viewportMode) {
+    val closeScale = remember(viewport, boardPx, userScale, viewportMode, fitScale) {
         val start = if (viewportMode == WordSiegeBoardViewportMode.FIT) fitScale else wordSiegeOnlineCloseScale(
             viewportWidthPx = viewport.width.toFloat(),
             viewportHeightPx = viewport.height.toFloat(),
@@ -587,15 +589,14 @@ private fun PanSiegeBoard(
         (userScale ?: start).coerceIn(fitScale, maxScale)
     }
 
-    val transform by remember(viewport, boardPx, closePan, closeScale) {
+    val transform by remember(viewport, boardPx, closePan, closeScale, boardSkin) {
         derivedStateOf {
-            wordSiegeBoardTransform(
-                mode = WordSiegeBoardViewportMode.CLOSE,
-                viewportWidthPx = viewport.width.toFloat(),
-                viewportHeightPx = viewport.height.toFloat(),
-                boardWidthPx = boardPx,
-                closeScale = closeScale,
-                closePan = closePan,
+            // Pan limits include the skin's frame, so the frame can be seen and never covers cells.
+            WordSiegeBoardTransform(
+                scale = closeScale,
+                pan = clampWordSiegeSkinnedPan(closePan, viewport.width.toFloat(), viewport.height.toFloat(), boardPx, closeScale, boardSkin),
+                renderedWidthPx = boardPx * closeScale,
+                renderedHeightPx = boardPx * closeScale,
             )
         }
     }
@@ -604,12 +605,13 @@ private fun PanSiegeBoard(
     val dragHover by remember(tileDrag) { derivedStateOf { tileDrag?.hoverCell } }
     val draggedFrom = tileDrag?.fromCell
 
-    fun clampClosePan(candidate: Offset): Offset = clampWordSiegeBoardPan(
+    fun clampClosePan(candidate: Offset): Offset = clampWordSiegeSkinnedPan(
         candidate,
         viewport.width.toFloat(),
         viewport.height.toFloat(),
         boardPx,
         closeScale,
+        boardSkin,
     )
 
     fun centerCloseOn(index: Int): Offset =
@@ -622,10 +624,14 @@ private fun PanSiegeBoard(
             scale = closeScale,
         )
 
-    // The gesture handler outlives recompositions: it reads the latest scale, pan and mode.
+    // The gesture handler outlives recompositions: it reads the latest sizes, scale and pan, and is
+    // never restarted mid-pinch (restarting it was what stopped the zoom after a tiny step).
     val gestureScale by rememberUpdatedState(closeScale)
     val gesturePan by rememberUpdatedState(transform.pan)
-    val gestureMode by rememberUpdatedState(viewportMode)
+    val gestureFit by rememberUpdatedState(fitScale)
+    val gestureMax by rememberUpdatedState(maxScale)
+    val gestureViewport by rememberUpdatedState(viewport)
+    val gestureSkin by rememberUpdatedState(boardSkin)
 
     /** Centre button: back to the close view around a cell. */
     fun recenterOn(focusIndex: Int) {
@@ -639,7 +645,6 @@ private fun PanSiegeBoard(
             cellSizePx = tilePx,
             scale = target,
         )
-        onViewportModeChange(WordSiegeBoardViewportMode.CLOSE)
     }
 
     LaunchedEffect(viewport, gameId, boardPx, closeScale) {
@@ -700,8 +705,6 @@ private fun PanSiegeBoard(
         }
     }
 
-    // Stone Keep is the default board; a bought skin replaces it; Walnut/Black themes keep their own.
-    val boardSkin = WordSiegeBoardSkins.active
     Surface(
         modifier = modifier,
         color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frame else Color.White,
@@ -727,22 +730,20 @@ private fun PanSiegeBoard(
                 }
                 .wordSiegeMascotTouchWatcher(mascotTouches)
                 // One finger pans, two fingers pinch to zoom around the fingers.
-                .pointerInput(gameId, viewport, boardPx, fitScale, maxScale) {
+                .pointerInput(gameId) {
                     detectTransformGestures { centroid, pan, zoom, _ ->
                         val oldScale = gestureScale
-                        val newScale = (oldScale * zoom).coerceIn(fitScale, maxScale)
+                        val newScale = (oldScale * zoom).coerceIn(gestureFit, gestureMax)
                         val ratio = if (oldScale > 0f) newScale / oldScale else 1f
                         userScale = newScale
-                        closePan = clampWordSiegeBoardPan(
+                        closePan = clampWordSiegeSkinnedPan(
                             centroid + (gesturePan - centroid) * ratio + pan,
-                            viewport.width.toFloat(),
-                            viewport.height.toFloat(),
+                            gestureViewport.width.toFloat(),
+                            gestureViewport.height.toFloat(),
                             boardPx,
                             newScale,
+                            gestureSkin,
                         )
-                        val zoomedOut = newScale <= fitScale * 1.02f
-                        val nextMode = if (zoomedOut) WordSiegeBoardViewportMode.FIT else WordSiegeBoardViewportMode.CLOSE
-                        if (nextMode != gestureMode) onViewportModeChange(nextMode)
                     }
                 },
         ) {
@@ -756,7 +757,9 @@ private fun PanSiegeBoard(
                         scaleX = transform.scale
                         scaleY = transform.scale
                         transformOrigin = TransformOrigin(0f, 0f)
-                    },
+                    }
+                    // The skin's frame belongs to the board: it zooms and pans with the cells.
+                    .wordSiegeBoardFrame(boardSkin, LocalWordSiegeFrame.current),
             ) {
                 repeat(WordSiegeBoardSpec.Size) { row ->
                     Row {

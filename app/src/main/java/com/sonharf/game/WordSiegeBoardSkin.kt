@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -40,22 +41,24 @@ internal enum class WordSiegeBoardSkin(
     /** Field colour between cells: the plate tone itself, so no dark grid lines tire the eye. */
     val field: Color,
     val dark: Boolean,
+    /** Ground around the frame when the board is zoomed out: the frame image's own outer tone. */
+    val ground: Color,
 ) {
     STONE_KEEP(
         "board_stone_keep", R.drawable.board_frame_stone_keep, R.drawable.board_plate_stone_keep, R.drawable.store_art_board_stone_keep,
-        listOf(.085f, .085f, .09f, .088f), Color(0xFFD6C8AA), dark = false,
+        listOf(.085f, .085f, .09f, .088f), Color(0xFFD6C8AA), dark = false, ground = Color(0xFF8A7C67),
     ),
     RIVER_VALLEY(
         "board_river_valley", R.drawable.board_frame_river_valley, R.drawable.board_plate_river_valley, R.drawable.store_art_board_river_valley,
-        listOf(.09f, .05f, .09f, .06f), Color(0xFFCFCCBE), dark = false,
+        listOf(.09f, .05f, .09f, .06f), Color(0xFFCFCCBE), dark = false, ground = Color(0xFF55621B),
     ),
     FROST_CITADEL(
         "board_frost_citadel", R.drawable.board_frame_frost_citadel, R.drawable.board_plate_frost_citadel, R.drawable.store_art_board_frost_citadel,
-        listOf(.045f, .05f, .045f, .06f), Color(0xFFD5E0EC), dark = false,
+        listOf(.045f, .05f, .045f, .06f), Color(0xFFD5E0EC), dark = false, ground = Color(0xFF99A6B9),
     ),
     OBSIDIAN(
         "board_obsidian", R.drawable.board_frame_obsidian, R.drawable.board_plate_obsidian, R.drawable.store_art_board_obsidian,
-        listOf(.05f, .055f, .05f, .055f), Color(0xFF2A2F37), dark = true,
+        listOf(.05f, .055f, .05f, .055f), Color(0xFF2A2F37), dark = true, ground = Color(0xFF171919),
     ),
     ;
 
@@ -99,9 +102,46 @@ internal object WordSiegeBoardSkins {
 /** Stone texture for empty cells, provided once per board so cells do not decode it 225 times. */
 internal val LocalWordSiegePlate = staticCompositionLocalOf<ImageBitmap?> { null }
 
+/** The skin's frame image, provided once per board and drawn around the 15x15 grid. */
+internal val LocalWordSiegeFrame = staticCompositionLocalOf<ImageBitmap?> { null }
+
 /**
- * Framed board: the skin's frame fills the whole area and the playing viewport sits inside its
- * border band. Without a skin the content is drawn unchanged.
+ * Size of the board plus its frame, in the board's own pixels. The grid keeps its origin at (0,0);
+ * the frame extends [left]/[top] before it and to [width]/[height] in total.
+ */
+internal data class WordSiegeSkinExtent(val width: Float, val height: Float, val left: Float, val top: Float)
+
+internal fun WordSiegeBoardSkin?.extent(boardPx: Float): WordSiegeSkinExtent {
+    if (this == null) return WordSiegeSkinExtent(boardPx, boardPx, 0f, 0f)
+    val width = boardPx / (1f - inset[0] - inset[2])
+    val height = boardPx / (1f - inset[1] - inset[3])
+    return WordSiegeSkinExtent(width, height, width * inset[0], height * inset[1])
+}
+
+/** Zoomed all the way out, the whole framed board fits the screen. */
+internal fun wordSiegeSkinnedFitScale(viewportWidthPx: Float, viewportHeightPx: Float, boardPx: Float, skin: WordSiegeBoardSkin?): Float {
+    val e = skin.extent(boardPx)
+    return wordSiegeFitScale(viewportWidthPx, viewportHeightPx, e.width, e.height)
+}
+
+/** Pan limits for the framed board: the frame may be scrolled into view, never past it. */
+internal fun clampWordSiegeSkinnedPan(
+    candidate: Offset,
+    viewportWidthPx: Float,
+    viewportHeightPx: Float,
+    boardPx: Float,
+    scale: Float,
+    skin: WordSiegeBoardSkin?,
+): Offset {
+    if (skin == null) return clampWordSiegeBoardPan(candidate, viewportWidthPx, viewportHeightPx, boardPx, scale)
+    val e = skin.extent(boardPx)
+    val shift = Offset(e.left * scale, e.top * scale)
+    return clampWordSiegeBoardPan(candidate - shift, viewportWidthPx, viewportHeightPx, e.width, scale, e.height) + shift
+}
+
+/**
+ * Board area with a skin: the viewport is filled with the ground tone; the frame itself is drawn by
+ * the board layer ([wordSiegeBoardFrame]) so it zooms and pans together with the cells.
  */
 @Composable
 internal fun WordSiegeSkinnedBoard(
@@ -114,27 +154,30 @@ internal fun WordSiegeSkinnedBoard(
         return
     }
     val plate = ImageBitmap.imageResource(skin.plateRes)
-    BoxWithConstraints(modifier) {
-        Image(
-            painter = painterResource(skin.frameRes),
-            contentDescription = null,
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier.matchParentSize(),
-        )
-        val viewport = Modifier
-            .fillMaxSize()
-            .padding(
-                start = maxWidth * skin.inset[0],
-                top = maxHeight * skin.inset[1],
-                end = maxWidth * skin.inset[2],
-                bottom = maxHeight * skin.inset[3],
-            )
-            .background(skin.field)
-        CompositionLocalProvider(LocalWordSiegePlate provides plate) {
-            content(viewport)
+    val frame = ImageBitmap.imageResource(skin.frameRes)
+    Box(modifier.background(skin.ground)) {
+        CompositionLocalProvider(LocalWordSiegePlate provides plate, LocalWordSiegeFrame provides frame) {
+            content(Modifier.fillMaxSize())
         }
     }
 }
+
+/**
+ * Drawn on the transformed board layer: the frame around the grid, then the plate-tone field under
+ * the cells so the frame picture's own tiles never show through.
+ */
+internal fun Modifier.wordSiegeBoardFrame(skin: WordSiegeBoardSkin?, frame: ImageBitmap?): Modifier =
+    if (skin == null || frame == null) this else drawBehind {
+        val e = skin.extent(size.width)
+        drawImage(
+            image = frame,
+            srcOffset = IntOffset.Zero,
+            srcSize = IntSize(frame.width, frame.height),
+            dstOffset = IntOffset(-e.left.toInt(), -e.top.toInt()),
+            dstSize = IntSize(e.width.toInt(), e.height.toInt()),
+        )
+        drawRect(skin.field, size = size)
+    }
 
 /** Draws the skin's stone texture across an empty cell (after the cell is clipped to its shape). */
 internal fun Modifier.wordSiegePlateTexture(plate: ImageBitmap?): Modifier =

@@ -35,8 +35,8 @@ class WordSiegePracticeVisualContractTest {
     @Test fun visualChangePreservesViewportVfxAndInteractionContracts() {
         val text = source()
         assertTrue(text.contains("PurchasedBoardActionVfxOverlay("))
-        assertTrue(text.contains("WordSiegeBoardViewportMode.CLOSE"))
-        assertTrue(text.contains("wordSiegeBoardTransform("))
+        assertTrue(text.contains("clampWordSiegeSkinnedPan("))
+        assertTrue(text.contains("WordSiegeBoardTransform("))
         assertTrue(text.contains("detectTransformGestures"))
         assertFalse(text.contains("WordSiegeBoardTapAction.TOGGLE_VIEWPORT"))
         assertTrue(text.contains("WordSiegeBoardTapAction.PLACE"))

@@ -22,7 +22,7 @@ class WordSiegePracticePlacementRegressionTest {
     fun practiceBoardCanPanDuringPlayerTurnAndKeepsCellTapPlacement() {
         val board = source("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
-        assertTrue(board.contains(".pointerInput(viewport, boardPx, minScale)"))
+        assertTrue(board.contains(".pointerInput(Unit)"))
         assertTrue(board.contains("detectTransformGestures"))
         assertFalse(board.contains("WordSiegeBoardViewportMode.CLOSE && !enabled"))
         assertTrue(board.contains("detectTransformGestures"))
