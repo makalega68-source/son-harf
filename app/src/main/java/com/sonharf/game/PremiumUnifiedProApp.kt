@@ -197,7 +197,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 }
             },
         ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding).wordSiegeMascotTouchWatcher(shellMascotTouches)) {
+            // consumeWindowInsets: the Scaffold padding already contains the status bar, so screens that
+            // add statusBarsPadding() themselves (the game arenas) no longer get a second, empty band on top.
+            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).wordSiegeMascotTouchWatcher(shellMascotTouches)) {
                 if (!SonHarfTheme.IsDark && !SonHarfCosmetics.darkArenaTheme && !SonHarfCosmetics.walnutTheme) SonHarfLeafBackdrop(Modifier.matchParentSize())
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
