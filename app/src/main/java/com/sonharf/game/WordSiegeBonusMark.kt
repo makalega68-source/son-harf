@@ -17,7 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -62,6 +65,12 @@ internal object WordSiegeBonusStyle {
     }
 }
 
+/** Text without the font's extra top/bottom padding, so lines sit on the true centre of the mark. */
+private val BonusMarkText = TextStyle(
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+)
+
 @Composable
 internal fun WordSiegeBonusMark(
     code: String,
@@ -81,25 +90,29 @@ internal fun WordSiegeBonusMark(
     val shape = WordSiegeBonusStyle.shape(code)
     // The seal keeps its word short inside the cell ("Mührü" / "Seal"); the full name is in the info card.
     val words = label.split("\n").let { if (seal) it.takeLast(1) else it }
+    // Round marks (word surges, the seal) keep their text inside the circle's inscribed square.
+    val round = code == "2K" || code == "3K" || seal
     Box(
         Modifier.fillMaxSize()
             .padding(if (overview) 5.dp else 3.5.dp)
             .clip(shape)
             .background(ink.copy(alpha = if (seal) .10f else .08f))
-            .border(if (strong) 1.6.dp else 1.dp, ink.copy(alpha = if (strong) .85f else .55f), shape),
+            .border(if (strong) 1.6.dp else 1.dp, ink.copy(alpha = if (strong) .85f else .55f), shape)
+            .padding(if (round) 5.dp else 3.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (overview) {
-            Text(glyph, color = ink, fontSize = glyphSize, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+            Text(glyph, style = BonusMarkText, color = ink, fontSize = glyphSize, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
         } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Text(glyph, color = ink, fontSize = 12.sp, lineHeight = 12.sp, fontWeight = FontWeight.Black)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically)) {
+                Text(glyph, style = BonusMarkText, color = ink, fontSize = 11.sp, lineHeight = 11.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                 words.forEach { word ->
                     Text(
                         word,
+                        style = BonusMarkText,
                         color = ink,
-                        fontSize = 8.sp,
-                        lineHeight = 9.sp,
+                        fontSize = if (round) 7.5.sp else 8.sp,
+                        lineHeight = if (round) 8.5.sp else 9.sp,
                         maxLines = 1,
                         softWrap = false,
                         fontWeight = FontWeight.Bold,

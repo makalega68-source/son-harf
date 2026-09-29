@@ -251,15 +251,10 @@ fun ProfileExperienceV2Screen() {
                         Modifier.fillMaxWidth().padding(13.dp),
                         verticalArrangement = Arrangement.spacedBy(9.dp),
                     ) {
+                        // The longest word gets its own full-width band: a long word never fits a third of a row.
+                        LongestWordRecordV2(r.longestWord, r.longestWordLength)
+
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            RecordTileV2(
-                                "🔤",
-                                if (r.longestWord.isBlank()) "—" else r.longestWord.uppercase(),
-                                if (r.longestWordLength > 0)
-                                    sh("${r.longestWordLength} harf", "${r.longestWordLength} letters")
-                                else sh("Uzun kelime", "Longest word"),
-                                Modifier.weight(1f),
-                            )
                             RecordTileV2(
                                 "🔥",
                                 r.bestStreak.toString(),
@@ -272,15 +267,15 @@ fun ProfileExperienceV2Screen() {
                                 sh("En büyük fark", "Biggest margin"),
                                 Modifier.weight(1f),
                             )
-                        }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                             RecordTileV2(
                                 "⚔",
                                 r.bestClassicScore.toString(),
                                 sh("Son Harf skor", "Son Harf score"),
                                 Modifier.weight(1f),
                             )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                             RecordTileV2(
                                 "⚡",
                                 r.bestArenaScore.toString(),
@@ -606,6 +601,54 @@ private fun ProfileMetricV2(value: String, label: String, modifier: Modifier) {
         Column(Modifier.padding(vertical = 12.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, fontSize = 21.sp, fontWeight = FontWeight.Black)
             Text(label, color = SonHarfMuted, fontSize = 13.sp, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun LongestWordRecordV2(word: String, length: Int) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(15.dp),
+        color = SonHarfSurface2,
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("🔤", fontSize = 22.sp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    sh("EN UZUN KELİME", "LONGEST WORD"),
+                    color = SonHarfMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    if (word.isBlank()) "—" else word.uppercase(),
+                    fontSize = when {
+                        word.length > 14 -> 16.sp
+                        word.length > 10 -> 19.sp
+                        else -> 22.sp
+                    },
+                    fontWeight = FontWeight.Black,
+                    softWrap = true,
+                    maxLines = 2,
+                )
+            }
+            if (length > 0) {
+                Surface(shape = RoundedCornerShape(10.dp), color = SonHarfGold.copy(alpha = .14f)) {
+                    Text(
+                        sh("$length harf", "$length letters"),
+                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        color = SonHarfText,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                    )
+                }
+            }
         }
     }
 }

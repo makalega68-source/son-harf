@@ -379,8 +379,10 @@ internal fun MainRetentionScreen(
             item {
                 MainSectionTitle(sh("KİŞİSEL REKORLAR", "PERSONAL RECORDS"))
                 Spacer(Modifier.height(8.dp))
+                // The longest word gets its own full-width card: a long word never fits a third of a row.
+                MainMetricCard(r.longestWord.ifBlank { "—" }.uppercase(), sh("En uzun kelime", "Longest word"), Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MainMetricCard(r.longestWord.ifBlank { "—" }.uppercase(), sh("En uzun kelime", "Longest word"), Modifier.weight(1f))
                     MainMetricCard(r.bestClassicScore.toString(), sh("En iyi skor", "Best score"), Modifier.weight(1f))
                     MainMetricCard(r.realPvpMatches.toString(), sh("Gerçek PvP", "Real PvP"), Modifier.weight(1f))
                 }
