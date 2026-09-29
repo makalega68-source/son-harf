@@ -37,7 +37,7 @@ class WordSiegePracticeVisualContractTest {
         assertTrue(text.contains("PurchasedBoardActionVfxOverlay("))
         assertTrue(text.contains("clampWordSiegeSkinnedPan("))
         assertTrue(text.contains("WordSiegeBoardTransform("))
-        assertTrue(text.contains("detectTransformGestures"))
+        assertTrue(text.contains("detectWordSiegeBoardGestures"))
         assertFalse(text.contains("WordSiegeBoardTapAction.TOGGLE_VIEWPORT"))
         assertTrue(text.contains("WordSiegeBoardTapAction.PLACE"))
     }

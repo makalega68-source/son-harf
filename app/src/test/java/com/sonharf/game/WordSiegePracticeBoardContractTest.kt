@@ -13,7 +13,7 @@ class WordSiegePracticeBoardContractTest {
 
         assertTrue(board.contains("PracticeSiegeCellSize = 52.dp"))
         assertTrue(board.contains("WordSiegeBoardSpec.Size"))
-        assertTrue(board.contains("detectTransformGestures"))
+        assertTrue(board.contains("detectWordSiegeBoardGestures"))
         assertTrue(board.contains("combinedClickable"))
         assertFalse(board.contains("WordSiegeBoardTapAction.TOGGLE_VIEWPORT"))
         assertFalse(board.contains("boardIndexAt"))

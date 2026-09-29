@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -731,7 +730,7 @@ private fun PanSiegeBoard(
                 .wordSiegeMascotTouchWatcher(mascotTouches)
                 // One finger pans, two fingers pinch to zoom around the fingers.
                 .pointerInput(gameId) {
-                    detectTransformGestures { centroid, pan, zoom, _ ->
+                    detectWordSiegeBoardGestures { centroid, pan, zoom ->
                         val oldScale = gestureScale
                         val newScale = (oldScale * zoom).coerceIn(gestureFit, gestureMax)
                         val ratio = if (oldScale > 0f) newScale / oldScale else 1f

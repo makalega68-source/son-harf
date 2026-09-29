@@ -23,9 +23,9 @@ class WordSiegePracticePlacementRegressionTest {
         val board = source("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
         assertTrue(board.contains(".pointerInput(Unit)"))
-        assertTrue(board.contains("detectTransformGestures"))
+        assertTrue(board.contains("detectWordSiegeBoardGestures"))
         assertFalse(board.contains("WordSiegeBoardViewportMode.CLOSE && !enabled"))
-        assertTrue(board.contains("detectTransformGestures"))
+        assertTrue(board.contains("detectWordSiegeBoardGestures"))
         assertTrue(board.contains("combinedClickable("))
         assertTrue(board.contains("WordSiegeBoardTapAction.PLACE"))
     }

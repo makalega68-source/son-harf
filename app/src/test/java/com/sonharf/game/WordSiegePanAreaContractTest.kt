@@ -15,7 +15,7 @@ class WordSiegePanAreaContractTest {
         assertTrue(experience.contains("WordSiegePanMatch("))
         assertTrue(pan.contains("PanSiegeCellSize = 52.dp"))
         assertTrue(pan.contains("WordSiegeBoardSpec.Size"))
-        assertTrue(pan.contains("detectTransformGestures"))
+        assertTrue(pan.contains("detectWordSiegeBoardGestures"))
         assertTrue(pan.contains("combinedClickable"))
         assertFalse(pan.contains("onDoubleClick"))
         assertTrue(pan.contains("wordSiegeOnlineCloseScale"))

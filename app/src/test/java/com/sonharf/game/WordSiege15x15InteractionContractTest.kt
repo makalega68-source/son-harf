@@ -19,7 +19,7 @@ class WordSiege15x15InteractionContractTest {
         // No double tap on the board: single taps place at once, zoom is a two-finger pinch.
         assertFalse(source.contains("onDoubleClick"))
         assertFalse(source.contains("wordSiegeBoardDoubleTap("))
-        assertTrue(source.contains("detectTransformGestures"))
+        assertTrue(source.contains("detectWordSiegeBoardGestures"))
         assertTrue(source.contains("fun recenterOn(focusIndex: Int)"))
         assertTrue(source.contains(".combinedClickable("))
         assertFalse(source.contains("detectTapGestures"))

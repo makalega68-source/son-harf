@@ -1,6 +1,17 @@
 package com.sonharf.game
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.ui.input.pointer.positionChange
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlin.math.floor
 
 /**
@@ -228,4 +239,34 @@ internal fun wordSiegeBoardIndexAt(
     val column = floor(boardX / cellSizePx).toInt()
     val row = floor(boardY / cellSizePx).toInt()
     return WordSiegeBoardSpec.index(row, column)
+}
+
+/**
+ * Board gestures: one finger pans (after the touch slop, so taps and tile drags still reach the
+ * cells), two fingers pinch-zoom and pan. The pinch is read before the cells see the touch, because
+ * a cell takes the second finger's press for itself, which used to cancel the pinch mid-way and
+ * left the board stuck zoomed in.
+ */
+internal suspend fun PointerInputScope.detectWordSiegeBoardGestures(
+    onTransform: (centroid: Offset, pan: Offset, zoom: Float) -> Unit,
+) = coroutineScope {
+    launch { detectTransformGestures { centroid, pan, zoom, _ -> onTransform(centroid, pan, zoom) } }
+    launch {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                if (event.changes.none { it.pressed }) break
+                if (event.changes.count { it.pressed } >= 2) {
+                    val zoom = event.calculateZoom()
+                    val pan = event.calculatePan()
+                    if (zoom != 1f || pan != Offset.Zero) {
+                        onTransform(event.calculateCentroid(useCurrent = true), pan, zoom)
+                        // Taken by the pinch: the cells under the fingers must not tap or drag.
+                        event.changes.forEach { if (it.positionChange() != Offset.Zero) it.consume() }
+                    }
+                }
+            }
+        }
+    }
 }

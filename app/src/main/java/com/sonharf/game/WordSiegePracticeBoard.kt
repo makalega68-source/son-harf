@@ -10,7 +10,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -222,7 +221,7 @@ internal fun WordSiegePracticeBoard(
                 // One finger pans, two fingers pinch to zoom; no double tap.
                 .pointerInput(Unit) {
                     run {
-                        detectTransformGestures { centroid, pan, zoom, _ ->
+                        detectWordSiegeBoardGestures { centroid, pan, zoom ->
                             val oldScale = closeScale
                             val newScale = (oldScale * zoom).coerceIn(gestureMin, WORD_SIEGE_PRACTICE_MAX_SCALE)
                             val ratio = if (oldScale > 0f) newScale / oldScale else 1f

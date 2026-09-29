@@ -151,7 +151,8 @@ internal fun WordSiegeScoreCard(
                         size = 52.dp, accent = accent, visible = avatarVisible,
                         frameId = frameId,
                     )
-                    if (leading) WordSiegeLeaderBadge(Modifier.align(Alignment.TopCenter).offset(y = (-16).dp).rotate(-12f))
+                    // The crown sits straight and centred on top of the photo.
+                    if (leading) WordSiegeLeaderBadge(Modifier.align(Alignment.TopCenter).offset(y = (-19).dp))
                 }
                 Spacer(Modifier.width(6.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
