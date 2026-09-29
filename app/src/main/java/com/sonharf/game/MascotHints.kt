@@ -17,6 +17,17 @@ internal object MascotHints {
     /** Mascot advantage: owning a mascot gives three free hints every match; others buy them. */
     val freeHints: Int get() = if (WordSiegeMascotOwnership.hasAny) HINTS_PER_MATCH else 0
 
+    /**
+     * Free hints left in a match after [used] of them. Computed from hints used (not a count fixed
+     * at match start), so mascot ownership that loads mid-match still grants its free hints.
+     * Against a real opponent a hint is only a strategy tip (fair play), so every player gets the
+     * tips for free and banked or bought hints are never spent on them.
+     */
+    fun freeHintsLeft(realOpponent: Boolean, used: Int, ownsMascot: Boolean = WordSiegeMascotOwnership.hasAny): Int {
+        val allowance = if (realOpponent || ownsMascot) HINTS_PER_MATCH else 0
+        return (allowance - used).coerceAtLeast(0)
+    }
+
     @Volatile private var commonTr: Set<String>? = null
 
     private fun common(context: Context, language: String): Set<String> {

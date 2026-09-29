@@ -133,6 +133,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         PremiumDestination.COMPETE,
         PremiumDestination.PROFILE,
     )
+    var incomingSocialCount by remember { mutableIntStateOf(0) }
+    LaunchedEffect(destination) { if (destination == PremiumDestination.SOCIAL) incomingSocialCount = 0 }
     val scheme = if (SonHarfTheme.IsDark || SonHarfCosmetics.darkArenaTheme) {
         darkColorScheme(
             primary = SonHarfTheme.Primary,
@@ -190,6 +192,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onSocial = { destination = PremiumDestination.SOCIAL },
                         onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
+                        socialBadge = incomingSocialCount,
                     )
                 }
             },
@@ -296,6 +299,15 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         stageY = .5f,
                     )
                 }
+                // Friend requests and game invitations are announced on every main page,
+                // not only inside the Friends page, so they never wait unseen.
+                IncomingSocialWatcher(
+                    backend = backend,
+                    enabled = topLevel && destination != PremiumDestination.SOCIAL,
+                    onCount = { incomingSocialCount = it },
+                    onOpen = { destination = PremiumDestination.SOCIAL },
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
             }
         }
     }
@@ -532,6 +544,7 @@ private fun PremiumBottomBar(
     onSocial: () -> Unit,
     onCompete: () -> Unit,
     onProfile: () -> Unit,
+    socialBadge: Int = 0,
 ) {
     val items = listOf(
         Triple(PremiumDestination.HOME, R.drawable.hf_ic_home, sh("Ana Sayfa", "Home")) to onHome,
@@ -552,12 +565,29 @@ private fun PremiumBottomBar(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Icon(
-                            painterResource(item.second),
-                            null,
-                            tint = if (selected) Hf.Green else Hf.Text.copy(alpha = .78f),
-                            modifier = Modifier.size(28.dp),
-                        )
+                        Box {
+                            Icon(
+                                painterResource(item.second),
+                                null,
+                                tint = if (selected) Hf.Green else Hf.Text.copy(alpha = .78f),
+                                modifier = Modifier.size(28.dp),
+                            )
+                            if (item.first == PremiumDestination.SOCIAL && socialBadge > 0) {
+                                Surface(
+                                    shape = RoundedCornerShape(99.dp),
+                                    color = Color(0xFFD64541),
+                                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 8.dp, y = (-4).dp),
+                                ) {
+                                    Text(
+                                        if (socialBadge > 9) "9+" else socialBadge.toString(),
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black,
+                                    )
+                                }
+                            }
+                        }
                         Spacer(Modifier.height(3.dp))
                         Text(
                             item.third,

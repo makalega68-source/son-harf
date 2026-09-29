@@ -145,6 +145,69 @@ internal fun premierRemainingReconnectSecondsFromMillis(remainingMillis: Long): 
     return ((remainingMillis + 999L) / 1000L).coerceIn(1L, PREMIER_RECONNECT_SECONDS.toLong()).toInt()
 }
 
+/** Two server timestamps name the same moment (formats may differ); unparseable ones compare as text. */
+private fun premierSameInstant(a: String?, b: String?): Boolean {
+    if (a == b) return true
+    val left = parseServerInstant(a)
+    val right = parseServerInstant(b)
+    return left != null && left == right
+}
+
+/**
+ * True when [after] moved the turn on from [before]. An RPC that answers with the room unchanged
+ * (e.g. `claim_turn_timeout` while the server clock still has time left) is not progress: taking
+ * it as progress left the countdown frozen on its last second.
+ */
+internal fun premierTurnStateChanged(before: GameRoomDto, after: GameRoomDto): Boolean =
+    before.id != after.id ||
+        !premierSameInstant(before.turnDeadline, after.turnDeadline) ||
+        before.currentPlayerId != after.currentPlayerId ||
+        before.status != after.status ||
+        before.roundNo != after.roundNo ||
+        before.validWordCount != after.validWordCount ||
+        before.botTurn != after.botTurn ||
+        before.winnerId != after.winnerId ||
+        before.disconnectedPlayerId != after.disconnectedPlayerId ||
+        !premierSameInstant(before.reconnectDeadline, after.reconnectDeadline)
+
+/** Identifies one room/word-list disagreement, so giving up on it never unlocks a later one. */
+private fun premierSyncGateKey(room: GameRoomDto, words: List<GameWordDto>): String =
+    "${room.id}:${room.validWordCount}:${words.size}"
+
+/** A live room only moves forward: to sudden death, then to a result. */
+private fun premierStatusRank(room: GameRoomDto): Int = when {
+    room.isPremierFinished() -> 2
+    room.status == "sudden_death" -> 1
+    else -> 0
+}
+
+/**
+ * True when [candidate] is an older snapshot of the same room than [current]. The room poll, the
+ * word poll and the screen's own RPC answers land out of order; accepting an older room briefly
+ * brought back the previous turn (timer restarted, keyboard re-enabled).
+ *
+ * Ordered by: result/sudden death, round, accepted words (words.size always equals
+ * valid_word_count), then, for a missed turn in the same round, the later turn deadline.
+ */
+internal fun premierRoomSnapshotIsOlder(candidate: GameRoomDto, current: GameRoomDto): Boolean {
+    if (candidate.id != current.id) return false
+    val rank = premierStatusRank(candidate).compareTo(premierStatusRank(current))
+    if (rank != 0) return rank < 0
+    if (current.isPremierFinished()) return false
+    if (candidate.roundNo != current.roundNo) return candidate.roundNo < current.roundNo
+    if (candidate.validWordCount != current.validWordCount) return candidate.validWordCount < current.validWordCount
+    // Same round and word count: only a missed turn (timeout, rejected word) moves the turn.
+    if (candidate.currentPlayerId == current.currentPlayerId && candidate.botTurn == current.botTurn) return false
+    val candidateDeadline = parseServerInstant(candidate.turnDeadline)
+    val currentDeadline = parseServerInstant(current.turnDeadline)
+    if (candidateDeadline != null && currentDeadline != null) return candidateDeadline.isBefore(currentDeadline)
+    // Against the AI a missed human turn hands the move to the AI (no deadline). Going back to the
+    // human without a new word only happens when the AI itself missed.
+    if (current.isBot && current.botTurn && !candidate.botTurn) return candidate.lastEvent != "bot_missed"
+    if (current.isBot && !current.botTurn && candidate.botTurn) return current.lastEvent == "bot_missed"
+    return false
+}
+
 @Composable
 fun PremierWordDuelScreen() {
     if (!SupabaseProvider.configured) {
@@ -189,6 +252,23 @@ fun PremierWordDuelScreen() {
             .getOrElse { backend.ensurePlayer(pt(language, "Oyuncu", "Player")) }
             .also { me = it }
     }
+
+    // Every room update of the running match goes through here, so an older snapshot (a slow
+    // poll landing after a newer RPC answer) can never bring back the previous turn.
+    fun acceptRoom(next: GameRoomDto): Boolean {
+        val current = room
+        if (current != null && premierRoomSnapshotIsOlder(next, current)) return false
+        room = next
+        return true
+    }
+
+    // The word list only grows within a match; an older poll must not shrink it.
+    fun acceptWords(next: List<GameWordDto>) {
+        val current = words
+        if (current.isNotEmpty() && next.size < current.size && current.first().roomId == room?.id) return
+        words = next
+    }
+    var syncGateOpenFor by remember { mutableStateOf<String?>(null) }
 
     suspend fun adoptRoom(next: GameRoomDto, cinematic: Boolean) {
         val previousRoomId = room?.id
@@ -279,14 +359,13 @@ fun PremierWordDuelScreen() {
             backend.observeRoom(active.id)
                 .catch { notice = pt(language, "Bağlantı yenileniyor…", "Reconnecting…") }
                 .collect { next ->
-                    room = next
-                    if (next.isPremierFinished()) stage = PremierStage.Finished
+                    if (acceptRoom(next) && next.isPremierFinished()) stage = PremierStage.Finished
                 }
         }
         launch {
             backend.observeWords(active.id)
                 .catch { }
-                .collect { words = it }
+                .collect { acceptWords(it) }
         }
         if (!active.isBot) launch {
             backend.observeChat(active.id)
@@ -301,6 +380,20 @@ fun PremierWordDuelScreen() {
                     }
                 }
         }
+    }
+
+    // The room and the word list are polled separately. When they disagree for a moment, fetch
+    // both again; if fresh copies still disagree, stop gating so the player is never locked out.
+    LaunchedEffect(stage, room?.id, room?.validWordCount, words.size) {
+        val active = room ?: return@LaunchedEffect
+        if (stage != PremierStage.Playing || words.size == active.validWordCount) return@LaunchedEffect
+        delay(900)
+        runCatching { backend.getWords(active.id) }.getOrNull()?.let { acceptWords(it) }
+        if (words.size == room?.validWordCount) return@LaunchedEffect
+        runCatching { backend.getRoom(active.id) }.getOrNull()?.let { acceptRoom(it) }
+        delay(1_500)
+        val latest = room ?: return@LaunchedEffect
+        if (words.size != latest.validWordCount) syncGateOpenFor = premierSyncGateKey(latest, words)
     }
 
     LaunchedEffect(floatingMessage?.id) {
@@ -372,13 +465,13 @@ fun PremierWordDuelScreen() {
                         synced.status !in setOf("playing", "final", "sudden_death")
                 )
             ) {
-                room = synced
+                acceptRoom(synced)
                 notice = ""
                 return@LaunchedEffect
             }
             val advanced = runCatching { backend.botTakeTurn(active.id) }.getOrNull()
             if (advanced != null) {
-                room = advanced
+                acceptRoom(advanced)
                 notice = ""
                 return@LaunchedEffect
             }
@@ -396,7 +489,7 @@ fun PremierWordDuelScreen() {
             active.status in setOf("playing", "final", "sudden_death")
         ) {
             runCatching { backend.activatePremierOpeningTurn(active.id) }.getOrNull()?.let { opened ->
-                if (room?.id == opened.id) room = opened
+                if (room?.id == opened.id) acceptRoom(opened)
             }
         }
     }
@@ -428,36 +521,52 @@ fun PremierWordDuelScreen() {
             active.disconnectedPlayerId != null &&
             active.disconnectedPlayerId == active.currentPlayerId
         ) {
-            active.reconnectDeadline?.let { runCatching { Instant.parse(it) }.getOrNull() }
+            com.sonharf.game.data.parseServerInstant(active.reconnectDeadline)
         } else {
             null
         }
 
         if (reconnectDeadline != null) {
             // The database clock is authoritative; phone wall-clock drift must not shorten reconnect grace.
-            val requestStartedAt = SystemClock.elapsedRealtime()
-            val reconnectClock = runCatching { backend.getPremierReconnectClock(active.id) }.getOrNull()
-            val requestFinishedAt = SystemClock.elapsedRealtime()
-            val halfRoundTripMs = ((requestFinishedAt - requestStartedAt) / 2L).coerceIn(0L, 750L)
-            val initialReconnectMs = if (reconnectClock != null) {
-                (reconnectClock.remainingMs - halfRoundTripMs).coerceAtLeast(0L)
-            } else {
-                PREMIER_RECONNECT_SECONDS * 1000L
+            // The countdown ticks at once from the local estimate and is re-anchored when the server answers,
+            // so a slow request never stalls the visible seconds.
+            var initialReconnectMs = Duration.between(Instant.now(), reconnectDeadline).toMillis()
+                .coerceIn(1_000L, PREMIER_RECONNECT_SECONDS * 1000L)
+            var reconnectAnchor = SystemClock.elapsedRealtime()
+            var reconnectClockResolved = false
+            fun syncReconnectClock() {
+                reconnectClockResolved = false
+                launch {
+                    val requestStartedAt = SystemClock.elapsedRealtime()
+                    val reconnectClock = runCatching { backend.getPremierReconnectClock(active.id) }.getOrNull()
+                    val requestFinishedAt = SystemClock.elapsedRealtime()
+                    if (reconnectClock != null) {
+                        val halfRoundTripMs = ((requestFinishedAt - requestStartedAt) / 2L).coerceIn(0L, 750L)
+                        initialReconnectMs = (reconnectClock.remainingMs - halfRoundTripMs).coerceAtLeast(0L)
+                        reconnectAnchor = SystemClock.elapsedRealtime()
+                    }
+                    reconnectClockResolved = true
+                }
             }
-            val reconnectAnchor = SystemClock.elapsedRealtime()
+            syncReconnectClock()
+            var reconnectAttempts = 0
             while (true) {
                 val elapsedMs = SystemClock.elapsedRealtime() - reconnectAnchor
                 val remaining = premierRemainingReconnectSecondsFromMillis(initialReconnectMs - elapsedMs)
-                if (remaining > 0) {
-                    turnSeconds = remaining
+                if (remaining > 0 || !reconnectClockResolved) {
+                    turnSeconds = remaining.coerceAtLeast(1)
                     delay(250)
                     continue
                 }
 
                 turnSeconds = 1
+                // Only a changed room is progress; an unchanged answer means the server still sees time left.
                 val resolved = runCatching { backend.heartbeatRoom(active.id) }.getOrNull()
+                    ?.takeIf { premierTurnStateChanged(active, it) }
+                    ?: runCatching { backend.claimTurnTimeout(active.id) }.getOrNull()
+                        ?.takeIf { premierTurnStateChanged(active, it) }
                 if (resolved != null) {
-                    room = resolved
+                    acceptRoom(resolved)
                     notice = if (resolved.isPremierFinished()) {
                         pt(language, "Yeniden bağlanma süresi doldu. Maç sonuçlandı.", "Reconnect window expired. Match finished.")
                     } else {
@@ -467,44 +576,58 @@ fun PremierWordDuelScreen() {
                     return@LaunchedEffect
                 }
 
+                reconnectAttempts += 1
                 notice = pt(language, "Yeniden bağlanma durumu eşitleniyor…", "Syncing reconnect status…")
-                delay(1000)
+                // Re-anchor to the server clock (bounded back-off) and keep counting from what it reports.
+                syncReconnectClock()
+                delay(if (reconnectAttempts < 8) 600L else 2_000L)
             }
         }
 
-        val deadline = active.turnDeadline?.let { runCatching { Instant.parse(it) }.getOrNull() }
+        val deadline = com.sonharf.game.data.parseServerInstant(active.turnDeadline)
         if (deadline == null) {
             turnSeconds = PREMIER_TURN_SECONDS
             runCatching { backend.getRoom(active.id) }.getOrNull()?.let { synced ->
-                if (synced != active) room = synced
+                if (synced != active) acceptRoom(synced)
             }
             return@LaunchedEffect
         }
 
         // Anchor the visible countdown to the database clock rather than the phone wall clock.
-        // Phone clock drift must not shorten the authoritative 15-second turn.
-        turnSeconds = PREMIER_TURN_SECONDS
-        val requestStartedAt = SystemClock.elapsedRealtime()
-        val serverClock = runCatching { fetchPremierTurnClock(active.id) }.getOrNull()
-        val requestFinishedAt = SystemClock.elapsedRealtime()
-        val halfRoundTripMs = ((requestFinishedAt - requestStartedAt) / 2L).coerceIn(0L, 750L)
-        val fallbackRemainingMs = Duration.between(Instant.now(), deadline).toMillis().coerceAtLeast(0L)
-        val initialRemainingMs = if (serverClock != null) {
-            (serverClock.remainingMs - halfRoundTripMs).coerceAtLeast(0L)
-        } else {
-            fallbackRemainingMs
+        // Phone clock drift must not shorten the authoritative 15-second turn. The seconds tick at
+        // once from the local estimate; the server's remaining_ms re-anchors them when it answers,
+        // so neither a slow request nor clock skew can stall or freeze the countdown.
+        var initialRemainingMs = Duration.between(Instant.now(), deadline).toMillis()
+            .coerceIn(1_000L, (PREMIER_TURN_SECONDS + PREMIER_ROUND_PREP_SECONDS) * 1000L)
+        var countdownAnchor = SystemClock.elapsedRealtime()
+        var serverClockResolved = false
+        fun syncTurnClock() {
+            serverClockResolved = false
+            launch {
+                val requestStartedAt = SystemClock.elapsedRealtime()
+                val serverClock = runCatching { fetchPremierTurnClock(active.id) }.getOrNull()
+                val requestFinishedAt = SystemClock.elapsedRealtime()
+                if (serverClock != null) {
+                    val halfRoundTripMs = ((requestFinishedAt - requestStartedAt) / 2L).coerceIn(0L, 750L)
+                    initialRemainingMs = (serverClock.remainingMs - halfRoundTripMs).coerceAtLeast(0L)
+                    countdownAnchor = SystemClock.elapsedRealtime()
+                }
+                serverClockResolved = true
+            }
         }
-        val countdownAnchor = SystemClock.elapsedRealtime()
+        syncTurnClock()
+        var claimAttempts = 0
 
         while (true) {
             val elapsedMs = SystemClock.elapsedRealtime() - countdownAnchor
             // A new round begins with preparation time on top of the 15-second turn: show it
-            // separately so the turn clock itself always counts down from 15.
+            // separately so the turn clock itself always counts down from 15. Only the server
+            // clock may open the break, so a skewed phone clock never flashes it.
             val prepMs = initialRemainingMs - elapsedMs - PREMIER_TURN_SECONDS * 1000L
-            prepSeconds = if (prepMs > 0L) ((prepMs + 999L) / 1000L).toInt() else 0
+            prepSeconds = if (serverClockResolved && prepMs > 0L) ((prepMs + 999L) / 1000L).toInt() else 0
             val remaining = premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs)
-            if (remaining > 0) {
-                turnSeconds = remaining
+            if (remaining > 0 || !serverClockResolved) {
+                turnSeconds = remaining.coerceAtLeast(1)
                 delay(250)
                 continue
             }
@@ -514,23 +637,15 @@ fun PremierWordDuelScreen() {
             turnSeconds = 1
 
             val synced = runCatching { backend.getRoom(active.id) }.getOrNull()
-            if (synced != null && (
-                    synced.turnDeadline != active.turnDeadline ||
-                        synced.currentPlayerId != active.currentPlayerId ||
-                        synced.status != active.status ||
-                        synced.botTurn != active.botTurn ||
-                        synced.disconnectedPlayerId != active.disconnectedPlayerId ||
-                        synced.reconnectDeadline != active.reconnectDeadline
-                )
-            ) {
-                room = synced
+            if (synced != null && premierTurnStateChanged(active, synced)) {
+                acceptRoom(synced)
                 notice = ""
                 return@LaunchedEffect
             }
 
             val advanced = runCatching { backend.claimTurnTimeout(active.id) }.getOrNull()
-            if (advanced != null) {
-                room = advanced
+            if (advanced != null && premierTurnStateChanged(active, advanced)) {
+                acceptRoom(advanced)
                 val reconnectProtected = !advanced.isBot &&
                     advanced.disconnectedPlayerId != null &&
                     advanced.disconnectedPlayerId == advanced.currentPlayerId &&
@@ -543,8 +658,14 @@ fun PremierWordDuelScreen() {
                 return@LaunchedEffect
             }
 
-            notice = pt(language, "Maç yeniden eşitleniyor…", "Resyncing match…")
-            delay(1000)
+            // The server answered with the same room: by its clock the turn is not over yet (clock
+            // skew, or our countdown ran early). Re-anchor to its remaining time and retry shortly.
+            claimAttempts += 1
+            if (advanced == null || claimAttempts >= 3) {
+                notice = pt(language, "Maç yeniden eşitleniyor…", "Resyncing match…")
+            }
+            syncTurnClock()
+            delay(if (claimAttempts < 8) 500L else 2_000L)
         }
     }
 
@@ -631,9 +752,14 @@ fun PremierWordDuelScreen() {
             PremierStage.Playing -> {
                 val active = room
                 if (active != null) {
+                    // The letter to play comes from the word list and the turn from the room: accept input
+                    // only while both describe the same move (the server keeps words.size == valid_word_count).
+                    val boardSynced = words.size == active.validWordCount ||
+                        syncGateOpenFor == premierSyncGateKey(active, words)
                     PremierArena(
                         language = language,
                         room = active,
+                        boardSynced = boardSynced,
                         me = me,
                         opponent = opponent,
                         meId = backend.currentUserId(),
@@ -655,7 +781,7 @@ fun PremierWordDuelScreen() {
                             showQuickChat = true
                         },
                         onSubmit = {
-                            if (busy || input.isBlank()) return@PremierArena
+                            if (busy || input.isBlank() || !boardSynced) return@PremierArena
                             // Obvious slips are caught locally: a rejected word would cost the turn.
                             val localProblem = premierLocalRejection(
                                 input,
@@ -681,7 +807,7 @@ fun PremierWordDuelScreen() {
                                 notice = ""
                                 runCatching { backend.submitPremierWord(active.id, candidate) }
                                     .onSuccess { next ->
-                                        room = next
+                                        acceptRoom(next)
                                         val accepted = next.validWordCount > active.validWordCount
                                         if (accepted) {
                                             notice = ""
@@ -705,7 +831,7 @@ fun PremierWordDuelScreen() {
                                         // A dropped connection may still have delivered the word: re-check the room first.
                                         val synced = runCatching { backend.getRoom(active.id) }.getOrNull()
                                         if (synced != null && synced.validWordCount > active.validWordCount) {
-                                            room = synced
+                                            acceptRoom(synced)
                                             notice = ""
                                             moveFeedback = PremierMoveFeedback(
                                                 accepted = true,
@@ -713,7 +839,7 @@ fun PremierWordDuelScreen() {
                                             )
                                             SonHarfSoundFx.wordAccepted()
                                         } else {
-                                            if (synced != null) room = synced
+                                            if (synced != null) acceptRoom(synced)
                                             notice = premierError(language, error.message.orEmpty())
                                         }
                                     }
@@ -779,7 +905,7 @@ fun PremierWordDuelScreen() {
                     scope.launch {
                         busy = true
                         runCatching { backend.forfeit(active.id) }
-                            .onSuccess { room = it; stage = PremierStage.Finished }
+                            .onSuccess { acceptRoom(it); stage = PremierStage.Finished }
                             .onFailure { notice = premierError(language, it.message.orEmpty()) }
                         busy = false
                     }
@@ -1232,6 +1358,8 @@ internal fun premierLocalRejection(word: String, required: String, usedWords: Co
 private fun PremierArena(
     language: String,
     room: GameRoomDto,
+    /** False while the word list and the room describe different moves: input waits for both. */
+    boardSynced: Boolean = true,
     me: ProfileDto?,
     opponent: ProfileDto?,
     meId: String?,
@@ -1278,52 +1406,71 @@ private fun PremierArena(
     val latestPlayedWord = latestMove?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
     val latestMoveMine = latestMove != null && latestMove.playerId == meId
 
-    // Mascot hints: three per match. Against a bot the mascot shows the start of a real word;
-    // against a real opponent it only gives strategy tips (fair play).
+    // Mascot hints. Against a bot the hint is a real answer word: mascot owners get three free
+    // ones, then banked (rewarded video) hints, then Son Coin. Against a real opponent a hint is
+    // only a strategy tip (fair play), so it is free and never spends banked or bought hints.
     val hintContext = androidx.compose.ui.platform.LocalContext.current
-    var hintsLeft by remember(room.id) { mutableIntStateOf(MascotHints.freeHints) }
+    // Used, not left: ownership that loads after the match started still grants its free hints.
+    var freeHintsUsed by remember(room.id) { mutableIntStateOf(0) }
+    val hintsLeft = MascotHints.freeHintsLeft(realOpponent = !room.isBot, used = freeHintsUsed)
     var hintRequest by remember(room.id) { mutableStateOf<Pair<Int, String>?>(null) }
-    fun askHint() {
+    fun showHintText(text: String) {
+        hintRequest = ((hintRequest?.first ?: 0) + 1) to text
+    }
+    fun hintText(): String = if (room.isBot) {
+        val prefix = if (required == "★") "" else required.lowercase(premierLocale(language))
+        MascotHints.startWord(hintContext, room.language, prefix, words.map { it.normalizedWord.ifBlank { it.word } }.toSet())
+    } else {
+        MascotHints.tip((hintRequest?.first ?: 0) + 1 + words.size)
+    }
+    fun askFreeHint() {
         if (hintsLeft <= 0) return
-        val next = (hintRequest?.first ?: 0) + 1
-        val text = if (room.isBot) {
-            val prefix = if (required == "★") "" else required.lowercase(premierLocale(language))
-            MascotHints.startWord(hintContext, room.language, prefix, words.map { it.normalizedWord.ifBlank { it.word } }.toSet())
-        } else {
-            MascotHints.tip(next + words.size)
-        }
-        hintsLeft -= 1
-        hintRequest = next to text
+        freeHintsUsed += 1
+        showHintText(hintText())
     }
     // Free hints used up against a bot: one more costs Son Coin (server-checked).
     val hintScope = rememberCoroutineScope()
     var buyingHint by remember(room.id) { mutableStateOf(false) }
     fun buyHint() {
-        if (buyingHint) return
+        if (buyingHint || !room.isBot) return
         buyingHint = true
         hintScope.launch {
             val bought = com.sonharf.game.data.GameHintBackend.buyHint("son_harf")
             if (bought != null) {
-                hintsLeft += 1
-                askHint()
+                showHintText(hintText())
             } else {
-                hintRequest = ((hintRequest?.first ?: 0) + 1) to pt(language, "Jeton yetmedi... maç kazanıp biriktirelim mi?", "Not enough coins... let's win some matches?")
+                showHintText(pt(language, "Jeton yetmedi... maç kazanıp biriktirelim mi?", "Not enough coins... let's win some matches?"))
             }
             buyingHint = false
         }
     }
-    // Hints won with a rewarded video (outside the match) are spent before any coins.
-    val bankedHints = RewardPassState.hints("son_harf")
+    // Hints won with a rewarded video (outside the match) are spent before any coins, and only
+    // where they reveal a word (against the AI).
+    val bankedHints = if (room.isBot) RewardPassState.hints("son_harf") else 0
     fun useBankedHint() {
-        if (buyingHint) return
+        if (buyingHint || !room.isBot) return
         buyingHint = true
         hintScope.launch {
             if (RewardPassState.useHint("son_harf")) {
-                hintsLeft += 1
-                askHint()
+                showHintText(hintText())
+            } else {
+                showHintText(pt(language, "İpucu şu an alınamadı, tekrar dene.", "Couldn't get a hint right now, try again."))
             }
             buyingHint = false
         }
+    }
+    // Without a mascot on screen the hint text is shown in the hint strip instead of a bubble.
+    val mascotShown = WordSiegeMascotOwnership.hasAny
+    var stripHint by remember(room.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(hintRequest?.first, mascotShown) {
+        val text = hintRequest?.second
+        if (text == null || mascotShown) {
+            stripHint = null
+            return@LaunchedEffect
+        }
+        stripHint = text
+        delay(7_000)
+        stripHint = null
     }
 
     // Real score changes from the server (streak and long-word bonuses included).
@@ -1545,7 +1692,9 @@ private fun PremierArena(
                 myStreak = myStreak,
                 rivalStreak = rivalStreak,
                 myTurn = myTurn && !preparing,
-                rivalTurn = !myTurn && !preparing && live,
+                // The turn owner, not "not my turn": while my own connection is being rechecked on
+                // my turn, the rival's card must not light up.
+                rivalTurn = !preparing && live && (room.botTurn || (room.currentPlayerId != null && room.currentPlayerId != meId)),
                 myGain = myGain,
                 rivalGain = rivalGain,
             )
@@ -1590,7 +1739,6 @@ private fun PremierArena(
                     Box(Modifier.fillMaxWidth().height(if (veryCompact) 44.dp else 52.dp), contentAlignment = Alignment.Center) {
                         when {
                             feedback != null -> PremierBoardMessage(feedback.message, if (feedback.accepted) PremierBoard.Gold else PremierBoard.Danger)
-                            slip != null -> PremierBoardMessage(slip, PremierBoard.RivalSoft)
                             else -> PremierLastWordCard(
                                 language = language,
                                 word = latestPlayedWord,
@@ -1600,7 +1748,21 @@ private fun PremierArena(
                             )
                         }
                     }
-                    Text("▼", color = PremierBoard.Ink.copy(alpha = .45f), fontSize = 12.sp)
+                    // A rival's slip is a small readable label here; the last word's tiles stay visible.
+                    Box(Modifier.fillMaxWidth().height(16.dp), contentAlignment = Alignment.Center) {
+                        if (slip != null) {
+                            Text(
+                                slip,
+                                color = PremierBoard.Rival,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        } else {
+                            Text("▼", color = PremierBoard.Ink.copy(alpha = .45f), fontSize = 12.sp)
+                        }
+                    }
                     // The letter to play, flanked by the round's word counts (mirrored).
                     Box(
                         modifier = Modifier.fillMaxWidth().height((if (targetSize > mascotSize) targetSize else mascotSize) + 20.dp),
@@ -1631,7 +1793,7 @@ private fun PremierArena(
                 language,
                 input,
                 required,
-                myTurn && !preparing,
+                myTurn && !preparing && boardSynced,
                 busy,
                 usedWords = words,
                 shakeKey = if (moveFeedback?.accepted == false) moveFeedback.message else null,
@@ -1641,7 +1803,20 @@ private fun PremierArena(
             // resizes the arena above, so the centre card stays still between turns.
             val hintVisible = myTurn && !preparing && (hintsLeft > 0 || bankedHints > 0 || room.isBot)
             Box(Modifier.fillMaxWidth().height(34.dp).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
-                if (notice.isNotBlank()) {
+                val shownHint = stripHint
+                if (shownHint != null) {
+                    Text(
+                        shownHint,
+                        color = PremierBoard.Ink,
+                        fontSize = 11.sp,
+                        lineHeight = 13.sp,
+                        fontWeight = FontWeight.Black,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth(if (hintVisible) .6f else 1f),
+                    )
+                } else if (notice.isNotBlank()) {
                     Text(
                         notice,
                         color = PremierBoard.Muted,
@@ -1657,9 +1832,9 @@ private fun PremierArena(
                     Surface(
                         onClick = {
                             when {
-                                hintsLeft > 0 -> askHint()
+                                hintsLeft > 0 -> askFreeHint()
                                 bankedHints > 0 -> useBankedHint()
-                                else -> buyHint()
+                                room.isBot -> buyHint()
                             }
                         },
                         modifier = Modifier.align(Alignment.CenterEnd),
@@ -1679,7 +1854,7 @@ private fun PremierArena(
                     }
                 }
             }
-            PremierKeyboard(language, input, enabled = myTurn && !busy && !preparing, keyHeight = keyHeight, onInput = onInput, onSubmit = onSubmit)
+            PremierKeyboard(language, input, enabled = myTurn && !busy && !preparing && boardSynced, keyHeight = keyHeight, onInput = onInput, onSubmit = onSubmit)
         }
 
         val slotCenter = mascotSlotCenter
@@ -1712,6 +1887,8 @@ private fun PremierArena(
             touches = mascotTouches,
             playerGender = me?.gender,
             hint = hintRequest,
+            // Above the perch is the last-word row: speak below it so the rival's word stays readable.
+            bubblePlacement = WordSiegeMascotBubblePlacement.PREFER_BELOW,
         )
 
         // Turn and accepted-word feedback live on the target tile itself (a light sweep), so no
@@ -1755,8 +1932,6 @@ private fun PremierArena(
 
         // Tension: the screen edge beats red on the player's last five seconds.
         PremierHeartbeatEdge(active = myTurn && live && !preparing && turnSeconds in 1..5, seconds = turnSeconds)
-        // Excitement: a flame badge while the player is on a word streak.
-        PremierStreakFlame(streak = myStreak, language = language, modifier = Modifier.align(Alignment.TopCenter).padding(top = 92.dp))
     }
 }
 
@@ -1789,19 +1964,25 @@ private fun PremierStreakFlame(streak: Int, language: String, modifier: Modifier
         exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut(),
     ) {
         val flicker = rememberInfiniteTransition(label = "flame")
-        val s by flicker.animateFloat(1f, 1.12f, infiniteRepeatable(tween(380), RepeatMode.Reverse), label = "flame-scale")
+        val s by flicker.animateFloat(1f, 1.08f, infiniteRepeatable(tween(380), RepeatMode.Reverse), label = "flame-scale")
+        // A slim pill that fits the timer strip's reserved line.
         Surface(
             shape = RoundedCornerShape(99.dp),
             color = Color(0xFFFF7A1A),
-            shadowElevation = 6.dp,
             modifier = Modifier.graphicsLayer { scaleX = s; scaleY = s },
         ) {
             Text(
                 pt(language, "🔥 $streak SERİ!", "🔥 $streak STREAK!"),
-                Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
+                Modifier.padding(horizontal = 8.dp, vertical = 0.dp),
                 color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Black,
+                style = TextStyle(
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp,
+                    fontWeight = FontWeight.Black,
+                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
+                ),
+                maxLines = 1,
             )
         }
     }
@@ -2406,15 +2587,22 @@ private fun PremierPressureStrip(
                     }
                 }
             }
-            // The line is always reserved so the board does not jump when it appears.
-            Text(
-                pt(language, "KRİTİK 5 SANİYE", "CRITICAL 5 SECONDS"),
-                color = PremierBoard.Danger.copy(alpha = if (danger) flash else 0f),
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp,
-                maxLines = 1,
-            )
+            // The line is always reserved so the board does not jump when it appears. It carries the
+            // critical warning, or else the player's streak (in the layout, never over the cards).
+            Box(Modifier.height(16.dp), contentAlignment = Alignment.Center) {
+                if (!danger && myStreak >= 2) {
+                    PremierStreakFlame(streak = myStreak, language = language, modifier = Modifier)
+                } else {
+                    Text(
+                        pt(language, "KRİTİK 5 SANİYE", "CRITICAL 5 SECONDS"),
+                        color = PremierBoard.Danger.copy(alpha = if (danger) flash else 0f),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp,
+                        maxLines = 1,
+                    )
+                }
+            }
         }
         PremierWordCountChip(pt(language, "RAKİP", "RIVAL"), rivalWords, PremierBoard.Rival, active = active && !myTurn)
     }

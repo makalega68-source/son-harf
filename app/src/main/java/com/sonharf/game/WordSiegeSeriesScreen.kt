@@ -35,7 +35,7 @@ private const val SERIES_DEFAULT_TURN_MINUTES = 5
 internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     val scope = rememberCoroutineScope()
-    val me = remember { backend.currentUserId() }
+    val me = backend.currentUserId()
     var entitlement by remember { mutableStateOf<VipEntitlementsDto?>(if (verifiedAccess) VipEntitlementsDto(seriesGameAccess = true) else null) }
     var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
@@ -50,6 +50,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
     var busy by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var noticeIsError by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
     var showPass by remember { mutableStateOf(false) }
@@ -69,10 +70,27 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
         if (loaded.isNotEmpty()) profiles = profiles + loaded
     }
 
+    fun showError(raw: String) {
+        notice = seriesFriendlyError(raw)
+        noticeIsError = true
+    }
+
+    fun clearErrorNotice() {
+        if (noticeIsError) {
+            notice = null
+            noticeIsError = false
+        }
+    }
+
     suspend fun refreshLobby(showProgress: Boolean = false) {
+        if (backend.currentUserId() == null) {
+            loading = false
+            return
+        }
         if (showProgress) loading = true
         val nextGames = runCatching { backend.getWordSiegeSeriesGames() }
-            .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
+            .onSuccess { clearErrorNotice() }
+            .onFailure { showError(it.message.orEmpty()) }
             .getOrDefault(games)
         games = nextGames
         loadProfiles(nextGames.flatMap { listOf(it.playerOneId, it.playerTwoId) })
@@ -98,8 +116,15 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
         scope.launch {
             busy = true
             runCatching { action() }
-                .onSuccess { next -> applyGame(next); notice = null; refreshLobby() }
-                .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
+                .onSuccess { next -> applyGame(next); notice = null; noticeIsError = false; refreshLobby() }
+                .onFailure { error ->
+                    val raw = error.message.orEmpty()
+                    showError(raw)
+                    val gameId = currentGame?.id
+                    if (gameId != null && ("word_siege_not_your_turn" in raw || "word_siege_not_playing" in raw)) {
+                        runCatching { backend.refreshWordSiegeGame(gameId) }.getOrNull()?.let { applyGame(it) }
+                    }
+                }
             busy = false
         }
     }
@@ -126,9 +151,14 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
         var movesFor = -1
         while (currentCoroutineContext().isActive) {
             if (tick % 2 == 0) {
+                val pollStartedWith = currentGame
                 runCatching { backend.refreshWordSiegeGame(gameId) }
                     .onSuccess { next ->
-                        if (next != currentGame) {
+                        clearErrorNotice()
+                        val shown = currentGame
+                        val stale = busy || shown !== pollStartedWith ||
+                            (shown != null && shown.id == next.id && next.moveCount < shown.moveCount)
+                        if (!stale && next != shown) {
                             val changed = currentGame?.moveCount != next.moveCount || currentGame?.currentPlayerId != next.currentPlayerId
                             currentGame = next
                             games = (games.filterNot { it.id == next.id } + next).sortedWith(seriesGameComparator(me))
@@ -139,7 +169,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                             }
                         }
                     }
-                    .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
+                    .onFailure { showError(it.message.orEmpty()) }
                 val moveCount = currentGame?.moveCount ?: -1
                 if (moveCount != movesFor) {
                     runCatching { backend.getWordSiegeMoves(gameId) }.getOrNull()?.let {
@@ -153,7 +183,6 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                 runCatching { backend.getWordSiegeMessages(gameId) }.getOrNull()?.let { if (it != messages) messages = it }
                 GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
             }
-            clockTick = System.currentTimeMillis()
             tick += 1
             delay(1_000)
         }
@@ -165,7 +194,17 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
             currentGame = null
             placements = emptyMap()
             selectedRackIndex = null
+            clearErrorNotice()
         } else onExit()
+    }
+
+    // The clock ticks on its own so a slow network round-trip never freezes the countdown.
+    LaunchedEffect(selectedGameId) {
+        if (selectedGameId == null) return@LaunchedEffect
+        while (currentCoroutineContext().isActive) {
+            clockTick = System.currentTimeMillis()
+            delay(1_000)
+        }
     }
 
     Surface(Modifier.fillMaxSize(), color = SonHarfTheme.Background) {
@@ -693,7 +732,7 @@ private fun seriesGameComparator(me: String?): Comparator<WordSiegeGameDto> =
 
 private fun seriesDeadlineText(deadline: String?, tick: Long): String {
     if (deadline.isNullOrBlank()) return sh("Süre bekleniyor", "Waiting for timer")
-    val parsed = runCatching { Instant.parse(deadline) }.getOrNull() ?: return sh("Süre bekleniyor", "Waiting for timer")
+    val parsed = com.sonharf.game.data.parseServerInstant(deadline) ?: return sh("Süre bekleniyor", "Waiting for timer")
     val now = Instant.ofEpochMilli(if (tick > 0L) tick else System.currentTimeMillis())
     val seconds = Duration.between(now, parsed).seconds.coerceAtLeast(0L)
     val minutesPart = seconds / 60L

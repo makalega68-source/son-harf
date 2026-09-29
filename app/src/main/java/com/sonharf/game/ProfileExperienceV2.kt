@@ -318,7 +318,7 @@ fun ProfileExperienceV2Screen() {
                 val seasonLeague = ratingLeagueProgress(s.rating)
                 val daysLeft = runCatching {
                     kotlin.math.ceil(
-                        ((java.time.Instant.parse(s.endsAt).toEpochMilli() - System.currentTimeMillis())
+                        (((com.sonharf.game.data.parseServerInstant(s.endsAt)?.toEpochMilli() ?: System.currentTimeMillis()) - System.currentTimeMillis())
                             .coerceAtLeast(0L)) / 86_400_000.0
                     ).toInt()
                 }.getOrDefault(0)

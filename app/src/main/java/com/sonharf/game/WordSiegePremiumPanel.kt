@@ -63,6 +63,7 @@ internal fun WordSiegePremiumPanel(
     var entitlementRetry by remember(game.id) { mutableIntStateOf(0) }
     var preview by remember(game.id) { mutableStateOf<WordSiegePremiumPreviewDto?>(null) }
     var previewError by remember(game.id) { mutableStateOf(false) }
+    var previewReason by remember(game.id) { mutableStateOf<String?>(null) }
     var letterTable by remember(game.id) { mutableStateOf<List<WordSiegeLetterCountDto>>(emptyList()) }
     var letterTableError by remember(game.id) { mutableStateOf(false) }
     var showLetterTable by remember(game.id) { mutableStateOf(false) }
@@ -96,6 +97,7 @@ internal fun WordSiegePremiumPanel(
     LaunchedEffect(game.id, game.moveCount, placements, canAct, access?.scoreCalculatorAccess) {
         preview = null
         previewError = false
+        previewReason = null
         if (!canAct || placements.isEmpty() || access?.scoreCalculatorAccess != true) return@LaunchedEffect
         val orientation = runCatching { WordSiegeFinalRules.detectOrientation(game.board, placements.keys) }.getOrNull()
             ?: return@LaunchedEffect
@@ -109,7 +111,12 @@ internal fun WordSiegePremiumPanel(
                 horizontal = orientation == WordSiegeOrientation.HORIZONTAL,
             )
         }.onSuccess {
-            preview = it
+            if (it.valid) {
+                preview = it
+            } else {
+                previewReason = wordSiegeFriendlyError(it.reason.orEmpty())
+                previewError = true
+            }
         }.onFailure {
             previewError = true
         }
@@ -228,7 +235,7 @@ internal fun WordSiegePremiumPanel(
                                         "+${preview!!.totalScore} • kelime ${preview!!.wordScore} + bölge ${preview!!.areaScore}",
                                         "+${preview!!.totalScore} • word ${preview!!.wordScore} + territory ${preview!!.areaScore}",
                                     )
-                                    previewError -> sh("Önizleme alınamadı", "Preview unavailable")
+                                    previewError -> previewReason ?: sh("Önizleme alınamadı", "Preview unavailable")
                                     else -> sh("Hesaplanıyor…", "Calculating…")
                                 },
                                 color = WordSiegeGameUi.Muted,

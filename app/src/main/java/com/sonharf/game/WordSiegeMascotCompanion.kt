@@ -83,6 +83,9 @@ internal enum class WordSiegeMascotEvent {
 
 internal enum class WordSiegeMascotOutcome { WIN, LOSS, DRAW }
 
+/** Where the speech bubble goes; it falls back to the other side when the preferred one does not fit. */
+internal enum class WordSiegeMascotBubblePlacement { PREFER_ABOVE, PREFER_BELOW }
+
 /** One occurrence of a game moment; a new [key] means a new occurrence. */
 internal data class WordSiegeMascotSignal(
     val key: String,
@@ -590,6 +593,8 @@ internal fun WordSiegeMascotCompanion(
     requireOwnership: Boolean = true,
     /** Always show this character (the first-run welcome uses the classic one). */
     forcedSkin: WordSiegeMascotSkin? = null,
+    /** Which side of the mascot the speech bubble prefers (screens with key content above use below). */
+    bubblePlacement: WordSiegeMascotBubblePlacement = WordSiegeMascotBubblePlacement.PREFER_ABOVE,
 ) {
     if (anchors.isEmpty()) return
     val ownedSkins = WordSiegeMascotOwnership.owned
@@ -1298,6 +1303,8 @@ internal fun WordSiegeMascotCompanion(
                 mascotCenter = center,
                 mascotRadius = sizePx / 2f,
                 areaWidth = areaWidth,
+                areaHeight = areaHeight,
+                placement = bubblePlacement,
             )
         }
 
@@ -1416,6 +1423,8 @@ private fun WordSiegeMascotSpeechBubble(
     mascotCenter: Offset,
     mascotRadius: Float,
     areaWidth: Float,
+    areaHeight: Float = Float.POSITIVE_INFINITY,
+    placement: WordSiegeMascotBubblePlacement = WordSiegeMascotBubblePlacement.PREFER_ABOVE,
 ) {
     val density = LocalDensity.current
     val appear = remember(id) { Animatable(0f) }
@@ -1439,7 +1448,12 @@ private fun WordSiegeMascotSpeechBubble(
         Modifier
             .layout { measurable, _ ->
                 val placeable = measurable.measure(Constraints(maxWidth = maxWidthPx))
-                val above = mascotCenter.y - mascotRadius - tailPx - placeable.height > marginPx
+                val fitsAbove = mascotCenter.y - mascotRadius - tailPx - placeable.height > marginPx
+                val fitsBelow = mascotCenter.y + mascotRadius * .85f + tailPx + placeable.height < areaHeight - marginPx
+                val above = when (placement) {
+                    WordSiegeMascotBubblePlacement.PREFER_ABOVE -> fitsAbove
+                    WordSiegeMascotBubblePlacement.PREFER_BELOW -> !fitsBelow && fitsAbove
+                }
                 val x = (mascotCenter.x - placeable.width / 2f)
                     .coerceIn(marginPx, max(marginPx, areaWidth - placeable.width - marginPx))
                 val y = if (above) mascotCenter.y - mascotRadius * .85f - tailPx - placeable.height

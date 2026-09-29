@@ -51,11 +51,31 @@ internal fun MainSocialScreen(
     var notice by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<ProfileDto>>(emptyList()) }
+    // Requests sent in this session show as pending at once, even before the list reloads.
+    var sentRequests by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var autoTabDone by remember { mutableStateOf(false) }
+
+    fun friendRequestError(error: Throwable): String {
+        val raw = error.message.orEmpty()
+        return when {
+            "pro_friend_list_required" in raw -> {
+                vipDialog = true
+                sh("Arkadaş eklemek için PRO gerekli.", "PRO is required to add friends.")
+            }
+            "blocked_relationship" in raw -> sh("Bu oyuncuyla engelleme olduğu için istek gönderilemiyor.", "You can't send a request because of a block.")
+            "cannot_friend_self" in raw -> sh("Kendine istek gönderemezsin.", "You can't add yourself.")
+            else -> sh("İstek gönderilemedi. Bağlantını kontrol edip tekrar dene.", "Request could not be sent. Check your connection and try again.")
+        }
+    }
 
     suspend fun reload() = coroutineScope {
         loading = true
         val friendTask = async { runCatching { backend.getFriends() }.getOrDefault(emptyList()) }
-        val friendshipTask = async { runCatching { backend.getFriendships() }.getOrDefault(emptyList()) }
+        val friendshipTask = async {
+            runCatching { backend.getFriendships() }
+                .onFailure { notice = sh("Arkadaş listesi yüklenemedi. Yenilemek için sayfayı tekrar aç.", "Friend list could not be loaded. Reopen the page to refresh.") }
+                .getOrDefault(emptyList())
+        }
         val requestTask = async { runCatching { backend.getIncomingFriendRequests() }.getOrDefault(emptyList()) }
         val legacyInviteTask = async { runCatching { backend.getIncomingGameInvites() }.getOrDefault(emptyList()) }
         val siegeInviteTask = async { runCatching { backend.getIncomingWordSiegeInvites() }.getOrDefault(emptyList()) }
@@ -76,6 +96,11 @@ internal fun MainSocialScreen(
         }
         inviteProfiles = senders
         loading = false
+        // Someone waiting for an answer is the first thing to show.
+        if (!autoTabDone) {
+            autoTabDone = true
+            if (requests.isNotEmpty() || siegeInvites.isNotEmpty() || invites.isNotEmpty()) tab = 1
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -122,7 +147,8 @@ internal fun MainSocialScreen(
                     Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 10.sp)
                 }
                 OutlinedButton(
-                    onClick = { tab = 0 },
+                    // Search, "EKLE" and incoming requests all live on the Requests tab.
+                    onClick = { tab = 1 },
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(15.dp),
                     border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f)),
@@ -274,6 +300,7 @@ internal fun MainSocialScreen(
 
                 items(results, key = { it.id }) { player ->
                     val relation = friendships.firstOrNull { it.userId == player.id || it.friendId == player.id }
+                    val relationStatus = relation?.status ?: if (player.id in sentRequests) "pending" else null
                     Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
                             ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = if (player.isVip) MainUi.Gold else MainUi.Blue, visible = player.avatarVisibility != "hidden")
@@ -284,21 +311,25 @@ internal fun MainSocialScreen(
                             }
                             Button(
                                 onClick = {
-                                    if (relation != null || busyKey != null) return@Button
+                                    if (relationStatus != null || busyKey != null) return@Button
                                     scope.launch {
                                         busyKey = player.id
                                         runCatching { backend.sendFriendRequest(player.id) }
-                                            .onSuccess { notice = sh("Arkadaşlık isteği gönderildi.", "Friend request sent."); reload() }
-                                            .onFailure { notice = sh("İstek gönderilemedi.", "Request could not be sent.") }
+                                            .onSuccess {
+                                                sentRequests = sentRequests + player.id
+                                                notice = sh("Arkadaşlık isteği gönderildi. ${player.displayName} kabul edince arkadaş olacaksınız.", "Friend request sent. You become friends once ${player.displayName} accepts.")
+                                                reload()
+                                            }
+                                            .onFailure { notice = friendRequestError(it) }
                                         busyKey = null
                                     }
                                 },
-                                enabled = relation == null && busyKey == null,
+                                enabled = relationStatus == null && busyKey == null,
                                 shape = RoundedCornerShape(12.dp),
                                 contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp),
                             ) {
                                 Text(
-                                    when (relation?.status) {
+                                    when (relationStatus) {
                                         "accepted" -> sh("ARKADAŞ", "FRIEND")
                                         "pending" -> sh("BEKLİYOR", "PENDING")
                                         else -> if (busyKey == player.id) "…" else sh("EKLE", "ADD")
@@ -311,7 +342,16 @@ internal fun MainSocialScreen(
                     }
                 }
 
-                if (requests.isNotEmpty()) item { MainSectionTitle(sh("ARKADAŞLIK İSTEKLERİ", "FRIEND REQUESTS")) }
+                item { MainSectionTitle(sh("ARKADAŞLIK İSTEKLERİ", "FRIEND REQUESTS")) }
+                if (requests.isEmpty() && !loading) {
+                    item {
+                        Text(
+                            sh("Sana gelen arkadaşlık istekleri burada görünür. Kabul ettiğinde ikiniz de arkadaş listesine eklenirsiniz.", "Friend requests you receive appear here. Once you accept, you are added to each other's friend list."),
+                            color = MainUi.Muted,
+                            fontSize = 10.sp,
+                        )
+                    }
+                }
                 items(requests, key = { it.second.id }) { (_, player) ->
                     Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .28f))) {
                         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -324,6 +364,8 @@ internal fun MainSocialScreen(
                                     scope.launch {
                                         busyKey = player.id
                                         runCatching { backend.respondFriendRequest(player.id, false) }
+                                            .onSuccess { notice = sh("İstek reddedildi.", "Request declined.") }
+                                            .onFailure { notice = sh("İşlem tamamlanamadı, tekrar dene.", "Could not complete, try again.") }
                                         reload()
                                         busyKey = null
                                     }
@@ -336,6 +378,7 @@ internal fun MainSocialScreen(
                                         busyKey = player.id
                                         runCatching { backend.respondFriendRequest(player.id, true) }
                                             .onSuccess { notice = sh("Arkadaşlık isteği kabul edildi.", "Friend request accepted.") }
+                                            .onFailure { notice = sh("İstek kabul edilemedi, tekrar dene.", "Request could not be accepted, try again.") }
                                         reload()
                                         busyKey = null
                                     }
@@ -493,7 +536,7 @@ internal fun MainSocialScreen(
                                         } else {
                                             runCatching { backend.sendFriendRequest(rival.opponentId) }
                                                 .onSuccess { notice = sh("Önce arkadaşlık isteği gönderildi.", "A friend request was sent first.") }
-                                                .onFailure { notice = sh("İstek gönderilemedi.", "Request could not be sent.") }
+                                                .onFailure { notice = friendRequestError(it) }
                                         }
                                         busyKey = null
                                     }

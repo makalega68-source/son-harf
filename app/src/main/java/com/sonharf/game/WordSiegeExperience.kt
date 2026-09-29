@@ -54,7 +54,8 @@ private enum class SiegeListSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FI
 internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     val scope = rememberCoroutineScope()
-    val me = remember { backend.currentUserId() }
+    // Read on every recomposition: remembering it once kept a null id forever when the session loaded late.
+    val me = backend.currentUserId()
     var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
     var profiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
     var selectedGameId by remember { mutableStateOf<String?>(null) }
@@ -62,6 +63,8 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     var moves by remember { mutableStateOf<List<WordSiegeMoveDto>>(emptyList()) }
     var messages by remember { mutableStateOf<List<WordSiegeMessageDto>>(emptyList()) }
     var notice by remember { mutableStateOf<String?>(null) }
+    // Connection/decoding errors are cleared by the next successful refresh instead of sticking forever.
+    var noticeIsError by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
@@ -88,10 +91,33 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         if (loaded.isNotEmpty()) profiles = profiles + loaded
     }
 
+    fun showError(raw: String) {
+        notice = wordSiegeFriendlyError(raw)
+        noticeIsError = true
+    }
+
+    fun showNotice(text: String?) {
+        notice = text
+        noticeIsError = false
+    }
+
+    fun clearErrorNotice() {
+        if (noticeIsError) {
+            notice = null
+            noticeIsError = false
+        }
+    }
+
     suspend fun refreshGames(showProgress: Boolean = false) {
+        // Before the session is restored every read is rejected; wait instead of flashing an error.
+        if (backend.currentUserId() == null) {
+            loading = false
+            return
+        }
         if (showProgress) loading = true
         runCatching { backend.getWordSiegeGames() }
             .onSuccess { next ->
+                clearErrorNotice()
                 games = next
                 loadProfiles(next.flatMap { listOf(it.playerOneId, it.playerTwoId) })
                 selectedGameId?.let { id ->
@@ -99,9 +125,10 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                 }
             }
             .onFailure {
-                notice = if (currentGame?.status == "waiting") {
-                    sh("Bağlantı yenileniyor • rakip araması sürüyor", "Reconnecting • opponent search continues")
-                } else wordSiegeFriendlyError(it.message.orEmpty())
+                if (currentGame?.status == "waiting") {
+                    notice = sh("Bağlantı yenileniyor • rakip araması sürüyor", "Reconnecting • opponent search continues")
+                    noticeIsError = true
+                } else showError(it.message.orEmpty())
             }
         if (showProgress) loading = false
     }
@@ -126,10 +153,19 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             runCatching { action() }
                 .onSuccess { next ->
                     applyGame(next)
-                    notice = successNotice
+                    showNotice(successNotice)
                     refreshGames()
                 }
-                .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
+                .onFailure { error ->
+                    val raw = error.message.orEmpty()
+                    showError(raw)
+                    // The server state moved on (turn passed, game ended, or the action already
+                    // landed): re-read the game at once and drop the stale placed tiles.
+                    val gameId = currentGame?.id
+                    if (gameId != null && ("word_siege_not_your_turn" in raw || "word_siege_not_playing" in raw)) {
+                        runCatching { backend.refreshWordSiegeGame(gameId) }.getOrNull()?.let { applyGame(it) }
+                    }
+                }
             busy = false
         }
     }
@@ -140,6 +176,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             currentGame = null
             placements = emptyMap()
             selectedRackIndex = null
+            clearErrorNotice()
         } else {
             onExit()
         }
@@ -159,9 +196,15 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         // Only a real change redraws the board; moves are re-read only after a new move.
         var movesFor = -1
         while (currentCoroutineContext().isActive) {
+            val pollStartedWith = currentGame
             runCatching { backend.refreshWordSiegeGame(gameId) }
                 .onSuccess { next ->
-                    if (next != currentGame) {
+                    clearErrorNotice()
+                    val shown = currentGame
+                    // A poll that started before a submit/pass must not roll the board back.
+                    val stale = busy || shown !== pollStartedWith ||
+                        (shown != null && shown.id == next.id && next.moveCount < shown.moveCount)
+                    if (!stale && next != shown) {
                         val turnChanged = currentGame?.moveCount != next.moveCount ||
                             currentGame?.currentPlayerId != next.currentPlayerId
                         currentGame = next
@@ -172,7 +215,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                         }
                     }
                 }
-                .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
+                .onFailure { showError(it.message.orEmpty()) }
             val moveCount = currentGame?.moveCount ?: -1
             if (moveCount != movesFor) {
                 runCatching { backend.getWordSiegeMoves(gameId) }.getOrNull()?.let {
@@ -207,11 +250,13 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                             .onSuccess { next ->
                                 applyGame(next)
                                 selectedGameId = next.id
-                                notice = if (next.status == "waiting") {
-                                    sh("Rakip aranıyor. Oyun açık kalmak zorunda değil.", "Looking for a rival. You may leave this screen.")
-                                } else null
+                                showNotice(
+                                    if (next.status == "waiting") {
+                                        sh("Rakip aranıyor. Oyun açık kalmak zorunda değil.", "Looking for a rival. You may leave this screen.")
+                                    } else null,
+                                )
                             }
-                            .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
+                            .onFailure { showError(it.message.orEmpty()) }
                         busy = false
                     }
                 },
@@ -240,6 +285,9 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     onBack = {
                         selectedGameId = null
                         currentGame = null
+                        placements = emptyMap()
+                        selectedRackIndex = null
+                        clearErrorNotice()
                     },
                     onBoardCell = { boardIndex ->
                         if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegePanMatch
@@ -1212,7 +1260,7 @@ private fun WordSiegeGameDto.listSection(me: String?): SiegeListSection = when {
 
 private fun WordSiegeGameDto.isSleeping(): Boolean {
     val stamp = lastMoveAt ?: createdAt
-    return runCatching { Duration.between(Instant.parse(stamp), Instant.now()).toDays() >= 7 }.getOrDefault(false)
+    return runCatching { Duration.between(requireNotNull(com.sonharf.game.data.parseServerInstant(stamp)), Instant.now()).toDays() >= 7 }.getOrDefault(false)
 }
 
 @Composable

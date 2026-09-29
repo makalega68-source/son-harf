@@ -186,6 +186,7 @@ object SupabaseProvider {
     val configured: Boolean = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_KEY.isNotBlank()
     val client: SupabaseClient by lazy {
         createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY) {
+            defaultSerializer = RowTolerantSerializer()
             install(Auth)
             install(Postgrest)
             install(Realtime)
