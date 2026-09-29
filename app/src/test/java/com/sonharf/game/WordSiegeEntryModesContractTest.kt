@@ -43,7 +43,7 @@ class WordSiegeEntryModesContractTest {
         assertTrue(board.contains("PanSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival"))
         assertTrue(board.contains("color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frame"))
         assertTrue(board.contains("shadowElevation = if (WordSiegeWalnutIvory.enabled) 7.dp else 14.dp"))
-        assertTrue(board.contains("border = BorderStroke(2.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameEdge"))
+        assertTrue(board.contains("border = BorderStroke(if (boardSkin != null) 0.dp else 2.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameEdge"))
         assertTrue(board.contains("WordSiegeWalnutIvory.tile"))
         assertTrue(board.contains("WordSiegePremiumPanel("))
     }

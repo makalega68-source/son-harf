@@ -114,6 +114,7 @@ internal fun MainPlayerProfileScreen(
         "mascot_hat" to sh("Obi", "Obi"),
         "profile_frame" to sh("Çerçeve", "Frame"),
         "game_theme" to sh("Tema", "Theme"),
+        "board_skin" to sh("Tahta", "Board"),
         "keyboard_theme" to sh("Klavye", "Keys"),
         "name_style" to sh("İsim", "Name"),
     )

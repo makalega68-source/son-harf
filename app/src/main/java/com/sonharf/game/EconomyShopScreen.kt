@@ -245,12 +245,13 @@ private fun EconomyCatalogScreen(
 
     val featuredFirst = listOfNotNull(
         items.firstOrNull { it.kind == "game_theme" },
+        items.firstOrNull { it.kind == "board_skin" },
         items.firstOrNull { it.kind == "keyboard_theme" },
         items.firstOrNull { it.kind == "name_style" },
     )
     val filtered = when (section) {
         0 -> (featuredFirst + items).distinctBy { it.id }
-        2 -> items.filter { it.kind == "game_theme" }.sortedByDescending { it.id == WALNUT_IVORY_THEME_ID }
+        2 -> items.filter { it.kind == "game_theme" || it.kind == "board_skin" }.sortedByDescending { it.id == WALNUT_IVORY_THEME_ID }
         5 -> items.filter { it.kind == "mascot_hat" || it.kind == "victory_effect" }
         6 -> items.filter { it.kind == "keyboard_theme" || it.kind == "name_style" }
         else -> emptyList()
@@ -627,6 +628,7 @@ private fun storeKindLabel(kind: String?): String = when (kind) {
     "keyboard_theme" -> sh("Klavye", "Keyboard")
     "name_style" -> sh("İsim stili", "Name style")
     "profile_frame" -> sh("Çerçeve", "Frame")
+    "board_skin" -> sh("Tahta", "Board")
     "victory_effect", "vfx" -> sh("Efekt", "Effect")
     else -> kind.replace('_', ' ').replaceFirstChar { it.uppercase() }
 }

@@ -77,7 +77,7 @@ private fun storeArtworkRes(itemId: String): Int? = when (itemId) {
     MascotHats.TOP -> R.drawable.store_art_hat_top
     "victory_crown" -> R.drawable.store_art_victory_crown
     "emoji_vip" -> R.drawable.store_art_emoji_vip
-    else -> null
+    else -> WordSiegeBoardSkin.fromId(itemId)?.artRes
 }
 
 @Composable
@@ -135,5 +135,6 @@ internal fun storeItemEffect(item: ShopItemDto): String? = when {
     item.id == WALNUT_IVORY_THEME_ID -> sh("Uygulama, Kuşatma tahtası ve Son Harf ceviz-fildişi olur.", "The app, the siege board and Last Letter turn walnut and ivory.")
     item.kind == "game_theme" -> sh("Uygulama ve oyun alanları bu temaya bürünür.", "The app and game areas take this theme.")
     item.kind == "profile_frame" -> sh("Profil fotoğrafının çevresinde her yerde görünür.", "Shown around your photo everywhere.")
+    item.kind == "board_skin" -> sh("Kuşatma tahtan bu görünüme bürünür. Profil > Koleksiyon > Tahta'dan seçilir.", "Your siege board takes this look. Pick it in Profile > Collection > Board.")
     else -> sh(item.descriptionTr, item.descriptionEn).takeIf { it.isNotBlank() }
 }

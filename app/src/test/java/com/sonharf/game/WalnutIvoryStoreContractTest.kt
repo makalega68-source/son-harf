@@ -22,7 +22,7 @@ class WalnutIvoryStoreContractTest {
             "keyboard_royal_purple", "name_cyan", "name_sapphire", "name_amethyst",
             "name_aurelia", "name_emerald", "name_ruby", "name_sunset",
         ).forEach { assertTrue("Existing active catalog item lost: $it", migration.contains("'$it'")) }
-        assertTrue(shop.contains("2 -> items.filter { it.kind == \"game_theme\" }"))
+        assertTrue(shop.contains("2 -> items.filter { it.kind == \"game_theme\" || it.kind == \"board_skin\" }"))
         assertTrue(shop.contains("b.purchaseShopItem(item.id)"))
         // Buying only adds to the collection; wearing, changing and removing happen in the profile.
         assertTrue(!shop.contains("b.equipShopItem(item.id)"))

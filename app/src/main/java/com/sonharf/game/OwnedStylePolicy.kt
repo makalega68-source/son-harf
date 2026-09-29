@@ -21,5 +21,6 @@ internal fun ShopItemDto.isSupportedOwnedStyle(): Boolean = when (kind) {
     "victory_effect" -> id == "victory_crown"
     "emoji_pack" -> id == "emoji_vip"
     "mascot_hat" -> id in MascotHats.ids
+    "board_skin" -> id in WordSiegeBoardSkin.productIds
     else -> false
 }

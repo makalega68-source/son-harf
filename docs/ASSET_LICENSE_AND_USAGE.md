@@ -44,3 +44,9 @@ Items the repository can vouch for, and items only the owner can confirm. No lic
 | Dictionaries `assets/dictionary/*.txt` | `assets` | See `DICTIONARY_AND_FRAME_SOURCES.md`. They contain ordinary words such as "kelimelik" and "scrabble"; these are dictionary entries, not brand use. |
 
 No asset file name or content refers to Kelimelik, He2 Apps or Scrabble. Board bonus cells, the Starting Seal, tiles and the HUD are drawn natively in Compose (no bitmap copied from another game).
+
+## Kuşatma board skins (2026-09-29)
+- `board_frame_*`, `board_plate_*`, `store_art_board_*` (JPEG, `drawable-nodpi`): made from four 2048 px
+  board images the owner generated and supplied (Stone Keep, River Valley, Frost Citadel, Obsidian Bastion)
+  using the prompts in `docs/store-art/`. Scaled to 1024 px (frame), 384 px (store art) and a 192 px
+  plate crop (cell texture) in-repo. The generation tool/plan licence stays with the owner's records.

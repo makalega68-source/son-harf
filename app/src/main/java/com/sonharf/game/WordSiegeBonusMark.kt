@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -152,3 +153,79 @@ internal fun wordSiegeCellBrush(base: Color, raised: Boolean, walnut: Boolean): 
             ),
         )
     }
+
+/** Light-board cell colours of each bonus, used to draw the tutorial's picture of the cell. */
+private fun wordSiegeLegendSurface(code: String): Color = when (code) {
+    "2H" -> Color(0xFFE0F3EF)
+    "3H" -> Color(0xFFC3E7DF)
+    "2K" -> Color(0xFFFFF0D3)
+    "3K" -> Color(0xFFF6D596)
+    WordSiegeBoardSpec.CenterBonus -> Color(0xFF24304B)
+    else -> Color(0xFFFBEBB5)
+}
+
+/** One short line per bonus: what it does, in plain words. */
+internal fun wordSiegeBonusShortEffect(code: String, turkish: Boolean): String = when (code) {
+    "2H" -> if (turkish) "Üstüne koyduğun harfin puanı 2 kat." else "The letter placed here scores double."
+    "3H" -> if (turkish) "Üstüne koyduğun harfin puanı 3 kat." else "The letter placed here scores triple."
+    "2K" -> if (turkish) "Buradan geçen kelimenin puanı 2 kat." else "A word through here scores double."
+    "3K" -> if (turkish) "Buradan geçen kelimenin puanı 3 kat." else "A word through here scores triple."
+    WordSiegeBoardSpec.CenterBonus -> if (turkish) "İlk kelime buradan geçer; puanı 4 kat." else "The first word passes here; it scores 4x."
+    WordSiegeBoardSpec.StarBonus -> if (turkish) "Buraya taş koyana +25 puan." else "+25 points to whoever places a tile here."
+    else -> ""
+}
+
+/**
+ * Picture guide to the bonuses, as they look on the board, each with one short line. Shown in the
+ * tutorial and the how-to-play card.
+ */
+@Composable
+internal fun WordSiegeBonusLegend(compact: Boolean, modifier: Modifier = Modifier) {
+    val turkish = !SonHarfUiState.isEnglish
+    val codes = listOf("2H", "3H", "2K", "3K", WordSiegeBoardSpec.CenterBonus, WordSiegeBoardSpec.StarBonus)
+    val cell = if (compact) 30.dp else 36.dp
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp)) {
+        codes.chunked(2).forEach { pair ->
+            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                pair.forEach { code ->
+                    androidx.compose.foundation.layout.Row(
+                        Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Box(
+                            Modifier.size(cell)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(wordSiegeLegendSurface(code)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            WordSiegeBonusMark(
+                                code = code,
+                                label = WordSiegeBoardSpec.displayBonusLabel(code, turkish),
+                                overview = true,
+                                themeLabel = Color(0xFF3F4A5A),
+                                glyphSize = if (compact) 13.sp else 15.sp,
+                            )
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                WordSiegeBoardSpec.bonusLongName(code, turkish),
+                                color = Color(0xFF17372C),
+                                fontSize = if (compact) 9.sp else 10.sp,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                            )
+                            Text(
+                                wordSiegeBonusShortEffect(code, turkish),
+                                color = Color(0xFF3F554A),
+                                fontSize = if (compact) 8.sp else 9.sp,
+                                lineHeight = if (compact) 10.sp else 11.sp,
+                                maxLines = 2,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

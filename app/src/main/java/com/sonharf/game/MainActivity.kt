@@ -162,7 +162,7 @@ class MainActivity : ComponentActivity() {
         bestEffortStartup("sound effects") { SonHarfSoundFx.init(this) }
         bestEffortStartup("sound preferences") { SonHarfPreferences.syncSound(this) }
         bestEffortStartup("ui preferences") { SonHarfPreferences.syncUi(this) }
-        bestEffortStartup("cosmetics") { SonHarfCosmetics.restore(this) }
+        bestEffortStartup("cosmetics") { SonHarfCosmetics.restore(this); WordSiegeBoardSkins.restore(this) }
         bestEffortStartup("remote experience cache") { RemoteExperience.loadCached(this) }
         bestEffortStartup("ad privacy") { AdPrivacyManager.requestConsent(this) }
 

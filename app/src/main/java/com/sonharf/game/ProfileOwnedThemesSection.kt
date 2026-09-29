@@ -45,7 +45,7 @@ private const val LegacyDarkArenaThemeId = "theme_dark_arena"
 private val DarkThemeIds = setOf(BlackThemeId, LegacyDarkArenaThemeId)
 
 /** Slots the player can return to the free built-in look from the profile. */
-private val ResettableKinds = listOf("profile_frame", "mascot_hat", "victory_effect", "keyboard_theme", "name_style")
+private val ResettableKinds = listOf("board_skin", "profile_frame", "mascot_hat", "victory_effect", "keyboard_theme", "name_style")
 
 private fun EquippedCosmeticsDto?.slotFor(kind: String): String? = when (kind) {
     "keyboard_theme" -> this?.keyboardThemeId
@@ -53,6 +53,8 @@ private fun EquippedCosmeticsDto?.slotFor(kind: String): String? = when (kind) {
     "mascot_hat" -> this?.mascotHatId
     "profile_frame" -> this?.profileFrameId
     "victory_effect" -> this?.victoryEffectId
+    // Board skins are chosen on the device; no server slot.
+    "board_skin" -> WordSiegeBoardSkins.selectedId
     else -> null
 }
 
@@ -61,6 +63,7 @@ private fun defaultStyleTitle(kind: String) = when (kind) {
     "mascot_hat" -> sh("Şapkasız Obi", "Obi, no hat")
     "profile_frame" -> sh("Çerçevesiz", "No frame")
     "victory_effect" -> sh("Standart Zafer", "Standard Victory")
+    "board_skin" -> sh("Taş Kale Tahtası", "Stone Keep Board")
     else -> sh("Standart İsim Rengi", "Standard Name Color")
 }
 
@@ -113,6 +116,11 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
     fun equipStyle(itemId: String?) {
         if (busy || loading) return
         if (itemId != null && itemId !in owned) return
+        if (itemId != null && itemId in WordSiegeBoardSkin.productIds) {
+            WordSiegeBoardSkins.select(context, itemId)
+            notice = sh("Tahta uygulandı.", "Board applied.")
+            return
+        }
         busy = true
         pendingId = itemId ?: "default_theme"
         notice = null
@@ -142,6 +150,11 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
     /** Back to the free default look for one slot; ownership of bought items is untouched. */
     fun resetSlot(kind: String) {
         if (busy || loading) return
+        if (kind == "board_skin") {
+            WordSiegeBoardSkins.select(context, null)
+            notice = sh("Taş Kale tahtasına dönüldü.", "Back to the Stone Keep board.")
+            return
+        }
         busy = true
         pendingId = "default_$kind"
         notice = null
@@ -281,7 +294,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: Str
                         ProfileThemeCard(
                             title = defaultStyleTitle(kind),
                             subtitle = sh("Varsayılan • Ücretsiz", "Default • Free"),
-                            active = equipped != null && equipped.slotFor(kind) == null,
+                            active = if (kind == "board_skin") WordSiegeBoardSkins.selectedId == null else equipped != null && equipped.slotFor(kind) == null,
                             enabled = true,
                             blackVariant = false,
                             modifier = m,
@@ -421,6 +434,11 @@ private fun BoxScope.DefaultSlotPreview(kind: String) {
             Icon(Icons.Rounded.Person, null, Modifier.size(34.dp), tint = Hf.TextMuted)
         }
         "mascot_hat" -> ObiHatPreview(hatId = "", modifier = Modifier.align(Alignment.Center).padding(6.dp))
+        "board_skin" -> androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(WordSiegeBoardSkin.DEFAULT.artRes),
+            contentDescription = null,
+            modifier = Modifier.matchParentSize().padding(4.dp),
+        )
         else -> Text(
             when (kind) {
                 "victory_effect" -> "🏆"

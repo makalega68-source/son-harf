@@ -78,10 +78,14 @@ internal fun WordSiegePracticeZoneInfoDialog(
             )
         },
         text = {
-            Text(
-                wordSiegePracticeZoneExplanation(code, turkish),
-                color = MainUi.Text,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    wordSiegePracticeZoneExplanation(code, turkish),
+                    color = MainUi.Text,
+                )
+                // All bonuses side by side, as they look on the board.
+                WordSiegeBonusLegend(compact = false, modifier = Modifier.fillMaxWidth())
+            }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
@@ -105,7 +109,7 @@ internal fun WordSiegePracticeTutorialCard(
         1 -> if (turkish) "1/4 • TAŞINI AL" else "1/4 • TAKE A TILE"
         2 -> if (turkish) "2/4 • MÜHRÜ AÇ" else "2/4 • OPEN THE SEAL"
         3 -> if (turkish) "3/4 • KELİMEYİ KİLİTLE" else "3/4 • LOCK IN THE WORD"
-        else -> if (turkish) "4/4 • BÖLGE SAVAŞI" else "4/4 • FIGHT FOR GROUND"
+        else -> if (turkish) "4/4 • BÖLGE VE BONUSLAR" else "4/4 • GROUND AND BONUSES"
     }
     val body = when (step) {
         0 -> if (turkish) {
@@ -129,9 +133,9 @@ internal fun WordSiegePracticeTutorialCard(
             "Line the tiles up as a word in a single row or column, then tap CONFIRM MOVE."
         }
         else -> if (turkish) {
-            "Harf Gücü tek taşı, Kelime Akımı bütün kelimeyi büyütür; +25 ödülü hamleye eklenir. Ele geçirdiğin her küp sana +2 Bölge Puanı yazar; rakipten kopardığın küp onun Bölge Puanını 1 azaltır. Kelime puanı kalıcıdır."
+            "Ele geçirdiğin her küp sana +2 Bölge Puanı yazar; rakipten kopardığın küp onun Bölge Puanını 1 azaltır. Kelime puanı kalıcıdır. Bonuslar yalnız üstüne ilk taş konunca çalışır:"
         } else {
-            "Letter Boost grows one tile, Word Surge grows the whole word; +25 is added to the move. Each cube you take writes +2 Territory Points for you; a cube pulled from your rival lowers their Territory Points by 1. Word points are permanent."
+            "Each cube you take writes +2 Territory Points for you; a cube pulled from your rival lowers their Territory Points by 1. Word points are permanent. A bonus works only for the first tile placed on it:"
         }
     }
 
@@ -160,6 +164,8 @@ internal fun WordSiegePracticeTutorialCard(
                 fontSize = if (compact) 9.sp else 10.sp,
                 lineHeight = if (compact) 12.sp else 14.sp,
             )
+            // The last step shows every bonus as it looks on the board, with one short line each.
+            if (step >= 4) WordSiegeBonusLegend(compact = compact, modifier = Modifier.fillMaxWidth())
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,

@@ -679,20 +679,26 @@ private fun PanSiegeBoard(
         }
     }
 
+    // Stone Keep is the default board; a bought skin replaces it; Walnut/Black themes keep their own.
+    val boardSkin = WordSiegeBoardSkins.active
     Surface(
         modifier = modifier,
         color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frame else Color.White,
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(2.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameEdge else Color(0xFFD2DBE5)),
+        border = BorderStroke(if (boardSkin != null) 0.dp else 2.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameEdge else Color(0xFFD2DBE5)),
         shadowElevation = if (WordSiegeWalnutIvory.enabled) 7.dp else 14.dp,
     ) {
+      WordSiegeSkinnedBoard(boardSkin, Modifier.fillMaxSize()) { viewportModifier ->
         Box(
-            Modifier
-                .fillMaxSize()
-                .padding(5.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.boardGrain else Brush.linearGradient(listOf(Color(0xFFEFE7D2), Color(0xFFECE3CB), Color(0xFFEFE7D2), Color(0xFFE9DFC5))))
-                .border(1.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameShade else Color(0xFFC9A560), RoundedCornerShape(14.dp))
+            viewportModifier
+                .then(
+                    if (boardSkin != null) Modifier.clip(RoundedCornerShape(6.dp))
+                    else Modifier
+                        .padding(5.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.boardGrain else Brush.linearGradient(listOf(Color(0xFFEFE7D2), Color(0xFFECE3CB), Color(0xFFEFE7D2), Color(0xFFE9DFC5))))
+                        .border(1.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameShade else Color(0xFFC9A560), RoundedCornerShape(14.dp)),
+                )
                 .clipToBounds()
                 .onGloballyPositioned {
                     viewport = it.size
@@ -854,6 +860,7 @@ private fun PanSiegeBoard(
             }
             if (GameChatBadge.unread > 0) Box(Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp)) { ChatUnreadDot(GameChatBadge.unread) }
         }
+      }
     }
 }
 
@@ -929,6 +936,7 @@ private fun PanSiegeBoardCell(
         else -> PanSiegeNeutralBorder
     }
     val regionGap = 1.25.dp
+    val skinPlate = LocalWordSiegePlate.current
     val boardInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by boardInteraction.collectIsPressedAsState()
     val pressScale by animateFloatAsState(if (pressed) .94f else 1f, tween(if (pressed) 65 else 150), label = "siege cell press")
@@ -962,7 +970,11 @@ private fun PanSiegeBoardCell(
             // Raised stones cast a short soft shadow; empty recesses cast none.
             .shadow(if (letter != null && !WordSiegeWalnutIvory.enabled) 2.dp else 0.dp, RoundedCornerShape(7.dp), clip = false)
             .clip(RoundedCornerShape(7.dp))
-            .background(wordSiegeCellBrush(displayBase, raised = letter != null, walnut = WordSiegeWalnutIvory.enabled))
+            .then(
+                // On a board skin an empty cell is a stone plate of that skin, bonus tint on top.
+                if (skinPlate != null && letter == null) Modifier.wordSiegePlateTexture(skinPlate).background(wordSiegeSkinCellOverlay(bonusSurface))
+                else Modifier.background(wordSiegeCellBrush(displayBase, raised = letter != null, walnut = WordSiegeWalnutIvory.enabled)),
+            )
             .border(
                 width = if (dropTarget) 3.dp else if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
                 color = if (dropTarget) Color(0xFF2FB36A) else PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),

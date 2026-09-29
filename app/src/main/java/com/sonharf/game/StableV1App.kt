@@ -54,6 +54,7 @@ fun StableV1App() {
     val context = LocalContext.current
     remember(context) {
         SonHarfCosmetics.restore(context)
+        WordSiegeBoardSkins.restore(context)
         WordSiegeMascotOwnership.restore(context)
         true
     }

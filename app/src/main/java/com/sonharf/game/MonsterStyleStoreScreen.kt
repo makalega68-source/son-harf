@@ -82,7 +82,8 @@ internal fun MonsterStyleStoreScreen() {
             runCatching {
                 withTimeout(StoreTimeout) {
                     if (item.id !in owned) b.purchaseShopItem(item.id)
-                    b.equipShopItem(item.id)
+                    // Board skins are chosen on the device; everything else is equipped on the server.
+                    if (item.kind == "board_skin") WordSiegeBoardSkins.select(context, item.id) else b.equipShopItem(item.id)
                 }
             }.onSuccess {
                 notice = sh("${item.nameTr} anında uygulandı.", "${item.nameEn} was applied instantly.")
@@ -182,6 +183,7 @@ internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) 
     "victory_effect" -> id == "victory_crown"
     "emoji_pack" -> id == "emoji_vip"
     "mascot_hat" -> id in MascotHats.ids
+    "board_skin" -> id in WordSiegeBoardSkin.productIds
     else -> false
 }
 
@@ -193,6 +195,8 @@ internal fun EquippedCosmeticsDto?.isEquipped(item: ShopItemDto): Boolean = when
     "victory_effect" -> this?.victoryEffectId == item.id
     "emoji_pack" -> this?.emojiPackId == item.id
     "mascot_hat" -> this?.mascotHatId == item.id
+    // Board skins are chosen on this device from Profile > Collection.
+    "board_skin" -> WordSiegeBoardSkins.selectedId == item.id
     else -> false
 }
 
