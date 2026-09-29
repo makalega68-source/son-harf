@@ -48,7 +48,7 @@ internal enum class WordSiegeBoardSkin(
     val rim: List<Color>,
     /** Thin metal inlay line and corner studs on the rim. */
     val inlay: Color,
-    /** Field colour between cells: the plate tone itself, so no dark grid lines tire the eye. */
+    /** Groove between the raised cells: a shade just below the plate tone, never a dark grid line. */
     val field: Color,
     val dark: Boolean,
     /** Table under the slab when zoomed out: centre and edge of a soft vignette. */
@@ -57,22 +57,22 @@ internal enum class WordSiegeBoardSkin(
     STONE_KEEP(
         "board_stone_keep", R.drawable.board_plate_stone_keep, R.drawable.store_art_board_stone_keep,
         listOf(Color(0xFFC9B48D), Color(0xFFA58C66), Color(0xFF76603F)), Color(0xFFD8B25E),
-        Color(0xFFD6C8AA), dark = false, ground = listOf(Color(0xFF5B5044), Color(0xFF2F2821)),
+        Color(0xFFC4B593), dark = false, ground = listOf(Color(0xFF5B5044), Color(0xFF2F2821)),
     ),
     RIVER_VALLEY(
         "board_river_valley", R.drawable.board_plate_river_valley, R.drawable.store_art_board_river_valley,
         listOf(Color(0xFF6F9C82), Color(0xFF41705A), Color(0xFF244536)), Color(0xFFBFE3D2),
-        Color(0xFFCFCCBE), dark = false, ground = listOf(Color(0xFF34473B), Color(0xFF18221C)),
+        Color(0xFFBBB8A9), dark = false, ground = listOf(Color(0xFF34473B), Color(0xFF18221C)),
     ),
     FROST_CITADEL(
         "board_frost_citadel", R.drawable.board_plate_frost_citadel, R.drawable.store_art_board_frost_citadel,
         listOf(Color(0xFF9FB2C9), Color(0xFF6D819C), Color(0xFF45566F)), Color(0xFFF1F6FB),
-        Color(0xFFD5E0EC), dark = false, ground = listOf(Color(0xFF45526A), Color(0xFF222A38)),
+        Color(0xFFBDCADA), dark = false, ground = listOf(Color(0xFF45526A), Color(0xFF222A38)),
     ),
     OBSIDIAN(
         "board_obsidian", R.drawable.board_plate_obsidian, R.drawable.store_art_board_obsidian,
         listOf(Color(0xFF454952), Color(0xFF25282E), Color(0xFF101114)), Color(0xFFD4AF37),
-        Color(0xFF2A2F37), dark = true, ground = listOf(Color(0xFF1E1F23), Color(0xFF060607)),
+        Color(0xFF1C2026), dark = true, ground = listOf(Color(0xFF1E1F23), Color(0xFF060607)),
     ),
     ;
 
@@ -272,12 +272,38 @@ internal fun Modifier.wordSiegePlateTexture(plate: ImageBitmap?): Modifier =
     }
 
 /**
- * Shading laid over the stone texture of an empty cell: a faint recess, or the bonus family's tint
- * so bonus cells still read at a glance on every skin.
+ * Shading laid over the stone texture of an empty cell: a convex light-to-shade fall so the plate reads
+ * as a raised stone, or the bonus family's tint so bonus cells still read at a glance on every skin.
  */
-internal fun wordSiegeSkinCellOverlay(bonusSurface: Color?): androidx.compose.ui.graphics.Brush =
+internal fun wordSiegeSkinCellOverlay(bonusSurface: Color?): Brush =
     if (bonusSurface != null) {
-        androidx.compose.ui.graphics.Brush.linearGradient(listOf(bonusSurface.copy(alpha = .40f), bonusSurface.copy(alpha = .28f)))
+        Brush.linearGradient(listOf(bonusSurface.copy(alpha = .40f), bonusSurface.copy(alpha = .28f)))
     } else {
-        androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Black.copy(alpha = .13f), Color.Transparent, Color.White.copy(alpha = .10f)))
+        Brush.verticalGradient(listOf(Color.White.copy(alpha = .16f), Color.Transparent, Color.Black.copy(alpha = .12f)))
     }
+
+/**
+ * Bevel of a raised stone cell, drawn inside its rounded clip: a bright top-left edge, a dark
+ * bottom-right edge and a soft top sheen, lit from the same corner as the slab.
+ */
+internal fun Modifier.wordSiegeCellBevel(dark: Boolean): Modifier = drawBehind {
+    val w = size.minDimension * .085f
+    val corner = size.minDimension * .14f
+    drawRoundRect(
+        Brush.linearGradient(
+            listOf(
+                Color.White.copy(alpha = if (dark) .26f else .55f),
+                Color.White.copy(alpha = if (dark) .06f else .12f),
+                Color.Black.copy(alpha = if (dark) .45f else .30f),
+            ),
+            start = Offset.Zero, end = Offset(size.width, size.height),
+        ),
+        topLeft = Offset(w / 2, w / 2), size = Size(size.width - w, size.height - w),
+        cornerRadius = CornerRadius(corner), style = Stroke(w),
+    )
+    drawRoundRect(
+        Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) .07f else .14f), Color.Transparent), w, size.height * .45f),
+        topLeft = Offset(w, w), size = Size(size.width - w * 2, size.height * .42f),
+        cornerRadius = CornerRadius(corner * .7f),
+    )
+}

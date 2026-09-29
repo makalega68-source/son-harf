@@ -495,7 +495,7 @@ private fun WordSiegePracticeBoardCell(
             .clip(RoundedCornerShape(8.dp))
             .then(
                 // On a board skin an empty cell is a stone plate of that skin, bonus tint on top.
-                if (skinPlate != null && letter == null) Modifier.wordSiegePlateTexture(skinPlate).background(wordSiegeSkinCellOverlay(zoneSurface))
+                if (skinPlate != null && letter == null) Modifier.wordSiegePlateTexture(skinPlate).background(wordSiegeSkinCellOverlay(zoneSurface)).wordSiegeCellBevel(WordSiegeBoardSkins.active?.dark == true)
                 else Modifier.background(wordSiegeCellBrush(displayCellColor, raised = letter != null, walnut = WordSiegeWalnutIvory.enabled)),
             )
             .border(
