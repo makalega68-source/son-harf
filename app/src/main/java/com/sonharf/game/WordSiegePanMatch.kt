@@ -56,12 +56,12 @@ private val PanSiegeFrameNavy get() = if (WordSiegeWalnutIvory.enabled) WordSieg
 private val PanSiegeFrameEdge get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameEdge else Color(0xFF9EC7D8)
 private val PanSiegeFrameInner get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameShade else Color(0xFFD7E7ED)
 private val PanSiegeNeutral get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.empty else Color(0xFFF3EEDF)
-private val PanSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF5FAF73)
-private val PanSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFD9776F)
+private val PanSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF2E9E54)
+private val PanSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFD83B35)
 private val PanSiegeNeutralBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.emptyEdge else Color(0xFFDCD3BD)
 private val PanSiegeBonusBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusBorder else Color(0xFFC9BFA5)
-private val PanSiegeMineBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF7FC391)
-private val PanSiegeRivalBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFEB9E97)
+private val PanSiegeMineBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF58C07A)
+private val PanSiegeRivalBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFEE6F69)
 private val PanSiegeBonus2H get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2H else Color(0xFFE0F3EF)
 private val PanSiegeBonus3H get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3H else Color(0xFFC3E7DF)
 private val PanSiegeBonus2K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2K else Color(0xFFFFF0D3)
@@ -990,7 +990,9 @@ private fun PanSiegeBoardCell(
             .then(
                 // On a board skin an empty cell is a stone plate of that skin, bonus tint on top.
                 if (skinPlate != null && letter == null) Modifier.wordSiegePlateTexture(skinPlate).background(wordSiegeSkinCellOverlay(bonusSurface)).wordSiegeCellBevel(WordSiegeBoardSkins.active?.dark == true)
-                else Modifier.background(wordSiegeCellBrush(displayBase, raised = letter != null, walnut = WordSiegeWalnutIvory.enabled)),
+                else Modifier.background(wordSiegeCellBrush(displayBase, raised = letter != null, walnut = WordSiegeWalnutIvory.enabled))
+                    // Placed stones are raised like the board's cells, with no outline.
+                    .then(if (letter != null && !pending && !WordSiegeWalnutIvory.enabled) Modifier.wordSiegeCellBevel(dark = false) else Modifier),
             )
             .border(
                 width = if (dropTarget) 3.dp else if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
@@ -1006,7 +1008,7 @@ private fun PanSiegeBoardCell(
             shape = RoundedCornerShape(7.dp),
             border = BorderStroke(
                 if (pending) maxOf(if (WordSiegeWalnutIvory.enabled) 1.6.dp else 1.4.dp, borderWidth) else if (WordSiegeWalnutIvory.enabled) .65.dp else .45.dp,
-                if (WordSiegeWalnutIvory.enabled) (if (pending) WordSiegeWalnutIvory.selection else if (letter != null) WordSiegeWalnutIvory.bevel else if (activeBonus != null) border else WordSiegeWalnutIvory.emptyEdge) else (if (pending) border.copy(alpha = .92f) else if (letter != null) Color(0xFFCDBF9F).copy(alpha = .55f) else Color.Transparent),
+                if (WordSiegeWalnutIvory.enabled) (if (pending) WordSiegeWalnutIvory.selection else if (letter != null) WordSiegeWalnutIvory.bevel else if (activeBonus != null) border else WordSiegeWalnutIvory.emptyEdge) else (if (pending) border.copy(alpha = .92f) else Color.Transparent),
             ),
         ) {
             Box(

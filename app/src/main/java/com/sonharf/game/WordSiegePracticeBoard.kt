@@ -46,10 +46,10 @@ private val PracticeSiegeTileBorder get() = if (WordSiegeWalnutIvory.enabled) Wo
 internal val PracticeSiegeBoardSurface = Color(0xFFD5CEBD)
 internal val PracticeSiegeNeutral get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.empty else Color(0xFFF3EEDF)
 private val PracticeSiegeEmpty get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.empty else Color(0xFFF3EEDF)
-private val PracticeSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF5FAF73)
-private val PracticeSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFD9776F)
-private val PracticeSiegeMineBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF7FC391)
-private val PracticeSiegeRivalBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFEB9E97)
+private val PracticeSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF2E9E54)
+private val PracticeSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFD83B35)
+private val PracticeSiegeMineBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF58C07A)
+private val PracticeSiegeRivalBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFEE6F69)
 private val PracticeSiegeThreat = Color(0xFFD8903D)
 private val PracticeSiegeLightTileText = Color(0xFF4A3217)
 private val PracticeZoneWatch get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2H else Color(0xFFE0F3EF)
@@ -496,7 +496,8 @@ private fun WordSiegePracticeBoardCell(
             .then(
                 // On a board skin an empty cell is a stone plate of that skin, bonus tint on top.
                 if (skinPlate != null && letter == null) Modifier.wordSiegePlateTexture(skinPlate).background(wordSiegeSkinCellOverlay(zoneSurface)).wordSiegeCellBevel(WordSiegeBoardSkins.active?.dark == true)
-                else Modifier.background(wordSiegeCellBrush(displayCellColor, raised = letter != null, walnut = WordSiegeWalnutIvory.enabled)),
+                else Modifier.background(wordSiegeCellBrush(displayCellColor, raised = letter != null, walnut = WordSiegeWalnutIvory.enabled))
+                    .then(if (letter != null && !pending && !WordSiegeWalnutIvory.enabled) Modifier.wordSiegeCellBevel(dark = false) else Modifier),
             )
             .border(
                 width = if (dropTarget) 3.dp else if (hintGlow != null) 2.2.dp else if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
@@ -509,7 +510,10 @@ private fun WordSiegePracticeBoardCell(
                 } else if (letter == null) {
                     // Empty cells have no outline: the recess shading separates them without a grid of lines.
                     Color.Transparent
-                } else if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.emptyEdge else Color(0xFFCDBF9F).copy(alpha = .55f),
+                } else if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.emptyEdge else if (pending) Color(0xFFCDBF9F) else {
+                    // Placed stones have no outline: their colour and bevel separate them.
+                    Color.Transparent
+                },
                 shape = RoundedCornerShape(8.dp),
             ),
         contentAlignment = Alignment.Center,

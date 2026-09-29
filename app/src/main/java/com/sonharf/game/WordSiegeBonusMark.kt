@@ -190,51 +190,60 @@ internal fun wordSiegeBonusShortEffect(code: String, turkish: Boolean): String =
 internal fun WordSiegeBonusLegend(compact: Boolean, modifier: Modifier = Modifier) {
     val turkish = !SonHarfUiState.isEnglish
     val codes = listOf("2H", "3H", "2K", "3K", WordSiegeBoardSpec.CenterBonus, WordSiegeBoardSpec.StarBonus)
-    val cell = if (compact) 30.dp else 36.dp
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp)) {
+    val icon = if (compact) 30.dp else 36.dp
+    // Picture = meaning, one bonus per line, e.g. [gem] = 2x letter points.
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(if (compact) 3.dp else 5.dp)) {
         codes.chunked(2).forEach { pair ->
             androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 pair.forEach { code ->
                     androidx.compose.foundation.layout.Row(
                         Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
                     ) {
-                        Box(
-                            Modifier.size(cell)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(wordSiegeLegendSurface(code)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            WordSiegeBonusMark(
-                                code = code,
-                                label = WordSiegeBoardSpec.displayBonusLabel(code, turkish),
-                                overview = true,
-                                themeLabel = Color(0xFF3F4A5A),
-                                glyphSize = if (compact) 13.sp else 15.sp,
-                            )
+                        val bitmap = WordSiegeBonusIcons.bitmap(code)
+                        if (bitmap != null) {
+                            androidx.compose.foundation.Image(bitmap, contentDescription = null, modifier = Modifier.size(icon))
+                        } else {
+                            Box(
+                                Modifier.size(icon).clip(RoundedCornerShape(6.dp)).background(wordSiegeLegendSurface(code)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                WordSiegeBonusMark(
+                                    code = code,
+                                    label = WordSiegeBoardSpec.displayBonusLabel(code, turkish),
+                                    overview = true,
+                                    themeLabel = Color(0xFF3F4A5A),
+                                    glyphSize = if (compact) 13.sp else 15.sp,
+                                )
+                            }
                         }
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                WordSiegeBoardSpec.bonusLongName(code, turkish),
-                                color = Color(0xFF17372C),
-                                fontSize = if (compact) 9.sp else 10.sp,
-                                fontWeight = FontWeight.Black,
-                                maxLines = 1,
-                            )
-                            Text(
-                                wordSiegeBonusShortEffect(code, turkish),
-                                color = Color(0xFF3F554A),
-                                fontSize = if (compact) 8.sp else 9.sp,
-                                lineHeight = if (compact) 10.sp else 11.sp,
-                                maxLines = 2,
-                            )
-                        }
+                        Text("=", color = Color(0xFF3F554A), fontSize = if (compact) 13.sp else 15.sp, fontWeight = FontWeight.Black)
+                        Text(
+                            wordSiegeBonusEquation(code, turkish),
+                            color = Color(0xFF17372C),
+                            fontSize = if (compact) 10.sp else 11.sp,
+                            lineHeight = if (compact) 12.sp else 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
             }
         }
     }
+}
+
+/** The legend's plain meaning of each bonus picture: "picture = what it gives". */
+internal fun wordSiegeBonusEquation(code: String, turkish: Boolean): String = when (code) {
+    "2H" -> if (turkish) "2 kat harf puanı" else "2x letter points"
+    "3H" -> if (turkish) "3 kat harf puanı" else "3x letter points"
+    "2K" -> if (turkish) "2 kat kelime puanı" else "2x word points"
+    "3K" -> if (turkish) "3 kat kelime puanı" else "3x word points"
+    WordSiegeBoardSpec.CenterBonus -> if (turkish) "İlk kelime; 4 kat kelime puanı" else "First word; 4x word points"
+    WordSiegeBoardSpec.StarBonus -> if (turkish) "+25 puan" else "+25 points"
+    else -> ""
 }
 
 
