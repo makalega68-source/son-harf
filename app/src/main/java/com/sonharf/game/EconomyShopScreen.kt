@@ -294,6 +294,8 @@ private fun EconomyCatalogScreen(
                         equipped = active,
                         busy = busy != null || loading,
                         proActive = profile?.isVip == true,
+                        balance = profile?.diamonds,
+                        wins = profile?.wins,
                         playPrice = if (playKeyboard) {
                             keyboardOffers[item.id]?.oneTimePurchaseOfferDetails?.formattedPrice ?: com.sonharf.game.billing.ProductCatalog.KEYBOARD_LIST_PRICE_TRY
                         } else null,
@@ -337,6 +339,9 @@ private fun EconomyCatalogScreen(
                                             "vip_required" in raw -> sh("Bu ürün PRO üyelerine özel.", "This item is exclusive to PRO members.")
                                             "already_owned" in raw -> sh("Bu ürüne zaten sahipsin.", "You already own this item.")
                                             "play_only" in raw -> sh("Bu ürün Google Play ile satılır.", "This item is sold through Google Play.")
+                                            "requirement_not_met" in raw -> item.requiredWins?.let { need ->
+                                                sh("Bu ürün $need galibiyetle açılır. Maç kazandıkça yaklaşırsın.", "This item unlocks at $need wins. Every win brings you closer.")
+                                            } ?: sh("Bu ürünün başarı şartı henüz tamamlanmadı.", "This item's achievement requirement is not met yet.")
                                             else -> sh("Satın alma tamamlanamadı.", "Purchase failed.")
                                         }
                                     }
@@ -474,12 +479,22 @@ private fun VerifiedStoreProductCard(
     equipped: Boolean,
     busy: Boolean,
     proActive: Boolean,
+    balance: Int? = null,
+    wins: Int? = null,
     playPrice: String? = null,
     modifier: Modifier = Modifier,
     onAction: () -> Unit,
 ) {
     val name = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
     val lockedByPro = item.vipOnly && !proActive && !owned
+    val tier = StoreTier.from(item.economyTier, item.rarity)
+    val goal = StoreGoalProgress.of(item.diamondPrice, balance, item.requiredWins, wins)
+    val tierColor = when (tier) {
+        StoreTier.STARTER, StoreTier.COMMON -> Hf.TextMuted
+        StoreTier.RARE -> Color(0xFF2F7FC1)
+        StoreTier.EPIC -> Color(0xFF8A4FC7)
+        StoreTier.LEGENDARY, StoreTier.PRESTIGE -> Hf.GoldDeep
+    }
 
     Surface(
         onClick = onAction,
@@ -487,7 +502,8 @@ private fun VerifiedStoreProductCard(
         modifier = modifier,
         shape = Hf.CardShape,
         color = Hf.Ivory,
-        border = BorderStroke(1.5.dp, if (owned || equipped) Hf.Green else Hf.Gold),
+        // Legendary and prestige get a slightly stronger rim, nothing louder.
+        border = BorderStroke(if (tier.rank >= StoreTier.LEGENDARY.rank) 2.5.dp else 1.5.dp, if (owned || equipped) Hf.Green else if (tier.rank >= StoreTier.RARE.rank) tierColor else Hf.Gold),
         shadowElevation = 3.dp,
     ) {
         Box {
@@ -495,7 +511,9 @@ private fun VerifiedStoreProductCard(
             // all centred so neighbouring cards line up.
             Column(Modifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 StoreProductPreview(item, Modifier.fillMaxWidth().height(72.dp))
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
+                Text(tier.label, color = tierColor, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp, maxLines = 1)
+                Spacer(Modifier.height(2.dp))
                 Text(
                     name,
                     color = Hf.Text,
@@ -521,6 +539,27 @@ private fun VerifiedStoreProductCard(
                     )
                 }
                 Spacer(Modifier.weight(1f).heightIn(min = 6.dp))
+                // A long goal reads as progress, not as a wall: coin share and any win requirement.
+                if (!owned && !equipped && !lockedByPro && playPrice == null && balance != null) {
+                    if (goal.winsNeeded != null) {
+                        Text(
+                            sh("${minOf(goal.winsHave, goal.winsNeeded)}/${goal.winsNeeded} galibiyet", "${minOf(goal.winsHave, goal.winsNeeded)}/${goal.winsNeeded} wins"),
+                            color = if (goal.requirementMet) Hf.Green else Hf.TextMuted,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                        )
+                    }
+                    if (goal.coinsMissing > 0) {
+                        LinearProgressIndicator(
+                            progress = { goal.coinFraction },
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).height(4.dp),
+                            color = tierColor.takeIf { tier.rank >= StoreTier.RARE.rank } ?: Hf.Gold,
+                            trackColor = Hf.Border,
+                        )
+                        Text("%${goal.percent}", color = Hf.TextMuted, fontSize = 9.sp, maxLines = 1)
+                    }
+                }
                 if (owned || equipped) {
                     Surface(shape = Hf.PillShape, color = Hf.Green) {
                         Row(Modifier.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -577,7 +616,7 @@ private fun ProShopCard(active: Boolean, onClick: () -> Unit) {
                 }
                 Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) Hf.GreenLight else Hf.Gold, fontWeight = FontWeight.Black)
             }
-            Text(sh("Kuşatmada hamle puanı • torbadaki harfler • Son Harf'te çıkan kelimeler • özel oda • PRO profil • reklamsız", "Siege move score • letters left in the bag • Last Letter played words • private rooms • PRO profile • ad-free"), color = Hf.Text, fontSize = 13.sp)
+            Text(sh("Reklamsız • PRO profil • özel oda • maç özeti • konfor araçları", "Ad-free • PRO profile • private rooms • match recap • comfort tools"), color = Hf.Text, fontSize = 13.sp)
         }
     }
 }

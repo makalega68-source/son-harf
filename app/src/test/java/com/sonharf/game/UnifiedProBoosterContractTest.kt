@@ -36,7 +36,7 @@ class UnifiedProBoosterContractTest {
 
         // Store messaging must describe only fair PRO value, never a paid ranked advantage.
         assertFalse(shop.contains("ADİL OYUN SÖZÜ"))
-        assertTrue(shop.contains("Kuşatmada hamle puanı • torbadaki harfler"))
+        assertTrue(shop.contains("Reklamsız • PRO profil • özel oda • maç özeti • konfor araçları"))
         assertFalse(shop.contains("günlük İpucu, Harf Değiştirici ve 2x Skor"))
         assertFalse(shop.contains("daily Hint, Letter Swap and 2x Score"))
         assertFalse(shop.contains("helper boosters with PRO"))

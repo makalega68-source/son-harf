@@ -40,7 +40,18 @@ data class ShopItemDto(
     @SerialName("sort_order") val sortOrder: Int = 0,
     @SerialName("trial_mode") val trialMode: String? = null,
     @SerialName("trial_value") val trialValue: Int? = null,
-)
+    val rarity: String? = null,
+    val metadata: kotlinx.serialization.json.JsonObject? = null,
+) {
+    /** Collection tier set by the economy migration (starter/common/rare/epic/legendary/prestige). */
+    val economyTier: String? get() = (metadata?.get("economy_tier") as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull()
+
+    /** Wins required before the server lets anyone buy this, whatever their balance. */
+    val requiredWins: Int? get() = ((metadata?.get("requirements") as? kotlinx.serialization.json.JsonObject)
+        ?.get("min_wins") as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull()
+}
+
+private fun kotlinx.serialization.json.JsonPrimitive.contentOrNull(): String? = if (this is kotlinx.serialization.json.JsonNull) null else content
 
 @Serializable
 data class InventoryDto(

@@ -104,8 +104,8 @@ fun RewardCenterScreen() {
 
     fun successMessage(rewardType: String, claim: RewardClaimDto): String = when (rewardType) {
         RewardKeys.COINS -> sh(
-            "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 10)} Son Coin hesabına eklendi.",
-            "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 10)} Son Coin added.",
+            "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 5)} Son Coin hesabına eklendi.",
+            "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 5)} Son Coin added.",
         )
         RewardKeys.DAILY_DOUBLE -> sh("Günlük hediyen ikiye katlandı: +${claim.diamondsAwarded} Son Coin!", "Daily gift doubled: +${claim.diamondsAwarded} Son Coin!")
         RewardKeys.KEYBOARD_DAY -> sh("${itemName(claim.trialItemId)} 24 saat senin! Tüm oyunlarda kullanılıyor.", "${itemName(claim.trialItemId)} is yours for 24 hours, in every game.")
@@ -361,8 +361,8 @@ fun RewardCenterScreen() {
                     )
                     Text(
                         sh(
-                            "Tamamlanan maçlarla Kumbara dolar. Hazır olduğunda ${s?.piggyBonusSc ?: 0} Son Coin açılır.",
-                            "Completed matches fill the Piggy Bank. When ready, ${s?.piggyBonusSc ?: 0} Son Coin opens.",
+                            "Son Harf ve Kuşatma maçları Kumbarayı doldurur; günde bir kez açılır. Hazır olan: ${s?.piggyBonusSc ?: 0} Son Coin.",
+                            "Last Letter and Siege matches fill the Piggy Bank; it opens once a day. Ready now: ${s?.piggyBonusSc ?: 0} Son Coin.",
                         ),
                         color = Hf.TextMuted,
                         fontSize = 12.sp,
@@ -378,7 +378,7 @@ fun RewardCenterScreen() {
                                         notice = sh("Kumbara açıldı: +${reward.bonusSc} Son Coin.", "Piggy Bank opened: +${reward.bonusSc} Son Coin.")
                                         reload()
                                     }
-                                    .onFailure { notice = sh("Kumbara henüz hazır değil.", "The Piggy Bank is not ready yet.") }
+                                    .onFailure { e -> notice = if ("piggy_daily_limit" in e.message.orEmpty()) sh("Kumbarayı bugün açtın; yarın yeniden dolmuş olacak.", "You opened the Piggy Bank today; it will be full again tomorrow.") else sh("Kumbara henüz hazır değil.", "The Piggy Bank is not ready yet.") }
                                 busy = null
                             }
                         },

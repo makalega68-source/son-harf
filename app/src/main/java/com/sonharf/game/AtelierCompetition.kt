@@ -224,7 +224,7 @@ internal fun AtelierLobby(
             }
             if (weekly) {
                 Text(
-                    sh("Haftalık ödül: 1. 200 · 2. 120 · 3. 80 · 4–10. 30 Son Coin", "Weekly reward: 1st 200 · 2nd 120 · 3rd 80 · 4–10th 30 Son Coin"),
+                    sh("Haftalık ödül: 1. 100 · 2. 60 · 3. 40 · 4–10. 15 Son Coin", "Weekly reward: 1st 100 · 2nd 60 · 3rd 40 · 4–10th 15 Son Coin"),
                     color = CompUi.InkMuted, fontSize = 12.sp,
                 )
             }

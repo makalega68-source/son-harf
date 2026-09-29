@@ -752,8 +752,8 @@ private fun WeeklyTournamentTab() {
                         }
                         Text(
                             sh(
-                                "4–10: 150 SC • En az 1 maç oynayan diğer oyuncular: 50 SC",
-                                "4–10: 150 SC • Other players with at least 1 match: 50 SC",
+                                "4–10: 40 SC • En az 1 maç oynayan diğer oyuncular: 10 SC",
+                                "4–10: 40 SC • Other players with at least 1 match: 10 SC",
                             ),
                             color = SonHarfMuted,
                             fontSize = 12.sp,
