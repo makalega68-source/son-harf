@@ -93,7 +93,17 @@ jobs:
               done
 
       - name: Build debug APK with tests
-        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+        run: |
+          set -o pipefail
+          if ! ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all 2>&1 | tee build.log; then
+            # Surface compiler errors and failing tests as annotations so they are readable without log access.
+            summary=$( { grep -E '^e: |FAILED$|Test.*> .* FAILED' build.log; \
+              for f in app/build/test-results/testDebugUnitTest/*.xml; do \
+                [ -f "$f" ] && grep -A3 '<failure' "$f" | head -8; \
+              done; } 2>/dev/null | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}' )
+            echo "::error title=Build or test failure::${summary}"
+            exit 1
+          fi
 
       - name: Prepare test APK artifact
         run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Final-Test.apk
