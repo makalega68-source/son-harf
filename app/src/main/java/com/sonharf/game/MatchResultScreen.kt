@@ -66,6 +66,19 @@ internal fun MatchResultScreen(
     } else {
         listOf(Color(0xFF10141F), Color(0xFF1E2638), Color(0xFF121826))
     }
+    val mineNumeric = mine.score.toIntOrNull()
+    val rivalNumeric = rival.score.toIntOrNull()
+    val scoreOrderDiffersFromResult = mineNumeric != null && rivalNumeric != null && when {
+        won -> mineNumeric <= rivalNumeric
+        else -> mineNumeric >= rivalNumeric
+    }
+    val displayedMine = if (scoreOrderDiffersFromResult) {
+        mine.copy(label = "${mine.label} · ${sh("PUAN", "SCORE")}")
+    } else mine
+    val displayedRival = if (scoreOrderDiffersFromResult) {
+        rival.copy(label = "${rival.label} · ${sh("PUAN", "SCORE")}")
+    } else rival
+
     Dialog(
         onDismissRequest = onSecondary,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
@@ -141,9 +154,23 @@ internal fun MatchResultScreen(
                             .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        ResultScoreColumn(mine, if (won) accent else Color.White, Modifier.weight(1f))
+                        ResultScoreColumn(displayedMine, if (won) accent else Color.White, Modifier.weight(1f))
                         Box(Modifier.width(1.dp).height(44.dp).background(Color.White.copy(alpha = .18f)))
-                        ResultScoreColumn(rival, if (won) Color.White else accent, Modifier.weight(1f))
+                        ResultScoreColumn(displayedRival, if (won) Color.White else accent, Modifier.weight(1f))
+                    }
+                    if (scoreOrderDiffersFromResult) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            sh(
+                                "Bunlar toplam puanlardır. Maç sonucu bitiş kuralına göre belirlenir; alan hâkimiyeti veya pes etme, puan sırasından farklı sonuç verebilir.",
+                                "These are total points. The result follows the match-ending rule; territory control or a forfeit can differ from the point order.",
+                            ),
+                            color = Color.White.copy(alpha = .66f),
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                        )
                     }
                     Spacer(Modifier.height(18.dp))
                     // Two equal buttons.

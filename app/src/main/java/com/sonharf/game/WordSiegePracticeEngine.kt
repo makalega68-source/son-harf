@@ -546,11 +546,9 @@ internal object WordSiegePracticeEngine {
     }
 
     private fun finish(state: WordSiegePracticeState, reason: String, forcedWinner: Int? = null): WordSiegePracticeState {
-        val playerScore = totalScore(state, 1)
-        val botScore = totalScore(state, 2)
         val winner = forcedWinner ?: when {
-            playerScore > botScore -> 1
-            botScore > playerScore -> 2
+            state.playerArea > state.botArea -> 1
+            state.botArea > state.playerArea -> 2
             else -> null
         }
         return state.copy(status = "finished", winnerOwner = winner, lastAction = reason)
