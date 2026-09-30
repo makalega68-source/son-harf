@@ -58,8 +58,9 @@ class WordSiegePracticeWinnerTest {
         val source = File("src/main/java/com/sonharf/game/MatchResultScreen.kt").readText()
 
         assertTrue(source.contains("scoreOrderDiffersFromResult"))
+        assertTrue(source.contains("sh(\"TOPLAM PUAN\", \"TOTAL SCORE\")"))
         assertTrue(source.contains("Bunlar toplam puanlardır"))
         assertTrue(source.contains("alan hâkimiyeti veya pes etme"))
-        assertTrue(source.contains("· ${'$'}{sh(\"PUAN\", \"SCORE\")}"))
+        assertTrue(source.contains("ResultScoreColumn(mine, if (won) accent else Color.White, Modifier.weight(1f))"))
     }
 }
