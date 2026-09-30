@@ -469,23 +469,17 @@ internal object WordSiegePracticeEngine {
     fun previewValidScore(board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>, language: String): Int? {
         val score = previewScore(board, rack, placements) ?: return null
         val horizontal = WordSiegeFinalRules.detectOrientation(board, placements.keys) == WordSiegeOrientation.HORIZONTAL
-        val indices = placements.keys.sorted()
+        val anchor = placements.keys.minOrNull() ?: return null
         fun letterAt(index: Int): Char? = placements[index]?.let(rack::getOrNull) ?: board[index].letter?.firstOrNull()
-        val hasBoardLetter = board.any { it.letter != null }
-        if (!hasBoardLetter && WordSiegeBoardSpec.CenterIndex !in indices) return null
-        val words = mutableListOf<List<Int>>()
-        val main = collectCells(indices.first(), if (horizontal) WordSiegeBoardSpec.HorizontalDelta else WordSiegeBoardSpec.VerticalDelta, ::letterAt)
-        if (main.size > 1) words += main
-        indices.forEach { index ->
+        val words = mutableListOf<String>()
+        val main = collectCells(anchor, if (horizontal) WordSiegeBoardSpec.HorizontalDelta else WordSiegeBoardSpec.VerticalDelta, ::letterAt)
+        if (main.size > 1) words += main.joinToString("") { letterAt(it)?.toString().orEmpty() }
+        placements.keys.forEach { index ->
             val cross = collectCells(index, if (horizontal) WordSiegeBoardSpec.VerticalDelta else WordSiegeBoardSpec.HorizontalDelta, ::letterAt)
-            if (cross.size > 1) words += cross
+            if (cross.size > 1) words += cross.joinToString("") { letterAt(it)?.toString().orEmpty() }
         }
-        if (words.isEmpty()) return null
-        if (hasBoardLetter && words.none { cells -> cells.any { board[it].letter != null } }) return null
-        val allValid = words.all { cells ->
-            SharedDictionaryService.isValidWordBlocking(cells.joinToString("") { letterAt(it)?.toString().orEmpty() }, language)
-        }
-        return if (allValid) score else null
+        if (words.isEmpty() || words.any { !SharedDictionaryService.isValidWordBlocking(it, language) }) return null
+        return score
     }
 
     private fun scoreWord(
@@ -546,10 +540,16 @@ internal object WordSiegePracticeEngine {
     }
 
     private fun finish(state: WordSiegePracticeState, reason: String, forcedWinner: Int? = null): WordSiegePracticeState {
-        val winner = forcedWinner ?: when {
-            state.playerArea > state.botArea -> 1
-            state.botArea > state.playerArea -> 2
-            else -> null
+        val winner = forcedWinner ?: run {
+            val playerTotal = totalScore(state, 1)
+            val botTotal = totalScore(state, 2)
+            when {
+                playerTotal > botTotal -> 1
+                botTotal > playerTotal -> 2
+                state.playerArea > state.botArea -> 1
+                state.botArea > state.playerArea -> 2
+                else -> null
+            }
         }
         return state.copy(status = "finished", winnerOwner = winner, lastAction = reason)
     }
