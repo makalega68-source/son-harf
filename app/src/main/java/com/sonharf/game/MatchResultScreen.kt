@@ -72,12 +72,6 @@ internal fun MatchResultScreen(
         won -> mineNumeric <= rivalNumeric
         else -> mineNumeric >= rivalNumeric
     }
-    val displayedMine = if (scoreOrderDiffersFromResult) {
-        mine.copy(label = "${mine.label} · ${sh("PUAN", "SCORE")}")
-    } else mine
-    val displayedRival = if (scoreOrderDiffersFromResult) {
-        rival.copy(label = "${rival.label} · ${sh("PUAN", "SCORE")}")
-    } else rival
 
     Dialog(
         onDismissRequest = onSecondary,
@@ -146,6 +140,17 @@ internal fun MatchResultScreen(
                         )
                     }
                     Spacer(Modifier.height(16.dp))
+                    if (scoreOrderDiffersFromResult) {
+                        Text(
+                            sh("TOPLAM PUAN", "TOTAL SCORE"),
+                            color = Color.White.copy(alpha = .62f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                    }
                     // Two equal score columns around a thin divider.
                     Row(
                         Modifier
@@ -154,9 +159,9 @@ internal fun MatchResultScreen(
                             .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        ResultScoreColumn(displayedMine, if (won) accent else Color.White, Modifier.weight(1f))
+                        ResultScoreColumn(mine, if (won) accent else Color.White, Modifier.weight(1f))
                         Box(Modifier.width(1.dp).height(44.dp).background(Color.White.copy(alpha = .18f)))
-                        ResultScoreColumn(displayedRival, if (won) Color.White else accent, Modifier.weight(1f))
+                        ResultScoreColumn(rival, if (won) Color.White else accent, Modifier.weight(1f))
                     }
                     if (scoreOrderDiffersFromResult) {
                         Spacer(Modifier.height(8.dp))
