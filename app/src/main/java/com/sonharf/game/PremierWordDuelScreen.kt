@@ -1967,22 +1967,26 @@ private fun PremierStreakFlame(streak: Int, language: String, modifier: Modifier
         enter = androidx.compose.animation.scaleIn(spring(dampingRatio = .45f)) + androidx.compose.animation.fadeIn(),
         exit = androidx.compose.animation.scaleOut() + androidx.compose.animation.fadeOut(),
     ) {
-        val flicker = rememberInfiniteTransition(label = "flame")
-        val s by flicker.animateFloat(1f, 1.08f, infiniteRepeatable(tween(380), RepeatMode.Reverse), label = "flame-scale")
+        val settle = remember { Animatable(.96f) }
+        LaunchedEffect(streak) {
+            settle.snapTo(.96f)
+            settle.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
+        }
         // A slim pill that fits the timer strip's reserved line.
         Surface(
             shape = RoundedCornerShape(99.dp),
-            color = Color(0xFFFF7A1A),
-            modifier = Modifier.graphicsLayer { scaleX = s; scaleY = s },
+            color = PremierUi.GoldSoft,
+            border = BorderStroke(.7.dp, PremierUi.Gold.copy(alpha = .45f)),
+            modifier = Modifier.graphicsLayer { scaleX = settle.value; scaleY = settle.value },
         ) {
             Text(
-                pt(language, "🔥 $streak SERİ!", "🔥 $streak STREAK!"),
+                pt(language, "$streak SERİ", "$streak STREAK"),
                 Modifier.padding(horizontal = 8.dp, vertical = 0.dp),
-                color = Color.White,
+                color = PremierBoard.Ink,
                 style = TextStyle(
                     fontSize = 10.sp,
                     lineHeight = 14.sp,
-                    fontWeight = FontWeight.Black,
+                    fontWeight = FontWeight.SemiBold,
                     platformStyle = PlatformTextStyle(includeFontPadding = false),
                     lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
                 ),
@@ -2286,8 +2290,8 @@ private fun PremierSymmetricPlayerCard(
     mascot: WordSiegeMascotSkin? = null,
 ) {
     val shownScore by animateIntAsState(score, tween(450), label = "score-count")
-    val glow = rememberInfiniteTransition(label = "card-glow")
-    val breath by glow.animateFloat(.45f, 1f, infiniteRepeatable(tween(850), RepeatMode.Reverse), label = "card-breath")
+    val breath by animateFloatAsState(if (active) .85f else .45f,
+        tween(220, easing = FastOutSlowInEasing), label = "card-focus")
     val pop = remember { Animatable(1f) }
     LaunchedEffect(gain?.first) {
         if (gain != null) {
@@ -2338,7 +2342,7 @@ private fun PremierSymmetricPlayerCard(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                if (streak >= 2) "🔥 $streak" else pt(language, "Raund Puanı", "Round Score"),
+                if (streak >= 2) pt(language, "$streak seri", "$streak streak") else pt(language, "Raund Puanı", "Round Score"),
                 color = if (streak >= 2) PremierBoard.GoldEdge else PremierBoard.Muted,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
@@ -2377,8 +2381,8 @@ private fun PremierSymmetricPlayerCard(
         modifier = modifier,
         shape = RoundedCornerShape(18.dp),
         color = if (active) soft else PremierBoard.Card,
-        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) accent.copy(alpha = breath) else PremierBoard.CardBorder),
-        shadowElevation = if (active) 6.dp else 1.dp,
+        border = BorderStroke(if (active) 1.2.dp else .75.dp, if (active) accent.copy(alpha = breath) else PremierBoard.CardBorder),
+        shadowElevation = if (active) 2.dp else .5.dp,
     ) {
         Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (!mirrored) {
@@ -2460,9 +2464,13 @@ private fun PremierBotAvatar(size: Dp, accent: Color) {
 @Composable
 private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String, botThinking: Boolean = false, rivalName: String = "") {
     val active = status in setOf("playing", "final", "sudden_death")
-    val transition = rememberInfiniteTransition(label = "turn-badge")
-    val pulse by transition.animateFloat(.75f, 1f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "turn-pulse")
-    val dots by transition.animateFloat(0f, 3.99f, infiniteRepeatable(tween(1_200)), label = "thinking-dots")
+    val pulse by animateFloatAsState(if (active && myTurn) 1f else .85f,
+        tween(220, easing = FastOutSlowInEasing), label = "turn-focus")
+    val dots = if (active && botThinking && !myTurn) {
+        val transition = rememberInfiniteTransition(label = "turn-badge")
+        val value by transition.animateFloat(0f, 3.99f, infiniteRepeatable(tween(1_200)), label = "thinking-dots")
+        value
+    } else 0f
     val label = when {
         !active -> pt(language, "ARENA SENKRONİZE EDİLİYOR", "SYNCING ARENA")
         myTurn -> pt(language, "HAMLE SIRASI SENDE", "YOUR TURN")
@@ -2544,8 +2552,11 @@ private fun PremierPressureStrip(
         myTurn -> PremierBoard.Mine
         else -> PremierBoard.Rival
     }
-    val transition = rememberInfiniteTransition(label = "bar-pulse")
-    val flash by transition.animateFloat(.55f, 1f, infiniteRepeatable(tween(420), RepeatMode.Reverse), label = "bar-flash")
+    val flash = if (danger) {
+        val transition = rememberInfiniteTransition(label = "bar-pulse")
+        val value by transition.animateFloat(.72f, 1f, infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "bar-flash")
+        value
+    } else 1f
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2627,7 +2638,8 @@ private fun PremierLetterTile(
     Box(
         modifier
             .size(size)
-            .background(if (gold) PremierBoard.Gold else PremierBoard.Tile, shape)
+            .background(arenaTileBrush(if (gold) PremierBoard.Gold else PremierBoard.Tile), shape)
+            .clip(shape).arenaTileFinish()
             .border(1.2.dp, if (gold) PremierBoard.GoldEdge else PremierBoard.TileEdge, shape),
         contentAlignment = Alignment.Center,
     ) {
@@ -2656,7 +2668,7 @@ private fun PremierTileShine(position: Float, modifier: Modifier) {
         val band = size.width * .35f
         drawRect(
             brush = Brush.linearGradient(
-                listOf(Color.Transparent, Color.White.copy(alpha = .7f), Color.Transparent),
+                listOf(Color.Transparent, Color.White.copy(alpha = .28f), Color.Transparent),
                 start = Offset(x - band, 0f),
                 end = Offset(x + band, size.height),
             ),
@@ -2683,15 +2695,10 @@ private fun PremierTargetCard(
     LaunchedEffect(required, active) {
         shine.snapTo(-.4f)
         shine.animateTo(1.4f, tween(950, easing = FastOutSlowInEasing))
-        while (active) {
-            delay(2_600)
-            shine.snapTo(-.4f)
-            shine.animateTo(1.4f, tween(1_100, easing = FastOutSlowInEasing))
-        }
     }
     // A new letter settles in.
     val drop = remember(required) { Animatable(0f) }
-    LaunchedEffect(required) { drop.animateTo(1f, spring(dampingRatio = .62f, stiffness = 300f)) }
+    LaunchedEffect(required) { drop.animateTo(1f, spring(dampingRatio = .82f, stiffness = 360f)) }
     val tile = size * .84f
     val shape = RoundedCornerShape(tile * .24f)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -2983,7 +2990,7 @@ private fun PremierKeyboard(language: String, value: String, enabled: Boolean, k
         shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
         // A painted panel brings its own frame and must not sit on a shadow box.
         border = if (palette.panelImage == null) BorderStroke(1.dp, PremierUi.Border) else null,
-        shadowElevation = if (palette.panelImage == null) 14.dp else 0.dp,
+        shadowElevation = if (palette.panelImage == null) 3.dp else 0.dp,
     ) {
         // A painted panel adds its crown band and frame; on compact screens keep both slim so the
         // board keeps its room.

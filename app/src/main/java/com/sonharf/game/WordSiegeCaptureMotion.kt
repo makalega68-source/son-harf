@@ -159,9 +159,10 @@ internal fun WordSiegeCaptureFlightOverlay(
                     if (progress < .26f) {
                         val flash = (1f - progress / .20f).coerceIn(0f, 1f)
                         drawCircle(
-                            color = effect.accent.copy(alpha = .28f * flash),
+                            color = effect.accent.copy(alpha = .18f * flash),
                             radius = 18.dp.toPx() + 8.dp.toPx() * (1f - flash),
                             center = center,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()),
                         )
                     }
 
@@ -171,11 +172,11 @@ internal fun WordSiegeCaptureFlightOverlay(
                     } else {
                         Offset.Zero
                     }
-                    repeat(5) { particle ->
+                    repeat(3) { particle ->
                         val distance = (particle + 1) * 5.5f
                         drawCircle(
-                            color = effect.accent.copy(alpha = .34f * (1f - particle / 5f)),
-                            radius = (3.1f - particle * .38f).dp.toPx(),
+                            color = effect.accent.copy(alpha = .22f * (1f - particle / 3f)),
+                            radius = (2.2f - particle * .38f).dp.toPx(),
                             center = center - unit * distance,
                         )
                     }
@@ -185,30 +186,21 @@ internal fun WordSiegeCaptureFlightOverlay(
                         center = center,
                     )
                 }
-                // Package motion spec: capture glow 0.7 → 1.1 scale, alpha 1 → 0 over the first 180 ms.
-                val glowPhase = (progress * WORD_SIEGE_CAPTURE_FLIGHT_MS / 180f).coerceIn(0f, 1f)
-                if (glowPhase < 1f) {
-                    androidx.compose.foundation.Image(
-                        painter = androidx.compose.ui.res.painterResource(R.drawable.hf_fx_capture_glow),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize().graphicsLayer {
-                            val scale = .7f + .4f * glowPhase
-                            scaleX = scale
-                            scaleY = scale
-                            alpha = 1f - glowPhase
-                        },
-                    )
+                // A crisp score medallion replaces the oversized bitmap flash.
+                Canvas(Modifier.size(32.dp)) {
+                    drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(
+                        listOf(Color(0xFFFFFCF1), Color(0xFFE8D4A1)), center = center,
+                        radius = size.minDimension / 2f,
+                    ))
+                    drawCircle(Color(0xFFB18B47).copy(alpha = .75f),
+                        radius = size.minDimension / 2f - .5.dp.toPx(),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(.8.dp.toPx()))
                 }
-                androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(R.drawable.hf_fx_sparkle),
-                    contentDescription = null,
-                    modifier = Modifier.size(44.dp).graphicsLayer { alpha = .85f },
-                )
                 Text(
                     text = "+$WORD_SIEGE_CAPTURE_POINTS_PER_CUBE",
-                    color = effect.accent,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF45484C),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
         }

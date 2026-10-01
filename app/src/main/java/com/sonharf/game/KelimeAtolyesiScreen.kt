@@ -603,8 +603,11 @@ private fun AtelierTopBar(seconds: Int, score: Int, onBack: () -> Unit) {
 
 @Composable
 private fun AtelierChip(label: String, value: String, accent: Color, pulse: Boolean = false) {
-    val beat by androidx.compose.animation.core.rememberInfiniteTransition(label = "chip")
-        .animateFloat(1f, 1.1f, androidx.compose.animation.core.infiniteRepeatable(tween(420), androidx.compose.animation.core.RepeatMode.Reverse), label = "chip-beat")
+    val beat = if (pulse) {
+        val animation by androidx.compose.animation.core.rememberInfiniteTransition(label = "chip")
+            .animateFloat(1f, 1.035f, androidx.compose.animation.core.infiniteRepeatable(tween(600), androidx.compose.animation.core.RepeatMode.Reverse), label = "chip-beat")
+        animation
+    } else 1f
     Column(
         Modifier
             .graphicsLayer { if (pulse) { scaleX = beat; scaleY = beat } }
@@ -693,22 +696,23 @@ private fun AtelierPool(state: AtelierState, language: String, onPick: (Long) ->
 private fun AtelierPoolTile(letter: String, tileId: Long, size: Dp, used: Boolean, onClick: () -> Unit) {
     // Each new tile (a fresh round or a refill) settles in with a short pop.
     val appear = remember(tileId) { Animatable(0f) }
-    LaunchedEffect(tileId) { appear.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = .5f, stiffness = 380f)) }
+    LaunchedEffect(tileId) { appear.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = .82f, stiffness = 420f)) }
     val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by press.collectIsPressedAsState()
-    val squeeze by androidx.compose.animation.core.animateFloatAsState(if (pressed) .88f else 1f, tween(90), label = "tile-press")
+    val squeeze by androidx.compose.animation.core.animateFloatAsState(if (pressed) .96f else 1f, tween(110, easing = FastOutSlowInEasing), label = "tile-press")
     Box(
         Modifier
             .size(size)
             .graphicsLayer {
                 scaleX = (.7f + .3f * appear.value) * squeeze
                 scaleY = (.7f + .3f * appear.value) * squeeze
-                translationY = (1f - appear.value) * -60f
+                translationY = (1f - appear.value) * -18f
                 alpha = if (used) .38f else appear.value.coerceIn(0f, 1f)
             }
-            .shadow(if (used) 0.dp else 3.dp, RoundedCornerShape(12.dp))
+            .shadow(if (used || pressed) 0.dp else 1.5.dp, RoundedCornerShape(12.dp))
             .clip(RoundedCornerShape(12.dp))
-            .background(if (used) AtelierUi.TileUsed else AtelierUi.Cream)
+            .background(arenaTileBrush(if (used) AtelierUi.TileUsed else AtelierUi.Cream))
+            .arenaTileFinish()
             .border(1.dp, AtelierUi.TileEdge, RoundedCornerShape(12.dp))
             .clickable(interactionSource = press, indication = null, enabled = !used, onClick = onClick)
             .semantics { contentDescription = letter },
@@ -790,7 +794,7 @@ private fun AtelierSlot(state: AtelierState, language: String, gain: Int, gainNo
     // A wrong word shakes the slot left and right; the letters stay where they are.
     val shake = remember { Animatable(0f) }
     LaunchedEffect(shakeNonce) {
-        if (shakeNonce > 0) for (x in listOf(16f, -14f, 10f, -7f, 4f, 0f)) shake.animateTo(x, tween(45))
+        if (shakeNonce > 0) for (x in listOf(7f, -6f, 4f, -2f, 0f)) shake.animateTo(x, tween(45))
     }
     Column(Modifier.fillMaxWidth().graphicsLayer { translationX = shake.value }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -804,7 +808,8 @@ private fun AtelierSlot(state: AtelierState, language: String, gain: Int, gainNo
                         Modifier
                             .size(cell)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (letter != null) AtelierUi.Cream else AtelierUi.WoodTop.copy(alpha = .7f))
+                            .background(arenaTileBrush(if (letter != null) AtelierUi.Cream else AtelierUi.WoodTop.copy(alpha = .7f)))
+                            .arenaTileFinish()
                             .border(
                                 1.dp,
                                 if (letter != null) AtelierUi.Green.copy(alpha = .75f) else AtelierUi.TileEdge.copy(alpha = .55f),

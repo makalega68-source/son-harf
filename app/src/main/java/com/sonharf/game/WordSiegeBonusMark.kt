@@ -9,18 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -30,47 +26,24 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * The board's own bonus language, shared by the online and practice boards:
- *  - Harf Gücü / Harf Gücü+ (letter boosts): teal cut-corner chip with a ◆ mark.
- *  - Kelime Akımı / Kelime Akımı+ (word surges): amber pill with a ≈ mark.
- *  - Başlangıç Mührü (centre): navy disc with a gold ring and a ✦ mark.
- *  - Sürpriz Ödül: a plain "+25".
- * Only the look changes; the persisted cell codes (2H, 3H, 2K, 3K, 4K, 3Y) and scoring stay the same.
- */
+/** Display art only: stored bonus codes and score multipliers stay unchanged. */
 internal object WordSiegeBonusStyle {
-    val SealGold = Color(0xFFE6BE55)
-    private val LetterBoostInk = Color(0xFF16776C)
-    private val WordSurgeInk = Color(0xFFA25A06)
+    val SealGold = Color(0xFFB18B47)
+    val Graphite = Color(0xFF45484C)
 
     fun glyph(code: String?): String = when (code) {
-        "2H" -> "◆"
-        "3H" -> "◆+"
-        "2K" -> "≈"
-        "3K" -> "≈+"
-        WordSiegeBoardSpec.CenterBonus -> "✦"
+        "2H" -> "HB²"
+        "3H" -> "HB³"
+        "2K" -> "KB²"
+        "3K" -> "KB³"
         else -> ""
-    }
-
-    fun shape(code: String?): Shape = when (code) {
-        "2H", "3H" -> CutCornerShape(6.dp)
-        "2K", "3K" -> RoundedCornerShape(50)
-        WordSiegeBoardSpec.CenterBonus -> CircleShape
-        else -> RoundedCornerShape(4.dp)
-    }
-
-    /** Ink for the mark. On the wooden themes the palette's label colour keeps the contrast. */
-    fun ink(code: String?, themeLabel: Color): Color = when {
-        code == WordSiegeBoardSpec.CenterBonus -> SealGold
-        WordSiegeWalnutIvory.enabled -> themeLabel
-        code == "2H" || code == "3H" -> LetterBoostInk
-        code == "2K" || code == "3K" -> WordSurgeInk
-        else -> themeLabel
     }
 }
 
-/** Text without the font's extra top/bottom padding, so lines sit on the true centre of the mark. */
 private val BonusMarkText = TextStyle(
+    fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+    fontWeight = FontWeight.SemiBold,
+    letterSpacing = .25.sp,
     platformStyle = PlatformTextStyle(includeFontPadding = false),
     lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
 )
@@ -84,57 +57,91 @@ internal fun WordSiegeBonusMark(
     glyphSize: TextUnit,
 ) {
     val glyph = WordSiegeBonusStyle.glyph(code)
-    val ink = WordSiegeBonusStyle.ink(code, themeLabel)
-    // Rendered 3D object for the bonus (top-down, transparent). Falls back to the drawn mark.
-    val icon = WordSiegeBonusIcons.bitmap(code)
-    if (icon != null) {
-        WordSiegeBonusIconMark(code, icon, label, overview, ink)
-        return
-    }
-    if (glyph.isEmpty()) {
-        Text(label, color = ink, fontSize = glyphSize, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-        return
-    }
-    val seal = code == WordSiegeBoardSpec.CenterBonus
-    val strong = code == "3H" || code == "3K" || seal
-    val shape = WordSiegeBonusStyle.shape(code)
-    // The seal keeps its word short inside the cell ("Mührü" / "Seal"); the full name is in the info card.
-    val words = label.split("\n").let { if (seal) it.takeLast(1) else it }
-    // Round marks (word surges, the seal) keep their text inside the circle's inscribed square.
-    val round = code == "2K" || code == "3K" || seal
-    Box(
-        Modifier.fillMaxSize()
-            .padding(if (overview) 5.dp else 3.5.dp)
-            .clip(shape)
-            // A soft embossed chip: gentle glow in the middle, a faint rim, no hard ring.
-            .background(
-                androidx.compose.ui.graphics.Brush.radialGradient(
-                    listOf(ink.copy(alpha = if (seal) .16f else .12f), ink.copy(alpha = if (strong) .07f else .04f)),
-                ),
+    if (glyph.isNotEmpty()) {
+        // Text is the entire multiplier mark: no object, badge or secondary caption.
+        Box(
+            Modifier.fillMaxSize().then(
+                if (WordSiegeWalnutIvory.enabled || WordSiegeBoardSkins.active?.dark == true)
+                    Modifier.background(Color(0xFFF3EEE3)) else Modifier,
+            ), contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                glyph, style = BonusMarkText, color = WordSiegeBonusStyle.Graphite,
+                fontSize = glyphSize, maxLines = 1, softWrap = false,
+                textAlign = TextAlign.Center,
             )
-            .border(1.dp, ink.copy(alpha = if (strong) .32f else .20f), shape)
-            .padding(if (round) 5.dp else 3.dp),
-        contentAlignment = Alignment.Center,
+        }
+        return
+    }
+    val star = code == WordSiegeBoardSpec.StarBonus
+    if (!star && code != WordSiegeBoardSpec.CenterBonus) {
+        Text(label, style = BonusMarkText, color = themeLabel, fontSize = glyphSize)
+        return
+    }
+    Column(
+        Modifier.fillMaxSize().then(
+            if (WordSiegeWalnutIvory.enabled || WordSiegeBoardSkins.active?.dark == true)
+                Modifier.background(Color(0xFFF3E8CD)) else Modifier,
+        ).padding(if (overview) 2.dp else 3.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        if (overview) {
-            Text(glyph, style = BonusMarkText, color = ink, fontSize = glyphSize, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-        } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically)) {
-                Text(glyph, style = BonusMarkText, color = ink, fontSize = 11.sp, lineHeight = 11.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-                words.forEach { word ->
-                    Text(
-                        word,
-                        style = BonusMarkText,
-                        color = ink,
-                        fontSize = if (round) 7.5.sp else 8.sp,
-                        lineHeight = if (round) 8.5.sp else 9.sp,
-                        maxLines = 1,
-                        softWrap = false,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+        WordSiegeGoldEmblem(star, Modifier.weight(1f).fillMaxSize())
+        if (star && !overview) {
+            Text("+25", style = BonusMarkText, color = WordSiegeBonusStyle.Graphite,
+                fontSize = 10.sp, lineHeight = 11.sp, maxLines = 1)
+        }
+    }
+}
+
+/** Vector metalwork stays crisp at both zoom levels and requires no idle animation. */
+@Composable
+private fun WordSiegeGoldEmblem(star: Boolean, modifier: Modifier) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val radius = size.minDimension * .43f
+        val gold = WordSiegeBonusStyle.SealGold
+        drawCircle(
+            androidx.compose.ui.graphics.Brush.radialGradient(
+                listOf(Color(0xFFFFF9E8), Color(0xFFE9D5A7)), center = center, radius = radius,
+            ), radius = radius, center = center,
+        )
+        drawCircle(gold.copy(alpha = .65f), radius, center,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = .8.dp.toPx()))
+        drawCircle(gold.copy(alpha = .25f), radius * .83f, center,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = .5.dp.toPx()))
+        val path = androidx.compose.ui.graphics.Path()
+        if (star) {
+            repeat(10) { index ->
+                val angle = -Math.PI / 2 + index * Math.PI / 5
+                val r = radius * if (index % 2 == 0) .69f else .31f
+                val x = center.x + kotlin.math.cos(angle).toFloat() * r
+                val y = center.y + kotlin.math.sin(angle).toFloat() * r
+                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
+        } else {
+            // The starting cell carries a small throne crown in a champagne seal.
+            val x = center.x
+            val y = center.y
+            val r = radius * .66f
+            path.moveTo(x - r, y - r * .38f)
+            path.lineTo(x - r * .48f, y + r * .05f)
+            path.lineTo(x, y - r * .78f)
+            path.lineTo(x + r * .48f, y + r * .05f)
+            path.lineTo(x + r, y - r * .38f)
+            path.lineTo(x + r * .73f, y + r * .58f)
+            path.lineTo(x - r * .73f, y + r * .58f)
+        }
+        path.close()
+        drawPath(path, androidx.compose.ui.graphics.Brush.linearGradient(
+            listOf(Color(0xFFF1D89C), Color(0xFFB18B47), Color(0xFF826136)),
+            start = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
+            end = androidx.compose.ui.geometry.Offset(center.x + radius, center.y + radius),
+        ))
+        drawPath(path, Color(0xFF826136).copy(alpha = .65f),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = .65.dp.toPx()))
+        if (!star) {
+            drawLine(gold, center + androidx.compose.ui.geometry.Offset(-radius * .48f, radius * .55f),
+                center + androidx.compose.ui.geometry.Offset(radius * .48f, radius * .55f), 1.dp.toPx())
         }
     }
 }
@@ -169,7 +176,7 @@ private fun wordSiegeLegendSurface(code: String): Color = when (code) {
     "3H" -> Color(0xFFC3E7DF)
     "2K" -> Color(0xFFFFF0D3)
     "3K" -> Color(0xFFF6D596)
-    WordSiegeBoardSpec.CenterBonus -> Color(0xFF24304B)
+    WordSiegeBoardSpec.CenterBonus -> Color(0xFFF3E8CD)
     else -> Color(0xFFFBEBB5)
 }
 
@@ -203,22 +210,17 @@ internal fun WordSiegeBonusLegend(compact: Boolean, modifier: Modifier = Modifie
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                     ) {
-                        val bitmap = WordSiegeBonusIcons.bitmap(code)
-                        if (bitmap != null) {
-                            androidx.compose.foundation.Image(bitmap, contentDescription = null, modifier = Modifier.size(icon))
-                        } else {
-                            Box(
-                                Modifier.size(icon).clip(RoundedCornerShape(6.dp)).background(wordSiegeLegendSurface(code)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                WordSiegeBonusMark(
-                                    code = code,
-                                    label = WordSiegeBoardSpec.displayBonusLabel(code, turkish),
-                                    overview = true,
-                                    themeLabel = Color(0xFF3F4A5A),
-                                    glyphSize = if (compact) 13.sp else 15.sp,
-                                )
-                            }
+                        Box(
+                            Modifier.size(icon).clip(RoundedCornerShape(6.dp)).background(wordSiegeLegendSurface(code)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            WordSiegeBonusMark(
+                                code = code,
+                                label = WordSiegeBoardSpec.displayBonusLabel(code, turkish),
+                                overview = true,
+                                themeLabel = WordSiegeBonusStyle.Graphite,
+                                glyphSize = if (compact) 12.sp else 14.sp,
+                            )
                         }
                         Text("=", color = Color(0xFF3F554A), fontSize = if (compact) 13.sp else 15.sp, fontWeight = FontWeight.Black)
                         Text(
@@ -272,78 +274,3 @@ internal object WordSiegeBonusIcons {
     }
 }
 
-@Composable
-private fun WordSiegeBonusIconMark(
-    code: String,
-    icon: androidx.compose.ui.graphics.ImageBitmap,
-    label: String,
-    overview: Boolean,
-    ink: Color,
-) {
-    val star = code == WordSiegeBoardSpec.StarBonus
-    // Keep the yellow reward star fully vivid; soften the other board icons so letters remain primary.
-    val iconAlpha = if (star) 1f else .68f
-    // The +25 star cell glows softly so it is noticed at once.
-    val glow = if (star) {
-        val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "star cell glow")
-        pulse.animateFloat(
-            initialValue = .35f,
-            targetValue = 1f,
-            animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-                androidx.compose.animation.core.tween(900),
-                androidx.compose.animation.core.RepeatMode.Reverse,
-            ),
-            label = "star cell glow alpha",
-        )
-    } else null
-    Box(
-        Modifier.fillMaxSize().then(
-            if (glow != null) Modifier.drawBehind {
-                drawRect(
-                    androidx.compose.ui.graphics.Brush.radialGradient(
-                        listOf(Color(0xFFFFE082).copy(alpha = .95f * glow.value), Color(0xFFFFC107).copy(alpha = .45f * glow.value), Color.Transparent),
-                        center = center,
-                        radius = size.minDimension * .75f,
-                    ),
-                )
-            } else Modifier,
-        ),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (overview) {
-            androidx.compose.foundation.Image(
-                bitmap = icon,
-                contentDescription = null,
-                alpha = iconAlpha,
-                modifier = Modifier.fillMaxSize().padding(3.dp),
-            )
-        } else {
-            val word = label.replace("\n", " ").trim()
-            Column(
-                Modifier.fillMaxSize().padding(horizontal = 1.dp, vertical = 2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
-            ) {
-                androidx.compose.foundation.Image(
-                    bitmap = icon,
-                    contentDescription = null,
-                    alpha = iconAlpha,
-                    modifier = Modifier.size(if (word.isEmpty()) 38.dp else 30.dp),
-                )
-                if (word.isNotEmpty()) {
-                    Text(
-                        word,
-                        style = BonusMarkText,
-                        color = ink,
-                        fontSize = 9.sp,
-                        lineHeight = 10.sp,
-                        maxLines = 1,
-                        softWrap = false,
-                        fontWeight = FontWeight.Black,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-        }
-    }
-}

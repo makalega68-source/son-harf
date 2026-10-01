@@ -55,7 +55,7 @@ private val PracticeZoneWatch get() = if (WordSiegeWalnutIvory.enabled) WordSieg
 private val PracticeZoneCritical get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3H else Color(0xFFC3E7DF)
 private val PracticeZoneFort get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2K else Color(0xFFFFF0D3)
 private val PracticeZoneSiege get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3K else Color(0xFFF6D596)
-private val PracticeZoneCrown get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus4K else Color(0xFF24304B)
+private val PracticeZoneCrown get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus4K else Color(0xFFF3E8CD)
 private val PracticeZoneReward get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusStar else Color(0xFFFBEBB5)
 private val PracticeLastMove = Color(0xFFE0A82E)
 private val PracticeDefinitionBadge = Color(0xFF5C8299)
@@ -488,7 +488,7 @@ private fun WordSiegePracticeBoardCell(
                 }
             }
             .padding(regionGap)
-            .graphicsLayer { scaleX = if (WordSiegeWalnutIvory.enabled) pressScale else 1f; scaleY = if (WordSiegeWalnutIvory.enabled) pressScale else 1f }
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             // Raised stones cast a short soft shadow; empty recesses cast none.
             .shadow(if (letter != null && !WordSiegeWalnutIvory.enabled) 2.dp else 0.dp, RoundedCornerShape(8.dp), clip = false)
             .clip(RoundedCornerShape(8.dp))
@@ -597,7 +597,7 @@ internal fun WordSiegePracticeRackTile(
     val pressed by interaction.collectIsPressedAsState()
     val pressScale by animateFloatAsState(if (pressed) .95f else 1f, tween(if (pressed) 65 else 150), label = "practice rack press")
     Surface(
-        modifier = modifier.height(48.dp).graphicsLayer { scaleX = if (WordSiegeWalnutIvory.enabled) pressScale else 1f; scaleY = if (WordSiegeWalnutIvory.enabled) pressScale else 1f }
+        modifier = modifier.height(48.dp).graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .combinedClickable(interactionSource = interaction, indication = null, onClick = onClick, enabled = enabled),
         color = when {
             used -> WordSiegeGameUi.SurfaceSoft
@@ -607,7 +607,7 @@ internal fun WordSiegePracticeRackTile(
         },
         shape = RoundedCornerShape(9.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (WordSiegeWalnutIvory.enabled) (if (selected) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel) else (if (selected) PracticeSiegeMineBorder else PracticeSiegeTileBorder.copy(alpha = .7f))),
-        shadowElevation = if (WordSiegeWalnutIvory.enabled && pressed) 0.dp else if (selected) 4.dp else 2.dp,
+        shadowElevation = if (pressed) 0.dp else if (selected) 3.dp else 1.5.dp,
     ) {
         Box(if (WordSiegeWalnutIvory.enabled) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier, contentAlignment = Alignment.Center) {
             Text(

@@ -57,10 +57,10 @@ internal object WordSiegeBoardSpec {
 
     /** Player-facing in-cell label: short bonus tags (HB² = letter bonus ×2, KB³ = word bonus ×3). */
     fun displayBonusLabel(bonus: String?, turkish: Boolean = true): String = when (bonus) {
-        "2H" -> if (turkish) "HB²" else "LB²"
-        "3H" -> if (turkish) "HB³" else "LB³"
-        "2K" -> if (turkish) "KB²" else "WB²"
-        "3K" -> if (turkish) "KB³" else "WB³"
+        "2H" -> "HB²"
+        "3H" -> "HB³"
+        "2K" -> "KB²"
+        "3K" -> "KB³"
         // The centre cell shows only its picture.
         CenterBonus -> ""
         StarBonus -> "+25"

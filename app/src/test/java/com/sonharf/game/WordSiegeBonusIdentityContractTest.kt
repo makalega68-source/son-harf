@@ -1,9 +1,7 @@
 package com.sonharf.game
 
-import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WordSiegeBonusIdentityContractTest {
@@ -27,14 +25,14 @@ class WordSiegeBonusIdentityContractTest {
         assertEquals(25, WordSiegeBoardSpec.StarBonusPoints)
     }
 
-    @Test fun eachBonusFamilyHasItsOwnMarkAndShape() {
-        val mark = listOf(File("src/main/java/com/sonharf/game/WordSiegeBonusMark.kt"), File("app/src/main/java/com/sonharf/game/WordSiegeBonusMark.kt"))
-            .first(File::exists).readText()
-        assertTrue(mark.contains("CutCornerShape"))
-        assertTrue(mark.contains("RoundedCornerShape(50)"))
-        assertTrue(mark.contains("CircleShape"))
-        assertTrue(mark.contains("\"2H\" -> \"◆\""))
-        assertTrue(mark.contains("\"3K\" -> \"≈+\""))
-        assertTrue(mark.contains("WordSiegeBoardSpec.CenterBonus -> \"✦\""))
+    @Test fun multiplierCellsUseOnlyTheRequestedSuperscriptLabels() {
+        val labels = mapOf("2H" to "HB²", "3H" to "HB³", "2K" to "KB²", "3K" to "KB³")
+        labels.forEach { (code, expected) ->
+            listOf(true, false).forEach { turkish ->
+                assertEquals(expected, WordSiegeBoardSpec.displayBonusLabel(code, turkish))
+            }
+        }
+        assertEquals("", WordSiegeBoardSpec.displayBonusLabel(WordSiegeBoardSpec.CenterBonus))
+        assertEquals("+25", WordSiegeBoardSpec.displayBonusLabel(WordSiegeBoardSpec.StarBonus))
     }
 }
