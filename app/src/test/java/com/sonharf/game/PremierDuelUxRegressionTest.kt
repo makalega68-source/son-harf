@@ -33,12 +33,12 @@ class PremierDuelUxRegressionTest {
         // Chat remains typed/realtime and now has an unread red indicator.
         assertTrue(screen.contains("Text(pt(language, \"SOHBET\", \"CHAT\")"))
         assertFalse(screen.contains("enabled = !room.isBot"))
-        assertTrue(screen.contains("var hasUnreadChat by remember { mutableStateOf(false) }"))
+        assertTrue(screen.contains("var unreadChatCount by remember { mutableIntStateOf(0) }"))
         assertTrue(screen.contains("if (latest != null && latest.id != previousId && latest.senderId != backend.currentUserId())"))
-        assertTrue(screen.contains("hasUnreadChat = !showQuickChat"))
-        assertTrue(screen.contains("unreadChat = hasUnreadChat"))
-        assertTrue(screen.contains("Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp)"))
-        assertTrue(screen.contains("hasUnreadChat = false"))
+        assertTrue(screen.contains("unreadChatCount = GameChatBadge.unread"))
+        assertTrue(screen.contains("unreadChat = unreadChatCount"))
+        assertTrue(screen.contains("ChatUnreadDot(unreadChat)"))
+        assertTrue(screen.contains("GameChatBadge.markRead()"))
 
         assertTrue(screen.contains("PremierSymmetricPlayerCard("))
         assertTrue(screen.contains("Modifier.weight(1f).height(cardHeight)"))
