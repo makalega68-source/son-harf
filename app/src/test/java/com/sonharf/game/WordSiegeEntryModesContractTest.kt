@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import java.io.File
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class WordSiegeEntryModesContractTest {
@@ -45,7 +46,7 @@ class WordSiegeEntryModesContractTest {
         assertTrue(board.contains("shadowElevation = if (WordSiegeWalnutIvory.enabled) 7.dp else 14.dp"))
         assertTrue(board.contains("border = BorderStroke(if (boardSkin != null) 0.dp else 2.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameEdge"))
         assertTrue(board.contains("WordSiegeWalnutIvory.tile"))
-        assertTrue(board.contains("WordSiegePremiumPanel("))
+        assertFalse(board.contains("WordSiegePremiumPanel("))
     }
 
     private fun projectFile(path: String): File =
