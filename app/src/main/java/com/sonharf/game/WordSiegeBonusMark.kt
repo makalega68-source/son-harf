@@ -281,6 +281,8 @@ private fun WordSiegeBonusIconMark(
     ink: Color,
 ) {
     val star = code == WordSiegeBoardSpec.StarBonus
+    // Keep the yellow reward star fully vivid; soften the other board icons so letters remain primary.
+    val iconAlpha = if (star) 1f else .68f
     // The +25 star cell glows softly so it is noticed at once.
     val glow = if (star) {
         val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "star cell glow")
@@ -312,6 +314,7 @@ private fun WordSiegeBonusIconMark(
             androidx.compose.foundation.Image(
                 bitmap = icon,
                 contentDescription = null,
+                alpha = iconAlpha,
                 modifier = Modifier.fillMaxSize().padding(3.dp),
             )
         } else {
@@ -321,7 +324,12 @@ private fun WordSiegeBonusIconMark(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
             ) {
-                androidx.compose.foundation.Image(bitmap = icon, contentDescription = null, modifier = Modifier.size(if (word.isEmpty()) 38.dp else 30.dp))
+                androidx.compose.foundation.Image(
+                    bitmap = icon,
+                    contentDescription = null,
+                    alpha = iconAlpha,
+                    modifier = Modifier.size(if (word.isEmpty()) 38.dp else 30.dp),
+                )
                 if (word.isNotEmpty()) {
                     Text(
                         word,
