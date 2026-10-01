@@ -113,8 +113,8 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
 
     fun runGameAction(action: suspend () -> WordSiegeGameDto) {
         if (busy) return
+        busy = true
         scope.launch {
-            busy = true
             runCatching { action() }
                 .onSuccess { next -> applyGame(next); notice = null; noticeIsError = false; refreshLobby() }
                 .onFailure { error ->
@@ -291,7 +291,9 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                             onBack = { selectedGameId = null; currentGame = null },
                             onBoardCell = { boardIndex ->
                                 if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegePanMatch
-                                if (placements.containsKey(boardIndex)) {
+                                if (placements.containsKey(boardIndex) && selectedRackIndex != null) {
+                                    selectedRackIndex = null
+                                } else if (placements.containsKey(boardIndex)) {
                                     val rackIndex = placements.getValue(boardIndex)
                                     placements = placements - boardIndex
                                     selectedRackIndex = rackIndex
@@ -306,6 +308,14 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                             onPlacementsChange = { next ->
                                 placements = next
                                 selectedRackIndex = null
+                            },
+                            onDropPlacement = { rackIndex, fromCell, target ->
+                                val live = currentGame
+                                if (live?.id == game.id && live.status == "playing" &&
+                                    live.currentPlayerId == me && !busy && rackIndex in live.rackFor(me).indices) {
+                                    placements = wordSiegeDropTile(placements, live.board, rackIndex, fromCell, target)
+                                    selectedRackIndex = null
+                                }
                             },
                             onRackTile = { rackIndex ->
                                 val pendingCell = placements.entries.firstOrNull { it.value == rackIndex }?.key
