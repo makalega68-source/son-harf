@@ -256,7 +256,7 @@ internal fun WordSiegePanMatch(
     fun dropTile(rackIndex: Int, fromCell: Int?, target: Int?) {
         if (!canAct) return
         if (onDropPlacement != null) onDropPlacement(rackIndex, fromCell, target)
-        else onPlacementsChange(wordSiegeDropTile(placements, game.board, rackIndex, fromCell, target))
+        else onPlacementsChange(wordSiegeDropTile(placements, game.board, rackIndex, fromCell, target, allowRackReplacement = false))
     }
 
     LaunchedEffect(game.id, game.status) {

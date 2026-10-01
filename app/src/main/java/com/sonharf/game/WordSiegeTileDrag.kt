@@ -248,9 +248,10 @@ internal fun wordSiegeDropTile(
     rackIndex: Int,
     fromCell: Int?,
     target: Int?,
+    allowRackReplacement: Boolean = true,
 ): Map<Int, Int> {
     // A rack tile cannot replace a pending tile. Leave both intact on an occupied drop.
-    if (fromCell == null && target != null && placements[target]?.let { it != rackIndex } == true) return placements
+    if (!allowRackReplacement && fromCell == null && target != null && placements[target]?.let { it != rackIndex } == true) return placements
     var next = placements
     if (fromCell != null) next = next - fromCell
     if (target != null && board.getOrNull(target)?.letter == null) {

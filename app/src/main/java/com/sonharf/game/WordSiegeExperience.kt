@@ -314,7 +314,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                         val live = currentGame
                         if (live?.id == game.id && live.status == "playing" &&
                             live.currentPlayerId == me && !busy && rackIndex in live.rackFor(me).indices) {
-                            placements = wordSiegeDropTile(placements, live.board, rackIndex, fromCell, target)
+                            placements = wordSiegeDropTile(placements, live.board, rackIndex, fromCell, target, allowRackReplacement = false)
                             selectedRackIndex = null
                         }
                     },

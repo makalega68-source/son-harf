@@ -13,7 +13,7 @@ class OnlineMoveIntegrityTest {
     }
     @Test fun anOccupiedRackDropCannotEraseTheExistingLetter() {
         val first = mapOf(112 to 0)
-        assertEquals(first, wordSiegeDropTile(first, board, 1, null, 112))
+        assertEquals(first, wordSiegeDropTile(first, board, 1, null, 112, allowRackReplacement = false))
     }
     @Test fun movingBoardLettersStillSwapsThem() {
         assertEquals(mapOf(112 to 1, 113 to 0),
