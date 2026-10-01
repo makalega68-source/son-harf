@@ -95,6 +95,12 @@ internal fun WordSiegePanMatch(
     onPlacementsChange: (Map<Int, Int>) -> Unit = {},
     onDropPlacement: ((Int, Int?, Int?) -> Unit)? = null,
 ) {
+    var resultDismissed by androidx.compose.runtime.saveable.rememberSaveable(game.id) { mutableStateOf(false) }
+    if (game.status == "finished" && game.winnerId != null && !resultDismissed) {
+        // Dispose the live board and its mascots while the result decoder is running.
+        PanSiegeFinishedCard(game, me, onResultDismissed = { resultDismissed = true })
+        return
+    }
     val mine = me?.let(profiles::get)
     val opponentId = if (me == game.playerOneId) game.playerTwoId else game.playerOneId
     val opponent = opponentId?.let(profiles::get)
@@ -510,7 +516,7 @@ internal fun WordSiegePanMatch(
                 )
             }
         } else {
-            PanSiegeFinishedCard(game, me)
+            PanSiegeFinishedCard(game, me, playAnimation = false)
         }
 
         notice?.let { PanSiegeNotice(it) }
@@ -1152,7 +1158,7 @@ private fun PanSiegePlayerCard(
 }
 
 @Composable
-private fun PanSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
+private fun PanSiegeFinishedCard(game: WordSiegeGameDto, me: String?, playAnimation: Boolean = true, onResultDismissed: () -> Unit = {}) {
     val won = game.winnerId == me
     val draw = game.winnerId == null
     val mine = if (me != null && me == game.playerTwoId) 2 else 1
@@ -1163,7 +1169,7 @@ private fun PanSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
     val myTotal = myWords + if (mine == 1) game.playerOneAreaScore else game.playerTwoAreaScore
     val rivalTotal = rivalWords + if (rival == 1) game.playerOneAreaScore else game.playerTwoAreaScore
     // Every player first sees the victory or defeat clip full screen; closing it shows the details.
-    var showResult by androidx.compose.runtime.saveable.rememberSaveable(game.id) { mutableStateOf(!draw) }
+    var showResult by androidx.compose.runtime.saveable.rememberSaveable(game.id) { mutableStateOf(!draw && playAnimation) }
     if (showResult) {
         MatchResultScreen(
             won = won,
@@ -1172,9 +1178,9 @@ private fun PanSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
             mine = ResultScore(sh("SEN", "YOU"), "$myTotal"),
             rival = ResultScore(sh("RAKİP", "RIVAL"), "$rivalTotal"),
             primaryLabel = sh("DEVAM", "CONTINUE"),
-            onPrimary = { showResult = false },
+            onPrimary = { showResult = false; onResultDismissed() },
             secondaryLabel = sh("DETAYLAR", "DETAILS"),
-            onSecondary = { showResult = false },
+            onSecondary = { showResult = false; onResultDismissed() },
         )
     }
     HfCard(modifier = Modifier.fillMaxWidth(), color = Hf.Ground) {
