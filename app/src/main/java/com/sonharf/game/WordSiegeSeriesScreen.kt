@@ -312,7 +312,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                             onDropPlacement = { rackIndex, fromCell, target ->
                                 val live = currentGame
                                 if (live?.id == game.id && live.status == "playing" &&
-                                    live.currentPlayerId == me && !busy && rackIndex in live.rackFor(me).indices) {
+                                    live.currentPlayerId == me && !busy && rackIndex in (if (me == live.playerOneId) live.playerOneRack else live.playerTwoRack.orEmpty()).indices) {
                                     placements = wordSiegeDropTile(placements, live.board, rackIndex, fromCell, target, allowRackReplacement = false)
                                     selectedRackIndex = null
                                 }
