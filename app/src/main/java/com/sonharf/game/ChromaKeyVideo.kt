@@ -289,7 +289,7 @@ private class KeyRenderer(
         val (sx, sy) = fitScale()
         if (spec.matte && !keyOn) {
             // Every few frames draw the clip once to read its edge, then fill the view with that colour.
-            if (!matteKnown) {
+            if (matteFrame++ % 4 == 0) {
                 clear()
                 draw(keying = false, sx = sx, sy = sy)
                 sampleMatte(sx, sy)
@@ -357,7 +357,7 @@ private class KeyRenderer(
         val saturation = maxOf(key[0], key[1], key[2]) - minOf(key[0], key[1], key[2])
         keyOn = close >= 6 && saturation > .18f
         keyTries++
-        keyKnown = keyOn || keyTries >= 6
+        keyKnown = keyOn || keyTries >= 45
     }
 
     private fun clear() {
