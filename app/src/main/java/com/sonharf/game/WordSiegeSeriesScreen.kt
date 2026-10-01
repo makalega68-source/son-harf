@@ -65,7 +65,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
         val missing = ids.filterNotNull().distinct().filterNot(profiles::containsKey)
         if (missing.isEmpty()) return
         val loaded = missing.mapNotNull { id ->
-            runCatching { backend.getProfile(id) }.getOrNull()?.let { id to it }
+            gameRequestResult { backend.getProfile(id) }.getOrNull()?.let { id to it }
         }.toMap()
         if (loaded.isNotEmpty()) profiles = profiles + loaded
     }
@@ -88,19 +88,25 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
             return
         }
         if (showProgress) loading = true
-        val nextGames = runCatching { backend.getWordSiegeSeriesGames() }
+        val nextGames = gameRequestResult { backend.getWordSiegeSeriesGames() }
             .onSuccess { clearErrorNotice() }
             .onFailure { showError(it.message.orEmpty()) }
             .getOrDefault(games)
         games = nextGames
         loadProfiles(nextGames.flatMap { listOf(it.playerOneId, it.playerTwoId) })
-        friends = runCatching { backend.getFriends() }.getOrDefault(friends)
-        invites = runCatching { backend.getIncomingWordSiegeSeriesInvites() }.getOrDefault(invites)
+        friends = gameRequestResult { backend.getFriends() }.getOrDefault(friends)
+        invites = gameRequestResult { backend.getIncomingWordSiegeSeriesInvites() }.getOrDefault(invites)
         loadProfiles(invites.map { it.senderId })
         if (showProgress) loading = false
     }
 
     fun applyGame(next: WordSiegeGameDto) {
+        if (currentGame?.id != next.id) {
+            moves = emptyList()
+            messages = emptyList()
+            showChat = false
+            GameChatBadge.select(next.id)
+        }
         currentGame = next
         selectedGameId = next.id
         placements = emptyMap()
@@ -114,38 +120,41 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
     fun runGameAction(action: suspend () -> WordSiegeGameDto) {
         if (busy) return
         busy = true
+        val requestedGameId = selectedGameId
         scope.launch {
-            runCatching { action() }
-                .onSuccess { next -> applyGame(next); notice = null; noticeIsError = false }
+            try {
+            gameRequestResult { action() }
+                .onSuccess { next -> if (selectedGameId != requestedGameId) return@onSuccess; applyGame(next); notice = null; noticeIsError = false }
                 .onFailure { error ->
+                    if (selectedGameId != requestedGameId) return@onFailure
                     val raw = error.message.orEmpty()
                     showError(raw)
                     val gameId = currentGame?.id
                     if (gameId != null && ("word_siege_not_your_turn" in raw || "word_siege_not_playing" in raw)) {
-                        runCatching { backend.refreshWordSiegeGame(gameId) }.getOrNull()?.let { applyGame(it) }
+                        gameRequestResult { backend.refreshWordSiegeGame(gameId) }.getOrNull()?.let { applyGame(it) }
                     }
                 }
-            busy = false
+            } finally { busy = false }
         }
     }
 
     LaunchedEffect(Unit) {
-        entitlement = runCatching { backend.getVipEntitlements() }.getOrElse { entitlement ?: VipEntitlementsDto() }
+        entitlement = gameRequestResult { backend.getVipEntitlements() }.getOrElse { entitlement ?: VipEntitlementsDto() }
         if (entitlement?.seriesGameAccess == true) refreshLobby(showProgress = true) else loading = false
     }
 
     LaunchedEffect(selectedGameId, currentGame?.status) {
-        runCatching { backend.setPresence(if (selectedGameId != null && currentGame?.status == "playing") "in_game" else "online") }
+        gameRequestResult { backend.setPresence(if (selectedGameId != null && currentGame?.status == "playing") "in_game" else "online") }
     }
 
     LaunchedEffect(entitlement?.seriesGameAccess, selectedGameId) {
         if (entitlement?.seriesGameAccess != true || selectedGameId != null) return@LaunchedEffect
         while (currentCoroutineContext().isActive) {
             refreshLobby()
-            val outgoing = runCatching { backend.getOutgoingWordSiegeSeriesInvites() }.getOrDefault(emptyList())
+            val outgoing = gameRequestResult { backend.getOutgoingWordSiegeSeriesInvites() }.getOrDefault(emptyList())
             outgoing.filter { it.status == "pending" }.forEach { WordSiegeLaunchConfig.awaitInvite(it.id) }
             outgoing.firstOrNull { it.status == "accepted" && it.id in WordSiegeLaunchConfig.awaitedInviteIds && it.gameId != null }?.let { invite ->
-                runCatching { backend.getWordSiegeGame(requireNotNull(invite.gameId)) }.getOrNull()?.let { game ->
+                gameRequestResult { backend.getWordSiegeGame(requireNotNull(invite.gameId)) }.getOrNull()?.let { game ->
                     WordSiegeLaunchConfig.awaitedInviteIds.remove(invite.id)
                     if (game.status == "playing") applyGame(game)
                 }
@@ -156,6 +165,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
 
     LaunchedEffect(selectedGameId, showChat) {
         val gameId = selectedGameId ?: return@LaunchedEffect
+        GameChatBadge.select(gameId)
         // The clock ticks every second, but the server is read every 2 s and the board is only
         // redrawn when something actually changed (a fresh copy of the same game used to redraw
         // the whole board every second, which made the match stutter).
@@ -164,7 +174,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
         while (currentCoroutineContext().isActive) {
             if (tick % 2 == 0) {
                 val pollStartedWith = currentGame
-                runCatching { backend.refreshWordSiegeGame(gameId) }
+                gameRequestResult { backend.refreshWordSiegeGame(gameId) }
                     .onSuccess { next ->
                         clearErrorNotice()
                         val shown = currentGame
@@ -184,7 +194,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                     .onFailure { showError(it.message.orEmpty()) }
                 val moveCount = currentGame?.moveCount ?: -1
                 if (moveCount != movesFor) {
-                    runCatching { backend.getWordSiegeMoves(gameId) }.getOrNull()?.let {
+                    gameRequestResult { backend.getWordSiegeMoves(gameId) }.getOrNull()?.let {
                         if (it != moves) moves = it
                         movesFor = moveCount
                     }
@@ -192,8 +202,8 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
             }
             // Chat is read in the background too, so the chat button can show new messages.
             if (tick % 4 == 0 || showChat) {
-                runCatching { backend.getWordSiegeMessages(gameId) }.getOrNull()?.let { if (it != messages) messages = it }
-                GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
+                gameRequestResult { backend.getWordSiegeMessages(gameId) }.getOrNull()?.let { if (it != messages) messages = it }
+                if (selectedGameId == gameId) GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
             }
             tick += 1
             delay(1_000)
@@ -237,9 +247,9 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                 onRefresh = { scope.launch { refreshLobby(showProgress = true) } },
                 onNewGame = {
                     if (busy) return@SeriesLobby
+                    busy = true
                     scope.launch {
-                        busy = true
-                        runCatching { backend.findOrCreateWordSiegeSeriesGame(SonHarfUiState.language, turnMinutes) }
+                        gameRequestResult { backend.findOrCreateWordSiegeSeriesGame(SonHarfUiState.language, turnMinutes) }
                             .onSuccess { next ->
                                 applyGame(next)
                                 notice = if (next.status == "waiting") sh("Düello rakibi aranıyor.", "Searching for a duel rival.") else null
@@ -254,7 +264,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                     if (busy) return@SeriesLobby
                     busy = true
                     scope.launch {
-                        runCatching { backend.respondWordSiegeSeriesInvite(invite.id, true) }
+                        gameRequestResult { backend.respondWordSiegeSeriesInvite(invite.id, true) }
                             .onSuccess { next ->
                                 invites = invites.filterNot { it.id == invite.id }
                                 if (next != null) applyGame(next)
@@ -265,9 +275,9 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                 },
                 onDeclineInvite = { invite ->
                     if (busy) return@SeriesLobby
+                    busy = true
                     scope.launch {
-                        busy = true
-                        runCatching { backend.respondWordSiegeSeriesInvite(invite.id, false) }
+                        gameRequestResult { backend.respondWordSiegeSeriesInvite(invite.id, false) }
                             .onSuccess { invites = invites.filterNot { it.id == invite.id } }
                             .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
                         busy = false
@@ -357,7 +367,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                             onChat = {
                                 showChat = true
                                 GameChatBadge.markRead()
-                                scope.launch { messages = runCatching { backend.getWordSiegeMessages(game.id) }.getOrDefault(emptyList()) }
+                                scope.launch { messages = gameRequestResult { backend.getWordSiegeMessages(game.id) }.getOrDefault(emptyList()) }
                             },
                             onForfeit = { showForfeit = true },
                             onCancelWaiting = {},
@@ -384,7 +394,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
             onInvite = { friend ->
                 scope.launch {
                     busy = true
-                    runCatching { backend.inviteFriendToWordSiegeSeries(friend.id, SonHarfUiState.language, turnMinutes) }
+                    gameRequestResult { backend.inviteFriendToWordSiegeSeries(friend.id, SonHarfUiState.language, turnMinutes) }
                         .onSuccess { invite ->
                             WordSiegeLaunchConfig.awaitInvite(invite.id)
                             notice = sh("${friend.displayName} Hızlı Düello'ya davet edildi.", "${friend.displayName} was invited to Quick Duel.")
@@ -486,10 +496,10 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                         val text = chatInput
                         scope.launch {
                             busy = true
-                            runCatching { backend.sendWordSiegeMessage(dialogGame.id, text) }
+                            gameRequestResult { backend.sendWordSiegeMessage(dialogGame.id, text) }
                                 .onSuccess {
                                     chatInput = ""
-                                    messages = runCatching { backend.getWordSiegeMessages(dialogGame.id) }.getOrDefault(messages)
+                                    messages = gameRequestResult { backend.getWordSiegeMessages(dialogGame.id) }.getOrDefault(messages)
                                 }
                                 .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
                             busy = false

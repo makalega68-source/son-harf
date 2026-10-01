@@ -80,6 +80,8 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 private enum class PremierStage { Loading, Lobby, Searching, Vs, Playing, Finished }
 private data class PremierMoveFeedback(val accepted: Boolean, val message: String)
@@ -238,7 +240,7 @@ fun PremierWordDuelScreen() {
     var busy by remember { mutableStateOf(false) }
     var showForfeit by remember { mutableStateOf(false) }
     var showQuickChat by remember { mutableStateOf(false) }
-    var hasUnreadChat by remember { mutableStateOf(false) }
+    var unreadChatCount by remember { mutableIntStateOf(0) }
     var floatingMessage by remember { mutableStateOf<ChatMessageDto?>(null) }
     var moveFeedback by remember { mutableStateOf<PremierMoveFeedback?>(null) }
     var turnSeconds by remember { mutableIntStateOf(PREMIER_TURN_SECONDS) }
@@ -249,7 +251,7 @@ fun PremierWordDuelScreen() {
     suspend fun ensureMe(): ProfileDto {
         if (backend.currentUserId() == null) backend.ensurePlayer(pt(language, "Oyuncu", "Player"))
         val id = requireNotNull(backend.currentUserId())
-        return runCatching { backend.getProfile(id) }
+        return gameRequestResult { backend.getProfile(id) }
             .getOrElse { backend.ensurePlayer(pt(language, "Oyuncu", "Player")) }
             .also { me = it }
     }
@@ -258,6 +260,7 @@ fun PremierWordDuelScreen() {
     // poll landing after a newer RPC answer) can never bring back the previous turn.
     fun acceptRoom(next: GameRoomDto): Boolean {
         val current = room
+        if (current != null && next.id != current.id) return false
         if (current != null && premierRoomSnapshotIsOlder(next, current)) return false
         room = next
         return true
@@ -265,6 +268,7 @@ fun PremierWordDuelScreen() {
 
     // The word list only grows within a match; an older poll must not shrink it.
     fun acceptWords(next: List<GameWordDto>) {
+        if (next.any { it.roomId != room?.id }) return
         val current = words
         if (current.isNotEmpty() && next.size < current.size && current.first().roomId == room?.id) return
         words = next
@@ -276,13 +280,20 @@ fun PremierWordDuelScreen() {
         room = next
         if (previousRoomId != next.id) {
             botChat = emptyList()
-            hasUnreadChat = false
+            unreadChatCount = 0
         }
         language = SharedDictionaryService.canonicalLanguage(next.language)
         SonHarfUiState.language = language
-        opponent = backend.getPremierOpponent(next)
-        words = runCatching { backend.getWords(next.id) }.getOrDefault(emptyList())
-        chat = if (next.isBot) emptyList() else runCatching { backend.getChat(next.id) }.getOrDefault(emptyList())
+        coroutineScope {
+            val opponentTask = async { gameRequestResult { backend.getPremierOpponent(next) }.getOrNull() }
+            val wordsTask = async { gameRequestResult { backend.getWords(next.id) }.getOrDefault(emptyList()) }
+            val chatTask = async { if (next.isBot) emptyList() else gameRequestResult { backend.getChat(next.id) }.getOrDefault(emptyList()) }
+            opponent = opponentTask.await()
+            words = wordsTask.await()
+            chat = chatTask.await()
+        }
+        GameChatBadge.update(next.id, chat.map { it.id to (it.senderId != backend.currentUserId()) }, open = showQuickChat)
+        unreadChatCount = GameChatBadge.unread
         stage = when {
             next.isPremierFinished() -> PremierStage.Finished
             cinematic -> PremierStage.Vs
@@ -290,10 +301,14 @@ fun PremierWordDuelScreen() {
         }
     }
 
+    var sendingChat by remember { mutableStateOf(false) }
     // One way to send chat, used by the chat sheet and by the quick messages between rounds.
     fun sendChatMessage(message: String) {
-                val active = room ?: return
+        val active = room ?: return
+        if (sendingChat || message.isBlank()) return
+        sendingChat = true
         scope.launch {
+            try {
             if (active.isBot) {
                 val myId = backend.currentUserId().orEmpty()
                 botChatSequence -= 1L
@@ -307,6 +322,7 @@ fun PremierWordDuelScreen() {
                 notice = ""
                 SonHarfSoundFx.softNotify()
                 delay(650)
+                if (room?.id != active.id) return@launch
                 botChatSequence -= 1L
                 val reply = ChatMessageDto(
                     id = botChatSequence,
@@ -319,26 +335,31 @@ fun PremierWordDuelScreen() {
                 // The answer also pops up above the board, so it is seen without opening the chat.
                 if (!showQuickChat) {
                     floatingMessage = reply
-                    hasUnreadChat = true
+                    unreadChatCount += 1
                 }
             } else {
-                runCatching {
+                gameRequestResult {
                     backend.sendChat(active.id, message)
                     backend.getChat(active.id)
                 }.onSuccess { refreshed ->
-                    chat = refreshed
-                    notice = ""
+                    if (room?.id == active.id) {
+                        chat = refreshed
+                        GameChatBadge.update(active.id, refreshed.map { it.id to (it.senderId != backend.currentUserId()) }, open = showQuickChat)
+                        unreadChatCount = GameChatBadge.unread
+                        notice = ""
+                    }
                 }.onFailure { notice = premierError(language, it.message.orEmpty()) }
             }
+            } finally { sendingChat = false }
         }
     }
 
     LaunchedEffect(Unit) {
-        runCatching {
+        gameRequestResult {
             val player = ensureMe()
             val found = backend.findPremierActiveRoom()
             val active = if (found?.isBot == true && found.isPremierLive()) {
-                runCatching { backend.resumePremierBotMatch(found.id) }.getOrDefault(found)
+                gameRequestResult { backend.resumePremierBotMatch(found.id) }.getOrDefault(found)
             } else {
                 found
             }
@@ -372,12 +393,15 @@ fun PremierWordDuelScreen() {
             backend.observeChat(active.id)
                 .catch { }
                 .collect { next ->
+                    if (room?.id != active.id) return@collect
                     val previousId = chat.lastOrNull()?.id
                     chat = next
+                    GameChatBadge.update(active.id, next.map { it.id to (it.senderId != backend.currentUserId()) }, open = showQuickChat)
+                    unreadChatCount = GameChatBadge.unread
                     val latest = next.lastOrNull()
                     if (latest != null && latest.id != previousId && latest.senderId != backend.currentUserId()) {
                         floatingMessage = latest
-                        hasUnreadChat = !showQuickChat
+
                     }
                 }
         }
@@ -389,12 +413,20 @@ fun PremierWordDuelScreen() {
         val active = room ?: return@LaunchedEffect
         if (stage != PremierStage.Playing || words.size == active.validWordCount) return@LaunchedEffect
         delay(900)
-        runCatching { backend.getWords(active.id) }.getOrNull()?.let { acceptWords(it) }
+        gameRequestResult { backend.getWords(active.id) }.getOrNull()?.let { acceptWords(it) }
         if (words.size == room?.validWordCount) return@LaunchedEffect
-        runCatching { backend.getRoom(active.id) }.getOrNull()?.let { acceptRoom(it) }
+        gameRequestResult { backend.getRoom(active.id) }.getOrNull()?.let { acceptRoom(it) }
         delay(1_500)
         val latest = room ?: return@LaunchedEffect
         if (words.size != latest.validWordCount) syncGateOpenFor = premierSyncGateKey(latest, words)
+    }
+
+    LaunchedEffect(showQuickChat, chat, room?.id) {
+        val active = room ?: return@LaunchedEffect
+        if (!active.isBot) {
+            GameChatBadge.update(active.id, chat.map { it.id to (it.senderId != backend.currentUserId()) }, open = showQuickChat)
+            unreadChatCount = GameChatBadge.unread
+        } else if (showQuickChat) unreadChatCount = 0
     }
 
     LaunchedEffect(floatingMessage?.id) {
@@ -459,7 +491,7 @@ fun PremierWordDuelScreen() {
         // Keep asking until the server bot moves; never leave the match waiting on a silent bot.
         var attempt = 0
         while (true) {
-            val synced = runCatching { backend.getRoom(active.id) }.getOrNull()
+            val synced = gameRequestResult { backend.getRoom(active.id) }.getOrNull()
             if (synced != null && (
                     !synced.botTurn ||
                         synced.isPremierFinished() ||
@@ -470,7 +502,7 @@ fun PremierWordDuelScreen() {
                 notice = ""
                 return@LaunchedEffect
             }
-            val advanced = runCatching { backend.botTakeTurn(active.id) }.getOrNull()
+            val advanced = gameRequestResult { backend.botTakeTurn(active.id) }.getOrNull()
             if (advanced != null) {
                 acceptRoom(advanced)
                 notice = ""
@@ -489,7 +521,7 @@ fun PremierWordDuelScreen() {
         if (active.roundNo == 1 && active.validWordCount == 0 && !active.botTurn &&
             active.status in setOf("playing", "final", "sudden_death")
         ) {
-            runCatching { backend.activatePremierOpeningTurn(active.id) }.getOrNull()?.let { opened ->
+            gameRequestResult { backend.activatePremierOpeningTurn(active.id) }.getOrNull()?.let { opened ->
                 if (room?.id == opened.id) acceptRoom(opened)
             }
         }
@@ -539,7 +571,7 @@ fun PremierWordDuelScreen() {
                 reconnectClockResolved = false
                 launch {
                     val requestStartedAt = SystemClock.elapsedRealtime()
-                    val reconnectClock = runCatching { backend.getPremierReconnectClock(active.id) }.getOrNull()
+                    val reconnectClock = gameRequestResult { backend.getPremierReconnectClock(active.id) }.getOrNull()
                     val requestFinishedAt = SystemClock.elapsedRealtime()
                     if (reconnectClock != null) {
                         val halfRoundTripMs = ((requestFinishedAt - requestStartedAt) / 2L).coerceIn(0L, 750L)
@@ -562,9 +594,9 @@ fun PremierWordDuelScreen() {
 
                 turnSeconds = 1
                 // Only a changed room is progress; an unchanged answer means the server still sees time left.
-                val resolved = runCatching { backend.heartbeatRoom(active.id) }.getOrNull()
+                val resolved = gameRequestResult { backend.heartbeatRoom(active.id) }.getOrNull()
                     ?.takeIf { premierTurnStateChanged(active, it) }
-                    ?: runCatching { backend.claimTurnTimeout(active.id) }.getOrNull()
+                    ?: gameRequestResult { backend.claimTurnTimeout(active.id) }.getOrNull()
                         ?.takeIf { premierTurnStateChanged(active, it) }
                 if (resolved != null) {
                     acceptRoom(resolved)
@@ -588,7 +620,7 @@ fun PremierWordDuelScreen() {
         val deadline = com.sonharf.game.data.parseServerInstant(active.turnDeadline)
         if (deadline == null) {
             turnSeconds = PREMIER_TURN_SECONDS
-            runCatching { backend.getRoom(active.id) }.getOrNull()?.let { synced ->
+            gameRequestResult { backend.getRoom(active.id) }.getOrNull()?.let { synced ->
                 if (synced != active) acceptRoom(synced)
             }
             return@LaunchedEffect
@@ -606,7 +638,7 @@ fun PremierWordDuelScreen() {
             serverClockResolved = false
             launch {
                 val requestStartedAt = SystemClock.elapsedRealtime()
-                val serverClock = runCatching { fetchPremierTurnClock(active.id) }.getOrNull()
+                val serverClock = gameRequestResult { fetchPremierTurnClock(active.id) }.getOrNull()
                 val requestFinishedAt = SystemClock.elapsedRealtime()
                 if (serverClock != null) {
                     val halfRoundTripMs = ((requestFinishedAt - requestStartedAt) / 2L).coerceIn(0L, 750L)
@@ -637,14 +669,14 @@ fun PremierWordDuelScreen() {
             // the server confirms expiry or sends the next authoritative room state.
             turnSeconds = 1
 
-            val synced = runCatching { backend.getRoom(active.id) }.getOrNull()
+            val synced = gameRequestResult { backend.getRoom(active.id) }.getOrNull()
             if (synced != null && premierTurnStateChanged(active, synced)) {
                 acceptRoom(synced)
                 notice = ""
                 return@LaunchedEffect
             }
 
-            val advanced = runCatching { backend.claimTurnTimeout(active.id) }.getOrNull()
+            val advanced = gameRequestResult { backend.claimTurnTimeout(active.id) }.getOrNull()
             if (advanced != null && premierTurnStateChanged(active, advanced)) {
                 acceptRoom(advanced)
                 val reconnectProtected = !advanced.isBot &&
@@ -703,10 +735,10 @@ fun PremierWordDuelScreen() {
                 },
                 onPlay = {
                     if (busy) return@PremierLobby
+                    busy = true
                     scope.launch {
-                        busy = true
                         notice = ""
-                        runCatching {
+                        gameRequestResult {
                             // A stalled connection must never leave the play button locked.
                             kotlinx.coroutines.withTimeout(15_000) {
                                 ensureMe()
@@ -741,7 +773,7 @@ fun PremierWordDuelScreen() {
                 onCancel = {
                     scope.launch {
                         stage = PremierStage.Lobby
-                        runCatching { backend.cancelRandomMatchmaking() }
+                        gameRequestResult { backend.cancelRandomMatchmaking() }
                         notice = pt(language, "Eşleşme iptal edildi.", "Matchmaking cancelled.")
                     }
                 },
@@ -769,7 +801,7 @@ fun PremierWordDuelScreen() {
                         notice = notice,
                         busy = busy,
                         turnSeconds = turnSeconds,
-                        unreadChat = hasUnreadChat,
+                        unreadChat = unreadChatCount,
                         floatingMessage = floatingMessage,
                         moveFeedback = moveFeedback,
                         botThinking = botThinking,
@@ -778,7 +810,8 @@ fun PremierWordDuelScreen() {
                         onInput = { input = it },
                         onForfeit = { showForfeit = true },
                         onQuickChat = {
-                            hasUnreadChat = false
+                            unreadChatCount = 0
+                            GameChatBadge.markRead()
                             showQuickChat = true
                         },
                         onSubmit = {
@@ -809,7 +842,7 @@ fun PremierWordDuelScreen() {
                                 // for the result, but stale text must never survive into the rival turn.
                                 input = ""
                                 notice = ""
-                                runCatching { backend.submitPremierWord(active.id, candidate) }
+                                gameRequestResult { backend.submitPremierWord(active.id, candidate) }
                                     .onSuccess { next ->
                                         acceptRoom(next)
                                         val accepted = next.validWordCount > active.validWordCount
@@ -833,7 +866,7 @@ fun PremierWordDuelScreen() {
                                     }
                                     .onFailure { error ->
                                         // A dropped connection may still have delivered the word: re-check the room first.
-                                        val synced = runCatching { backend.getRoom(active.id) }.getOrNull()
+                                        val synced = gameRequestResult { backend.getRoom(active.id) }.getOrNull()
                                         if (synced != null && synced.validWordCount > active.validWordCount) {
                                             acceptRoom(synced)
                                             notice = ""
@@ -865,19 +898,19 @@ fun PremierWordDuelScreen() {
                     playerGender = me?.gender,
                     onRematch = {
                         if (busy) return@PremierResult
+                        busy = true
                         scope.launch {
-                            busy = true
                             if (active.isBot) {
-                                runCatching { backend.restartBotMatch(active.id) }
+                                gameRequestResult { backend.restartBotMatch(active.id) }
                                     .onSuccess { adoptRoom(it, cinematic = true) }
                                     .onFailure { notice = premierError(language, it.message.orEmpty()) }
                             } else {
-                                runCatching { backend.requestRematch(active.id) }
+                                gameRequestResult { backend.requestRematch(active.id) }
                                     .onSuccess {
                                         notice = pt(language, "Rövanş teklifi gönderildi.", "Rematch request sent.")
                                         for (attempt in 0 until 16) {
                                             delay(750)
-                                            val next = runCatching { backend.findPremierActiveRoom() }.getOrNull()
+                                            val next = gameRequestResult { backend.findPremierActiveRoom() }.getOrNull()
                                             if (next != null && next.id != active.id) {
                                                 adoptRoom(next, cinematic = true)
                                                 break
@@ -906,9 +939,9 @@ fun PremierWordDuelScreen() {
                 showForfeit = false
                 val active = room
                 if (active != null) {
+                    busy = true
                     scope.launch {
-                        busy = true
-                        runCatching { backend.forfeit(active.id) }
+                        gameRequestResult { backend.forfeit(active.id) }
                             .onSuccess { acceptRoom(it); stage = PremierStage.Finished }
                             .onFailure { notice = premierError(language, it.message.orEmpty()) }
                         busy = false
@@ -1372,7 +1405,7 @@ private fun PremierArena(
     notice: String,
     busy: Boolean,
     turnSeconds: Int,
-    unreadChat: Boolean,
+    unreadChat: Int,
     floatingMessage: ChatMessageDto?,
     moveFeedback: PremierMoveFeedback?,
     botThinking: Boolean,
@@ -1675,12 +1708,7 @@ private fun PremierArena(
                             Spacer(Modifier.width(4.dp))
                             Text(pt(language, "SOHBET", "CHAT"), color = PremierBoard.Mine, fontSize = 10.sp, fontWeight = FontWeight.Black)
                         }
-                        if (unreadChat) {
-                            Box(
-                                Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp)
-                                    .size(9.dp).clip(CircleShape).background(PremierBoard.Danger)
-                            )
-                        }
+                        ChatUnreadDot(unreadChat)
                     }
                 }
             }
@@ -3197,269 +3225,4 @@ private fun PremierChatSheet(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PremierBoard.Mine,
                         unfocusedBorderColor = PremierBoard.TileEdge,
-                        focusedContainerColor = PremierUi.Ice,
-                        unfocusedContainerColor = PremierUi.Ice,
-                        focusedTextColor = PremierBoard.Ink,
-                        unfocusedTextColor = PremierBoard.Ink,
-                    ),
-                )
-                Spacer(Modifier.width(8.dp))
-                FilledIconButton(
-                    onClick = {
-                        val text = draft.trim()
-                        if (text.isNotEmpty()) {
-                            onSend(text)
-                            draft = ""
-                        }
-                    },
-                    enabled = draft.isNotBlank(),
-                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = PremierBoard.Mine),
-                ) {
-                    Icon(Icons.Rounded.Send, pt(language, "Gönder", "Send"))
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-    }
-}
-
-private fun premierQuickMessages(language: String): List<String> = if (language == "en") {
-    listOf("👋 Hi!", "👍 Good game", "🔥 Nice word!", "😅 That was close", "🍀 Good luck", "😄")
-} else {
-    listOf("👋 Selam!", "👍 İyi oyun", "🔥 Güzel kelime!", "😅 Kıl payı", "🍀 Bol şans", "😄")
-}
-
-@Composable
-private fun PremierResult(language: String, room: GameRoomDto, meId: String?, busy: Boolean, notice: String, onRematch: () -> Unit, onHome: () -> Unit, playerName: String? = null, playerGender: String? = null) {
-    val amHost = meId == room.hostId
-    val myScore = if (amHost) room.hostScore else room.guestScore
-    val rivalScore = if (amHost) room.guestScore else room.hostScore
-    val won = when {
-        room.isBot -> room.winnerId == meId && !room.winnerIsBot
-        else -> room.winnerId == meId
-    }
-    val mascotOutcome = when {
-        won -> WordSiegeMascotOutcome.WIN
-        room.winnerId == null && !room.winnerIsBot -> WordSiegeMascotOutcome.DRAW
-        else -> WordSiegeMascotOutcome.LOSS
-    }
-    // The result is heard once: a fanfare for a win, a gentle phrase otherwise.
-    LaunchedEffect(room.id) {
-        when (mascotOutcome) {
-            WordSiegeMascotOutcome.WIN -> SonHarfSoundFx.victory()
-            WordSiegeMascotOutcome.LOSS -> SonHarfSoundFx.defeat()
-            WordSiegeMascotOutcome.DRAW -> SonHarfSoundFx.bonus()
-        }
-    }
-    if (mascotOutcome != WordSiegeMascotOutcome.DRAW) {
-        // Every player: the victory or defeat clip full screen, the result underneath.
-        MatchResultScreen(
-            won = won,
-            title = if (won) pt(language, "KAZANDIN!", "YOU WON!") else pt(language, "KAYBETTİN", "YOU LOST"),
-            subtitle = notice.ifBlank { null },
-            mine = ResultScore(pt(language, "SEN", "YOU"), "$myScore"),
-            rival = ResultScore(pt(language, "RAKİP", "RIVAL"), "$rivalScore"),
-            primaryLabel = if (busy) "…" else pt(language, "RÖVANŞ", "REMATCH"),
-            onPrimary = { if (!busy) onRematch() },
-            secondaryLabel = pt(language, "ANA SAYFA", "HOME"),
-            onSecondary = onHome,
-        )
-        return
-    }
-    val glowTransition = rememberInfiniteTransition(label = "result-glow")
-    val glow by glowTransition.animateFloat(.6f, 1f, infiniteRepeatable(tween(1_100), RepeatMode.Reverse), label = "result-glow-value")
-    Box(Modifier.fillMaxSize()) {
-    Column(
-        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(22.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Box(
-                Modifier.size(150.dp).graphicsLayer { scaleX = glow; scaleY = glow }.background(
-                    Brush.radialGradient(listOf((if (won) PremierUi.Gold else PremierUi.Red).copy(alpha = .45f), Color.Transparent)),
-                    CircleShape,
-                )
-            )
-            Surface(shape = CircleShape, color = if (won) PremierUi.GoldSoft else PremierUi.RedSoft, border = BorderStroke(2.dp, if (won) PremierUi.Gold else PremierUi.Red)) {
-                Icon(if (won) Icons.Rounded.EmojiEvents else Icons.Rounded.SportsEsports, null, tint = if (won) PremierUi.Gold else PremierUi.Red, modifier = Modifier.padding(22.dp).size(52.dp))
-            }
-            // Taç Zaferi: the purchased crown comes down onto the victory, as in Kelime Tahtı.
-            if (won && SonHarfCosmetics.crownVictory) {
-                CrownVictoryCelebration(eventKey = "sonharf:${room.id}", modifier = Modifier.size(190.dp), compact = true)
-            }
-        }
-        Spacer(Modifier.height(18.dp))
-        Text(if (won) pt(language, "ZAFER", "VICTORY") else pt(language, "MAÇ BİTTİ", "MATCH OVER"), color = if (won) PremierUi.Ocean else PremierUi.Red, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-        Text(if (won) pt(language, "Rakibini geride bıraktın.", "You outplayed your rival.") else pt(language, "Yeni maçta geri dön.", "Come back stronger next match."), color = PremierUi.Muted, fontSize = 12.sp)
-        Spacer(Modifier.height(22.dp))
-        Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(23.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Border)) {
-            Row(Modifier.padding(20.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                PremierResultMetric(pt(language, "SKOR", "SCORE"), "$myScore")
-                Box(Modifier.width(1.dp).height(52.dp).background(PremierUi.Border))
-                PremierResultMetric(pt(language, "RAKİP", "RIVAL"), "$rivalScore")
-                Box(Modifier.width(1.dp).height(52.dp).background(PremierUi.Border))
-                PremierResultMetric(pt(language, "ROUND", "ROUNDS"), "${if (amHost) room.hostRounds else room.guestRounds}-${if (amHost) room.guestRounds else room.hostRounds}")
-            }
-        }
-        if (notice.isNotBlank()) {
-            Spacer(Modifier.height(10.dp))
-            Text(notice, color = PremierUi.OceanDeep, fontSize = 11.sp, textAlign = TextAlign.Center)
-        }
-        Spacer(Modifier.height(24.dp))
-        Button(onClick = onRematch, enabled = !busy, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean)) {
-            Icon(Icons.Rounded.Replay, null)
-            Spacer(Modifier.width(7.dp))
-            Text(if (busy) pt(language, "BEKLENİYOR…", "WAITING…") else pt(language, "HEMEN RÖVANŞ", "INSTANT REMATCH"), fontWeight = FontWeight.Black)
-        }
-        Spacer(Modifier.height(9.dp))
-        OutlinedButton(onClick = onHome, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), border = BorderStroke(1.dp, PremierUi.Border)) {
-            Text(pt(language, "ANA MENÜ", "HOME"), color = PremierUi.Muted, fontWeight = FontWeight.Black)
-        }
-    }
-    // The mascot flies in to celebrate a win (or to comfort after a loss), then perches above.
-    WordSiegeMascotCompanion(
-        anchors = listOf(Offset(.84f, .14f), Offset(.16f, .14f)),
-        mascotSize = 84.dp,
-        moveId = null,
-        lastMoveMine = false,
-        playerTurn = false,
-        modifier = Modifier.matchParentSize().statusBarsPadding(),
-        outcome = mascotOutcome,
-        playerName = playerName,
-        playerGender = playerGender,
-        greet = false,
-        stageY = .2f,
-        celebrationScale = 1.9f,
-    )
-    }
-}
-
-@Composable
-private fun PremierResultMetric(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = PremierUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-        Text(value, color = PremierUi.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)
-    }
-}
-
-@Composable
-private fun PremierCenteredMessage(title: String, detail: String, action: String, onAction: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Icon(Icons.Rounded.CloudOff, null, tint = PremierUi.Ocean, modifier = Modifier.size(42.dp))
-        Spacer(Modifier.height(12.dp))
-        Text(title, color = PremierUi.Ink, fontSize = 20.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(5.dp))
-        Text(detail, color = PremierUi.Muted, fontSize = 12.sp, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(18.dp))
-        Button(onClick = onAction, colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean)) { Text(action, fontWeight = FontWeight.Black) }
-    }
-}
-
-private fun profileWinRate(profile: ProfileDto?): Int {
-    if (profile == null) return 0
-    val total = profile.wins + profile.losses
-    return if (total <= 0) 0 else ((profile.wins.toDouble() / total.toDouble()) * 100.0).toInt().coerceIn(0, 100)
-}
-
-private fun premierRequiredToken(room: GameRoomDto, words: List<GameWordDto>): String {
-    val last = words.lastOrNull()?.normalizedWord?.trim().orEmpty()
-    if (last.isBlank()) return "★"
-    val count = if (room.gameMode == "expert") room.roundNo.coerceIn(1, 3) else 1
-    return premierUpper(last.takeLast(count), room.language)
-}
-
-private fun premierBotChatReply(language: String, message: String): String {
-    val lower = message.lowercase(premierLocale(language))
-    // The bot reads the match: the score, its lead, the last word and the player's streak.
-    val lead = PremierBotBrain.botScore - PremierBotBrain.myScore
-    val lastWord = PremierBotBrain.lastWord
-    fun pick(vararg options: Pair<String, String>): String {
-        val (tr, en) = options[kotlin.random.Random.nextInt(options.size)]
-        return pt(language, tr, en)
-    }
-    val tokens = lower.split(Regex("[^\\p{L}]+")).filter { it.isNotBlank() }.toSet()
-    return when {
-        lower.contains("hile") || lower.contains("cheat") ->
-            pick(
-                "Hile yok, sadece çok kelime okudum. 📖" to "No cheating, I've just read a lot of words. 📖",
-                "Hile mi? Sadece sözlüğü ezberledim. 🤓" to "Cheating? I just memorised the dictionary. 🤓",
-            )
-        "merhaba" in tokens || "selam" in tokens || "hello" in tokens || "hi" in tokens || "hey" in tokens ->
-            pick(
-                "Selam! Güzel bir maç olsun. 🤖" to "Hi! Let's have a good match. 🤖",
-                "Merhaba! Sözlüğümü ısıttım, hazırım. 📚" to "Hello! My dictionary is warmed up, I'm ready. 📚",
-            )
-        lower.contains("rövanş") || lower.contains("rematch") ->
-            pick("Maç bitince rövanşa hazırım. 😏" to "I'll be ready for a rematch when this ends. 😏")
-        lower.contains("tebrik") || lower.contains("bravo") || lower.contains("congrats") || lower.contains("güzel") || lower.contains("nice") ->
-            pick(
-                "Teşekkürler! Sen de iyi gidiyorsun." to "Thanks! You're doing well too.",
-                "Sağ ol! Ama asıl hamlem daha gelmedi. 😉" to "Thanks! But my best move is yet to come. 😉",
-            )
-        lower.contains("zor") || lower.contains("hard") ->
-            pick(
-                "Hile yok, sadece çok kelime okudum. 📖" to "No cheating, I've just read a lot of words. 📖",
-                "Zor harfleri severim… sen de sevmeye başla. 😈" to "I love tricky letters… you should too. 😈",
-            )
-        "bot" in tokens || "robot" in tokens || lower.contains("yapay") || "ai" in tokens ->
-            pick(
-                "Evet, yapay zekâyım. Ama kelimelere gönülden bağlıyım. 🤖💙" to "Yes, I'm an AI. But I truly love words. 🤖💙",
-                "Yapay zekâyım ama kaybetmekten gerçekten nefret ederim. 😅" to "I'm an AI, but I truly hate losing. 😅",
-            )
-        lead >= 10 ->
-            pick(
-                "Skor tabelasına bir bak istersen… 😏" to "Maybe take a look at the scoreboard… 😏",
-                "Bugün sözlük benden yana gibi. 📚" to "The dictionary seems to be on my side today. 📚",
-                "Toparlanmak için hâlâ vaktin var, merak etme." to "You still have time to recover, don't worry.",
-            )
-        lead <= -10 ->
-            pick(
-                "Tamam, bugün çok iyisin. Ama pes etmem! 😤" to "Okay, you're really good today. But I won't give up! 😤",
-                "Nasıl bu kadar hızlısın?! 😲" to "How are you this fast?! 😲",
-                "Devrelerim ısınmaya başladı… 🔥" to "My circuits are heating up… 🔥",
-            )
-        PremierBotBrain.myStreak >= 3 ->
-            pick("Serin çok iyi, ama onu bozacağım. 😈" to "Nice streak, but I'm going to break it. 😈")
-        lastWord.isNotBlank() && PremierBotBrain.lastWordMine ->
-            pick(
-                "$lastWord mı? Hmm, iyi seçim. 🤔" to "$lastWord? Hmm, good pick. 🤔",
-                "$lastWord… not ettim. 📝" to "$lastWord… noted. 📝",
-            )
-        lastWord.isNotBlank() ->
-            pick(
-                "$lastWord'den sonra ne yazacaksın bakalım? 😏" to "Let's see what you play after $lastWord. 😏",
-                "Son harfi beğendin mi? Özenle seçtim. 😉" to "Like that last letter? I picked it carefully. 😉",
-            )
-        else -> pick(
-            "Buradayım. Zinciri sürdür!" to "I'm here. Keep the chain going!",
-            "Sıradaki kelimede bol şans." to "Good luck on the next word.",
-            "Maç giderek kızışıyor. 🔥" to "This match is getting interesting. 🔥",
-        )
-    }
-}
-
-private fun validationMessage(language: String, reason: String): String = when (reason) {
-    "invalid_length" -> pt(language, "En az 2 harf olmalı.", "At least 2 letters.")
-    "invalid_characters" -> pt(language, "Geçersiz karakter var.", "Invalid characters.")
-    "not_in_dictionary", "invalid_word" -> pt(language, "Sözlükte yok.", "Not in the dictionary.")
-    "abbreviation_not_allowed" -> pt(language, "Kısaltmalar kullanılamaz.", "Abbreviations are not allowed.")
-    "proper_noun_not_allowed" -> pt(language, "Özel adlar kullanılamaz.", "Proper nouns are not allowed.")
-    "not_game_allowed" -> pt(language, "Oyunda geçerli değil.", "Not allowed in play.")
-    "ends_with_soft_g" -> pt(language, "Ğ ile bitemez.", "Cannot end with Ğ.")
-    "wrong_start_letter" -> pt(language, "Hedef harfle başlamalı.", "Must start with the target.")
-    "word_already_used" -> pt(language, "Daha önce kullanıldı.", "Already used.")
-    "turn_expired" -> pt(language, "Süren doldu.", "Your turn expired.")
-    else -> pt(language, "Hamle kabul edilmedi.", "Move was not accepted.")
-}
-
-private fun premierError(language: String, raw: String): String = when {
-    "player_already_in_game" in raw -> pt(language, "Aktif maçın bulundu.", "Your active match was found.")
-    "not_your_turn" in raw -> pt(language, "Sıra rakibinde.", "It is your rival's turn.")
-    "maintenance_mode" in raw -> pt(language, "Oyun kısa süreli bakımda.", "The game is under brief maintenance.")
-    "matchmaking_disabled" in raw -> pt(language, "Eşleşme geçici olarak kapalı.", "Matchmaking is temporarily disabled.")
-    "not_in_dictionary" in raw -> validationMessage(language, "not_in_dictionary")
-    "wrong_start_letter" in raw -> validationMessage(language, "wrong_start_letter")
-    "word_already_used" in raw -> validationMessage(language, "word_already_used")
-    else -> pt(language, "Bağlantı yenileniyor. Tekrar deneyebilirsin.", "Connection refreshed. You can try again.")
-}
+                        focusedContainerC

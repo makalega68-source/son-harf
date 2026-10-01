@@ -3,6 +3,7 @@ package com.sonharf.game
 import android.graphics.BitmapFactory
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -95,6 +96,10 @@ internal fun WeeklyPodiumArt(
     seats: List<PodiumSeat?>,
     modifier: Modifier = Modifier,
 ) {
+    if (style == WeeklyPodiumStyle.HOME) {
+        HomeWeeklyPodium(seats, modifier)
+        return
+    }
     val density = LocalDensity.current
     BoxWithConstraints(modifier.fillMaxWidth().aspectRatio(style.aspect)) {
         val w = maxWidth
@@ -200,5 +205,38 @@ private fun PodiumPhoto(seat: PodiumSeat, size: Dp) {
         Image(bitmap.asImageBitmap(), seat.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
     } else {
         DefaultProfilePortrait(gender, Modifier.fillMaxSize())
+    }
+}
+
+@Composable
+private fun HomeWeeklyPodium(seats: List<PodiumSeat?>, modifier: Modifier) {
+    Column(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+            .background(Brush.verticalGradient(listOf(SonHarfTheme.Surface, SonHarfTheme.SurfaceSecondary)))
+            .border(.8.dp, SonHarfTheme.PremiumGold.copy(alpha = .35f), RoundedCornerShape(22.dp))
+            .padding(horizontal = 12.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(sh("HAFTALIK SIRALAMA", "WEEKLY RANKING"), color = SonHarfTheme.TextPrimary,
+            fontSize = 13.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Bottom) {
+            listOf(1, 0, 2).forEach { place ->
+                val seat = seats.getOrNull(place)
+                val winner = place == 0
+                val medal = when (place) { 0 -> SonHarfTheme.PremiumGold; 1 -> Color(0xFF89908E); else -> Color(0xFFAF8261) }
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("${place + 1}", color = medal, fontSize = if (winner) 16.sp else 13.sp, fontWeight = FontWeight.Bold)
+                    val size = if (winner) 62.dp else 48.dp
+                    Box(Modifier.size(size).clip(CircleShape).border(if (winner) 2.dp else 1.dp, medal, CircleShape)) {
+                        if (seat != null) PodiumPhoto(seat, size) else DefaultProfilePortrait(null, Modifier.fillMaxSize())
+                    }
+                    Text(seat?.name ?: sh("Boş", "Open"), color = SonHarfTheme.TextPrimary, fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(seat?.score ?: "—", color = SonHarfTheme.TextSecondary, fontSize = 10.sp, maxLines = 1)
+                }
+            }
+        }
     }
 }

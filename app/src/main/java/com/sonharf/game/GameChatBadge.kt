@@ -10,7 +10,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,23 +26,43 @@ import androidx.compose.ui.unit.sp
 internal object GameChatBadge {
     var unread by mutableIntStateOf(0)
         private set
-    private var seenId by mutableLongStateOf(0L)
+    private val tracker = UnreadChatTracker()
     private var gameId: String? = null
+    private var preferences: android.content.SharedPreferences? = null
+    private val restored = mutableSetOf<String>()
 
-    /** A new message list for [game]; [open] means the chat is on screen and everything is read. */
+    fun init(context: android.content.Context) {
+        preferences = context.applicationContext.getSharedPreferences("chat_read_watermarks", android.content.Context.MODE_PRIVATE)
+    }
+
+    private fun key(game: String): String {
+        val user = if (com.sonharf.game.data.SupabaseProvider.configured)
+            com.sonharf.game.data.OnlineGameBackend().currentUserId().orEmpty() else "local"
+        return "$user:$game"
+    }
+
+    fun select(game: String) {
+        val conversation = key(game)
+        gameId = conversation
+        if (restored.add(conversation)) tracker.restore(conversation, preferences?.getLong(conversation, 0) ?: 0)
+        unread = tracker.count(conversation)
+    }
+
     fun update(game: String, messageIds: List<Pair<Long, Boolean>>, open: Boolean) {
-        if (gameId != game) {
-            gameId = game
-            // Messages already there when the game is opened count as read.
-            seenId = messageIds.maxOfOrNull { it.first } ?: 0L
-        }
-        if (open) seenId = maxOf(seenId, messageIds.maxOfOrNull { it.first } ?: 0L)
-        unread = messageIds.count { (id, fromRival) -> fromRival && id > seenId }
+        select(game)
+        val conversation = requireNotNull(gameId)
+        unread = tracker.update(conversation, messageIds, open)
+        if (open) preferences?.edit()?.putLong(conversation, tracker.seenId(conversation))?.apply()
     }
 
     fun markRead() {
+        gameId?.let { room ->
+            tracker.markRead(room)
+            preferences?.edit()?.putLong(room, tracker.seenId(room))?.apply()
+        }
         unread = 0
     }
+
 }
 
 /** A small red count in the corner of a chat button. */

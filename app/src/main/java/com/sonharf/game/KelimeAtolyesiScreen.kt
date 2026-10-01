@@ -102,13 +102,15 @@ private data class AtelierFeedback(val text: String, val positive: Boolean, val 
 
 private object AtelierRecords {
     private const val PREFS = "kelime_atolyesi_records"
-    fun best(context: android.content.Context, language: String): Int =
-        context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getInt("best_$language", 0)
-
-    fun save(context: android.content.Context, language: String, score: Int): Int {
+    fun best(context: android.content.Context, language: String, seconds: Int = 60): Int {
         val prefs = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
-        val best = maxOf(prefs.getInt("best_$language", 0), score)
-        prefs.edit().putInt("best_$language", best).apply()
+        return prefs.getInt("best_${language}_$seconds", if (seconds == 60) prefs.getInt("best_$language", 0) else 0)
+    }
+
+    fun save(context: android.content.Context, language: String, score: Int, seconds: Int = 60): Int {
+        val prefs = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+        val best = maxOf(best(context, language, seconds), score)
+        prefs.edit().putInt("best_${language}_$seconds", best).apply()
         return best
     }
 }
@@ -122,6 +124,7 @@ private fun atelierMascotSkin(context: android.content.Context): WordSiegeMascot
 
 private fun atelierTaskText(task: AtelierTask, language: String): String = when (task.kind) {
     AtelierTaskKind.LENGTH -> sh("${task.length} harfli kelime kur", "Build a ${task.length}-letter word")
+    AtelierTaskKind.ENDING -> sh("“${KelimeAtolyesiEngine.display(task.letter, language)}” ile biten kelime kur", "Build a word ending in “${KelimeAtolyesiEngine.display(task.letter, language)}”")
     AtelierTaskKind.LETTER -> {
         val letter = KelimeAtolyesiEngine.display(task.letter, language)
         sh("“$letter” harfini kullan", "Use the letter “$letter”")
@@ -141,14 +144,18 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var loadNonce by remember { mutableIntStateOf(0) }
     var roundKey by remember { mutableIntStateOf(0) }
     // Round length chosen in the lobby: 1 or 2 minutes.
-    var roundSeconds by remember { mutableIntStateOf(KelimeAtolyesiEngine.ROUND_SECONDS) }
-    var secondsLeft by remember { mutableIntStateOf(KelimeAtolyesiEngine.ROUND_SECONDS) }
+    var roundSeconds by remember { mutableIntStateOf(KelimeAtolyesiEngine.STRATEGY_ROUND_SECONDS) }
+    var secondsLeft by remember { mutableIntStateOf(KelimeAtolyesiEngine.STRATEGY_ROUND_SECONDS) }
     var busy by remember { mutableStateOf(false) }
+    var startingRound by remember { mutableStateOf(false) }
+    var hintLoading by remember { mutableStateOf(false) }
+    var roundDeadlineMs by remember { mutableStateOf(0L) }
+    var roundGeneration by remember { mutableIntStateOf(0) }
     var feedback by remember { mutableStateOf<AtelierFeedback?>(null) }
     var gain by remember { mutableIntStateOf(0) }
     var gainNonce by remember { mutableIntStateOf(0) }
     var happyUntil by remember { mutableStateOf(0L) }
-    var best by remember(language) { mutableIntStateOf(AtelierRecords.best(context, language)) }
+    var best by remember(language) { mutableIntStateOf(AtelierRecords.best(context, language, roundSeconds)) }
     var newBest by remember { mutableStateOf(false) }
     // Mascot hints: three per round, only when the player taps the hint button.
     var hintsLeft by remember { mutableIntStateOf(MascotHints.freeHints) }
@@ -174,7 +181,10 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var raceBoard by remember { mutableStateOf<AtelierBoardDto?>(null) }
     var dailyLine by remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(language, roundSeconds) { best = AtelierRecords.best(context, language, roundSeconds) }
+
     fun toLobby() {
+        roundGeneration += 1
         mode = AtelierMode.LOBBY
         state = null
         boardNonce += 1
@@ -185,20 +195,20 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     LaunchedEffect(mode, weeklyBoard, boardNonce, language, roundSeconds) {
         if (mode != AtelierMode.LOBBY || !online) return@LaunchedEffect
         loadingBoard = true
-        runCatching { AtelierCompetitionBackend.board(language, weeklyBoard, roundSeconds) }.onSuccess { board = it }
-        runCatching { AtelierCompetitionBackend.weeklyReward(language) }.onSuccess { reward = it }
+        gameRequestResult { AtelierCompetitionBackend.board(language, weeklyBoard, roundSeconds) }.onSuccess { board = it }
+        gameRequestResult { AtelierCompetitionBackend.weeklyReward(language) }.onSuccess { reward = it }
         loadingBoard = false
     }
 
     fun endRound(finished: AtelierState) {
         state = finished
         newBest = finished.score > best
-        best = AtelierRecords.save(context, language, finished.score)
+        best = AtelierRecords.save(context, language, finished.score, roundSeconds)
         if (finished.everySetDone) SonHarfSoundFx.victory() else SonHarfSoundFx.softNotify()
         if (mode == AtelierMode.DAILY) {
             dailyLine = sh("Puanın kaydediliyor…", "Saving your score…")
             scope.launch {
-                runCatching {
+                gameRequestResult {
                     AtelierCompetitionBackend.finishDaily(language, roundSeconds, finished.score, finished.words.size, finished.completedTasks)
                 }.onSuccess { r ->
                     dailyLine = if (r.rank == 1) sh("🥇 Bugünün lideri sensin! (${r.total} oyuncu)", "🥇 You lead today! (${r.total} players)")
@@ -212,26 +222,34 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
 
     fun startRound(seed: Long? = null) {
         val e = engine ?: return
-        e.reseed(seed ?: System.nanoTime())
+        if (startingRound || busy) return
+        startingRound = true
+        val generation = ++roundGeneration
+        val duration = roundSeconds
         scope.launch {
-            val fresh = withContext(Dispatchers.Default) { runCatching { e.newRound(roundSeconds) }.getOrNull() }
-            if (fresh == null) {
-                loadFailed = true
-                return@launch
-            }
-            state = fresh
-            feedback = null
-            newBest = false
-            hintsLeft = MascotHints.freeHints
-            hintText = null
-            combo = 0
-            lastWordAt = 0L
-            secondsLeft = roundSeconds
-            roundKey += 1
+            try {
+                val fresh = withContext(Dispatchers.Default) {
+                    e.reseed(seed ?: System.nanoTime())
+                    runCatching { e.newRound(duration) }.getOrNull()
+                }
+                if (generation != roundGeneration || mode == AtelierMode.LOBBY) return@launch
+                if (fresh == null) { loadFailed = true; return@launch }
+                state = fresh
+                feedback = null
+                newBest = false
+                hintsLeft = MascotHints.freeHints
+                hintText = null
+                combo = 0
+                lastWordAt = 0L
+                secondsLeft = duration
+                roundDeadlineMs = android.os.SystemClock.elapsedRealtime() + duration * 1_000L
+                roundKey += 1
+            } finally { startingRound = false }
         }
     }
 
     LaunchedEffect(language, loadNonce) {
+        roundGeneration += 1
         loadFailed = false
         engine = null
         state = null
@@ -249,17 +267,18 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     }
 
     fun startPractice() {
+        if (startingRound || startingDaily || busy) return
         mode = AtelierMode.PRACTICE
         dailyLine = null
         startRound()
     }
 
     fun startDaily() {
-        if (startingDaily || engine == null) return
+        if (startingDaily || startingRound || busy || engine == null) return
         startingDaily = true
         lobbyNotice = null
         scope.launch {
-            val started = runCatching { AtelierCompetitionBackend.startDaily(language, roundSeconds) }.getOrNull()
+            val started = gameRequestResult { AtelierCompetitionBackend.startDaily(language, roundSeconds) }.getOrNull()
             when {
                 started == null -> lobbyNotice = sh("Yarış başlatılamadı. Bağlantını kontrol et.", "Could not start the race. Check your connection.")
                 !started.started -> {
@@ -267,7 +286,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     boardNonce += 1
                 }
                 else -> {
-                    raceBoard = runCatching { AtelierCompetitionBackend.board(language, weekly = false, seconds = roundSeconds) }.getOrNull()
+                    raceBoard = if (!weeklyBoard) board else null
                     mode = AtelierMode.DAILY
                     dailyLine = null
                     startRound(KelimeAtolyesiEngine.dailySeed(language, started.day))
@@ -279,7 +298,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
 
     fun claimReward() {
         scope.launch {
-            runCatching { AtelierCompetitionBackend.claimWeeklyReward(language) }
+            gameRequestResult { AtelierCompetitionBackend.claimWeeklyReward(language) }
                 .onSuccess { r ->
                     lobbyNotice = if (r.claimed) sh("+${r.reward} Son Coin hesabına eklendi!", "+${r.reward} Son Coin added!")
                         else sh("Bu ödül alınamadı.", "This reward could not be claimed.")
@@ -297,7 +316,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             delay(1_000)
             val current = state ?: break
             if (current.over) break
-            secondsLeft = (secondsLeft - 1).coerceAtLeast(0)
+            secondsLeft = atelierRemainingSeconds(roundDeadlineMs, android.os.SystemClock.elapsedRealtime())
             if (secondsLeft == 0) {
                 engine?.let { endRound(it.finish(current)) }
                 break
@@ -305,14 +324,28 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         }
     }
 
+    LaunchedEffect(mode, roundKey, state?.over) {
+        if (mode != AtelierMode.DAILY || state == null || state?.over == true) return@LaunchedEffect
+        while (true) {
+            gameRequestResult { AtelierCompetitionBackend.board(language, weekly = false, seconds = roundSeconds) }
+                .onSuccess { raceBoard = it }
+            delay(15_000)
+        }
+    }
+
     fun submit() {
         val e = engine ?: return
         val before = state ?: return
-        if (busy || before.over || before.picked.isEmpty()) return
+        if (busy || hintLoading || startingRound || before.over || before.picked.isEmpty()) return
         busy = true
         scope.launch {
-            val result = withContext(Dispatchers.Default) { e.submit(before) }
-            busy = false
+            val result = try {
+                withContext(Dispatchers.Default) { runCatching { e.submit(before) }.getOrNull() }
+            } finally { busy = false }
+            if (result == null) {
+                feedback = AtelierFeedback(sh("Kelime kontrol edilemedi. Tekrar deneyebilirsin.", "Could not check the word. You can try again."), false, (feedback?.nonce ?: 0) + 1)
+                return@launch
+            }
             if (state !== before) return@launch // the round ended while the word was being checked
             val shown = KelimeAtolyesiEngine.display(result.word, language)
             val nonce = (feedback?.nonce ?: 0) + 1
@@ -359,20 +392,23 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     fun askHint() {
         val e = engine ?: return
         val current = state ?: return
-        if (hintsLeft <= 0 || current.over) return
-        val open = current.tasks.filter { !it.done }
-        val options = e.formable(current.pool.map { it.letter }, current.words.toSet())
-        // With every task set done, the hint is simply the best-scoring word on the table.
-        val word = if (open.isEmpty()) options.maxByOrNull { it.length }
-            else open.firstNotNullOfOrNull { task -> options.filter { task.matches(it) }.minByOrNull { it.length } }
-        hintsLeft -= 1
-        mascotAction = WordSiegeMascotAction.POINT
-        mascotActionKey += 1
-        hintText = if (word == null) {
-            sh("Harflerini bir daha incele, bir kelime saklanıyor!", "Look at your letters again, a word is hiding!")
-        } else {
-            // The clear answer: the whole word that completes an open task.
-            sh("Cevap: ${MascotHints.full(word, language)}", "Answer: ${MascotHints.full(word, language)}")
+        if (hintsLeft <= 0 || current.over || busy || hintLoading) return
+        hintLoading = true
+        scope.launch {
+            try {
+                val word = withContext(Dispatchers.Default) {
+                    val open = current.tasks.filter { !it.done }
+                    val options = e.formable(current.pool.map { it.letter }, current.words.toSet())
+                    if (open.isEmpty()) options.maxByOrNull { it.length }
+                    else open.firstNotNullOfOrNull { task -> options.filter { task.matches(it) }.minByOrNull { it.length } }
+                }
+                if (state !== current || current.over) return@launch
+                hintsLeft -= 1
+                mascotAction = WordSiegeMascotAction.POINT
+                mascotActionKey += 1
+                hintText = if (word == null) sh("Harflerini incele, bir kelime saklanıyor!", "Look at the letters, a word is hiding!")
+                    else sh("Cevap: ${MascotHints.full(word, language)}", "Answer: ${MascotHints.full(word, language)}")
+            } finally { hintLoading = false }
         }
     }
     val hintScope = rememberCoroutineScope()
@@ -381,14 +417,15 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         if (buyingHint) return
         buyingHint = true
         hintScope.launch {
-            val bought = com.sonharf.game.data.GameHintBackend.buyHint("kelime_atolyesi")
+            try {
+            val bought = gameRequestResult { com.sonharf.game.data.GameHintBackend.buyHint("kelime_atolyesi") }.getOrNull()
             if (bought != null) {
                 hintsLeft += 1
                 askHint()
             } else {
                 hintText = sh("Jeton yetmedi... biraz daha oynayıp biriktirelim!", "Not enough coins... let's play a bit more!")
             }
-            buyingHint = false
+            } finally { buyingHint = false }
         }
     }
     // Hints won with a rewarded video are spent before any coins.
@@ -397,11 +434,12 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         if (buyingHint) return
         buyingHint = true
         hintScope.launch {
-            if (RewardPassState.useHint("kelime_atolyesi")) {
+            try {
+            if (gameRequestResult { RewardPassState.useHint("kelime_atolyesi") }.getOrDefault(false)) {
                 hintsLeft += 1
                 askHint()
             }
-            buyingHint = false
+            } finally { buyingHint = false }
         }
     }
 
@@ -460,7 +498,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     loadingBoard = loadingBoard,
                     reward = reward,
                     notice = lobbyNotice,
-                    starting = startingDaily || engine == null,
+                    starting = startingDaily || startingRound || busy || engine == null,
                     seconds = roundSeconds,
                     onSeconds = { roundSeconds = it },
                     onWeekly = { weeklyBoard = it },
@@ -489,23 +527,24 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     // Tasks and the word slot on top; the letter pool sits at the bottom right above
                     // Temizle / Gönder, where the thumbs are.
                     if (mode == AtelierMode.DAILY) AtelierRivalStrip(raceBoard, current.score)
+                    AtelierMatchProgressCard(roundSeconds, secondsLeft, current, combo, best)
                     AtelierTasks(current, language)
                     AtelierSlot(current, language, gain = gain, gainNonce = gainNonce, shakeNonce = shakeNonce) { index ->
                         SonHarfSoundFx.puzzleKey()
-                        state = current.unpickAt(index)
+                        if (!busy && !hintLoading) { val current = state ?: return@AtelierSlot; state = current.unpickAt(index) }
                     }
                     AtelierFeedbackLine(feedback)
                     AtelierPool(current, language) { tileId ->
                         SonHarfSoundFx.puzzleTap()
-                        state = current.pick(tileId)
+                        if (!busy && !hintLoading) { val current = state ?: return@AtelierPool; state = current.pick(tileId) }
                     }
                     AtelierActions(
-                        canClear = current.picked.isNotEmpty(),
-                        canSubmit = current.picked.isNotEmpty() && !busy,
-                        onClear = { state = current.clearPicks() },
+                        canClear = current.picked.isNotEmpty() && !busy && !hintLoading,
+                        canSubmit = current.picked.isNotEmpty() && !busy && !hintLoading,
+                        onClear = { if (!busy && !hintLoading) state = state?.clearPicks() },
                         onShuffle = {
                             SonHarfSoundFx.puzzleTap()
-                            state = current.copy(pool = current.pool.shuffled())
+                            if (!busy && !hintLoading) state = state?.let { it.copy(pool = it.pool.shuffled()) }
                         },
                         onSubmit = { submit() },
                     )
@@ -1027,5 +1066,34 @@ private fun AtelierLoadError(onRetry: () -> Unit) {
         ) {
             Text(sh("Tekrar dene", "Retry"))
         }
+    }
+}
+
+@Composable
+private fun AtelierMatchProgressCard(seconds: Int, remaining: Int, state: AtelierState, combo: Int, best: Int) {
+    val phase = atelierMatchPhase(seconds, remaining)
+    val title = when (phase) {
+        AtelierMatchPhase.WARMUP -> sh("HAZIRLIK", "WARM-UP")
+        AtelierMatchPhase.STRATEGY -> sh("STRATEJİ", "STRATEGY")
+        AtelierMatchPhase.FINAL -> sh("FİNAL", "FINAL PUSH")
+    }
+    val objective = if (best > state.score) sh("Rekor için ${best - state.score + 1} puan", "${best - state.score + 1} points to beat your best")
+        else sh("Çıtayı yükselt: uzun kelime + görev + seri", "Raise the bar: long words + tasks + streaks")
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(AtelierUi.Cream)
+        .border(.8.dp, AtelierUi.Gold.copy(alpha = .4f), RoundedCornerShape(14.dp)).padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, color = AtelierUi.Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Spacer(Modifier.weight(1f))
+            Text(sh("${state.words.size} kelime · ${combo.coerceAtLeast(0)} seri", "${state.words.size} words · ${combo.coerceAtLeast(0)} streak"),
+                color = AtelierUi.InkMuted, fontSize = 11.sp)
+        }
+        androidx.compose.material3.LinearProgressIndicator(
+            progress = { (1f - remaining.toFloat() / seconds.coerceAtLeast(1)).coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(99.dp)),
+            color = if (phase == AtelierMatchPhase.FINAL) AtelierUi.Gold else AtelierUi.Green,
+            trackColor = AtelierUi.TileUsed,
+        )
+        Text(objective, color = AtelierUi.Ink, fontSize = 12.sp, maxLines = 2)
     }
 }

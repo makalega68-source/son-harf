@@ -70,19 +70,19 @@ internal fun MainSocialScreen(
 
     suspend fun reload() = coroutineScope {
         loading = true
-        val friendTask = async { runCatching { backend.getFriends() }.getOrDefault(emptyList()) }
+        val friendTask = async { gameRequestResult { backend.getFriends() }.getOrDefault(friends) }
         val friendshipTask = async {
-            runCatching { backend.getFriendships() }
+            gameRequestResult { backend.getFriendships() }
                 .onFailure { notice = sh("Arkadaş listesi yüklenemedi. Yenilemek için sayfayı tekrar aç.", "Friend list could not be loaded. Reopen the page to refresh.") }
                 .getOrDefault(emptyList())
         }
-        val requestTask = async { runCatching { backend.getIncomingFriendRequests() }.getOrDefault(emptyList()) }
-        val legacyInviteTask = async { runCatching { backend.getIncomingGameInvites() }.getOrDefault(emptyList()) }
-        val siegeInviteTask = async { runCatching { backend.getIncomingWordSiegeInvites() }.getOrDefault(emptyList()) }
-        val rivalTask = async { runCatching { backend.getRivalHistory(30) }.getOrDefault(emptyList()) }
-        val historyTask = async { runCatching { backend.getMatchHistory(30) }.getOrDefault(emptyList()) }
-        val archTask = async { runCatching { backend.getArchRival() }.getOrNull() }
-        friends = friendTask.await()
+        val requestTask = async { gameRequestResult { backend.getIncomingFriendRequests() }.getOrDefault(emptyList()) }
+        val legacyInviteTask = async { gameRequestResult { backend.getIncomingGameInvites() }.getOrDefault(emptyList()) }
+        val siegeInviteTask = async { gameRequestResult { backend.getIncomingWordSiegeInvites() }.getOrDefault(emptyList()) }
+        val rivalTask = async { gameRequestResult { backend.getRivalHistory(30) }.getOrDefault(emptyList()) }
+        val historyTask = async { gameRequestResult { backend.getMatchHistory(30) }.getOrDefault(emptyList()) }
+        val archTask = async { gameRequestResult { backend.getArchRival() }.getOrNull() }
+        friends = friendTask.await().sortedByDescending { it.second.presenceStatus == "online" }
         friendships = friendshipTask.await()
         requests = requestTask.await()
         invites = legacyInviteTask.await()
@@ -92,7 +92,7 @@ internal fun MainSocialScreen(
         archRival = archTask.await()
         val senders = linkedMapOf<String, ProfileDto>()
         (invites.map { it.senderId } + siegeInvites.map { it.senderId }).distinct().forEach { id ->
-            runCatching { backend.getProfile(id) }.getOrNull()?.let { senders[id] = it }
+            gameRequestResult { backend.getProfile(id) }.getOrNull()?.let { senders[id] = it }
         }
         inviteProfiles = senders
         loading = false
@@ -104,7 +104,7 @@ internal fun MainSocialScreen(
     }
 
     LaunchedEffect(Unit) {
-        isPro = runCatching {
+        isPro = gameRequestResult {
             backend.currentUserId()?.let { backend.getProfile(it).isVip } ?: false
         }.getOrDefault(false)
         proChecked = true
@@ -210,12 +210,12 @@ internal fun MainSocialScreen(
                 items(friends, key = { it.second.id }) { (_, friend) ->
                     MainFriendCard(
                         friend = friend,
-                        busy = busyKey == friend.id,
+                        busy = busyKey != null,
                         onInvite = {
                             if (busyKey != null) return@MainFriendCard
+                            busyKey = friend.id
                             scope.launch {
-                                busyKey = friend.id
-                                runCatching { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
+                                gameRequestResult { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
                                     .onSuccess { invite ->
                                         WordSiegeLaunchConfig.awaitInvite(invite.id)
                                         notice = sh("${friend.displayName} Kelime Tahtı'na davet edildi.", "${friend.displayName} was invited to Word Throne.")
@@ -227,9 +227,9 @@ internal fun MainSocialScreen(
                         },
                         onRemove = {
                             if (busyKey != null) return@MainFriendCard
+                            busyKey = friend.id
                             scope.launch {
-                                busyKey = friend.id
-                                runCatching { backend.removeFriend(friend.id) }
+                                gameRequestResult { backend.removeFriend(friend.id) }
                                     .onSuccess { notice = sh("Arkadaş listesi güncellendi.", "Friend list updated."); reload() }
                                     .onFailure { notice = sh("Arkadaş kaldırılamadı.", "Friend could not be removed.") }
                                 busyKey = null
@@ -285,7 +285,7 @@ internal fun MainSocialScreen(
                                     if (query.trim().length < 2 || busyKey != null) return@Button
                                     scope.launch {
                                         busyKey = "search"
-                                        results = runCatching { backend.searchPlayers(query, 20) }.getOrDefault(emptyList())
+                                        results = gameRequestResult { backend.searchPlayers(query, 20) }.getOrDefault(emptyList())
                                         notice = if (results.isEmpty()) sh("Eşleşen oyuncu bulunamadı.", "No matching player found.") else null
                                         busyKey = null
                                     }
@@ -315,7 +315,7 @@ internal fun MainSocialScreen(
                                     if (relationStatus != null || busyKey != null) return@Button
                                     scope.launch {
                                         busyKey = player.id
-                                        runCatching { backend.sendFriendRequest(player.id) }
+                                        gameRequestResult { backend.sendFriendRequest(player.id) }
                                             .onSuccess {
                                                 sentRequests = sentRequests + player.id
                                                 notice = sh("Arkadaşlık isteği gönderildi. ${player.displayName} kabul edince arkadaş olacaksınız.", "Friend request sent. You become friends once ${player.displayName} accepts.")
@@ -364,7 +364,7 @@ internal fun MainSocialScreen(
                                     if (busyKey != null) return@IconButton
                                     scope.launch {
                                         busyKey = player.id
-                                        runCatching { backend.respondFriendRequest(player.id, false) }
+                                        gameRequestResult { backend.respondFriendRequest(player.id, false) }
                                             .onSuccess { notice = sh("İstek reddedildi.", "Request declined.") }
                                             .onFailure { notice = sh("İşlem tamamlanamadı, tekrar dene.", "Could not complete, try again.") }
                                         reload()
@@ -377,7 +377,7 @@ internal fun MainSocialScreen(
                                     if (busyKey != null) return@IconButton
                                     scope.launch {
                                         busyKey = player.id
-                                        runCatching { backend.respondFriendRequest(player.id, true) }
+                                        gameRequestResult { backend.respondFriendRequest(player.id, true) }
                                             .onSuccess { notice = sh("Arkadaşlık isteği kabul edildi.", "Friend request accepted.") }
                                             .onFailure { notice = sh("İstek kabul edilemedi, tekrar dene.", "Request could not be accepted, try again.") }
                                         reload()
@@ -408,7 +408,7 @@ internal fun MainSocialScreen(
                                         if (busyKey != null) return@OutlinedButton
                                         scope.launch {
                                             busyKey = "siege:${invite.id}"
-                                            runCatching { backend.respondWordSiegeInvite(invite.id, false) }
+                                            gameRequestResult { backend.respondWordSiegeInvite(invite.id, false) }
                                             reload()
                                             busyKey = null
                                         }
@@ -420,7 +420,7 @@ internal fun MainSocialScreen(
                                         if (busyKey != null) return@Button
                                         busyKey = "siege:${invite.id}"
                                         scope.launch {
-                                            runCatching { backend.respondWordSiegeInvite(invite.id, true) }
+                                            gameRequestResult { backend.respondWordSiegeInvite(invite.id, true) }
                                                 .onSuccess { game ->
                                                     if (game != null) {
                                                         WordSiegeLaunchConfig.open(game)
@@ -459,7 +459,7 @@ internal fun MainSocialScreen(
                                         if (busyKey != null) return@OutlinedButton
                                         scope.launch {
                                             busyKey = "legacy:${invite.id}"
-                                            runCatching { backend.respondGameInvite(invite.id, false) }
+                                            gameRequestResult { backend.respondGameInvite(invite.id, false) }
                                             reload()
                                             busyKey = null
                                         }
@@ -471,7 +471,7 @@ internal fun MainSocialScreen(
                                         if (busyKey != null) return@Button
                                         scope.launch {
                                             busyKey = "legacy:${invite.id}"
-                                            runCatching { backend.respondGameInvite(invite.id, true) }
+                                            gameRequestResult { backend.respondGameInvite(invite.id, true) }
                                                 .onSuccess { room -> if (room != null) onPlay() }
                                                 .onFailure { notice = sh("Son Harf daveti artık kullanılamıyor.", "The Last Letter invite is no longer available."); reload() }
                                             busyKey = null
@@ -532,11 +532,11 @@ internal fun MainSocialScreen(
                                     scope.launch {
                                         busyKey = rival.opponentId
                                         if (rival.isFriend) {
-                                            runCatching { backend.inviteFriendToWordSiege(rival.opponentId, SonHarfUiState.language) }
+                                            gameRequestResult { backend.inviteFriendToWordSiege(rival.opponentId, SonHarfUiState.language) }
                                                 .onSuccess { notice = sh("Kelime Tahtı rövanş daveti gönderildi.", "Kelime Tahtı rematch invite sent.") }
                                                 .onFailure { notice = sh("Rövanş daveti gönderilemedi veya bekleyen bir davet var.", "Rematch invite could not be sent or one is already pending.") }
                                         } else {
-                                            runCatching { backend.sendFriendRequest(rival.opponentId) }
+                                            gameRequestResult { backend.sendFriendRequest(rival.opponentId) }
                                                 .onSuccess { notice = sh("Önce arkadaşlık isteği gönderildi.", "A friend request was sent first.") }
                                                 .onFailure { notice = friendRequestError(it) }
                                         }
@@ -662,6 +662,7 @@ private fun MainFriendCard(
 ) {
     var menu by remember { mutableStateOf(false) }
     val online = friend.presenceStatus == "online"
+    val playing = friend.presenceStatus == "in_game"
     Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, if (online) MainUi.Green.copy(alpha = .28f) else MainUi.Border)) {
         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
             Box {
@@ -680,7 +681,7 @@ private fun MainFriendCard(
                     }
                 }
                 Text(
-                    if (online) sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"),
+                    if (playing) sh("Oyunda", "Playing") else if (online) sh("Oynamaya hazır", "Ready to play") else sh("Çevrimdışı", "Offline"),
                     color = if (online) MainUi.Green else MainUi.Muted,
                     fontSize = 9.sp,
                 )
@@ -691,7 +692,7 @@ private fun MainFriendCard(
                 enabled = !busy,
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp),
-            ) { Text(if (busy) "…" else sh("DAVET", "INVITE"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
+            ) { Text(if (busy) "…" else sh("OYNA", "PLAY"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, sh("Daha fazla", "More"), tint = MainUi.Muted) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

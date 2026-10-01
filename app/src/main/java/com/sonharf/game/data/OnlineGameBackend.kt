@@ -425,9 +425,9 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
             val heartbeatDue = now - lastHeartbeatAt >= 4_000_000_000L
             val result = if (heartbeatDue) {
                 lastHeartbeatAt = now
-                runCatching { heartbeatRoom(id) }
+                com.sonharf.game.gameRequestResult { heartbeatRoom(id) }
             } else {
-                runCatching { getRoom(id) }
+                com.sonharf.game.gameRequestResult { getRoom(id) }
             }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
@@ -445,7 +445,7 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     fun observeWords(id: String, intervalMs: Long = 700): Flow<List<GameWordDto>> = flow {
         var previous = emptyList<GameWordDto>()
         while (currentCoroutineContext().isActive) {
-            val result = runCatching { getWords(id) }
+            val result = com.sonharf.game.gameRequestResult { getWords(id) }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {
@@ -462,7 +462,7 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     fun observeChat(id: String, intervalMs: Long = 900): Flow<List<ChatMessageDto>> = flow {
         var previous = emptyList<ChatMessageDto>()
         while (currentCoroutineContext().isActive) {
-            val result = runCatching { getChat(id) }
+            val result = com.sonharf.game.gameRequestResult { getChat(id) }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {

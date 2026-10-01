@@ -4,7 +4,7 @@ import java.util.Locale
 import kotlin.random.Random
 
 /*
- * Kelime Atölyesi (Word Workshop): a 1- or 2-minute round with a 7-letter pool. Tasks come in
+ * Kelime Atölyesi (Word Workshop): a 1-, 2-, 3- or 5-minute round with a 7-letter pool. Tasks come in
  * sets of three; when a set is done the next one appears (2 sets in 1 minute, 5 in 2 minutes).
  * The round always runs until the clock stops, and the highest score wins.
  * The engine is plain Kotlin so every rule is unit-tested without a device.
@@ -19,7 +19,7 @@ import kotlin.random.Random
  *    remaining task solvable.
  */
 
-internal enum class AtelierTaskKind { LENGTH, LETTER }
+internal enum class AtelierTaskKind { LENGTH, LETTER, ENDING }
 
 internal data class AtelierTask(
     val kind: AtelierTaskKind,
@@ -30,6 +30,7 @@ internal data class AtelierTask(
     fun matches(word: String): Boolean = when (kind) {
         AtelierTaskKind.LENGTH -> word.length == length
         AtelierTaskKind.LETTER -> letter in word
+        AtelierTaskKind.ENDING -> word.endsWith(letter)
     }
 }
 
@@ -50,6 +51,7 @@ internal data class AtelierState(
     val taskSets: Int = 1,
     /** Tasks finished in earlier sets. */
     val earlierTasksDone: Int = 0,
+    val roundSeconds: Int = 60,
 ) {
     /** The word currently laid in the slot, in the order the tiles were picked. */
     val word: String get() = picked.mapNotNull { id -> pool.firstOrNull { it.id == id }?.letter }.joinToString("")
@@ -111,9 +113,9 @@ internal class KelimeAtolyesiEngine(
 
     fun isWord(word: String): Boolean = word in words
 
-    /** A fresh round of [seconds] (60 or 120): pool and first task set built from real words. */
+    /** A fresh round of [seconds] (60, 120, 180 or 300): pool and first task set built from real words. */
     fun newRound(seconds: Int = ROUND_SECONDS): AtelierState =
-        freshRound().copy(taskSets = setsFor(seconds))
+        freshRound().copy(taskSets = setsFor(seconds), roundSeconds = seconds)
 
     private fun freshRound(): AtelierState {
         repeat(ROUND_TRIES) {
@@ -153,7 +155,7 @@ internal class KelimeAtolyesiEngine(
             }
         } else {
             // The kept letters cannot carry the open tasks any more: lay a whole new pool for them.
-            val letters = poolFor(open, used.toSet()) ?: seedLetters().orEmpty()
+            val letters = poolFor(open, used.toSet()) ?: state.pool.map { it.letter }
             pool = letters.map { AtelierTile(nextId++, it).also { tile -> fresh += tile.id } }
         }
         var next = state.copy(
@@ -179,7 +181,7 @@ internal class KelimeAtolyesiEngine(
     private fun nextTaskSet(state: AtelierState, fresh: MutableSet<Long>): AtelierState {
         val used = state.words.toSet()
         val letters = state.pool.map { it.letter }
-        val tasks = pickTasks(letters, formable(letters, used))
+        val tasks = pickTasks(letters, formable(letters, used), challenging = state.roundSeconds >= STRATEGY_ROUND_SECONDS && state.taskSet >= 2)
         val base = state.copy(taskSet = state.taskSet + 1, earlierTasksDone = state.earlierTasksDone + state.tasks.size)
         if (tasks != null) return base.copy(tasks = tasks)
         var nextId = state.nextTileId
@@ -187,7 +189,7 @@ internal class KelimeAtolyesiEngine(
             val seed = seedLetters() ?: return@repeat
             val options = formable(seed, used)
             if (options.size < MIN_FORMABLE) return@repeat
-            val seedTasks = pickTasks(seed, options) ?: return@repeat
+            val seedTasks = pickTasks(seed, options, challenging = state.roundSeconds >= STRATEGY_ROUND_SECONDS && state.taskSet >= 2) ?: return@repeat
             fresh.clear()
             val pool = seed.map { AtelierTile(nextId++, it).also { tile -> fresh += tile.id } }
             return base.copy(pool = pool, tasks = seedTasks, nextTileId = nextId)
@@ -209,15 +211,17 @@ internal class KelimeAtolyesiEngine(
         return tasks.filter { !it.done }.all { task -> formable.any { task.matches(it) } }
     }
 
-    private fun pickTasks(letters: List<Char>, formable: List<String>): List<AtelierTask>? {
+    private fun pickTasks(letters: List<Char>, formable: List<String>, challenging: Boolean = false): List<AtelierTask>? {
         val byLength = formable.groupBy { it.length }
         val shortLengths = (MIN_WORD..4).filter { (byLength[it]?.size ?: 0) >= 2 }
-        val shortLength = shortLengths.randomOrNull(random) ?: return null
-        val longLength = (5..POOL_SIZE).filter { (byLength[it]?.size ?: 0) >= 1 }.randomOrNull(random) ?: return null
+        val shortLength = (if (challenging) shortLengths.filter { it >= 4 }.ifEmpty { shortLengths } else shortLengths).randomOrNull(random) ?: return null
+        val longLengths = (5..POOL_SIZE).filter { (byLength[it]?.size ?: 0) >= 1 }
+        val longLength = (if (challenging) longLengths.filter { it >= 6 }.ifEmpty { longLengths } else longLengths).randomOrNull(random) ?: return null
         val letter = letters.distinct().filter { c -> formable.count { c in it } >= 2 }.randomOrNull(random) ?: return null
         return listOf(
             AtelierTask(AtelierTaskKind.LENGTH, length = shortLength),
-            AtelierTask(AtelierTaskKind.LETTER, letter = letter),
+            if (challenging) AtelierTask(AtelierTaskKind.ENDING, letter = formable.filter { it.length >= 5 }.map { it.last() }.distinct().random(random))
+                else AtelierTask(AtelierTaskKind.LETTER, letter = letter),
             AtelierTask(AtelierTaskKind.LENGTH, length = longLength),
         )
     }
@@ -296,12 +300,19 @@ internal class KelimeAtolyesiEngine(
         const val MIN_WORD = 3
         const val ROUND_SECONDS = 60
         const val LONG_ROUND_SECONDS = 120
+        const val STRATEGY_ROUND_SECONDS = 180
+        const val MARATHON_ROUND_SECONDS = 300
         const val TASKS_PER_SET = 3
         const val WORD_LETTER_POINTS = 10
         const val TASK_POINTS = 50
 
         /** Task sets per round: 2 in the 1-minute round (6 tasks), 5 in the 2-minute round (15 tasks). */
-        fun setsFor(seconds: Int): Int = if (seconds >= LONG_ROUND_SECONDS) 5 else 2
+        fun setsFor(seconds: Int): Int = when {
+            seconds >= MARATHON_ROUND_SECONDS -> 12
+            seconds >= STRATEGY_ROUND_SECONDS -> 8
+            seconds >= LONG_ROUND_SECONDS -> 5
+            else -> 2
+        }
         private const val MIN_FORMABLE = 6
         private const val ROUND_TRIES = 600
         private const val REFILL_TRIES = 120

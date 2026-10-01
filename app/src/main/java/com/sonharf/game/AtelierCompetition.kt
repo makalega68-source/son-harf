@@ -61,13 +61,14 @@ internal fun AtelierRivalStrip(board: AtelierBoardDto?, score: Int) {
     val others = board?.rows.orEmpty().filter { !it.me }
     val above = others.filter { it.score > score }
     val rank = above.size + 1
+    val shownRank = if ((board?.total ?: 0) > others.size && rank > others.size) "50+" else rank.toString()
     val next = above.minByOrNull { it.score }
     val text = when {
         board == null -> sh("Günlük Yarış · sıralama yükleniyor…", "Daily Race · loading the board…")
         others.isEmpty() -> sh("Bugünün ilk yarışçısı sensin! Çıtayı sen koy.", "You're today's first racer! Set the bar.")
         next == null -> sh("🥇 Şu an zirvedesin! ${others.size} rakibin arkanda.", "🥇 You're on top! ${others.size} rivals behind you.")
-        else -> sh("Şu an $rank. · Sıradaki: ${next.name} (${next.score}) · ${next.score - score + 1} puan",
-            "Now #$rank · Next: ${next.name} (${next.score}) · ${next.score - score + 1} pts")
+        else -> sh("Hedef sıralama $shownRank · Sıradaki: ${next.name} (${next.score}) · ${next.score - score + 1} puan",
+            "Target rank $shownRank · Next: ${next.name} (${next.score}) · ${next.score - score + 1} pts")
     }
     Row(
         Modifier
@@ -102,26 +103,30 @@ internal fun AtelierLobby(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Round length for both the race and practice; each length has its own daily race and board.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(60 to sh("1 Dakika · 6 görev", "1 Minute · 6 tasks"), 120 to sh("2 Dakika · 15 görev", "2 Minutes · 15 tasks")).forEach { (value, label) ->
-                val selected = seconds == value
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(if (selected) CompUi.Night else CompUi.Cream)
-                        .border(1.dp, if (selected) Color(0xFFFFC94A) else CompUi.Edge, RoundedCornerShape(14.dp))
-                        .clickable(enabled = !starting) { onSeconds(value) }
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(label, color = if (selected) Color(0xFFFFD98A) else CompUi.Ink, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        listOf(
+            60 to sh("1 Dakika · 6 görev", "1 Minute · 6 tasks"),
+            120 to sh("2 Dakika · 15 görev", "2 Minutes · 15 tasks"),
+            180 to sh("3 Dakika · 24 görev", "3 Minutes · 24 tasks"),
+            300 to sh("5 Dakika · 36 görev", "5 Minutes · 36 tasks"),
+        ).chunked(2).forEach { pair ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                pair.forEach { (value, label) ->
+                    val selected = seconds == value
+                    Box(
+                        Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
+                            .background(if (selected) CompUi.GoldSoft else CompUi.Cream)
+                            .border(1.dp, if (selected) CompUi.Gold else CompUi.Edge, RoundedCornerShape(14.dp))
+                            .clickable(enabled = !starting) { onSeconds(value) }.padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(label, color = CompUi.Ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
                 }
             }
         }
         Text(
-            sh("Görevler üçerli setler hâlinde gelir. Süre bitene kadar oyna; görevler dahil en çok puanı alan kazanır.",
-                "Tasks come in sets of three. Play until time runs out; the highest score, tasks included, wins."),
+            sh("3 ve 5 dakikalık yarışlarda hazırlık, strateji ve final var. İlerledikçe daha uzun kelimeler ve bitiş harfi görevleri gelir. Rakibini puanla geç.",
+                "The 3- and 5-minute races have warm-up, strategy and final phases. Later tasks ask for longer words and specific ending letters. Outscore your rival."),
             color = CompUi.Ink.copy(alpha = .75f),
             fontSize = 12.sp,
             textAlign = TextAlign.Center,

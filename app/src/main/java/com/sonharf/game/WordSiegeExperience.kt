@@ -86,7 +86,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         val missing = ids.filterNotNull().distinct().filterNot(profiles::containsKey)
         if (missing.isEmpty()) return
         val loaded = missing.mapNotNull { id ->
-            runCatching { backend.getProfile(id) }.getOrNull()?.let { id to it }
+            gameRequestResult { backend.getProfile(id) }.getOrNull()?.let { id to it }
         }.toMap()
         if (loaded.isNotEmpty()) profiles = profiles + loaded
     }
@@ -115,7 +115,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             return
         }
         if (showProgress) loading = true
-        runCatching { backend.getWordSiegeGames() }
+        gameRequestResult { backend.getWordSiegeGames() }
             .onSuccess { next ->
                 clearErrorNotice()
                 games = next
@@ -134,6 +134,12 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     }
 
     fun applyGame(next: WordSiegeGameDto) {
+        if (currentGame?.id != next.id) {
+            moves = emptyList()
+            messages = emptyList()
+            showChat = false
+            GameChatBadge.select(next.id)
+        }
         currentGame = next
         games = (games.filterNot { it.id == next.id } + next)
             .filterNot { it.status == "cancelled" }
@@ -149,25 +155,29 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     ) {
         if (busy) return
         busy = true
+        val requestedGameId = selectedGameId
         scope.launch {
-            runCatching { action() }
+            try {
+            gameRequestResult { action() }
                 .onSuccess { next ->
+                    if (selectedGameId != requestedGameId) return@onSuccess
                     applyGame(next)
                     showNotice(successNotice)
                     // The returned room is authoritative. Unrelated lobby/profile reads must
                     // not keep input locked after the move has already completed.
                 }
                 .onFailure { error ->
+                    if (selectedGameId != requestedGameId) return@onFailure
                     val raw = error.message.orEmpty()
                     showError(raw)
                     // The server state moved on (turn passed, game ended, or the action already
                     // landed): re-read the game at once and drop the stale placed tiles.
                     val gameId = currentGame?.id
                     if (gameId != null && ("word_siege_not_your_turn" in raw || "word_siege_not_playing" in raw)) {
-                        runCatching { backend.refreshWordSiegeGame(gameId) }.getOrNull()?.let { applyGame(it) }
+                        gameRequestResult { backend.refreshWordSiegeGame(gameId) }.getOrNull()?.let { applyGame(it) }
                     }
                 }
-            busy = false
+            } finally { busy = false }
         }
     }
 
@@ -193,16 +203,17 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     }
 
     LaunchedEffect(selectedGameId, currentGame?.status) {
-        runCatching { backend.setPresence(if (selectedGameId != null && currentGame?.status == "playing") "in_game" else "online") }
+        gameRequestResult { backend.setPresence(if (selectedGameId != null && currentGame?.status == "playing") "in_game" else "online") }
     }
 
     LaunchedEffect(selectedGameId, showChat) {
         val gameId = selectedGameId ?: return@LaunchedEffect
+        GameChatBadge.select(gameId)
         // Only a real change redraws the board; moves are re-read only after a new move.
         var movesFor = -1
         while (currentCoroutineContext().isActive) {
             val pollStartedWith = currentGame
-            runCatching { backend.refreshWordSiegeGame(gameId) }
+            gameRequestResult { backend.refreshWordSiegeGame(gameId) }
                 .onSuccess { next ->
                     clearErrorNotice()
                     val shown = currentGame
@@ -223,14 +234,14 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                 .onFailure { showError(it.message.orEmpty()) }
             val moveCount = currentGame?.moveCount ?: -1
             if (moveCount != movesFor) {
-                runCatching { backend.getWordSiegeMoves(gameId) }.getOrNull()?.let {
+                gameRequestResult { backend.getWordSiegeMoves(gameId) }.getOrNull()?.let {
                     if (it != moves) moves = it
                     movesFor = moveCount
                 }
             }
             // Chat is read in the background too, so the chat button can show new messages.
-            runCatching { backend.getWordSiegeMessages(gameId) }.getOrNull()?.let { if (it != messages) messages = it }
-            GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
+            gameRequestResult { backend.getWordSiegeMessages(gameId) }.getOrNull()?.let { if (it != messages) messages = it }
+            if (selectedGameId == gameId) GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
             delay(2_500)
         }
     }
@@ -251,7 +262,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     if (busy) return@WordSiegeGamesList
                     busy = true
                     scope.launch {
-                        runCatching { backend.findOrCreateWordSiegeGame(if (SonHarfUiState.isEnglish) "en" else "tr") }
+                        gameRequestResult { backend.findOrCreateWordSiegeGame(if (SonHarfUiState.isEnglish) "en" else "tr") }
                             .onSuccess { next ->
                                 applyGame(next)
                                 selectedGameId = next.id
@@ -266,7 +277,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     }
                 },
                 onOpen = { game ->
-                    currentGame = game
+                    applyGame(game)
                     selectedGameId = game.id
                     notice = null
                 },
@@ -356,7 +367,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                         showChat = true
                         GameChatBadge.markRead()
                         scope.launch {
-                            messages = runCatching { backend.getWordSiegeMessages(game.id) }.getOrDefault(emptyList())
+                            messages = gameRequestResult { backend.getWordSiegeMessages(game.id) }.getOrDefault(emptyList())
                         }
                     },
                     onForfeit = { showForfeit = true },
@@ -466,10 +477,10 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                 if (text.isBlank() || busy) return@WordSiegeChatDialog
                 busy = true
                 scope.launch {
-                    runCatching { backend.sendWordSiegeMessage(gameId, text) }
+                    gameRequestResult { backend.sendWordSiegeMessage(gameId, text) }
                         .onSuccess {
                             if (chatInput.trim() == text) chatInput = ""
-                            messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
+                            messages = gameRequestResult { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
                         }
                         .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
                     busy = false

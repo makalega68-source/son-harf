@@ -12,8 +12,8 @@ import android.widget.Toast
 /**
  * Keeps the launcher mascot in sync with the time since the player last opened the app.
  *
- * Requested five-day cycle:
- * day 0 = happy, day 1 = sad, days 2-3 = angry, day 4 = closed eyes, day 5 = happy again.
+ * Requested repeating cycle: day 1 happy, day 2 sad, day 3 angry, day 4 sleepy.
+ * Day 5 starts the same four-day cycle again; opening the app resets it.
  * The same cycle then repeats indefinitely. The existing CURIOUS and CRYING aliases are retained
  * only for upgrade compatibility and are never selected by the new cycle.
  */
@@ -32,7 +32,7 @@ internal object MascotLauncherIcon {
     private const val KEY_MOOD = "mood"
     private const val ALARM_REQUEST_CODE = 4_100
     private const val DAY_MILLIS = 24L * 60L * 60L * 1_000L
-    private const val CYCLE_DAYS = 5L
+    private const val CYCLE_DAYS = 4L
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -54,14 +54,8 @@ internal object MascotLauncherIcon {
     fun onAppBackground(context: Context) {
         runCatching { apply(context, Mood.HAPPY) }
 
-        val storedLastOpen = prefs(context).getLong(KEY_LAST_OPEN, 0L)
-        val lastOpen = if (storedLastOpen > 0L) {
-            storedLastOpen
-        } else {
-            System.currentTimeMillis().also {
-                prefs(context).edit().putLong(KEY_LAST_OPEN, it).apply()
-            }
-        }
+        val lastOpen = System.currentTimeMillis()
+        prefs(context).edit().putLong(KEY_LAST_OPEN, lastOpen).apply()
 
         cancelAlarms(context)
         scheduleNextTransition(context, lastOpen, System.currentTimeMillis())
@@ -84,18 +78,15 @@ internal object MascotLauncherIcon {
     internal fun moodForAwayDays(daysAway: Long): Mood = when (daysAway.coerceAtLeast(0L) % CYCLE_DAYS) {
         0L -> Mood.HAPPY
         1L -> Mood.SAD
-        2L, 3L -> Mood.ANGRY
-        4L -> Mood.SLEEPY
+        2L -> Mood.ANGRY
+        3L -> Mood.SLEEPY
         else -> Mood.HAPPY
     }
 
     /** Absolute elapsed-day boundary at which the visible face next changes. */
     internal fun nextTransitionDay(daysAway: Long): Long {
         val safeDays = daysAway.coerceAtLeast(0L)
-        return safeDays + when (safeDays % CYCLE_DAYS) {
-            2L -> 2L // Angry intentionally covers both day 2 and the unspecified day 3.
-            else -> 1L
-        }
+        return safeDays + 1L
     }
 
     private fun scheduleNextTransition(context: Context, lastOpen: Long, now: Long) {
