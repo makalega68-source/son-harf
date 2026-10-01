@@ -95,6 +95,29 @@ class KelimeAtolyesiEngineTest {
         assertEquals(1, long.taskSet)
     }
 
+    @Test fun longRacesKeepEveryAdvancedTaskSolvable() {
+        for (duration in listOf(180, 300)) {
+            val engine = KelimeAtolyesiEngine(TR_WORDS, "tr", Random(duration))
+            var state = engine.newRound(duration)
+            assertEquals(if (duration == 180) 24 else 36, state.totalTasks)
+            var endingSeen = false
+            var moves = 0
+            while (!state.everySetDone && moves++ < 100) {
+                endingSeen = endingSeen || state.tasks.any { it.kind == AtelierTaskKind.ENDING }
+                val open = state.tasks.filter { !it.done }
+                val options = engine.formable(state.pool.map { it.letter }, state.words.toSet())
+                val word = options.firstOrNull { w -> open.any { it.matches(w) } }
+                assertTrue("An open task must have a playable answer", word != null)
+                val result = engine.submit(state.lay(requireNotNull(word))!!)
+                assertNull(result.reject)
+                state = result.state
+                assertTrue(engine.solvable(state.pool.map { it.letter }, state.tasks, state.words.toSet()))
+            }
+            assertTrue(state.everySetDone)
+            assertTrue("Later phases include ending-letter tasks", endingSeen)
+        }
+    }
+
     @Test fun englishRoundsArePlayableEndToEnd() = playRounds("en", EN_WORDS)
 
     @Test fun oneWordCompletesEveryTaskItFits() {

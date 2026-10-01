@@ -143,7 +143,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var loadFailed by remember(language) { mutableStateOf(false) }
     var loadNonce by remember { mutableIntStateOf(0) }
     var roundKey by remember { mutableIntStateOf(0) }
-    // Round length chosen in the lobby: 1 or 2 minutes.
+    // Each duration has its own daily race and personal record.
     var roundSeconds by remember { mutableIntStateOf(KelimeAtolyesiEngine.STRATEGY_ROUND_SECONDS) }
     var secondsLeft by remember { mutableIntStateOf(KelimeAtolyesiEngine.STRATEGY_ROUND_SECONDS) }
     var busy by remember { mutableStateOf(false) }
@@ -207,13 +207,17 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         if (finished.everySetDone) SonHarfSoundFx.victory() else SonHarfSoundFx.softNotify()
         if (mode == AtelierMode.DAILY) {
             dailyLine = sh("Puanın kaydediliyor…", "Saving your score…")
+            val finishedGeneration = roundGeneration
+            val finishedDuration = roundSeconds
             scope.launch {
                 gameRequestResult {
-                    AtelierCompetitionBackend.finishDaily(language, roundSeconds, finished.score, finished.words.size, finished.completedTasks)
+                    AtelierCompetitionBackend.finishDaily(language, finishedDuration, finished.score, finished.words.size, finished.completedTasks)
                 }.onSuccess { r ->
+                    if (roundGeneration != finishedGeneration) return@onSuccess
                     dailyLine = if (r.rank == 1) sh("🥇 Bugünün lideri sensin! (${r.total} oyuncu)", "🥇 You lead today! (${r.total} players)")
                         else sh("Bugün ${r.rank}. sıradasın · ${r.total} oyuncu", "You're #${r.rank} today · ${r.total} players")
                 }.onFailure {
+                    if (roundGeneration != finishedGeneration) return@onFailure
                     dailyLine = sh("Puan kaydedilemedi (süre aşımı veya bağlantı).", "Score could not be saved (timeout or connection).")
                 }
             }
@@ -309,7 +313,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         }
     }
 
-    // The round clock (1 or 2 minutes); the round always runs until it stops.
+    // Absolute deadline catches up after backgrounding or a slow frame.
     LaunchedEffect(roundKey) {
         if (roundKey == 0) return@LaunchedEffect
         while (true) {

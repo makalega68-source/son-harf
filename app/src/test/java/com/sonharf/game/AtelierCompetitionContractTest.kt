@@ -17,7 +17,7 @@ class AtelierCompetitionContractTest {
         // Same letters for everyone, one official try that starts on the server first.
         assertTrue(screen.contains("startRound(KelimeAtolyesiEngine.dailySeed(language, started.day))"))
         assertTrue(screen.contains("AtelierCompetitionBackend.startDaily(language, roundSeconds)"))
-        assertTrue(screen.contains("AtelierCompetitionBackend.finishDaily(language, roundSeconds, finished.score, finished.words.size, finished.completedTasks)"))
+        assertTrue(screen.contains("AtelierCompetitionBackend.finishDaily(language, finishedDuration, finished.score, finished.words.size, finished.completedTasks)"))
         assertTrue(screen.contains("if (mode == AtelierMode.DAILY) AtelierRivalStrip(raceBoard, current.score)"))
         assertTrue(comp.contains("sh(\"Yarışa Başla\", \"Start the Race\")"))
         assertTrue(comp.contains("sh(\"Serbest Antrenman\", \"Free Practice\")"))
