@@ -148,8 +148,8 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         action: suspend () -> WordSiegeGameDto,
     ) {
         if (busy) return
+        busy = true
         scope.launch {
-            busy = true
             runCatching { action() }
                 .onSuccess { next ->
                     applyGame(next)
@@ -291,7 +291,10 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     },
                     onBoardCell = { boardIndex ->
                         if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegePanMatch
-                        if (placements.containsKey(boardIndex)) {
+                        if (placements.containsKey(boardIndex) && selectedRackIndex != null) {
+                            // An occupied pending cell must never erase another selected letter.
+                            selectedRackIndex = null
+                        } else if (placements.containsKey(boardIndex)) {
                             val rackIndex = placements.getValue(boardIndex)
                             placements = placements - boardIndex
                             selectedRackIndex = rackIndex
@@ -307,7 +310,16 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                         placements = next
                         selectedRackIndex = null
                     },
+                    onDropPlacement = { rackIndex, fromCell, target ->
+                        val live = currentGame
+                        if (live?.id == game.id && live.status == "playing" &&
+                            live.currentPlayerId == me && !busy && rackIndex in live.rackFor(me).indices) {
+                            placements = wordSiegeDropTile(placements, live.board, rackIndex, fromCell, target)
+                            selectedRackIndex = null
+                        }
+                    },
                     onRackTile = { rackIndex ->
+                        if (currentGame?.currentPlayerId != me || busy) return@WordSiegePanMatch
                         val pendingCell = placements.entries.firstOrNull { it.value == rackIndex }?.key
                         if (pendingCell != null) placements = placements - pendingCell
                         selectedRackIndex = if (selectedRackIndex == rackIndex) null else rackIndex

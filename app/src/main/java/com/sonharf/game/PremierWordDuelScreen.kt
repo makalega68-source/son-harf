@@ -191,6 +191,7 @@ private fun premierStatusRank(room: GameRoomDto): Int = when {
  */
 internal fun premierRoomSnapshotIsOlder(candidate: GameRoomDto, current: GameRoomDto): Boolean {
     if (candidate.id != current.id) return false
+    if (candidate.actionSeq != current.actionSeq) return candidate.actionSeq < current.actionSeq
     val rank = premierStatusRank(candidate).compareTo(premierStatusRank(current))
     if (rank != 0) return rank < 0
     if (current.isPremierFinished()) return false
@@ -781,7 +782,10 @@ fun PremierWordDuelScreen() {
                             showQuickChat = true
                         },
                         onSubmit = {
-                            if (busy || input.isBlank() || !boardSynced) return@PremierArena
+                            val live = room ?: return@PremierArena
+                            if (busy || input.isBlank() || !boardSynced ||
+                                live.currentPlayerId != backend.currentUserId() || live.botTurn ||
+                                !live.isPremierLive() || premierTurnStateChanged(active, live)) return@PremierArena
                             // Obvious slips are caught locally: a rejected word would cost the turn.
                             val localProblem = premierLocalRejection(
                                 input,
@@ -798,9 +802,9 @@ fun PremierWordDuelScreen() {
                                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                 return@PremierArena
                             }
+                            busy = true
+                            val candidate = input
                             scope.launch {
-                                busy = true
-                                val candidate = input
                                 // Clear immediately when Send is pressed. The server remains authoritative
                                 // for the result, but stale text must never survive into the rival turn.
                                 input = ""

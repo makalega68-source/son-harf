@@ -53,6 +53,7 @@ data class GameRoomDto(
     @SerialName("host_streak") val hostStreak: Int = 0,
     @SerialName("guest_streak") val guestStreak: Int = 0,
     @SerialName("valid_word_count") val validWordCount: Int = 0,
+    @SerialName("action_seq") val actionSeq: Long = 0,
     @SerialName("final_moves_remaining") val finalMovesRemaining: Int = 0,
     @SerialName("last_event") val lastEvent: String? = null,
     @SerialName("last_event_player_id") val lastEventPlayerId: String? = null,

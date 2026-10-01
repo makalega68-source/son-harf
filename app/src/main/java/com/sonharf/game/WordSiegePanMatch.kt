@@ -93,6 +93,7 @@ internal fun WordSiegePanMatch(
     onCancelWaiting: () -> Unit,
     /** Finger-dragged tiles replace the pending placements (drag-and-drop). */
     onPlacementsChange: (Map<Int, Int>) -> Unit = {},
+    onDropPlacement: ((Int, Int?, Int?) -> Unit)? = null,
 ) {
     val mine = me?.let(profiles::get)
     val opponentId = if (me == game.playerOneId) game.playerTwoId else game.playerOneId
@@ -248,7 +249,8 @@ internal fun WordSiegePanMatch(
     val pendingValid = pendingScore != null && pendingFor == placements
     fun dropTile(rackIndex: Int, fromCell: Int?, target: Int?) {
         if (!canAct) return
-        onPlacementsChange(wordSiegeDropTile(placements, game.board, rackIndex, fromCell, target))
+        if (onDropPlacement != null) onDropPlacement(rackIndex, fromCell, target)
+        else onPlacementsChange(wordSiegeDropTile(placements, game.board, rackIndex, fromCell, target))
     }
 
     LaunchedEffect(game.id, game.status) {
@@ -431,11 +433,7 @@ internal fun WordSiegePanMatch(
                     Spacer(Modifier.weight(1f))
                 }
 
-                WordSiegePremiumPanel(
-                    game = game,
-                    placements = placements,
-                    canAct = canAct,
-                )
+                // Keep the online arena clear; the PRO score remains above the word.
             }
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {

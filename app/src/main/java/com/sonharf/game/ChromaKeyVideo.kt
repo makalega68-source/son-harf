@@ -68,6 +68,7 @@ internal fun ChromaKeyVideo(
     AndroidView(
         factory = { ChromaKeyVideoView(it, KeyVideoSpec(raw, loop, muted, speed, scale, crop, keying, matte), controller) { finished() } },
         modifier = modifier,
+        onRelease = { it.dispose() },
     )
 }
 
@@ -104,6 +105,11 @@ internal class ChromaKeyVideoView(
         return false
     }
 
+    fun dispose() {
+        renderer?.quit()
+        renderer = null
+    }
+
     override fun onSurfaceTextureUpdated(surface: SurfaceTexture) = Unit
 }
 
@@ -119,6 +125,9 @@ private class KeyRenderer(
     private val thread = HandlerThread("chroma-key-video")
     private lateinit var handler: Handler
     private val main = Handler(Looper.getMainLooper())
+    @Volatile private var stopping = false
+    private var finished = false
+    private var lastFrameNanos = 0L
 
     private var display: EGLDisplay = EGL14.EGL_NO_DISPLAY
     private var eglContext: EGLContext = EGL14.EGL_NO_CONTEXT
@@ -158,7 +167,9 @@ private class KeyRenderer(
     }
 
     fun quit(afterTearDown: () -> Unit = {}) {
-        handler.post {
+        if (stopping) return
+        stopping = true
+        handler.postAtFrontOfQueue {
             runCatching { tearDown() }
             afterTearDown()
             thread.quitSafely()
@@ -166,6 +177,8 @@ private class KeyRenderer(
     }
 
     private fun finish() {
+        if (finished || stopping) return
+        finished = true
         main.post {
             controller?.completed = true
             onFinished()
@@ -173,6 +186,7 @@ private class KeyRenderer(
     }
 
     private fun setUp() {
+        if (stopping) return
         display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
         val version = IntArray(2)
         check(EGL14.eglInitialize(display, version, 0, version, 1))
@@ -205,7 +219,9 @@ private class KeyRenderer(
 
         val texture = SurfaceTexture(videoTex)
         // A frame that fails to draw (e.g. the surface going away) is skipped, never fatal.
-        texture.setOnFrameAvailableListener({ runCatching { drawFrame() } }, handler)
+        texture.setOnFrameAvailableListener({
+            if (!stopping && !finished) runCatching { drawFrame() }.onFailure { finish() }
+        }, handler)
         videoTexture = texture
         val surface = Surface(texture)
         videoSurface = surface
@@ -224,6 +240,7 @@ private class KeyRenderer(
             setOnCompletionListener { finish() }
             setOnErrorListener { _, _, _ -> finish(); true }
             setOnPreparedListener {
+                if (stopping) return@setOnPreparedListener
                 it.start()
                 if (spec.speed != 1f) runCatching { it.playbackParams = it.playbackParams.setSpeed(spec.speed) }
             }
@@ -250,9 +267,13 @@ private class KeyRenderer(
     }
 
     private fun drawFrame() {
+        if (stopping || finished) return
         val texture = videoTexture ?: return
         if (eglSurface == EGL14.EGL_NO_SURFACE) return
         texture.updateTexImage()
+        val now = System.nanoTime()
+        if (now - lastFrameNanos < 33_000_000L) return
+        lastFrameNanos = now
         texture.getTransformMatrix(texMatrix)
         GLES20.glViewport(0, 0, width, height)
         if (!spec.keying) {
@@ -268,7 +289,7 @@ private class KeyRenderer(
         val (sx, sy) = fitScale()
         if (spec.matte && !keyOn) {
             // Every few frames draw the clip once to read its edge, then fill the view with that colour.
-            if (matteFrame++ % 4 == 0) {
+            if (!matteKnown) {
                 clear()
                 draw(keying = false, sx = sx, sy = sy)
                 sampleMatte(sx, sy)
@@ -336,7 +357,7 @@ private class KeyRenderer(
         val saturation = maxOf(key[0], key[1], key[2]) - minOf(key[0], key[1], key[2])
         keyOn = close >= 6 && saturation > .18f
         keyTries++
-        keyKnown = keyOn || keyTries >= 45
+        keyKnown = keyOn || keyTries >= 6
     }
 
     private fun clear() {
