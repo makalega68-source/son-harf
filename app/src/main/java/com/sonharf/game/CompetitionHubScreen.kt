@@ -385,6 +385,8 @@ private fun ClubCompetitionTab() {
                     Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                         ProfilePhotoAvatar(
                             avatarPath = memberProfiles[member.userId]?.avatarPath,
+                            gender = memberProfiles[member.userId]?.gender,
+                            visible = memberProfiles[member.userId]?.avatarVisibility != "hidden",
                             name = member.displayName,
                             size = 36.dp,
                             accent = if (member.role == "owner") SonHarfGold else SonHarfBlue,
@@ -827,6 +829,8 @@ private fun WeeklyTournamentTab() {
                     )
                     ProfilePhotoAvatar(
                         avatarPath = leaderboardProfiles[row.userId]?.avatarPath,
+                            gender = leaderboardProfiles[row.userId]?.gender,
+                            visible = leaderboardProfiles[row.userId]?.avatarVisibility != "hidden",
                         name = row.displayName,
                         size = 34.dp,
                         accent = SonHarfGold,
@@ -1049,6 +1053,8 @@ private fun RivalHistoryTab() {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ProfilePhotoAvatar(
                             avatarPath = playerProfiles[rival.opponentId]?.avatarPath,
+                            gender = playerProfiles[rival.opponentId]?.gender,
+                            visible = playerProfiles[rival.opponentId]?.avatarVisibility != "hidden",
                             name = rival.displayName,
                             size = 42.dp,
                             accent = if (rival.canChallenge) SonHarfBlue else SonHarfMuted,
@@ -1232,6 +1238,8 @@ private fun RivalHistoryTab() {
                     ) {
                         ProfilePhotoAvatar(
                             avatarPath = playerProfiles[match.opponentId]?.avatarPath,
+                            gender = playerProfiles[match.opponentId]?.gender,
+                            visible = playerProfiles[match.opponentId]?.avatarVisibility != "hidden",
                             name = match.displayName,
                             size = 38.dp,
                             accent = resultColor,

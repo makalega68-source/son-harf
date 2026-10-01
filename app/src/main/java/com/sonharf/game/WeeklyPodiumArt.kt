@@ -186,24 +186,19 @@ private fun EmptyWell() {
 /** The player's photo filling the ring edge to edge; the initial when there is no photo. */
 @Composable
 private fun PodiumPhoto(seat: PodiumSeat, size: Dp) {
-    var bytes by remember(seat.avatarPath) { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(seat.avatarPath) {
-        bytes = seat.avatarPath?.takeIf { it.isNotBlank() }?.let { ProfilePhotoRuntime.load(it) }
+    var bytes by remember(seat.userId, seat.avatarPath) { mutableStateOf<ByteArray?>(null) }
+    var gender by remember(seat.userId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(seat.userId, seat.avatarPath) {
+        val profile = runCatching { com.sonharf.game.data.OnlineGameBackend().getProfile(seat.userId) }.getOrNull()
+        gender = profile?.gender
+        bytes = if (profile?.avatarVisibility != "hidden") {
+            profile?.avatarPath?.takeIf { it.isNotBlank() }?.let { ProfilePhotoRuntime.load(it) }
+        } else null
     }
-    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+    val bitmap = rememberProfileBitmap(bytes)
     if (bitmap != null) {
         Image(bitmap.asImageBitmap(), seat.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
     } else {
-        Box(
-            Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4F6FA), Color(0xFFDCE2EC)))),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                seat.name.take(1).uppercase(),
-                color = Color(0xFF3A4A66),
-                fontSize = (size.value * .42f).sp,
-                fontWeight = FontWeight.Black,
-            )
-        }
+        DefaultProfilePortrait(gender, Modifier.fillMaxSize())
     }
 }

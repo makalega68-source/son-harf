@@ -305,10 +305,14 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 // not only inside the Friends page, so they never wait unseen.
                 IncomingSocialWatcher(
                     backend = backend,
-                    enabled = topLevel && destination != PremiumDestination.SOCIAL,
+                    enabled = topLevel,
                     onCount = { incomingSocialCount = it },
                     onOpen = { destination = PremiumDestination.SOCIAL },
                     modifier = Modifier.align(Alignment.TopCenter),
+                    onAcceptedSiege = { game ->
+                        com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
+                        openGame(PremiumDestination.SIEGE, game.language)
+                    },
                 )
             }
         }

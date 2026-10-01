@@ -2,6 +2,9 @@ package com.sonharf.game.data
 
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
@@ -10,6 +13,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 @Serializable
+@androidx.compose.runtime.Immutable
 data class WordSiegeCellDto(
     val letter: String? = null,
     val owner: Int = 0,
@@ -132,6 +136,27 @@ private data class WordSiegeMessageWrite(
  * It is intentionally not persisted: each fresh visit defaults to the standard 12-hour pool.
  */
 object WordSiegeLaunchConfig {
+    var pendingGameId: String? = null
+    var pendingGameMode: String = "classic"
+    val awaitedInviteIds = mutableSetOf<String>()
+    var awaitedInviteRevision by mutableIntStateOf(0)
+        private set
+
+    fun awaitInvite(id: String) {
+        if (awaitedInviteIds.add(id)) awaitedInviteRevision++
+    }
+
+    fun open(game: WordSiegeGameDto) {
+        pendingGameId = game.id
+        pendingGameMode = game.gameMode
+        classicTurnHours = game.turnDurationHours
+    }
+
+    fun consumeGameId(mode: String): String? {
+        if (pendingGameMode != mode) return null
+        return pendingGameId.also { pendingGameId = null }
+    }
+
     var classicTurnHours: Int = 12
         set(value) {
             field = if (value == 24) 24 else 12
@@ -165,6 +190,19 @@ suspend fun OnlineGameBackend.getWordSiegeGame(gameId: String): WordSiegeGameDto
     SupabaseProvider.client.from("word_siege_games")
         .select { filter { eq("id", gameId) } }
         .decodeSingle()
+
+/** Only the sender's invitations; participant RLS still applies. */
+suspend fun OnlineGameBackend.getOutgoingWordSiegeInvites(): List<WordSiegeInviteDto> {
+    val me = currentUserId() ?: return emptyList()
+    return SupabaseProvider.client.from("word_siege_invites")
+        .select { filter { eq("sender_id", me) } }.decodeList()
+}
+
+suspend fun OnlineGameBackend.getOutgoingWordSiegeSeriesInvites(): List<WordSiegeSeriesInviteDto> {
+    val me = currentUserId() ?: return emptyList()
+    return SupabaseProvider.client.from("word_siege_series_invites")
+        .select { filter { eq("sender_id", me) } }.decodeList()
+}
 
 suspend fun OnlineGameBackend.refreshWordSiegeGame(gameId: String): WordSiegeGameDto =
     SupabaseProvider.client.postgrest.rpc(

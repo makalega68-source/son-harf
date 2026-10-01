@@ -31,8 +31,8 @@ class WordSiegeProfileRegressionTest {
         assertTrue(scoreCard.contains("• AI"))
 
         assertTrue(profileRuntime.contains("SyntheticProfilePortrait"))
-        assertTrue(profileRuntime.contains("Icons.Rounded.Face"))
-        assertTrue(profileRuntime.contains("FramelessGenderSymbol"))
+        assertTrue(profileRuntime.contains("DefaultProfilePortrait(gender, modifier)"))
+        org.junit.Assert.assertFalse(profileRuntime.contains("FramelessGenderSymbol"))
     }
 
     private fun projectFile(path: String): File {

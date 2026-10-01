@@ -58,7 +58,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     val me = backend.currentUserId()
     var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
     var profiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
-    var selectedGameId by remember { mutableStateOf<String?>(null) }
+    var selectedGameId by remember { mutableStateOf(WordSiegeLaunchConfig.consumeGameId("classic")) }
     var currentGame by remember { mutableStateOf<WordSiegeGameDto?>(null) }
     var moves by remember { mutableStateOf<List<WordSiegeMoveDto>>(emptyList()) }
     var messages by remember { mutableStateOf<List<WordSiegeMessageDto>>(emptyList()) }
@@ -154,7 +154,8 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                 .onSuccess { next ->
                     applyGame(next)
                     showNotice(successNotice)
-                    refreshGames()
+                    // The returned room is authoritative. Unrelated lobby/profile reads must
+                    // not keep input locked after the move has already completed.
                 }
                 .onFailure { error ->
                     val raw = error.message.orEmpty()
@@ -189,6 +190,10 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             // The game list is not on screen during a match; refreshing it there only costs frames.
             if (selectedGameId == null) refreshGames()
         }
+    }
+
+    LaunchedEffect(selectedGameId, currentGame?.status) {
+        runCatching { backend.setPresence(if (selectedGameId != null && currentGame?.status == "playing") "in_game" else "online") }
     }
 
     LaunchedEffect(selectedGameId, showChat) {

@@ -41,7 +41,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var invites by remember { mutableStateOf<List<WordSiegeSeriesInviteDto>>(emptyList()) }
     var profiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
-    var selectedGameId by remember { mutableStateOf<String?>(null) }
+    var selectedGameId by remember { mutableStateOf(WordSiegeLaunchConfig.consumeGameId("series")) }
     var currentGame by remember { mutableStateOf<WordSiegeGameDto?>(null) }
     var moves by remember { mutableStateOf<List<WordSiegeMoveDto>>(emptyList()) }
     var messages by remember { mutableStateOf<List<WordSiegeMessageDto>>(emptyList()) }
@@ -116,7 +116,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
         busy = true
         scope.launch {
             runCatching { action() }
-                .onSuccess { next -> applyGame(next); notice = null; noticeIsError = false; refreshLobby() }
+                .onSuccess { next -> applyGame(next); notice = null; noticeIsError = false }
                 .onFailure { error ->
                     val raw = error.message.orEmpty()
                     showError(raw)
@@ -134,11 +134,23 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
         if (entitlement?.seriesGameAccess == true) refreshLobby(showProgress = true) else loading = false
     }
 
+    LaunchedEffect(selectedGameId, currentGame?.status) {
+        runCatching { backend.setPresence(if (selectedGameId != null && currentGame?.status == "playing") "in_game" else "online") }
+    }
+
     LaunchedEffect(entitlement?.seriesGameAccess, selectedGameId) {
         if (entitlement?.seriesGameAccess != true || selectedGameId != null) return@LaunchedEffect
         while (currentCoroutineContext().isActive) {
             refreshLobby()
-            delay(5_000)
+            val outgoing = runCatching { backend.getOutgoingWordSiegeSeriesInvites() }.getOrDefault(emptyList())
+            outgoing.filter { it.status == "pending" }.forEach { WordSiegeLaunchConfig.awaitInvite(it.id) }
+            outgoing.firstOrNull { it.status == "accepted" && it.id in WordSiegeLaunchConfig.awaitedInviteIds && it.gameId != null }?.let { invite ->
+                runCatching { backend.getWordSiegeGame(requireNotNull(invite.gameId)) }.getOrNull()?.let { game ->
+                    WordSiegeLaunchConfig.awaitedInviteIds.remove(invite.id)
+                    if (game.status == "playing") applyGame(game)
+                }
+            }
+            delay(if (WordSiegeLaunchConfig.awaitedInviteIds.isEmpty()) 5_000L else 2_000L)
         }
     }
 
@@ -240,8 +252,8 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                 onInviteFriend = { inviteFriend = true },
                 onAcceptInvite = { invite ->
                     if (busy) return@SeriesLobby
+                    busy = true
                     scope.launch {
-                        busy = true
                         runCatching { backend.respondWordSiegeSeriesInvite(invite.id, true) }
                             .onSuccess { next ->
                                 invites = invites.filterNot { it.id == invite.id }
@@ -373,7 +385,8 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                 scope.launch {
                     busy = true
                     runCatching { backend.inviteFriendToWordSiegeSeries(friend.id, SonHarfUiState.language, turnMinutes) }
-                        .onSuccess {
+                        .onSuccess { invite ->
+                            WordSiegeLaunchConfig.awaitInvite(invite.id)
                             notice = sh("${friend.displayName} Hızlı Düello'ya davet edildi.", "${friend.displayName} was invited to Quick Duel.")
                             inviteFriend = false
                         }

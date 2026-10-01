@@ -180,8 +180,8 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
             success = false
             return
         }
+        busy = true
         scope.launch {
-            busy = true
             notice = ""
             success = false
             runCatching {
@@ -226,8 +226,8 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
             return
         }
         lastResendAt = System.currentTimeMillis()
+        busy = true
         scope.launch {
-            busy = true
             notice = ""
             success = false
             runCatching {
@@ -767,7 +767,10 @@ private fun EmailVerificationCard(
                 singleLine = true,
                 maxLines = 1,
                 label = { Text(sh("Doğrulama kodu", "Verification code")) },
-                placeholder = { Text("00000000") },
+                placeholder = { Text(sh("E-postadaki kod", "Code from email"), fontSize = 14.sp, letterSpacing = 0.sp) },
+                enabled = !busy,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onVerify() }),
                 textStyle = LocalTextStyle.current.copy(
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Black,

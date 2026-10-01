@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
-import com.sonharf.game.data.getIncomingWordSiegeInvites
+import com.sonharf.game.data.*
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -48,9 +48,38 @@ internal fun IncomingSocialWatcher(
     onCount: (Int) -> Unit,
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
+    onAcceptedSiege: (WordSiegeGameDto) -> Unit = {},
 ) {
     var seen by remember { mutableStateOf<Set<String>?>(null) }
     var banner by remember { mutableStateOf<String?>(null) }
+    val openAccepted by androidx.compose.runtime.rememberUpdatedState(onAcceptedSiege)
+
+    // The sender also enters the room when their friend accepts. Watching only incoming
+    // invitations left the sender in the lobby while the server marked both as in-game.
+    LaunchedEffect(enabled, WordSiegeLaunchConfig.awaitedInviteRevision) {
+        if (!enabled || !SupabaseProvider.configured) return@LaunchedEffect
+        while (currentCoroutineContext().isActive) {
+            val outgoing = runCatching { backend.getOutgoingWordSiegeInvites() }.getOrNull()
+            val series = runCatching { backend.getOutgoingWordSiegeSeriesInvites() }.getOrNull()
+            val states = outgoing.orEmpty().map { Triple(it.id, it.status, it.gameId) } +
+                series.orEmpty().map { Triple(it.id, it.status, it.gameId) }
+            states.filter { it.second == "pending" }.forEach { WordSiegeLaunchConfig.awaitInvite(it.first) }
+            val accepted = states.firstOrNull {
+                it.first in WordSiegeLaunchConfig.awaitedInviteIds && it.second == "accepted" && it.third != null
+            }
+            if (accepted != null) {
+                val game = runCatching { backend.getWordSiegeGame(requireNotNull(accepted.third)) }.getOrNull()
+                if (game != null) {
+                    WordSiegeLaunchConfig.awaitedInviteIds.remove(accepted.first)
+                    if (game.status == "playing") openAccepted(game)
+                }
+            }
+            states.filter { it.second in listOf("declined", "expired", "cancelled") }.forEach {
+                WordSiegeLaunchConfig.awaitedInviteIds.remove(it.first)
+            }
+            delay(if (WordSiegeLaunchConfig.awaitedInviteIds.isEmpty()) 10_000L else 2_000L)
+        }
+    }
 
     LaunchedEffect(enabled) {
         if (!enabled || !SupabaseProvider.configured) return@LaunchedEffect

@@ -176,24 +176,14 @@ fun ProfileExperienceV2Screen() {
         item {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(contentAlignment = Alignment.BottomEnd) {
-                    ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 112)
+                    ProfileAvatarV2(avatarBytes.takeIf { p?.avatarVisibility != "hidden" }, p?.displayName ?: "O", 112, p?.gender)
                     Surface(
                         modifier = Modifier.size(42.dp).clickable { photoEditor = true },
                         shape = CircleShape,
                         color = SonHarfPurple,
                         border = BorderStroke(2.dp, SonHarfSurface),
                     ) { Box(contentAlignment = Alignment.Center) { Text("✎", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black) } }
-                    p?.gender?.let { gender ->
-                        val female = gender.trim().lowercase() in setOf("kadın", "kadin", "female", "woman")
-                        val male = gender.trim().lowercase() in setOf("erkek", "male", "man")
-                        if (female || male) {
-                            androidx.compose.foundation.Image(
-                                painter = androidx.compose.ui.res.painterResource(if (female) R.drawable.gender_female else R.drawable.gender_male),
-                                contentDescription = if (female) sh("Kadın", "Female") else sh("Erkek", "Male"),
-                                modifier = Modifier.align(Alignment.BottomStart).size(38.dp),
-                            )
-                        }
-                    }
+
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(p?.displayName ?: sh("Oyuncu", "Player"), fontSize = 29.sp, fontWeight = FontWeight.Black)
@@ -476,6 +466,7 @@ fun ProfileExperienceV2Screen() {
         PhotoEditorDialogV2(
             avatar = avatarBytes,
             name = p.displayName,
+            gender = p.gender,
             hidden = p.avatarVisibility == "hidden",
             busy = busy,
             onDismiss = { if (!busy) photoEditor = false },
@@ -529,7 +520,7 @@ fun ProfileExperienceV2Screen() {
 
 @Composable
 private fun PhotoEditorDialogV2(
-    avatar: ByteArray?, name: String, hidden: Boolean, busy: Boolean,
+    avatar: ByteArray?, name: String, gender: String?, hidden: Boolean, busy: Boolean,
     onDismiss: () -> Unit, onPhoto: (Uri) -> Unit, onHidden: (Boolean) -> Unit,
 ) {
     var hide by remember(hidden) { mutableStateOf(hidden) }
@@ -540,7 +531,7 @@ private fun PhotoEditorDialogV2(
         text = {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Box(contentAlignment = Alignment.BottomEnd) {
-                    ProfileAvatarV2(avatar, name, 118)
+                    ProfileAvatarV2(avatar.takeIf { !hide }, name, 118, gender)
                     Surface(modifier = Modifier.size(42.dp), shape = CircleShape, color = SonHarfPurple) { Box(contentAlignment = Alignment.Center) { Text("✎", color = Color.White, fontSize = 21.sp) } }
                 }
                 OutlinedButton(onClick = { picker.launch("image/*") }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(50.dp)) {
@@ -584,14 +575,14 @@ private fun LegacyIdentityDialogV2(initialName: String, busy: Boolean, onDismiss
 }
 
 @Composable
-private fun ProfileAvatarV2(bytes: ByteArray?, name: String, size: Int) {
-    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+private fun ProfileAvatarV2(bytes: ByteArray?, name: String, size: Int, gender: String?) {
+    val bitmap = rememberProfileBitmap(bytes)
     Box(
         Modifier.size(size.dp).clip(CircleShape).background(Brush.sweepGradient(listOf(SonHarfPurple, SonHarfCyan, SonHarfPink, SonHarfPurple))).padding(4.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (bitmap != null) Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-        else Box(Modifier.fillMaxSize().clip(CircleShape).background(SonHarfSurface), contentAlignment = Alignment.Center) { Text(name.take(1).uppercase(), fontSize = (size / 3).sp, fontWeight = FontWeight.Black) }
+        else DefaultProfilePortrait(gender, Modifier.fillMaxSize().clip(CircleShape))
     }
 }
 

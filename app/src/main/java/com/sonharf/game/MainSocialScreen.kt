@@ -216,7 +216,8 @@ internal fun MainSocialScreen(
                             scope.launch {
                                 busyKey = friend.id
                                 runCatching { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
-                                    .onSuccess {
+                                    .onSuccess { invite ->
+                                        WordSiegeLaunchConfig.awaitInvite(invite.id)
                                         notice = sh("${friend.displayName} Kelime Tahtı'na davet edildi.", "${friend.displayName} was invited to Word Throne.")
                                         SonHarfSoundFx.softNotify()
                                     }
@@ -246,7 +247,7 @@ internal fun MainSocialScreen(
                                 friends.map { it.second }.sortedByDescending { it.rating }.take(8).forEachIndexed { index, friend ->
                                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                         Text("${index + 1}", color = MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(22.dp))
-                                        ProfilePhotoAvatar(friend.avatarPath, friend.displayName, 30.dp, visible = friend.avatarVisibility != "hidden", accent = if (friend.isVip) MainUi.Gold else MainUi.Blue)
+                                        ProfilePhotoAvatar(friend.avatarPath, friend.displayName, 30.dp, visible = friend.avatarVisibility != "hidden", accent = if (friend.isVip) MainUi.Gold else MainUi.Blue, gender = friend.gender)
                                         Spacer(Modifier.width(8.dp))
                                         Text(friend.displayName, color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
                                         Text(friend.rating.toString(), color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
@@ -394,7 +395,7 @@ internal fun MainSocialScreen(
                     Surface(shape = RoundedCornerShape(17.dp), color = Color(0xFFE8F1EB), border = BorderStroke(1.dp, Color(0xFF567A64).copy(alpha = .35f))) {
                         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = Color(0xFF567A64))
+                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = Color(0xFF567A64), gender = sender?.gender)
                                 Spacer(Modifier.width(9.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(sender?.displayName ?: sh("Oyun daveti", "Game invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
@@ -417,11 +418,12 @@ internal fun MainSocialScreen(
                                 Button(
                                     onClick = {
                                         if (busyKey != null) return@Button
+                                        busyKey = "siege:${invite.id}"
                                         scope.launch {
-                                            busyKey = "siege:${invite.id}"
                                             runCatching { backend.respondWordSiegeInvite(invite.id, true) }
                                                 .onSuccess { game ->
                                                     if (game != null) {
+                                                        WordSiegeLaunchConfig.open(game)
                                                         notice = sh("Maç hazır.", "Match is ready.")
                                                         onSiege()
                                                     }
@@ -444,7 +446,7 @@ internal fun MainSocialScreen(
                     Surface(shape = RoundedCornerShape(17.dp), color = MainUi.BlueSoft, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .25f))) {
                         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = MainUi.Blue)
+                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = MainUi.Blue, gender = sender?.gender)
                                 Spacer(Modifier.width(9.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(sender?.displayName ?: sh("Son Harf daveti", "Last Letter invite"), color = MainUi.Text, fontWeight = FontWeight.Black)

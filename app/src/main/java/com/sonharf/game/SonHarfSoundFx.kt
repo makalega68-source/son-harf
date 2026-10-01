@@ -12,9 +12,9 @@ import android.os.VibratorManager
  * File-backed game SFX palette.
  *
  * The previous procedural click/noise generator was intentionally removed because it produced
- * harsh synthetic beeps on some Android devices. These effects are pre-rendered 44.1 kHz WAV
- * assets built from modal instrument models (marimba, glass bell, kalimba and wooden tiles)
- * with soft attacks, gentle low-pass and a small room reverb, tuned to one pentatonic palette
+ * harsh synthetic beeps on some Android devices. These effects are pre-rendered 22.05 kHz WAV
+ * assets built from warm electric-piano voices, with soft attacks and a short room tail,
+ * tuned to one D major pentatonic palette
  * so every cue sounds like part of the same instrument set. Played through SoundPool.
  */
 object SonHarfSoundFx {
@@ -31,7 +31,7 @@ object SonHarfSoundFx {
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
         pool = SoundPool.Builder()
-            .setMaxStreams(8)
+            .setMaxStreams(4)
             .setAudioAttributes(attrs)
             .build()
         listOf(

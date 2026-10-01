@@ -522,7 +522,12 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             if (big && sinceLast > 12_000L) {
                 lastMoveReactionAt = now
                 startReaction(WordSiegeMascotBehavior.choose(moveId, lastMoveMine, moveScore, capturedCells, opponentCaptured), now)
-                if (lastMoveMine) heartsStartedAt = now
+                if (lastMoveMine) {
+                    heartsStartedAt = now
+                    if (now >= actionUntil) {
+                        perform(if (moveId % 2L == 0L) WordSiegeMascotAction.CLAP else WordSiegeMascotAction.CHEER, now)
+                    }
+                }
             } else if (!big && sinceLast > 35_000L && random.nextFloat() < .3f) {
                 lastMoveReactionAt = now
                 reaction = if (lastMoveMine) WordSiegeMascotEmotion.HAPPY else WordSiegeMascotEmotion.SURPRISED
@@ -668,6 +673,14 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         lastFrame = 0L
         historyCount = 0
         invalidate()
+    }
+
+    override fun onVisibilityAggregated(isVisible: Boolean) {
+        super.onVisibilityAggregated(isVisible)
+        if (isVisible) {
+            lastFrame = 0L
+            invalidate()
+        }
     }
 
     private fun markActive(now: Long) {
@@ -1124,7 +1137,13 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         drawHearts(canvas, now)
         canvas.restore()
 
-        if (isAttachedToWindow && isShown) postInvalidateOnAnimation()
+        if (isAttachedToWindow && isShown && windowVisibility == VISIBLE) {
+            // Full-rate reactions; quiet, small companions need half as many draw passes.
+            // This clock belongs to the View and never recomposes the game board.
+            val reacting = now < actionUntil || now < motionUntil || flying || speaking
+            if (reacting || width >= 180f * resources.displayMetrics.density) postInvalidateOnAnimation()
+            else postInvalidateDelayed(33L)
+        }
     }
 
     // ---- Expression poses ------------------------------------------------------------------------

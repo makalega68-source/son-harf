@@ -75,8 +75,12 @@ internal fun WordSiegeEntryScreen(
     onExit: () -> Unit,
     onOpenStore: () -> Unit,
 ) {
-    var mode by remember { mutableStateOf<WordSiegeEntryMode?>(null) }
-    var selectedClassicHours by remember { mutableIntStateOf(12) }
+    var mode by remember { mutableStateOf<WordSiegeEntryMode?>(
+        if (WordSiegeLaunchConfig.pendingGameId == null) null
+        else if (WordSiegeLaunchConfig.pendingGameMode == "series") WordSiegeEntryMode.SERIES
+        else WordSiegeEntryMode.STANDARD,
+    ) }
+    var selectedClassicHours by remember { mutableIntStateOf(WordSiegeLaunchConfig.classicTurnHours) }
 
     when (mode) {
         WordSiegeEntryMode.STANDARD -> {
@@ -287,8 +291,12 @@ internal fun WordSiegeEntryScreen(
                                         game = game,
                                         onClick = {
                                             if (game.gameMode == "series") {
-                                                if (seriesOwned) mode = WordSiegeEntryMode.SERIES else onOpenStore()
+                                                if (seriesOwned) {
+                                                    WordSiegeLaunchConfig.open(game)
+                                                    mode = WordSiegeEntryMode.SERIES
+                                                } else onOpenStore()
                                             } else {
+                                                WordSiegeLaunchConfig.open(game)
                                                 selectedClassicHours = if (game.turnDurationHours == 24) 24 else 12
                                                 mode = WordSiegeEntryMode.STANDARD
                                             }

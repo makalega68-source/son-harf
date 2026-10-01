@@ -202,6 +202,7 @@ private fun RankingListRow(rank: Int?, name: String, score: Int?, avatarPath: St
             visible = true,
             showGenderBadge = false,
             frameId = rememberPlayerFrame(userId),
+            userId = userId,
         )
         Spacer(Modifier.width(12.dp))
         Text(
