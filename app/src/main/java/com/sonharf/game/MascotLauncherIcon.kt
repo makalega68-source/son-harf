@@ -10,66 +10,113 @@ import android.content.pm.PackageManager
 import android.widget.Toast
 
 /**
- * The home-screen icon shows the mascot's mood, like a pet that misses you: a big smile once you
- * have played, then a new face for every day away: looking around for you (1 day), sad (2),
- * cross (3), dozing off (5) and in tears after a week.
+ * Keeps the launcher mascot in sync with the time since the player last opened the app.
  *
- * Each mood is an activity-alias with its own icon; exactly one is enabled. Switching happens
- * only while the app is in the background (onStop) or from an alarm, never while it is in use.
+ * Requested five-day cycle:
+ * day 0 = happy, day 1 = sad, days 2-3 = angry, day 4 = closed eyes, day 5 = happy again.
+ * The same cycle then repeats indefinitely. The existing CURIOUS and CRYING aliases are retained
+ * only for upgrade compatibility and are never selected by the new cycle.
  */
 internal object MascotLauncherIcon {
-    enum class Mood(val alias: String, val afterHours: Long) {
-        HAPPY(".LauncherMascotHappy", 0),
-        CURIOUS(".LauncherMascotCurious", 24),
-        SAD(".LauncherMascotSad", 48),
-        ANGRY(".LauncherMascotAngry", 72),
-        SLEEPY(".LauncherMascotSleepy", 120),
-        CRYING(".LauncherMascotCrying", 168),
+    enum class Mood(val alias: String) {
+        HAPPY(".LauncherMascotHappy"),
+        CURIOUS(".LauncherMascotCurious"),
+        SAD(".LauncherMascotSad"),
+        ANGRY(".LauncherMascotAngry"),
+        SLEEPY(".LauncherMascotSleepy"),
+        CRYING(".LauncherMascotCrying"),
     }
 
     private const val PREFS = "mascot_launcher_icon"
     private const val KEY_LAST_OPEN = "last_open"
     private const val KEY_MOOD = "mood"
-    internal const val EXTRA_MOOD = "mood"
+    private const val ALARM_REQUEST_CODE = 4_100
+    private const val DAY_MILLIS = 24L * 60L * 60L * 1_000L
+    private const val CYCLE_DAYS = 5L
 
-    private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private fun prefs(context: Context) =
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     fun current(context: Context): Mood =
-        runCatching { Mood.valueOf(prefs(context).getString(KEY_MOOD, Mood.HAPPY.name)!!) }.getOrDefault(Mood.HAPPY)
+        runCatching { Mood.valueOf(prefs(context).getString(KEY_MOOD, Mood.HAPPY.name)!!) }
+            .getOrDefault(Mood.HAPPY)
 
-    /** App came to the foreground: note the visit and greet if the mascot had been sulking. */
+    /** App came to the foreground: this visit always resets the launcher face to happy. */
     fun onAppOpened(context: Context) {
         val before = current(context)
         prefs(context).edit().putLong(KEY_LAST_OPEN, System.currentTimeMillis()).apply()
         cancelAlarms(context)
+        runCatching { apply(context, Mood.HAPPY) }
         if (before != Mood.HAPPY) greetBack(context, before)
     }
 
-    /** App went to the background: smile again and schedule the moods for a long absence. */
+    /** App went to the background: keep the happy face and schedule only the next transition. */
     fun onAppBackground(context: Context) {
         runCatching { apply(context, Mood.HAPPY) }
-        val lastOpen = prefs(context).getLong(KEY_LAST_OPEN, System.currentTimeMillis())
-        val alarms = context.getSystemService(AlarmManager::class.java) ?: return
-        Mood.entries.filter { it != Mood.HAPPY }.forEach { mood ->
-            runCatching {
-                alarms.set(AlarmManager.RTC, lastOpen + mood.afterHours * 3_600_000L, pending(context, mood))
+
+        val storedLastOpen = prefs(context).getLong(KEY_LAST_OPEN, 0L)
+        val lastOpen = if (storedLastOpen > 0L) {
+            storedLastOpen
+        } else {
+            System.currentTimeMillis().also {
+                prefs(context).edit().putLong(KEY_LAST_OPEN, it).apply()
             }
+        }
+
+        cancelAlarms(context)
+        scheduleNextTransition(context, lastOpen, System.currentTimeMillis())
+    }
+
+    /**
+     * Alarm target. The mood is calculated from actual elapsed time, so a delayed alarm still lands
+     * directly on the correct face instead of replaying stale intermediate states.
+     */
+    fun onAlarm(context: Context) {
+        val lastOpen = prefs(context).getLong(KEY_LAST_OPEN, 0L)
+        if (lastOpen <= 0L) return
+
+        val now = System.currentTimeMillis()
+        val awayDays = ((now - lastOpen).coerceAtLeast(0L)) / DAY_MILLIS
+        runCatching { apply(context, moodForAwayDays(awayDays)) }
+        scheduleNextTransition(context, lastOpen, now)
+    }
+
+    internal fun moodForAwayDays(daysAway: Long): Mood = when (daysAway.coerceAtLeast(0L) % CYCLE_DAYS) {
+        0L -> Mood.HAPPY
+        1L -> Mood.SAD
+        2L, 3L -> Mood.ANGRY
+        4L -> Mood.SLEEPY
+        else -> Mood.HAPPY
+    }
+
+    /** Absolute elapsed-day boundary at which the visible face next changes. */
+    internal fun nextTransitionDay(daysAway: Long): Long {
+        val safeDays = daysAway.coerceAtLeast(0L)
+        return safeDays + when (safeDays % CYCLE_DAYS) {
+            2L -> 2L // Angry intentionally covers both day 2 and the unspecified day 3.
+            else -> 1L
         }
     }
 
-    /** Called by the alarm: only changes the face if the player really has been away that long. */
-    fun onAlarm(context: Context, mood: Mood) {
-        val lastOpen = prefs(context).getLong(KEY_LAST_OPEN, 0L)
-        if (lastOpen == 0L) return
-        val away = System.currentTimeMillis() - lastOpen
-        if (away >= mood.afterHours * 3_600_000L - 60_000L && mood.ordinal > current(context).ordinal) {
-            runCatching { apply(context, mood) }
+    private fun scheduleNextTransition(context: Context, lastOpen: Long, now: Long) {
+        val alarms = context.getSystemService(AlarmManager::class.java) ?: return
+        val awayDays = ((now - lastOpen).coerceAtLeast(0L)) / DAY_MILLIS
+        val nextDay = nextTransitionDay(awayDays)
+        val triggerAt = lastOpen + nextDay * DAY_MILLIS
+
+        runCatching {
+            alarms.setAndAllowWhileIdle(
+                AlarmManager.RTC,
+                triggerAt,
+                pending(context, ALARM_REQUEST_CODE),
+            )
         }
     }
 
     private fun apply(context: Context, mood: Mood) {
         val pm = context.packageManager
         val pkg = context.packageName
+
         // Touching components makes launchers refresh; do nothing when the face is already right.
         val already = Mood.entries.all {
             val state = pm.getComponentEnabledSetting(ComponentName(pkg, pkg + it.alias))
@@ -81,7 +128,8 @@ internal object MascotLauncherIcon {
             prefs(context).edit().putString(KEY_MOOD, mood.name).apply()
             return
         }
-        // Enable the new face first so the app always has a launcher entry, then hide the rest.
+
+        // Enable the new face first so the app always keeps one launcher entry, then hide the rest.
         pm.setComponentEnabledSetting(
             ComponentName(pkg, pkg + mood.alias),
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
@@ -97,16 +145,19 @@ internal object MascotLauncherIcon {
         prefs(context).edit().putString(KEY_MOOD, mood.name).apply()
     }
 
-    private fun pending(context: Context, mood: Mood): PendingIntent = PendingIntent.getBroadcast(
+    private fun pending(context: Context, requestCode: Int): PendingIntent = PendingIntent.getBroadcast(
         context,
-        4_100 + mood.ordinal,
-        Intent(context, MascotIconMoodReceiver::class.java).putExtra(EXTRA_MOOD, mood.name),
+        requestCode,
+        Intent(context, MascotIconMoodReceiver::class.java),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
+    /** Cancels the new single alarm plus all request codes used by the previous finite mood system. */
     private fun cancelAlarms(context: Context) {
         val alarms = context.getSystemService(AlarmManager::class.java) ?: return
-        Mood.entries.filter { it != Mood.HAPPY }.forEach { runCatching { alarms.cancel(pending(context, it)) } }
+        (ALARM_REQUEST_CODE until ALARM_REQUEST_CODE + Mood.entries.size).forEach { requestCode ->
+            runCatching { alarms.cancel(pending(context, requestCode)) }
+        }
     }
 
     private fun greetBack(context: Context, mood: Mood) {
@@ -115,17 +166,22 @@ internal object MascotLauncherIcon {
             Mood.SAD -> sh("Obi seni çok özlemişti... geri geldin!", "Obi missed you so much... you're back!")
             Mood.ANGRY -> sh("Hmph! Obi küsmüştü ama tamam, barıştık!", "Hmph! Obi was sulking, but okay, friends again!")
             Mood.SLEEPY -> sh("Obi uyuyakalmıştı... uyandın mı? Oyun zamanı!", "Obi fell asleep... wake up? Game time!")
-            else -> sh("Obi bir haftadır ağlıyordu! Bir daha bu kadar gitme, tamam mı?", "Obi cried all week! Don't stay away this long again, okay?")
+            Mood.CRYING -> sh("Obi seni bekliyordu... hoş geldin!", "Obi was waiting for you... welcome back!")
+            Mood.HAPPY -> return
         }
-        runCatching { Toast.makeText(context, MascotVoice.style(text, WordSiegeMascotSkin.ORB, mood.ordinal), Toast.LENGTH_LONG).show() }
+        runCatching {
+            Toast.makeText(
+                context,
+                MascotVoice.style(text, WordSiegeMascotSkin.ORB, mood.ordinal),
+                Toast.LENGTH_LONG,
+            ).show()
+        }
     }
 }
 
-/** Alarm target: moves the launcher icon to the next mood while the player is away. */
+/** Alarm target: recalculates the correct launcher face from the last-open timestamp. */
 class MascotIconMoodReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val mood = intent.getStringExtra(MascotLauncherIcon.EXTRA_MOOD)
-            ?.let { runCatching { MascotLauncherIcon.Mood.valueOf(it) }.getOrNull() } ?: return
-        MascotLauncherIcon.onAlarm(context, mood)
+        MascotLauncherIcon.onAlarm(context)
     }
 }
