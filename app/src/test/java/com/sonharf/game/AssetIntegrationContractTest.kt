@@ -95,7 +95,7 @@ class AssetIntegrationContractTest {
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
         listOf(
-            "0xFFE0F3EF", "0xFFC3E7DF", "0xFFFFF0D3", "0xFFF6D596", "0xFF24304B", "0xFFFBEBB5",
+            "0xFFE0F3EF", "0xFFC3E7DF", "0xFFFFF0D3", "0xFFF6D596", "0xFFF3E8CD", "0xFFFBEBB5",
         ).forEach { assertTrue(online.contains(it)) }
         assertTrue(online.contains("WordSiegeWalnutIvory.tile"))
         assertTrue(online.contains("WordSiegeWalnutIvory.mine"))

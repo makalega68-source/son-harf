@@ -30,7 +30,7 @@ class WordSiegeReadabilityV35ContractTest {
     @Test fun bonusSquaresUseWordBoardColorsWhileOwnershipStaysGreenAndRed() {
         val online = read("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
-        listOf("0xFFE0F3EF", "0xFFC3E7DF", "0xFFFFF0D3", "0xFFF6D596", "0xFF24304B", "0xFFFBEBB5").forEach {
+        listOf("0xFFE0F3EF", "0xFFC3E7DF", "0xFFFFF0D3", "0xFFF6D596", "0xFFF3E8CD", "0xFFFBEBB5").forEach {
             assertTrue(online.contains(it))
             assertTrue(practice.contains(it))
         }
