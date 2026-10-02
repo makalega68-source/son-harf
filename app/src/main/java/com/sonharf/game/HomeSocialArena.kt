@@ -24,10 +24,10 @@ import com.sonharf.game.data.ProfileDto
 
 /** An entry into existing friends/invitations; never invents presence or sends an invitation. */
 @Composable
-internal fun HomeSocialArena(backend: OnlineGameBackend, incomingCount: Int, onSocial: () -> Unit) {
+internal fun HomeSocialArena(backend: OnlineGameBackend, incomingCount: Int, onSocial: () -> Unit, isPro: Boolean) {
     var friends by remember { mutableStateOf<List<ProfileDto>?>(null) }
-    LaunchedEffect(backend) {
-        friends = gameRequestResult { backend.getFriends().map { it.second } }.getOrNull()
+    LaunchedEffect(backend, isPro) {
+        friends = if (isPro) gameRequestResult { backend.getFriends().map { it.second } }.getOrNull() else null
     }
     val available = friends.orEmpty().filter { it.presenceStatus == "online" }
     Surface(shape = RoundedCornerShape(22.dp), color = Hf.Surface,

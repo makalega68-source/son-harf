@@ -364,7 +364,7 @@ private fun PremiumHomeScreen(
                 PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
             }
             item(key = "atelier_tournament") { HomeTournamentCard(onOpen = onWorkshop) }
-            item(key = "social_arena") { HomeSocialArena(backend, incomingCount, onSocial) }
+            item(key = "social_arena") { HomeSocialArena(backend, incomingCount, onSocial, isPro = profile?.isVip == true) }
             item(key = "home_daily_tasks") {
                 PremiumHomeDailyTasks(onClick = onCompete)
             }
