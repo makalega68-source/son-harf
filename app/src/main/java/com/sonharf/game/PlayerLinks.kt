@@ -14,9 +14,11 @@ internal object PlayerLinks {
         if(uri.scheme!="kelimetahti") return null
         if (uri.rawQuery != null || uri.rawFragment != null || uri.userInfo != null || uri.port != -1) return null
         val id=uri.path?.removePrefix("/")?.takeIf { it.isNotBlank() && "/" !in it } ?: return null
-        return when(uri.host) {
+        // URI.host rejects underscores although Android custom schemes accept them.
+        val kind = uri.rawAuthority ?: return null
+        return when(kind) {
             "invite" -> id.uppercase().takeIf { it.matches(Regex("[A-F0-9]{12}")) }?.let { PlayerTarget("invite",it) }
-            "siege","series","son_harf" -> id.takeIf { it.matches(Regex("[a-fA-F0-9]{8}(-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}")) }?.let { PlayerTarget(requireNotNull(uri.host),it) }
+            "siege","series","son_harf" -> id.takeIf { it.matches(Regex("[a-fA-F0-9]{8}(-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}")) }?.let { PlayerTarget(kind,it) }
             "activity" -> PlayerTarget("activity",null)
             else -> null
         }

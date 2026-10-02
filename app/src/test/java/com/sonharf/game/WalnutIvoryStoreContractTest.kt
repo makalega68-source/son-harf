@@ -26,7 +26,7 @@ class WalnutIvoryStoreContractTest {
         assertTrue(shop.contains("b.purchaseShopItem(item.id)"))
         // Buying only adds to the collection; wearing, changing and removing happen in the profile.
         assertTrue(!shop.contains("b.equipShopItem(item.id)"))
-        assertTrue(shop.contains("Profil > Koleksiyon'dan kullanabilirsin."))
+        assertTrue(shop.contains("if (owned || equipped) onCollection() else onAction()"))
         assertTrue(profile.contains("itemId != null && itemId !in owned"))
         assertTrue(profile.contains("it.id == WALNUT_IVORY_THEME_ID && it.id in owned"))
         assertTrue(profile.contains("backend.equipShopItem(itemId)"))
