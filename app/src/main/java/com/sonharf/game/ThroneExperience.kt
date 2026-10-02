@@ -112,6 +112,14 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
     Text(if(busy)sh("Hazırlanıyor…","Preparing…")else if(already)sh("Bu aşama oynandı · Sonrakini bekle","Stage played · Wait for the next")else if(!previous)sh("Önceki aşama tamamlanmalı","Complete the previous stage first")else sh("TURNUVAYA KATIL","JOIN TOURNAMENT"))
    }
    event?.myStages?.filter{it.finished}?.forEach{Text(sh("${it.stage}. aşama: +${it.xp} XP","Stage ${it.stage}: +${it.xp} XP"),color=SonHarfTheme.TextSecondary,fontSize=11.sp)}
+   if(event?.rows?.isNotEmpty()==true) {
+    Text(sh("TURNUVA SIRALAMASI · İLK 10", "TOURNAMENT RANKING · TOP 10"),color=SonHarfTheme.TextPrimary,fontSize=12.sp,fontWeight=FontWeight.Bold)
+    event.rows.take(10).forEach{row->Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+     Text("${row.rank}.",Modifier.width(28.dp),color=SonHarfTheme.PremiumGold,fontSize=12.sp)
+     Text(row.name,Modifier.weight(1f),color=SonHarfTheme.TextPrimary,fontSize=12.sp,maxLines=1)
+     Text("${row.stages}/3 · ${row.score}",color=SonHarfTheme.TextSecondary,fontSize=11.sp)
+    }}
+   }
   }
  }
 }
