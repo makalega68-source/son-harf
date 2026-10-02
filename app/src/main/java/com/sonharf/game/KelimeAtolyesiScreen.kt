@@ -518,6 +518,16 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             val current = state
+            if (mode == AtelierMode.LOBBY) {
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                    IconButton(onClick=onExit){Icon(Icons.Rounded.ArrowBack,null,tint=AtelierUi.Ink)}
+                    HfGameArt(R.drawable.kelime_atolyesi_game_icon,48.dp,48.dp,description=null)
+                    Column(Modifier.padding(start=8.dp)) {
+                        Text(sh("KELİME ATÖLYESİ","WORD WORKSHOP"),color=AtelierUi.Ink,fontSize=21.sp,fontWeight=FontWeight.Black)
+                        Text(sh("Harflerini seç. Kürsüyü ele geçir.","Choose your letters. Claim the podium."),color=AtelierUi.InkMuted,fontSize=11.sp)
+                    }
+                }
+            } else {
             AtelierTopBar(
                 seconds = secondsLeft,
                 score = current?.score ?: 0,
@@ -549,6 +559,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     }
                 },
             )
+            }
             when {
                 loadFailed -> AtelierLoadError { loadNonce += 1 }
                 mode == AtelierMode.LOBBY -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

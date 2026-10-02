@@ -284,23 +284,16 @@ internal fun PremiumLeagueProgress(profile: ProfileDto?, onLeague: () -> Unit) {
 
 @Composable
 internal fun PremiumOtherGames(onLastLetter: () -> Unit, onWorkshop: () -> Unit) {
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PremiumHomeModeCard(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-            title = "Son Harf",
-            subtitle = sh("Son harfle yeni kelime bul", "Find a word from the last letter"),
-            art = { HfGameArt(R.drawable.son_harf_game_icon, 86.dp, 86.dp, description = "Son Harf") },
-            colors = HfPanel.GreenSet,
-            onPlay = onLastLetter,
-        )
-        PremiumHomeModeCard(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-            title = sh("Kelime Atölyesi", "Word Workshop"),
-            subtitle = sh("7 harfle 3 görevi tamamla", "Finish 3 tasks with 7 letters"),
-            art = { HfGameArt(R.drawable.kelime_atolyesi_game_icon, 86.dp, 86.dp, description = "Kelime Atölyesi") },
-            colors = HfPanel.BlueSet,
-            onPlay = onWorkshop,
-        )
+    GameEventStage(onClick=onLastLetter) {
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            HfGameArt(R.drawable.son_harf_game_icon,76.dp,76.dp,description="Son Harf")
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                EventTag(sh("1v1 KELİME DÜELLOSU","1v1 WORD DUEL"))
+                Text("Son Harf",color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Black)
+                Text(sh("Zinciri sürdür. Rakibini geç.","Keep the chain. Outplay your rival."),color=Color.White.copy(alpha=.85f),fontSize=12.sp)
+            }
+        }
+        EventAction(sh("DÜELLOYA GİR","ENTER DUEL"),onLastLetter)
     }
 }
 
@@ -386,11 +379,8 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        // Live weekly podium uses the same material palette as the home profile card.
-        WeeklyPodiumArt(
-            style = WeeklyPodiumStyle.HOME,
-            seats = players.map { PodiumSeat(it.userId, it.name, "${it.xp} XP", it.avatarPath) },
-        )
+        GameWeeklyPodium(players)
+
         when {
             loading -> CircularProgressIndicator(Modifier.size(22.dp), color = Hf.GoldLight, strokeWidth = 2.dp)
             failed -> HfPill(onClick = { reloadKey += 1 }) {

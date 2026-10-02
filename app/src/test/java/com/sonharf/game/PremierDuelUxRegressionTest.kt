@@ -14,12 +14,12 @@ class PremierDuelUxRegressionTest {
         val onlineBackend = File("src/main/java/com/sonharf/game/data/OnlineGameBackend.kt").readText()
         val turnClock = File("src/main/java/com/sonharf/game/data/PremierTurnClock.kt").readText()
 
-        // Human profile photos use the rectangular runtime so purchased rectangular frames align.
+        // The arena keeps its compact wells; match-found cards use a circular well for cosmetic frames.
         assertTrue(screen.contains("ProfilePhotoAvatarRectWithGender("))
         assertTrue(screen.contains("width = 70.dp"))
         assertTrue(screen.contains("height = 54.dp"))
-        assertTrue(screen.contains("width = 84.dp"))
-        assertTrue(screen.contains("height = 64.dp"))
+        assertTrue(screen.contains("ProfilePhotoAvatarWithGender(avatar,gender,name,70.dp"))
+        assertTrue(screen.contains("botGenderForName(name)"))
         assertTrue(screen.contains("PremierBotAvatar(size = 58.dp"))
         assertTrue(screen.contains("PremierBotAvatar(size = 70.dp"))
         assertFalse(screen.contains("MageCatCompanion("))

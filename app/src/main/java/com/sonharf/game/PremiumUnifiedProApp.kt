@@ -355,10 +355,10 @@ private fun PremiumHomeScreen(
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onPro, onSettings)
             }
-            item(key = "atelier_tournament") { HomeTournamentCard(onOpen = onWorkshop) }
             item(key = "home_secondary_modes") {
                 PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
             }
+            item(key = "atelier_tournament") { HomeTournamentCard(onOpen = onWorkshop) }
             item(key = "home_daily_tasks") {
                 PremiumHomeDailyTasks(onClick = onCompete)
             }

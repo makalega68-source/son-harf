@@ -21,6 +21,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,8 +51,8 @@ private object CompUi {
     val Gold = Color(0xFFB08D45)
     val GoldSoft = Color(0xFFF1E4C3)
     val Edge = Color(0xFFCDB387)
-    val Night = Color(0xFF26324A)
-    val NightTop = Color(0xFF3B4C70)
+    val Night = Color(0xFF214938)
+    val NightTop = Color(0xFF3F8F61)
 }
 
 /**
@@ -102,6 +105,7 @@ internal fun AtelierLobby(
     onClaim: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(sh("YARIŞ SÜRENİ SEÇ","CHOOSE YOUR RACE"),color=CompUi.Ink,fontSize=14.sp,fontWeight=FontWeight.Black,letterSpacing=1.sp)
         // Round length for both the race and practice; each length has its own daily race and board.
         listOf(
             60 to sh("1 Dakika · 6 görev", "1 Minute · 6 tasks"),
@@ -114,35 +118,25 @@ internal fun AtelierLobby(
                     val selected = seconds == value
                     Box(
                         Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
-                            .background(if (selected) CompUi.GoldSoft else CompUi.Cream)
+                            .background(Brush.verticalGradient(if(selected)listOf(Color(0xFFFFE4A0),Color(0xFFEBC06B))else listOf(CompUi.Cream,Color(0xFFEEE5D4))))
                             .border(1.dp, if (selected) CompUi.Gold else CompUi.Edge, RoundedCornerShape(14.dp))
                             .clickable(enabled = !starting) { onSeconds(value) }.padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(label, color = CompUi.Ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                            Icon(if(selected)Icons.Rounded.Bolt else Icons.Rounded.Timer,null,tint=CompUi.Green,modifier=Modifier.size(23.dp))
+                            Text(label, color = CompUi.Ink, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                            Text(when(value){60->sh("HIZLI ISINMA","QUICK WARM-UP");120->sh("TAKTİK YARIŞ","TACTICAL RACE");180->sh("UZUN MÜCADELE","LONG CHALLENGE");else->sh("USTALIK KOŞUSU","MASTERY RUN")},color=CompUi.InkMuted,fontSize=8.sp,fontWeight=FontWeight.Bold)
+                        }
                     }
                 }
             }
         }
-        Text(
-            sh("3 ve 5 dakikalık yarışlarda hazırlık, strateji ve final var. İlerledikçe daha uzun kelimeler ve bitiş harfi görevleri gelir. Rakibini puanla geç.",
-                "The 3- and 5-minute races have warm-up, strategy and final phases. Later tasks ask for longer words and specific ending letters. Outscore your rival."),
-            color = CompUi.Ink.copy(alpha = .75f),
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        Text(sh("Kelime kur, görevleri tamamla, kombo yap. Her yeni görev setinde mücadele büyür.","Build words, complete tasks, chain combos. Each new task set raises the challenge."),color=CompUi.InkMuted,fontSize=12.sp,lineHeight=17.sp)
         val today = board?.today
         // Official daily race card.
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(Brush.verticalGradient(listOf(CompUi.NightTop, CompUi.Night)))
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(sh("GÜNLÜK YARIŞ", "DAILY RACE"), color = Color(0xFFFFD98A), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+        GameEventStage {
+            EventTag(sh("GÜNLÜK YARIŞ", "DAILY RACE"))
             Text(
                 sh("Bugün herkes aynı harflerle yarışıyor. Tek resmî hakkın var!", "Everyone races with the same letters today. You get one official try!"),
                 color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
@@ -181,6 +175,7 @@ internal fun AtelierLobby(
 
         OutlinedButton(
             onClick = onPractice,
+            enabled = !starting,
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(14.dp),
             border = BorderStroke(1.dp, CompUi.Edge),

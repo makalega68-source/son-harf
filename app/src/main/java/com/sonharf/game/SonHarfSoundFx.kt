@@ -8,19 +8,15 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 
-/**
- * File-backed game SFX palette.
- *
- * The previous procedural click/noise generator was intentionally removed because it produced
- * harsh synthetic beeps on some Android devices. These effects are pre-rendered 22.05 kHz WAV
- * assets built from warm electric-piano voices, with soft attacks and a short room tail,
- * tuned to one D major pentatonic palette
- * so every cue sounds like part of the same instrument set. Played through SoundPool.
+/** Original 44.1 kHz wood/ceramic contacts, plucked rewards and short scene swishes.
+ * Rendered offline, kept under a conservative master ceiling; SoundPool playback only.
  */
 object SonHarfSoundFx {
     @Volatile private var enabled = true
     private var pool: SoundPool? = null
-    private val sounds = mutableMapOf<Int, Int>()
+    private val sounds = java.util.concurrent.ConcurrentHashMap<Int, Int>()
+    private val ready = java.util.concurrent.ConcurrentHashMap.newKeySet<Int>()
+    private var lastKeyAt = 0L
     private var appContext: Context? = null
 
     fun init(context: Context) {
@@ -34,6 +30,9 @@ object SonHarfSoundFx {
             .setMaxStreams(4)
             .setAudioAttributes(attrs)
             .build()
+        pool!!.setOnLoadCompleteListener { source, id, status ->
+            if (source === pool && status == 0) ready.add(id)
+        }
         listOf(
             R.raw.sfx_key_click,
             R.raw.sfx_ui_tap,
@@ -59,12 +58,19 @@ object SonHarfSoundFx {
         runCatching { pool?.release() }
         pool = null
         sounds.clear()
+        ready.clear()
+        lastKeyAt = 0L
     }
 
     fun setEnabled(value: Boolean) { enabled = value }
 
     fun tap() = play(R.raw.sfx_ui_tap, .18f)
-    fun typingClick() { buzz(10L, 40); play(R.raw.sfx_key_click, .12f) }
+    fun typingClick() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastKeyAt < 35L) return
+        lastKeyAt = now
+        buzz(10L, 40); play(R.raw.sfx_key_click, .28f)
+    }
     fun scoreTick() = play(R.raw.sfx_ui_tap, .16f, 1.02f)
     fun leadChange() = play(R.raw.sfx_word_accepted, .28f, 1.02f)
     fun missionComplete() = play(R.raw.sfx_bonus, .34f)
@@ -90,11 +96,11 @@ object SonHarfSoundFx {
     fun fireworks() = play(R.raw.sfx_victory, .28f)
 
     /** Kelime Atölyesi uses a deliberately quieter, softer micro-feedback palette. */
-    fun puzzleKey() { buzz(10L, 40); play(R.raw.sfx_ui_tap, .045f, 1.16f) }
-    fun puzzleTap() = play(R.raw.sfx_ui_tap, .065f, 1.04f)
-    fun puzzleHint() = play(R.raw.sfx_soft_notify, .075f, 1.08f)
-    fun puzzleError() { buzz(50L, 140); play(R.raw.sfx_soft_notify, .070f, .88f) }
-    fun puzzleSuccess() { buzz(28L, 110); play(R.raw.sfx_word_accepted, .14f, 1.04f) }
+    fun puzzleKey() = typingClick()
+    fun puzzleTap() = play(R.raw.sfx_ui_tap, .22f)
+    fun puzzleHint() = play(R.raw.sfx_soft_notify, .25f)
+    fun puzzleError() { buzz(50L, 140); play(R.raw.sfx_warning, .24f) }
+    fun puzzleSuccess() { buzz(28L, 110); play(R.raw.sfx_word_accepted, .32f) }
 
     /** A short vibration for a game cue; follows the Settings switch, independent of sound. */
     private fun buzz(ms: Long, amplitude: Int) {
@@ -119,6 +125,7 @@ object SonHarfSoundFx {
         if (!enabled) return
         val soundPool = pool ?: return
         val soundId = sounds[resId] ?: return
+        if (soundId !in ready) return
         runCatching {
             soundPool.play(
                 soundId,
