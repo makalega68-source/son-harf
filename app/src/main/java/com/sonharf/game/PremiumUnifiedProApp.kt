@@ -356,6 +356,9 @@ private fun PremiumHomeScreen(
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onPro, onSettings)
             }
             item(key = "ongoing_games") { HomeSessions(backend, onResume, onPrimary) }
+            item(key = "home_secondary_modes") {
+                PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
+            }
             item(key = "league_progress") { HomeLeague(backend, onCompete) }
             item(key = "activity_events") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -372,7 +375,7 @@ private fun PremiumHomeScreen(
                 }
             }
             if (WordSiegeMascotOwnership.hasAny) item(key = "mascot_stage") {
-                Box(Modifier.fillMaxWidth().height(194.dp).clipToBounds()) {
+                Box(Modifier.fillMaxWidth().height(112.dp).clipToBounds()) {
                     WordSiegeMascotCompanion(
                         anchors = listOf(Offset(.75f, .55f), Offset(.25f, .55f)), mascotSize = 83.dp,
                         ambientScenes = true, moveId = null, lastMoveMine = false, playerTurn = false,
@@ -381,20 +384,12 @@ private fun PremiumHomeScreen(
                     )
                 }
             }
-            item(key = "home_secondary_modes") {
-                PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
-            }
             item(key = "atelier_tournament") { HomeTournamentCard(onOpen = onWorkshop) }
             item(key = "social_arena") { HomeSocialArena(backend, incomingCount, onSocial, isPro = profile?.isVip == true) }
             item(key = "home_daily_tasks") {
                 PremiumHomeDailyTasks(onClick = onCompete)
             }
-            item(key = "invite_friends") {
-                InviteFriendsCard(playerName = profile?.displayName)
-            }
-            item(key = "daily_objective") {
-                PremiumDailyObjective(onClick = onCompete)
-            }
+
         }
     }
 }

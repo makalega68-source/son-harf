@@ -92,11 +92,12 @@ fun StableV1App() {
 
     // Players who skipped the language screen (e.g. an update over an older install) still get
     // the classic mascot's welcome once, on their first entry.
-    var mascotWelcomePending by remember { mutableStateOf(!FirstRunLanguagePreferences.mascotWelcomeSeen(context)) }
+    var mascotWelcomePending by remember { mutableStateOf(false) }
     var comebackGift by remember { mutableStateOf<ComebackGiftDto?>(null) }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
         // Every entry counts as a visit; a player back after days away gets Obi's gift.
+        FirstRunLanguagePreferences.markMascotWelcomeSeen(context)
         comebackGift = runCatching { PresenceBackend.touch() }.getOrNull()?.takeIf { it.gift > 0 }
     }
     LaunchedEffect(mascotWelcomePending) {
@@ -112,12 +113,6 @@ fun StableV1App() {
             introDone = false
             authenticated = false
         })
-        if (mascotWelcomePending) {
-            MascotWelcomeOverlay(onDone = {
-                FirstRunLanguagePreferences.markMascotWelcomeSeen(context)
-                mascotWelcomePending = false
-            })
-        }
         val gift = comebackGift
         if (gift != null && !mascotWelcomePending) {
             ComebackGiftDialog(gift) { comebackGift = null }
@@ -147,51 +142,6 @@ private fun ComebackGiftDialog(gift: ComebackGiftDto, onDismiss: () -> Unit) {
 }
 
 /** A one-time greeting from the classic mascot over the home screen; tap anywhere to continue. */
-@Composable
-private fun MascotWelcomeOverlay(onDone: () -> Unit) {
-    val english = SonHarfUiState.language == "en"
-    LaunchedEffect(Unit) {
-        // It says hello, does its little show and then lets the player in by itself.
-        kotlinx.coroutines.delay(9_000L)
-        onDone()
-    }
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color(0xCC0B1530))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onDone,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.fillMaxWidth().height(320.dp)) {
-                WordSiegeMascotCompanion(
-                    anchors = listOf(Offset(.5f, .6f)),
-                    mascotSize = 169.dp,
-                        ambientScenes = true,
-                    moveId = null,
-                    lastMoveMine = false,
-                    playerTurn = false,
-                    modifier = Modifier.matchParentSize(),
-                    greet = false,
-                    greeting = if (english) "Hi! I'm Obi 👋\nWelcome to Word Board!" else "Merhaba! Ben Obi 👋\nKelime Tahtı'na hoş geldin!",
-                    requireOwnership = false,
-                    forcedSkin = WordSiegeMascotSkin.ORB,
-                )
-            }
-            Text(
-                text = if (english) "Tap to start" else "Başlamak için dokun",
-                color = Color.White.copy(alpha = .78f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
 /**
  * Keeps the existing authentication flow intact while making the oversized entry controls
  * slightly more compact on phones. The language selector is intentionally unaffected.

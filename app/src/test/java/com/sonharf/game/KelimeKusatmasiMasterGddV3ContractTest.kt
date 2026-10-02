@@ -20,7 +20,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
             "0xFF6B7A8C", // Muted
         ).forEach { token -> assertTrue("Missing current theme palette token $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = alternateDark"))
         assertTrue(theme.contains("val ActionOrange: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
         assertTrue(theme.contains("val HeroMiddle: Color get()"))

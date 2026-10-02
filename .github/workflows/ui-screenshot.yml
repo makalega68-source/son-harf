@@ -75,6 +75,7 @@ jobs:
             sleep 8
             adb exec-out screencap -p > Ceviz-Fildisi-Android.png
             for stage in home duel search versus throne atelier; do adb shell am force-stop com.sonharf.game; adb logcat -c; adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es game_stage "$stage" || exit 1; sleep 3; adb exec-out screencap -p > "Game-${stage}-Android.png" || exit 1; adb logcat -d -s AndroidRuntime:E > "Game-${stage}-runtime.log"; if grep -q "FATAL EXCEPTION" "Game-${stage}-runtime.log"; then cat "Game-${stage}-runtime.log"; exit 1; fi; done
+            for stage in welcome-light welcome-dark store-light store-dark controls-light controls-dark home-dark; do adb shell am force-stop com.sonharf.game; adb logcat -c; adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage "$stage" || exit 1; sleep 4; adb exec-out screencap -p > "Review-${stage}-Android.png" || exit 1; adb logcat -d -s AndroidRuntime:E > "Review-${stage}-runtime.log"; if grep -q "FATAL EXCEPTION" "Review-${stage}-runtime.log"; then cat "Review-${stage}-runtime.log"; exit 1; fi; done
       - name: Validate frame and APK were produced by this checkout
         run: |
           test -s Ceviz-Fildisi-Android.png
@@ -91,6 +92,9 @@ jobs:
             Ceviz-Fildisi-Android.png
             Game-*-Android.png
             Game-*-runtime.log
+            Review-*-Android.png
+            Review-*-runtime.log
+            app/build/test-results/testDebugUnitTest/*.xml
           if-no-files-found: error
           retention-days: 7
 

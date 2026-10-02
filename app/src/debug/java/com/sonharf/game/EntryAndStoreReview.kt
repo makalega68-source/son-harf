@@ -1,0 +1,60 @@
+package com.sonharf.game
+
+import android.widget.ImageView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.sonharf.game.data.ShopItemDto
+
+/** Debug-only verification of production entry, navigation, product cards and adaptive icons. */
+@Composable
+internal fun EntryAndStoreReview(stage: String) {
+    val scheme = if (SonHarfTheme.IsDark) darkColorScheme(
+        primary = Hf.Green, background = Hf.Ground, surface = Hf.Surface, onSurface = Hf.Text,
+        secondaryContainer = SonHarfTheme.PrimarySoft, onSecondaryContainer = Hf.Text,
+    ) else lightColorScheme(primary = Hf.Green, background = Hf.Ground, surface = Hf.Surface, onSurface = Hf.Text)
+    MaterialTheme(colorScheme = scheme) {
+        when {
+            stage.startsWith("welcome") -> IntroWelcomeScreen {}
+            stage.startsWith("store") -> EconomyShopScreen(onCollection = {}, onPro = {})
+            stage == "home-dark" -> PremiumUnifiedProApp(onSignedOut = {})
+            else -> Column(Modifier.fillMaxSize().background(Hf.Ground).statusBarsPadding().navigationBarsPadding()
+                .verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("KELİME TAHTI", color = Hf.Text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HomeSessionFilter("Tümü 3", false) {}
+                    HomeSessionFilter("Sıra sende 2", true) {}
+                    HomeSessionFilter("Rakip 1", false) {}
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    VerifiedStoreProductCard(ShopItemDto("theme_black", "game_theme", "Kara Taht", "Black Throne", diamondPrice = 300),
+                        false, false, false, true, 200, 20, modifier = Modifier.weight(1f).height(280.dp)) {}
+                    VerifiedStoreProductCard(ShopItemDto("keyboard_premium_white", "keyboard_theme", "Beyaz Klavye", "White Keyboard", diamondPrice = 250),
+                        true, true, false, true, modifier = Modifier.weight(1f).height(280.dp)) {}
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    listOf(R.mipmap.ic_kelime_tahti, R.mipmap.ic_kelime_tahti_mascot_happy).forEach { res ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            AndroidView(factory = { context -> ImageView(context).apply {
+                                setImageDrawable(context.getDrawable(res)); scaleType = ImageView.ScaleType.FIT_CENTER
+                            } }, modifier = Modifier.size(126.dp))
+                            Text(if (res == R.mipmap.ic_kelime_tahti) "APK" else "ANA EKRAN", color = Hf.Text, fontSize = 12.sp)
+                        }
+                    }
+                }
+                // Original rig and artwork, never the reverted green redesign.
+                WordSiegeMascot(moveId = null, lastMoveMine = false, pendingCells = emptyList(), playerTurn = false, requestedEmotion = WordSiegeMascotEmotion.HAPPY, modifier = Modifier.size(160.dp))
+            }
+        }
+    }
+}

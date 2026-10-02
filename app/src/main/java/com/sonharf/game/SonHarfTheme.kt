@@ -58,7 +58,7 @@ internal object SonHarfTheme {
     private val alternateDark: Boolean get() = SonHarfCosmetics.darkArenaTheme
 
     // Light board-game UI (theme D): light ground, dark text, green actions.
-    val IsDark: Boolean get() = false
+    val IsDark: Boolean get() = alternateDark
 
     // Foundation layers.
     val Background: Color get() = KelimeKusatmasiPalette.MonsterBlack
@@ -75,7 +75,7 @@ internal object SonHarfTheme {
 
     // Accent family: player green for actions, champagne gold for detail and prestige.
     val Primary: Color get() = KelimeKusatmasiPalette.MonsterLime
-    val PrimarySoft: Color get() = Color(0xFFE1F2E3)
+    val PrimarySoft: Color get() = if (alternateDark) Color(0xFF213D2C) else Color(0xFFE1F2E3)
     val SoftBlue: Color get() = KelimeKusatmasiPalette.Champagne
     val Turquoise: Color get() = KelimeKusatmasiPalette.PlayerGreenLight
     val ActionOrange: Color get() = KelimeKusatmasiPalette.MonsterOrange
@@ -89,11 +89,11 @@ internal object SonHarfTheme {
 
     // Semantic states.
     val Success: Color get() = KelimeKusatmasiPalette.PlayerGreen
-    val SuccessSoft: Color get() = Color(0xFFE1F2E3)
+    val SuccessSoft: Color get() = PrimarySoft
     val Error: Color get() = KelimeKusatmasiPalette.RivalRed
     val Warning: Color get() = KelimeKusatmasiPalette.Champagne
-    val DisabledBackground: Color get() = Color(0xFFE3E9EF)
-    val DisabledContent: Color get() = KelimeKusatmasiPalette.Disabled
+    val DisabledBackground: Color get() = if (alternateDark) Color(0xFF28303A) else Color(0xFFE3E9EF)
+    val DisabledContent: Color get() = if (alternateDark) Color(0xFF87939F) else Color(0xFF657483)
 
     val OnPrimary: Color get() = KelimeKusatmasiPalette.Ivory
     val OnSecondary: Color get() = KelimeKusatmasiPalette.Ivory

@@ -172,8 +172,8 @@ private fun HomeSiegeHero(onSiege: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         HfGameArt(
             R.drawable.kelime_tahti_brand_logo,
-            320.dp,
-            170.dp,
+            280.dp,
+            136.dp,
             modifier = Modifier.clickable(onClick = onSiege).graphicsLayer { scaleX = breathe; scaleY = breathe },
             description = "KELİME TAHTI",
         )

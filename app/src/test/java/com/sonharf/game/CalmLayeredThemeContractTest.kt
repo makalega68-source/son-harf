@@ -38,7 +38,7 @@ class CalmLayeredThemeContractTest {
         assertTrue(theme.contains("Color(0xFFD0514A)"))
         assertTrue(theme.contains("Color(0xFFE0A82E)"))
         assertTrue(theme.contains("Color(0xFFF7E3A6)"))
-        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = alternateDark"))
     }
 
     @Test

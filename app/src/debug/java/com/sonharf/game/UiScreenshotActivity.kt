@@ -34,8 +34,11 @@ class UiScreenshotActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SonHarfUiState.language = "tr"
         SonHarfCosmetics.restore(this)
+        if (intent.hasExtra("review_stage")) SonHarfCosmetics.gameThemeId =
+            if (intent.getStringExtra("review_stage").orEmpty().contains("dark")) "theme_black" else null
         setContent {
-            if (intent.hasExtra("game_stage")) GameStageFixture(intent.getStringExtra("game_stage").orEmpty())
+            if (intent.hasExtra("review_stage")) EntryAndStoreReview(intent.getStringExtra("review_stage").orEmpty())
+            else if (intent.hasExtra("game_stage")) GameStageFixture(intent.getStringExtra("game_stage").orEmpty())
             else if (intent.getBooleanExtra("walnut_ivory_board", false)) WalnutIvoryScreenshotFixture()
             else PremiumUnifiedProApp(onSignedOut = {})
         }

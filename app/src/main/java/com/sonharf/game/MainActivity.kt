@@ -281,12 +281,14 @@ internal fun LaunchSplashFrame() {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color(0xFFE6ECF2))
+            .background(SonHarfTheme.Background)
             .semantics { contentDescription = sh("Kelime Tahtı hazırlanıyor…", "Preparing Word Throne…") },
         contentAlignment = Alignment.Center,
     ) {
-        if (slow) {
-            CircularProgressIndicator(
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.kelime_tahti_brand_logo),
+                "Kelime Tahtı", modifier = Modifier.size(240.dp, 140.dp))
+            if (slow) CircularProgressIndicator(
                 modifier = Modifier.size(28.dp),
                 color = Color(0xFF9AA8B8),
                 strokeWidth = 2.5.dp,

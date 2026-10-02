@@ -55,7 +55,7 @@ internal object Hf {
     val Ivory: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFBF5E8) else Color(0xFFFFFDF7)
     val Gold = Color(0xFFE0A82E)
     val GoldLight = Color(0xFFF2C14E)
-    val GoldDeep = Color(0xFFB07F1E)
+    val GoldDeep: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFF2C14E) else Color(0xFFB07F1E)
     val Green = Color(0xFF3E9F4D)
     val GreenLight = Color(0xFF52B360)
     val GreenPressed = Color(0xFF2B7537)
@@ -382,11 +382,11 @@ internal fun HfChip(label: String, selected: Boolean, onClick: () -> Unit, modif
         onClick = onClick,
         modifier = modifier.heightIn(min = 44.dp),
         shape = Hf.PillShape,
-        color = if (selected) Hf.Green else Hf.Ground,
+        color = if (selected) Hf.GreenPressed else Hf.Ground,
         border = BorderStroke(1.5.dp, if (selected) Hf.GreenLight else Hf.Gold),
     ) {
         Box(Modifier.padding(horizontal = 18.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
-            Text(label, color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(label, color = if (selected) Hf.OnAccent else Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
 }

@@ -23,7 +23,7 @@ class UnifiedThemeSourceContractTest {
         assertFalse(unified.contains("MageCatDirector.onLobbyGreet()"))
         assertFalse(unified.contains("com.sonharf.game.mascot"))
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
-        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = alternateDark"))
         assertTrue(theme.contains("val SecondaryAccent: Color get()"))
         assertTrue(theme.contains("val NavigationSurface: Color get()"))
         assertTrue(theme.contains("val GameSurface: Color get()"))

@@ -56,27 +56,42 @@ fun EconomyShopScreen(
     Column(Modifier.fillMaxSize().background(SonHarfBg)) {
         StoreTitleBar(balance = balance, onBack = onBack)
         HorizontalDivider(color = Hf.Gold.copy(alpha = .18f))
-        // Son Coin cosmetics are grouped by what they change; bought items are equipped from
-        // Profile > Koleksiyonum. Opening the store without a tab lands on Obi's hats.
-        val shown = when (tab) {
-            2, 4, 5, 6, 7, 3, 8 -> tab
-            else -> 5
+        // Keep every category visible; related products share one group instead of a hidden strip.
+        val shown = if (tab in setOf(0, 2, 3, 4, 5, 6, 7, 8)) tab else 0
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            TextButton(onClick = onCollection) {
+                Icon(Icons.Rounded.Checkroom, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(sh("Koleksiyonum", "My collection"), color = Hf.Text, fontSize = 12.sp)
+            }
+            TextButton(onClick = { tab = 8 }) {
+                Icon(Icons.Rounded.Redeem, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(sh("Ödüller", "Rewards"), color = Hf.Text, fontSize = 12.sp)
+            }
         }
-        val categories = listOf(
-            5 to sh("Obi & Zafer", "Obi & Victory"),
-            7 to sh("Çerçeveler", "Frames"),
-            2 to sh("Tahta & Tema", "Board & Theme"),
-            6 to sh("Klavye & İsim", "Keys & Name"),
-            4 to sh("Maskotlar", "Mascots"),
-            3 to sh("PRO Üyelik", "PRO Membership"),
-            8 to sh("🎬 Video Ödülleri", "🎬 Video Rewards"),
-        )
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        val selectedGroup = when (shown) { 4 -> 5; 6 -> 2; else -> shown }
+        val categories = listOf(0 to sh("Vitrin", "Featured"), 2 to sh("Stil", "Style"),
+            5 to "Obi", 7 to sh("Çerçeve", "Frames"), 3 to "PRO")
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             categories.forEach { (index, label) ->
-                HfChip(label = label, selected = shown == index, onClick = { tab = index; kindFilter = null })
+                Surface(onClick = { tab = index; kindFilter = null }, modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                    shape = RoundedCornerShape(12.dp), color = if (selectedGroup == index) Hf.GreenPressed else Hf.Surface,
+                    border = BorderStroke(1.dp, if (selectedGroup == index) Hf.GreenLight else Hf.Border)) {
+                    Box(Modifier.padding(horizontal = 4.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
+                        Text(label, color = if (selectedGroup == index) Hf.OnAccent else Hf.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    }
+                }
+            }
+        }
+        if (shown in setOf(2, 6, 4, 5)) {
+            val choices = if (shown in setOf(2, 6)) listOf(2 to sh("Tahta & Tema", "Board & Theme"), 6 to sh("Klavye & İsim", "Keys & Name"))
+                else listOf(5 to sh("Aksesuar & Zafer", "Hats & Victory"), 4 to sh("Maskotlar", "Mascots"))
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                choices.forEach { (index, label) -> FilterChip(selected = shown == index, onClick = { tab = index },
+                    colors = FilterChipDefaults.filterChipColors(containerColor = Hf.Surface, labelColor = Hf.TextMuted,
+                        selectedContainerColor = SonHarfTheme.PrimarySoft, selectedLabelColor = Hf.Text),
+                    label = { Text(label, fontSize = 12.sp) }) }
             }
         }
         Box(Modifier.weight(1f)) {
@@ -250,7 +265,7 @@ private fun EconomyCatalogScreen(
         items.firstOrNull { it.kind == "name_style" },
     )
     val filtered = when (section) {
-        0 -> (featuredFirst + items).distinctBy { it.id }
+        0 -> (featuredFirst + items).distinctBy { it.id }.take(8)
         2 -> items.filter { it.kind == "game_theme" || it.kind == "board_skin" }.sortedByDescending { it.id == WALNUT_IVORY_THEME_ID }
         5 -> items.filter { it.kind == "mascot_hat" || it.kind == "victory_effect" }
         6 -> items.filter { it.kind == "keyboard_theme" || it.kind == "name_style" }
@@ -265,6 +280,14 @@ private fun EconomyCatalogScreen(
     ) {
         if (section == 0) {
             item { StoreProBanner(profile?.isVip == true) { onSection(3) } }
+            item {
+                HfSecondaryButton(
+                    sh("Son Coin al", "Get Son Coin"),
+                    onClick = { showCoins = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingChevron = true,
+                )
+            }
         }
 
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Gold, trackColor = Hf.Surface) }
@@ -283,7 +306,7 @@ private fun EconomyCatalogScreen(
             }
         }
 
-        items(filtered.chunked(3), key = { row -> row.joinToString { it.id } }) { row ->
+        items(filtered.chunked(2), key = { row -> row.joinToString { it.id } }) { row ->
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { item ->
                     val mine = item.id in owned
@@ -293,12 +316,12 @@ private fun EconomyCatalogScreen(
                         item = item,
                         owned = mine,
                         equipped = active,
-                        busy = busy != null || loading,
+                        busy = busy != null || loading || (playKeyboard && !mine && keyboardOffers[item.id]?.oneTimePurchaseOfferDetails == null),
                         proActive = profile?.isVip == true,
                         balance = profile?.diamonds,
                         wins = profile?.wins,
                         playPrice = if (playKeyboard) {
-                            keyboardOffers[item.id]?.oneTimePurchaseOfferDetails?.formattedPrice ?: com.sonharf.game.billing.ProductCatalog.KEYBOARD_LIST_PRICE_TRY
+                            keyboardOffers[item.id]?.oneTimePurchaseOfferDetails?.formattedPrice ?: sh("PLAY’DE YOK", "NOT ON PLAY")
                         } else null,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     ) {
@@ -351,19 +374,11 @@ private fun EconomyCatalogScreen(
                         }
                     }
                 }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
 
         if (section == 0) {
-            item {
-                HfSecondaryButton(
-                    sh("Son Coin al", "Get Son Coin"),
-                    onClick = { showCoins = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingChevron = true,
-                )
-            }
             item {
                 StoreDailyRewardCard(storefront, busy != null || loading) {
                     val b = backend
@@ -474,7 +489,7 @@ private fun StoreProBanner(active: Boolean, onClick: () -> Unit) {
 
 /** 158×198 ivory product card: preview, name, champagne rule, price chip or owned pill. */
 @Composable
-private fun VerifiedStoreProductCard(
+internal fun VerifiedStoreProductCard(
     item: ShopItemDto,
     owned: Boolean,
     equipped: Boolean,
@@ -492,7 +507,7 @@ private fun VerifiedStoreProductCard(
     val goal = StoreGoalProgress.of(item.diamondPrice, balance, item.requiredWins, wins)
     val tierColor = when (tier) {
         StoreTier.STARTER, StoreTier.COMMON -> Hf.TextMuted
-        StoreTier.RARE -> Color(0xFF2F7FC1)
+        StoreTier.RARE -> Color(0xFF3E9F4D)
         StoreTier.EPIC -> Color(0xFF8A4FC7)
         StoreTier.LEGENDARY, StoreTier.PRESTIGE -> Hf.GoldDeep
     }
@@ -510,8 +525,8 @@ private fun VerifiedStoreProductCard(
         Box {
             // Same order on every card: picture, name, one short line, then the price at the bottom,
             // all centred so neighbouring cards line up.
-            Column(Modifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                StoreProductPreview(item, Modifier.fillMaxWidth().height(72.dp))
+            Column(Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                StoreProductPreview(item, Modifier.fillMaxWidth().height(102.dp))
                 Spacer(Modifier.height(4.dp))
                 Text(tier.label, color = tierColor, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp, maxLines = 1)
                 Spacer(Modifier.height(2.dp))

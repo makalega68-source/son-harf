@@ -95,12 +95,13 @@ internal fun HomeSessions(backend: OnlineGameBackend, onOpen: (WordSiegeGameDto)
                 Text(sh("OYUNLARIM", "MY GAMES"), Modifier.weight(1f), color = Hf.Text, fontWeight = FontWeight.Black, fontSize = 16.sp)
                 TextButton(onClick = onAll) { Text(sh("TÜMÜ", "ALL"), color = Hf.Green, fontSize = 11.sp) }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (games.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(null, HomeTurn.YOURS, HomeTurn.RIVAL).forEach { turn ->
                     val label = when (turn) { HomeTurn.YOURS -> sh("Sıra sende", "Your turn"); HomeTurn.RIVAL -> sh("Rakibin sırası", "Their turn"); else -> sh("Tümü", "All") }
-                    FilterChip(selected = filter == turn, onClick = { filter = turn }, label = {
-                        Text("$label ${games.count { turn == null || homeTurn(it, me) == turn }}", fontSize = 10.sp)
-                    })
+                    HomeSessionFilter(
+                        "$label ${games.count { turn == null || homeTurn(it, me) == turn }}",
+                        selected = filter == turn, onClick = { filter = turn },
+                    )
                 }
             }
             if (!loaded) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Green)
@@ -109,7 +110,7 @@ internal fun HomeSessions(backend: OnlineGameBackend, onOpen: (WordSiegeGameDto)
                 TextButton(onClick = { retry++ }) { Text(sh("YENİLE", "RETRY"), fontSize = 10.sp) }
             }
             val shown = games.filter { filter == null || homeTurn(it, me) == filter }
-            if (loaded && shown.isEmpty() && !failed) Text(sh("Bu bölümde bekleyen maç yok", "No games in this section"), color = Hf.TextMuted, fontSize = 12.sp)
+            if (loaded && shown.isEmpty() && !failed) Text(sh("Devam eden maçın yok", "No ongoing games"), color = Hf.TextMuted, fontSize = 12.sp)
             shown.take(5).forEach { game ->
                 val id = if (game.playerOneId == me) game.playerTwoId else game.playerOneId
                 val rival = id?.let(profiles::get)
@@ -164,7 +165,7 @@ internal fun HomeLeague(backend: OnlineGameBackend, onOpen: (() -> Unit)? = null
                 Text(sh("Sezon bitişi: ", "Season ends: ") + socialDate(s.endsAt), color = Hf.TextMuted, fontSize = 11.sp)
                 val available = rewards?.filter { it.rewardEligible && !it.rewardClaimed }.orEmpty()
                 Text(if (available.isNotEmpty()) sh("Sezon ödülü: ${available.sumOf { it.rewardCoins }} Son Coin alınabilir", "Season reward: ${available.sumOf { it.rewardCoins }} Son Coins available")
-                    else sh("Sezon ödülü final sıralamasına göre belirlenir", "Season reward follows your final ranking"), color = Hf.Gold, fontSize = 11.sp)
+                    else sh("Ödül: sezon sıralaması", "Reward: season ranking"), color = Hf.Gold, fontSize = 11.sp)
             }
             rewards.orEmpty().filter { it.rewardEligible && !it.rewardClaimed }.forEach { reward ->
                 TextButton(enabled = !claiming, onClick = {
@@ -186,4 +187,13 @@ internal fun HomeLeague(backend: OnlineGameBackend, onOpen: (() -> Unit)? = null
             else if (season == null) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Green)
         }
     }
+}
+
+@Composable
+internal fun HomeSessionFilter(label: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(selected = selected, onClick = onClick,
+        colors = FilterChipDefaults.filterChipColors(containerColor = Hf.Surface,
+            labelColor = Hf.TextMuted, selectedContainerColor = SonHarfTheme.PrimarySoft,
+            selectedLabelColor = Hf.Text),
+        label = { Text(label, fontSize = 11.sp) })
 }

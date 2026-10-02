@@ -20,17 +20,15 @@ class FirstRunLanguageSelectorContractTest {
         assertTrue(shell.contains("introDone = false\n            authenticated = false"))
         assertTrue(!shell.contains("private fun FirstRunLanguageScreen("))
 
-        assertTrue(intro.contains("R.raw.intro_welcome"))
-        assertTrue(intro.contains("Dilini seç / Choose your language"))
+        assertTrue(!intro.contains("ChromaKeyVideo"))
+        assertTrue(!intro.contains("intro_welcome"))
+        assertTrue(intro.contains("onContinue(selected)"))
         assertTrue(intro.contains("TÜRKÇE"))
         assertTrue(intro.contains("ENGLISH"))
-        // Logo 40% smaller than on the home screen, dropping in near the end.
-        assertTrue(intro.contains("private val IntroLogoWidth = (320 * .6f).dp"))
-        assertTrue(intro.contains("player.positionMs >= duration - INTRO_LOGO_LEAD_MS"))
         assertTrue(prefs.contains("language_complete"))
         assertTrue(prefs.contains("SonHarfPreferences.setLanguage"))
-        val raw = listOf(File("src/main/res/raw/intro_welcome.mp4"), File("app/src/main/res/raw/intro_welcome.mp4")).first { it.exists() }
-        assertTrue(raw.length() > 1_000_000L)
+        assertTrue(!projectFile("app/src/main/res/raw").resolve("intro_welcome.mp4").exists())
+
     }
 
     private fun projectFile(path: String): File {

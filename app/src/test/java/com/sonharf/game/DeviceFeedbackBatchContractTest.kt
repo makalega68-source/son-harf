@@ -35,12 +35,11 @@ class DeviceFeedbackBatchContractTest {
         assertTrue(ui.contains("horizontalAlignment = Alignment.CenterHorizontally,\n        ) {\n            Text(\n                label,"))
     }
 
-    @Test fun introClipIsSmallerWithAnEdgeColourFill() {
+    @Test fun welcomeDoesNotBlockEntryOnAMediaClock() {
         val intro = repoFile("app/src/main/java/com/sonharf/game/IntroWelcome.kt")
-        assertTrue(intro.contains("scale = INTRO_VIDEO_SCALE,"))
-        assertTrue(intro.contains("matte = true,"))
-        val video = repoFile("app/src/main/java/com/sonharf/game/ChromaKeyVideo.kt")
-        assertTrue(video.contains("private fun sampleMatte(sx: Float, sy: Float)"))
+        assertFalse(intro.contains("ChromaKeyVideo"))
+        assertFalse(intro.contains("delay("))
+        assertTrue(intro.contains("Button(onClick = { onContinue(selected) }"))
     }
 
     private fun repoFile(path: String): String {
