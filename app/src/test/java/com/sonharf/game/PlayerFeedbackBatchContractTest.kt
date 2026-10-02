@@ -15,8 +15,8 @@ class PlayerFeedbackBatchContractTest {
         assertTrue(duel.contains("val BackgroundTop: Color get() = if (SonHarfCosmetics.darkArenaTheme)"))
         assertTrue(duel.contains("val Tile: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F2025)"))
         // Matchmaking text follows the theme, so its background must too.
-        assertTrue(duel.contains(".background(Brush.verticalGradient(listOf(Hf.Surface, Hf.Ground)))"))
-        assertTrue(duel.contains("HfTitleRule(pt(language, \"Son Harf\", \"Last Letter\")"))
+        assertTrue(duel.substringAfter("internal fun PremierSearching(").substringBefore("internal fun PremierVsScreen(").contains(".background(SonHarfTheme.Background)"))
+        assertTrue(duel.contains("HfGameArt(R.drawable.son_harf_game_icon"))
     }
 
     @Test fun paintedKeyboardKeysStayInsideTheirFrame() {
@@ -97,7 +97,7 @@ class PlayerFeedbackBatchContractTest {
             assertTrue(name, f.length() > 100_000L)
         }
         val home = source("PremiumHomeV3.kt")
-        assertTrue(home.contains("style = WeeklyPodiumStyle.HOME"))
+        assertTrue(home.contains("GameWeeklyPodium(players)"))
         assertFalse(home.contains("HomePodiumSpot("))
         assertFalse(home.contains("PremiumWeeklyPodium("))
         assertTrue(home.contains("delay(WEEKLY_PODIUM_REFRESH_MS)"))
@@ -190,3 +190,4 @@ class PlayerFeedbackBatchContractTest {
         assertTrue(source("PremierWordDuelScreen.kt").contains("else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFF7E3A6)"))
     }
 }
+

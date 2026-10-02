@@ -12,7 +12,7 @@ class DeviceFeedbackBatchContractTest {
         assertTrue(repoFile("app/src/main/AndroidManifest.xml").contains("android.permission.VIBRATE"))
         val fx = repoFile("app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt")
         assertTrue(fx.contains("if (!SonHarfPreferences.vibrationEnabled(context)) return"))
-        assertTrue(fx.contains("fun typingClick() { buzz("))
+        assertTrue(fx.substringAfter("fun typingClick()").substringBefore("fun scoreTick()").contains("buzz("))
         assertTrue(fx.contains("fun wrongWord() { buzz("))
     }
 
@@ -24,7 +24,9 @@ class DeviceFeedbackBatchContractTest {
 
     @Test fun sonHarfLobbyShowsTheProfileFrame() {
         val screen = repoFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt")
-        assertTrue(screen.contains("size = 52.dp,\n                                accent = Color.White,\n                                showGenderBadge = false,\n                                frameId = SonHarfCosmetics.profileFrameId,"))
+        val lobby = screen.substringAfter("internal fun PremierLobby(").substringBefore("private fun PremierHowToPlay(")
+        assertTrue(lobby.contains("ProfilePhotoAvatarWithGender("))
+        assertTrue(Regex("frameId\\s*=\\s*SonHarfCosmetics.profileFrameId").containsMatchIn(lobby))
     }
 
     @Test fun siegeHeaderCardsHaveRoomForTheirScores() {
@@ -47,3 +49,4 @@ class DeviceFeedbackBatchContractTest {
         return requireNotNull(file).readText()
     }
 }
+
