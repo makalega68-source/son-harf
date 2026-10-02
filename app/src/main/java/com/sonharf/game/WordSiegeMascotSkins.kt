@@ -121,7 +121,7 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
 
     /** Floating round hands: light and dark tone, and whether they get pink paw pads. */
     val handColors: IntArray = when (skin) {
-        WordSiegeMascotSkin.ORB -> intArrayOf(0xFFC3F1D8.toInt(), 0xFF30866B.toInt())
+        WordSiegeMascotSkin.ORB -> intArrayOf(0xFF9CF3FF.toInt(), 0xFF2F6DFF.toInt())
         WordSiegeMascotSkin.PINK -> intArrayOf(0xFFFFD3EC.toInt(), 0xFFE2408F.toInt())
         WordSiegeMascotSkin.DEVIL_BLUE -> intArrayOf(0xFFA9DEFF.toInt(), 0xFF1D3FB8.toInt())
         WordSiegeMascotSkin.DEVIL_RED -> intArrayOf(0xFFFFB98A.toInt(), 0xFFB3121C.toInt())
@@ -138,9 +138,9 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
     init {
         when (skin) {
             WordSiegeMascotSkin.ORB -> {
-                ringColors = intArrayOf(0xFFFFDCA2.toInt(), 0xFFB9EDD4.toInt(), 0xFF37896B.toInt(), 0xFF87C8A7.toInt(), 0xFFFFDCA2.toInt())
+                ringColors = intArrayOf(0xFFFFAD72.toInt(), 0xFF56E4F7.toInt(), 0xFF307AF1.toInt(), 0xFFB266F5.toInt(), 0xFFFFAD72.toInt())
                 wingColors = intArrayOf(0xE6A8F4FF.toInt(), 0xB39A7CFF.toInt())
-                target = tuft; magicTuft(0xFF30866B, 0xFFC3F1D8, 0x6695D9B6, 0xFF204E3E)
+                target = tuft; magicTuft(0xFF2F8DFF, 0xFF8AF1FF, 0xE678DCFF, 0xFF141A4A)
             }
             WordSiegeMascotSkin.PINK -> {
                 ringColors = intArrayOf(0xFFFFC1E3.toInt(), 0xFFFF7AC8.toInt(), 0xFFE0409A.toInt(), 0xFFC77DFF.toInt(), 0xFFFFC1E3.toInt())
@@ -182,7 +182,7 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
                 target = tuft; magicTuft(0xFF5E6F86, 0xFFEAF4FF, 0xE678EBFF, 0xFF1C2533)
             }
             WordSiegeMascotSkin.ASTRONAUT -> {
-                ringColors = intArrayOf(0xFFFFDCA2.toInt(), 0xFFB9EDD4.toInt(), 0xFF37896B.toInt(), 0xFF87C8A7.toInt(), 0xFFFFDCA2.toInt())
+                ringColors = intArrayOf(0xFFFFAD72.toInt(), 0xFF56E4F7.toInt(), 0xFF307AF1.toInt(), 0xFFB266F5.toInt(), 0xFFFFAD72.toInt())
                 wingColors = intArrayOf(0xE6A8F4FF.toInt(), 0xB39A7CFF.toInt())
                 target = tuft; magicTuft(0xFF56B8F7, 0xFFFFFFFF, 0xF2A0E6FF, 0xFF16305A)
                 target = front; helmet()

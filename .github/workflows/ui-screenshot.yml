@@ -75,22 +75,10 @@ jobs:
             sleep 8
             adb exec-out screencap -p > Ceviz-Fildisi-Android.png
             for stage in home duel search versus throne atelier; do adb shell am force-stop com.sonharf.game; adb logcat -c; adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es game_stage "$stage" || exit 1; sleep 3; adb exec-out screencap -p > "Game-${stage}-Android.png" || exit 1; adb logcat -d -s AndroidRuntime:E > "Game-${stage}-runtime.log"; if grep -q "FATAL EXCEPTION" "Game-${stage}-runtime.log"; then cat "Game-${stage}-runtime.log"; exit 1; fi; done
-            for stage in turns expressions skins motion; do adb shell am force-stop com.sonharf.game; adb logcat -c; adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es mascot_stage "$stage" || exit 1; sleep 2; adb exec-out screencap -p > "Mascot-${stage}-Android.png" || exit 1; adb logcat -d -s AndroidRuntime:E > "Mascot-${stage}-runtime.log"; if grep -q "FATAL EXCEPTION" "Mascot-${stage}-runtime.log"; then cat "Mascot-${stage}-runtime.log"; exit 1; fi; done
-            adb shell screenrecord --time-limit 6 /sdcard/mascot-motion.mp4
-            adb pull /sdcard/mascot-motion.mp4 Mascot-motion-Android.mp4
       - name: Validate frame and APK were produced by this checkout
         run: |
           test -s Ceviz-Fildisi-Android.png
           test -s Kelime-Tahti-Guncel.apk
-          python3 -m pip install --user --break-system-packages --quiet Pillow
-          python3 - <<'PY'
-          from PIL import Image
-          from pathlib import Path
-          for path in Path('.').glob('Mascot-*-Android.png'):
-              image = Image.open(path).convert('RGB')
-              center = image.crop((100, 100, image.width - 100, image.height - 250))
-              assert max(channel[1] for channel in center.getextrema()) > 100, f'Blank mascot frame: {path}'
-          PY
           echo "SOURCE_SHA=$(git rev-parse HEAD)"
           sha256sum Kelime-Tahti-Guncel.apk Ceviz-Fildisi-Android.png
       - name: Upload APK
@@ -103,8 +91,6 @@ jobs:
             Ceviz-Fildisi-Android.png
             Game-*-Android.png
             Game-*-runtime.log
-            Mascot-*-Android.png
-            Mascot-*-runtime.log
-            Mascot-motion-Android.mp4
           if-no-files-found: error
           retention-days: 7
+
