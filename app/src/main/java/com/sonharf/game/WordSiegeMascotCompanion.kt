@@ -677,7 +677,8 @@ internal fun WordSiegeMascotCompanion(
         if (!foreground) {
             tripJob?.cancel(); speechJob?.cancel()
             guestSkin = null; chase = null; speech = null; stageEmotion = null
-            talking = false; busy = false; watching = true
+            talking = false; busy = false; watching = true; dragging = false
+            if (userPoint != null) anchorIndex = USER_ANCHOR
             scale.snapTo(1f)
         } else lastInteractionAt = SystemClock.uptimeMillis()
     }
@@ -803,7 +804,7 @@ internal fun WordSiegeMascotCompanion(
             }
         }
 
-        suspend fun flyTo(index: Int, durationMillis: Int) {
+        val flyTo: suspend (Int, Int) -> Unit = { index, durationMillis ->
             fromPosition = currentCenter()
             anchorIndex = if (index >= 0 && userPoint != null) USER_ANCHOR else index
             if (index >= 0) homeIndex = index
