@@ -33,7 +33,9 @@ class RewardedPassesContractTest {
         assertTrue(verify.contains("...keyboardProducts"))
         val shop = repoFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt")
         assertTrue(shop.contains("billing.queryOneTimeProducts(com.sonharf.game.billing.ProductCatalog.keyboardProducts)"))
-        assertTrue(shop.contains("8 to sh(\"🎬 Video Ödülleri\", \"🎬 Video Rewards\")"))
+        assertTrue(shop.contains("onClick = { tab = 8 }"))
+        assertTrue(shop.contains("8 -> RewardCenterScreen("))
+        assertTrue(shop.contains("oneTimePurchaseOfferDetails?.formattedPrice"))
     }
 
     @Test fun bankedHintsAndDayPassesReachTheGames() {

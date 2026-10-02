@@ -36,7 +36,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(shell.contains("title = sh(\"KELİME ATÖLYESİ\", \"WORD WORKSHOP\")"))
-        assertTrue(firstRun.contains("selected == \"tr\""))
+        assertTrue(firstRun.contains("\"tr\" to \"TÜRKÇE\""))
         assertTrue(firstRun.contains("selected == \"en\""))
         assertFalse(firstRun.contains("selected == \"es\""))
         assertFalse(firstRun.contains("selected == \"fr\""))
