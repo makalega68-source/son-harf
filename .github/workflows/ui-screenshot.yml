@@ -74,15 +74,7 @@ jobs:
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --ez walnut_ivory_board true
             sleep 8
             adb exec-out screencap -p > Ceviz-Fildisi-Android.png
-            for stage in home duel search versus throne atelier; do
-              adb shell am force-stop com.sonharf.game
-              adb logcat -c
-              adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es game_stage "$stage"
-              sleep 3
-              adb exec-out screencap -p > "Game-${stage}-Android.png"
-              adb logcat -d -s AndroidRuntime:E > "Game-${stage}-runtime.log"
-              ! grep -q "FATAL EXCEPTION" "Game-${stage}-runtime.log"
-            done
+            for stage in home duel search versus throne atelier; do adb shell am force-stop com.sonharf.game; adb logcat -c; adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es game_stage "$stage" || exit 1; sleep 3; adb exec-out screencap -p > "Game-${stage}-Android.png" || exit 1; adb logcat -d -s AndroidRuntime:E > "Game-${stage}-runtime.log"; if grep -q "FATAL EXCEPTION" "Game-${stage}-runtime.log"; then cat "Game-${stage}-runtime.log"; exit 1; fi; done
       - name: Validate frame and APK were produced by this checkout
         run: |
           test -s Ceviz-Fildisi-Android.png
@@ -101,3 +93,4 @@ jobs:
             Game-*-runtime.log
           if-no-files-found: error
           retention-days: 7
+
