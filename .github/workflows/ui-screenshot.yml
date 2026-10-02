@@ -40,7 +40,7 @@ jobs:
         with:
           validate-wrappers: false
       - name: Unit tests and debug APK
-        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+        run: ./gradlew --no-daemon -Pkotlin.compiler.execution.strategy=in-process clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
       - name: Prepare APK
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk Kelime-Tahti-Guncel.apk
@@ -61,7 +61,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           cores: 2
-          ram-size: 4096M
+          ram-size: 2048M
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           # Its animation-settings step was the first adb call to break; the app does not need it.
@@ -107,7 +107,7 @@ jobs:
             adb shell uiautomator dump /sdcard/preview-open.xml
             adb pull /sdcard/preview-open.xml Preview-open.xml
             grep -q 'SATIN AL' Preview-open.xml
-            adb exec-out screencap -p > Review-preview-dark-Android.png
+            timeout 25s adb exec-out screencap -p > Review-preview-dark-Android.png
       - name: Validate frame and APK were produced by this checkout
         run: |
           test -s Ceviz-Fildisi-Android.png
@@ -115,6 +115,7 @@ jobs:
           echo "SOURCE_SHA=$(git rev-parse HEAD)"
           sha256sum Kelime-Tahti-Guncel.apk Ceviz-Fildisi-Android.png
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ceviz-fildisi-android-teslim

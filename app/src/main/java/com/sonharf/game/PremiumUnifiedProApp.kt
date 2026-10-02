@@ -42,6 +42,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var destination by remember { mutableStateOf(PremiumDestination.HOME) }
     var isPro by remember { mutableStateOf(false) }
     var startQuickDuel by remember { mutableStateOf(false) }
+    var gameLaunchRevision by remember { mutableIntStateOf(0) }
     val homeRequest = SonHarfUiState.homeRequest
     val defaultGameLanguage = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
     var siegeLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
@@ -58,6 +59,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         RewardPassState.refresh()
     }
     fun openGame(target: PremiumDestination, language: String, quickDuel: Boolean = false) {
+        gameLaunchRevision++
         startQuickDuel = quickDuel
         if (uiLanguageBeforeGame == null) uiLanguageBeforeGame = SonHarfUiState.language
         SonHarfUiState.language = SharedDictionaryService.canonicalLanguage(language)
@@ -294,12 +296,12 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onBack = { destination = PremiumDestination.PRO },
                         onRoomReady = { language -> openGame(PremiumDestination.LAST_LETTER, language) },
                     )
-                    PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()
-                    PremiumDestination.SIEGE -> WordSiegeEntryScreen(
+                    PremiumDestination.LAST_LETTER -> key(gameLaunchRevision) { OnlineGameScreenV6() }
+                    PremiumDestination.SIEGE -> key(gameLaunchRevision) { WordSiegeEntryScreen(
                         startQuickDuel = startQuickDuel,
                         onExit = { leaveGame() },
                         onOpenStore = { leaveGame(PremiumDestination.SHOP) },
-                    )
+                    ) }
                     PremiumDestination.WORD_WORKSHOP -> KelimeAtolyesiScreen {
                         leaveGame()
                     }

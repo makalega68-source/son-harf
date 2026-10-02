@@ -92,7 +92,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleAuthDeepLink(intent: Intent) {
-        PlayerLinks.accept(this, intent.dataString)
+        if (PlayerLinks.parse(intent.dataString) != null) {
+            PlayerLinks.accept(this, intent.dataString)
+            intent.data = null
+            return
+        }
         val uri = intent.data
         if (!SupabaseProvider.configured || uri?.scheme != "sonharf" || uri.host != "auth") return
         val recoveryRequested = isPasswordRecoveryDeepLink(intent)
