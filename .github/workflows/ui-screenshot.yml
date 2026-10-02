@@ -46,22 +46,42 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk Kelime-Tahti-Guncel.apk
           sha256sum Kelime-Tahti-Guncel.apk > Kelime-Tahti-Guncel.sha256
           echo "SOURCE_SHA=$(git rev-parse HEAD)"
+      # Without KVM the emulator is software-emulated: it took ~7 minutes to boot and then dropped
+      # adb ("Broken pipe") on its first commands. Hardware acceleration makes boot fast and stable.
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
       - name: Capture real Android frame from the committed debug APK
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           arch: x86_64
           profile: pixel_6
+          cores: 2
+          ram-size: 4096M
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          # Its animation-settings step was the first adb call to break; the app does not need it.
+          disable-animations: false
           script: |
-            adb install -r Kelime-Tahti-Guncel.apk
-            adb shell am start -n com.sonharf.game/.UiScreenshotActivity --ez walnut_ivory_board true
+            adb wait-for-device
+            for i in 1 2 3 4 5; do adb shell getprop sys.boot_completed | grep -q 1 && adb shell pm list packages >/dev/null 2>&1 && break; echo "package service not ready ($i)"; sleep 15; done
+            for i in 1 2 3; do adb install -r -t Kelime-Tahti-Guncel.apk && break; echo "install retry $i"; sleep 20; adb wait-for-device; done
+            adb shell pm list packages | grep -q com.sonharf.game
+            adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --ez walnut_ivory_board true
             sleep 8
             adb exec-out screencap -p > Ceviz-Fildisi-Android.png
             for stage in home duel search versus throne atelier; do
               adb shell am force-stop com.sonharf.game
-              adb shell am start -n com.sonharf.game/.UiScreenshotActivity --es game_stage "$stage"
+              adb logcat -c
+              adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es game_stage "$stage"
               sleep 3
               adb exec-out screencap -p > "Game-${stage}-Android.png"
+              adb logcat -d -s AndroidRuntime:E > "Game-${stage}-runtime.log"
+              ! grep -q "FATAL EXCEPTION" "Game-${stage}-runtime.log"
             done
       - name: Validate frame and APK were produced by this checkout
         run: |
@@ -78,5 +98,6 @@ jobs:
             Kelime-Tahti-Guncel.sha256
             Ceviz-Fildisi-Android.png
             Game-*-Android.png
+            Game-*-runtime.log
           if-no-files-found: error
           retention-days: 7
