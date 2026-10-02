@@ -428,6 +428,18 @@ internal fun WordSiegePanMatch(
             onCell = onBoardCell,
             onChat = onChat,
         )
+        ArenaMoveImpact(
+            eventKey = lastMove?.id?.toString(),
+            label = lastMove?.let { move ->
+                when {
+                    move.opponentCaptured > 0 -> sh("BÖLGE ELE GEÇİRİLDİ · ${move.opponentCaptured}", "TERRITORY TAKEN · ${move.opponentCaptured}")
+                    move.totalScore >= 25 -> sh("GÜÇLÜ HAMLE · +${move.totalScore}", "POWER MOVE · +${move.totalScore}")
+                    else -> sh("${move.primaryWord} · +${move.totalScore}", "${move.primaryWord} · +${move.totalScore}")
+                }
+            }.orEmpty(),
+            accent = if (lastMove?.playerId == me) PanSiegeMineBorder else PanSiegeRivalBorder,
+            modifier = Modifier.matchParentSize(), bannerTop = 10.dp,
+        )
         }
 
         if (game.status == "playing") {
@@ -1141,6 +1153,8 @@ private fun PanSiegePlayerCard(
         scoreLossTick = scoreLossTick,
         onScoreCenterChanged = onScoreCenterChanged,
         frameId = rememberPlayerFrame(profile?.id),
+        rating = profile?.rating,
+        isPro = profile?.isVip == true,
     )
     if (mascot != null) {
         WordSiegeMascot(

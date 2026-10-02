@@ -634,6 +634,10 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
         }
+        ArenaMoveImpact(eventKey = if (gainNonce > 0 && state?.words?.isNotEmpty() == true && mode != AtelierMode.LOBBY) "$roundKey:$gainNonce" else null,
+            label = if (combo >= 3) sh("KOMBO ×$combo · +$gain", "COMBO ×$combo · +$gain") else sh("KELİME TAMAM · +$gain", "WORD COMPLETE · +$gain"),
+            accent = AtelierUi.Green, modifier = Modifier.matchParentSize(), bannerTop = 110.dp)
+        ArenaCriticalFrame(secondsLeft, state?.over == false && mode != AtelierMode.LOBBY, Modifier.matchParentSize())
         AtelierConfetti(confettiNonce, Modifier.fillMaxSize())
         AtelierComboBanner(comboNonce, combo, Modifier.align(Alignment.Center))
     }

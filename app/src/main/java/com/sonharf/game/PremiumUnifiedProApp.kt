@@ -212,6 +212,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onSettings = { destination = PremiumDestination.SETTINGS },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
+                        onSocial = { destination = PremiumDestination.SOCIAL },
+                        incomingCount = incomingSocialCount,
                     )
                     PremiumDestination.GAMES -> PremiumGameCenter(
                         siegeLanguage = siegeLanguage,
@@ -338,6 +340,8 @@ private fun PremiumHomeScreen(
     onSettings: () -> Unit,
     onLastLetter: () -> Unit,
     onWorkshop: () -> Unit,
+    onSocial: () -> Unit,
+    incomingCount: Int,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
 
@@ -360,6 +364,7 @@ private fun PremiumHomeScreen(
                 PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
             }
             item(key = "atelier_tournament") { HomeTournamentCard(onOpen = onWorkshop) }
+            item(key = "social_arena") { HomeSocialArena(backend, incomingCount, onSocial) }
             item(key = "home_daily_tasks") {
                 PremiumHomeDailyTasks(onClick = onCompete)
             }

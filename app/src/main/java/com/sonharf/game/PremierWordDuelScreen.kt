@@ -1816,6 +1816,13 @@ private fun PremierArena(
             bubblePlacement = WordSiegeMascotBubblePlacement.PREFER_BELOW,
         )
 
+        ArenaMoveImpact(eventKey = latestMove?.id?.toString(),
+            label = if (latestMoveScore >= 12) pt(language, "ZİNCİR GÜÇLENİYOR · +$latestMoveScore", "CHAIN POWER · +$latestMoveScore")
+                else pt(language, "${latestPlayedWord.uppercase(premierLocale(language))} · +$latestMoveScore", "${latestPlayedWord.uppercase(premierLocale(language))} · +$latestMoveScore"),
+            accent = if (latestMoveMine) PremierBoard.Mine else PremierBoard.Danger,
+            modifier = Modifier.matchParentSize(), bannerTop = 112.dp)
+        ArenaCriticalFrame(turnSeconds, live && !preparing && !reconnectGraceActive, Modifier.matchParentSize())
+
         // Turn and accepted-word feedback live on the target tile itself (a light sweep), so no
         // screen-centred rings are drawn over the board.
 

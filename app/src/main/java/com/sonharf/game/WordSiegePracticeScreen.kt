@@ -508,6 +508,8 @@ private fun WordSiegePracticeContent(
                         avatarPath = playerProfile?.avatarPath,
                         gender = playerProfile?.gender,
                         avatarVisible = playerProfile?.avatarVisibility != "hidden",
+                        rating = playerProfile?.rating,
+                        isPro = playerProfile?.isVip == true,
                         isBot = false,
                         modifier = Modifier.weight(1f),
                         scoreArrivalTick = playerScoreArrivalTick,
@@ -604,6 +606,13 @@ private fun WordSiegePracticeContent(
                             }
                         },
                     )
+                    ArenaMoveImpact(eventKey = if (actionVfxEvent > 0) actionVfxEvent.toString() else null,
+                        label = lastMove?.let { move ->
+                            if (move.opponentCaptured > 0) sh("BÖLGE ELE GEÇİRİLDİ · ${move.opponentCaptured}", "TERRITORY TAKEN · ${move.opponentCaptured}")
+                            else "${move.primaryWord} · +${move.wordScore}"
+                        }.orEmpty(),
+                        accent = if (state.currentOwner == 2) PracticePlayerAccent else PracticeRivalAccent,
+                        modifier = Modifier.matchParentSize(), bannerTop = 10.dp)
 
                     if (tutorialStep >= 0 && !matchmakingFallback) {
                         Box(
@@ -1161,6 +1170,8 @@ private fun WordSiegePracticeScoreCard(
     gender: String?,
     avatarVisible: Boolean,
     isBot: Boolean,
+    rating: Int? = null,
+    isPro: Boolean = false,
     modifier: Modifier = Modifier,
     scoreArrivalTick: Int = 0,
     scoreLossTick: Int = 0,
@@ -1172,6 +1183,7 @@ private fun WordSiegePracticeScoreCard(
         active = active, leading = leading, avatarPath = avatarPath,
         gender = gender, avatarVisible = avatarVisible, isBot = isBot,
         modifier = modifier,
+        rating = rating, isPro = isPro,
         scoreArrivalTick = scoreArrivalTick,
         scoreLossTick = scoreLossTick,
         onScoreCenterChanged = onScoreCenterChanged,

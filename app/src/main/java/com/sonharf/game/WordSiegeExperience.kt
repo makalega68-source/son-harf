@@ -1222,7 +1222,7 @@ private fun WordSiegeChatDialog(
                                 horizontalArrangement = if (message.senderId == me) Arrangement.End else Arrangement.Start,
                             ) {
                                 Surface(
-                                    color = if (message.senderId == me) SiegeBlueSoft else SiegePurpleSoft,
+                                    color = if (message.senderId == me) WordSiegeGameUi.Blue.copy(alpha = .15f) else WordSiegeGameUi.Red.copy(alpha = .13f),
                                     shape = RoundedCornerShape(12.dp),
                                 ) {
                                     Text(message.body, Modifier.padding(9.dp), color = MainUi.Text, fontSize = 11.sp)
@@ -1232,6 +1232,16 @@ private fun WordSiegeChatDialog(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    listOf(sh("Bol şans!", "Good luck!"), sh("Güzel hamle!", "Nice move!"), sh("Tebrikler!", "Well played!")).forEach { reaction ->
+                        OutlinedButton(onClick = { onSend(reaction) }, enabled = !busy,
+                            modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 3.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(12.dp)) {
+                            Text(reaction, fontSize = 9.sp, maxLines = 1)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(5.dp))
                 if (SonHarfCosmetics.emojiPackId == "emoji_vip") {
                     Text(sh("VIP TEPKİLER", "VIP REACTIONS"), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(5.dp))

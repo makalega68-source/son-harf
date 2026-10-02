@@ -121,11 +121,22 @@ internal fun MainSocialScreen(
     ) {
         item {
             MainScreenHeader(
-                title = sh("Sosyal", "Social"),
+                title = sh("OYUN ARKADAŞLARIN", "YOUR GAME FRIENDS"),
                 subtitle = sh("Arkadaşların, oyun davetlerin ve ezeli rakiplerin", "Friends, game invitations and rivals"),
             )
         }
 
+        item(key = "share_invite") { InviteFriendsCard(playerName = null) }
+        item(key = "social_refresh") {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(sh("Bir davet, yeni bir rekabet", "One invitation, a new rivalry"), color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                TextButton(onClick = { scope.launch { reload() } }, enabled = !loading && busyKey == null) {
+                    Icon(Icons.Rounded.Refresh, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(sh("Yenile", "Refresh"), fontSize = 11.sp)
+                }
+            }
+        }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MainMetricCard(friends.size.toString(), sh("Arkadaş", "Friends"), Modifier.weight(1f))
@@ -666,7 +677,7 @@ private fun MainFriendCard(
     Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, if (online) MainUi.Green.copy(alpha = .28f) else MainUi.Border)) {
         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
             Box {
-                ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 48.dp, accent = if (friend.isVip) MainUi.Gold else MainUi.Blue, visible = friend.avatarVisibility != "hidden")
+                ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 48.dp, accent = if (friend.isVip) MainUi.Gold else MainUi.Green, visible = friend.avatarVisibility != "hidden", frameId = rememberPlayerFrame(friend.id))
                 Box(
                     Modifier.align(Alignment.BottomEnd).size(12.dp).clip(CircleShape).background(if (online) MainUi.Green else MainUi.Muted),
                 )
@@ -677,7 +688,7 @@ private fun MainFriendCard(
                     Text(friend.displayName, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (friend.isVip) {
                         Spacer(Modifier.width(5.dp))
-                        Text("VIP", color = MainUi.Gold, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                        Text("PRO", color = MainUi.Gold, fontSize = 7.sp, fontWeight = FontWeight.Black)
                     }
                 }
                 Text(
@@ -689,10 +700,11 @@ private fun MainFriendCard(
             }
             Button(
                 onClick = onInvite,
-                enabled = !busy,
+                enabled = !busy && !playing,
+                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Green),
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp),
-            ) { Text(if (busy) "…" else sh("OYNA", "PLAY"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
+            ) { Text(if (busy) "…" else if (playing) sh("OYUNDA", "PLAYING") else sh("DAVET ET", "INVITE"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, sh("Daha fazla", "More"), tint = MainUi.Muted) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
