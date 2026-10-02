@@ -154,6 +154,8 @@ internal object PublicFrames {
     private fun weekKey(): String = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Istanbul"))
         .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)).toString()
 
+    fun invalidate(userId: String) { cache.remove(userId) }
+
     fun rewardDeadline(userId: String): Long? = cache[userId]?.expiresAt
 
     suspend fun get(userId: String): String? {
@@ -179,10 +181,17 @@ internal fun rememberPlayerFrame(userId: String?): String? {
     var frame by remember(userId) { mutableStateOf<String?>(localFrame) }
     LaunchedEffect(userId, localFrame) {
         if (!com.sonharf.game.data.SupabaseProvider.configured) return@LaunchedEffect
+        if (userId == me) {
+            PublicFrames.invalidate(userId)
+            frame = localFrame
+        }
         while (true) {
-            // Timed rewards fail closed; permanent cosmetics retain the local selection.
-            if (frame == ProfileFrameCollection.throneFrame.id) frame = localFrame
-            runCatching { PublicFrames.get(userId) }.onSuccess { frame = it ?: localFrame }
+            // Keep a valid reward visible during refresh; revoke on expiry or transport failure.
+            if (frame == ProfileFrameCollection.throneFrame.id &&
+                (PublicFrames.rewardDeadline(userId) ?: 0L) <= System.currentTimeMillis()) frame = localFrame
+            runCatching { PublicFrames.get(userId) }
+                .onSuccess { frame = it }
+                .onFailure { if (frame == ProfileFrameCollection.throneFrame.id) frame = localFrame }
             val zone = java.time.ZoneId.of("Europe/Istanbul")
             val boundary = java.time.LocalDate.now(zone)
                 .with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.MONDAY))
