@@ -14,7 +14,7 @@ Takvim Europe/Istanbul saat dilimindedir; telefon saati sonuç ve XP belirlemez.
 - Sonuç aşama bitiminden en fazla 15 saniye sonra kaydedilebilir. Ağ hatasında bu pencere içinde aynı sonucu tekrar göndermek mümkündür ve XP ikinci kez verilmez.
 - Başlanan ama tamamlanmayan aşama yeniden başlatılmaz. Bağlantı koptuğunda devam eden yerel oyun kalır; uygulamadan çıkıp yeniden girmek aşamayı geri yüklemez.
 - Sıralama önce tamamlanan aşama sayısı, ardından toplam oyun puanı, son bitirme zamanı, ardından kullanıcı kimliği ile belirlenir.
-- Son biten ve en az bir tamamlanan sonucu bulunan turnuvanın ilk üç oyuncusu ana ekranda kayan yazıyla gösterilir. Sıfır katılımlı turnuva sahte kazanan üretmez.
+- Sonuç kaydı için ayrılan 15 saniyelik ek pencere kapandıktan sonra, son biten ve en az bir tamamlanan sonucu bulunan turnuvanın ilk üç oyuncusu ana ekranda kayan yazıyla gösterilir. Sıfır katılımlı turnuva sahte kazanan üretmez.
 - Ana sayaç her çift saatte 02:00:00 değerine döner. 19:00 ek turnuvasının sayacı ayrıca gösterilir.
 - Takvim ve aşama kapanışı zaman karşılaştırmalarıyla otomatik işler; açık uygulama veya cron görevi gerektirmez. Sunucu sorgusu ilgili anda güncel aşamayı hesaplar.
 
