@@ -969,7 +969,7 @@ fun PremierWordDuelScreen() {
 }
 
 @Composable
-private fun PremierLobby(
+internal fun PremierLobby(
     language: String,
     profile: ProfileDto?,
     notice: String,
@@ -1014,9 +1014,7 @@ private fun PremierLobby(
                 Text(pt(language,"Son harf senin hamlen.","The last letter is your next move."),color=Color.White,fontSize=28.sp,lineHeight=31.sp,fontWeight=FontWeight.Black)
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                        Text(pt(language,"Zinciri koparma.
-Üç raundun galibi ol.","Keep the chain alive.
-Win the three-round duel."),color=Color.White.copy(alpha=.9f),fontSize=14.sp,lineHeight=19.sp,fontWeight=FontWeight.Bold)
+                        Text(pt(language,"Zinciri koparma.\nÜç raundun galibi ol.","Keep the chain alive.\nWin the three-round duel."),color=Color.White.copy(alpha=.9f),fontSize=14.sp,lineHeight=19.sp,fontWeight=FontWeight.Bold)
                         EventTag(pt(language,"15 SANİYE · 10 KELİME","15 SECONDS · 10 WORDS"),gold=false)
                     }
                     if(skin!=null)WordSiegeMascot(moveId=null,lastMoveMine=false,pendingCells=emptyList(),playerTurn=true,requestedEmotion=WordSiegeMascotEmotion.HAPPY,modifier=Modifier.size(88.dp),actionKey=waveKey,action=WordSiegeMascotAction.WAVE,skin=skin)
@@ -1139,7 +1137,7 @@ private fun PremierLoading(language: String) {
 }
 
 @Composable
-private fun PremierSearching(language: String, me: ProfileDto?, onCancel: () -> Unit) {
+internal fun PremierSearching(language: String, me: ProfileDto?, onCancel: () -> Unit) {
     val transition = rememberInfiniteTransition(label = "search")
     // Radar ripples around the rival slot and a gentle wave through the brand tiles.
     val ripple by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1_800, easing = LinearEasing)), label = "ripple")
@@ -1233,7 +1231,7 @@ private fun PremierSearching(language: String, me: ProfileDto?, onCancel: () -> 
 }
 
 @Composable
-private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: ProfileDto?, room: GameRoomDto) {
+internal fun PremierVsScreen(language: String, me: ProfileDto?, opponent: ProfileDto?, room: GameRoomDto) {
     Column(
         Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

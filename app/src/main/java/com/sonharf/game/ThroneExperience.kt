@@ -49,6 +49,11 @@ import kotlinx.coroutines.delay
   while(true){gameRequestResult{ThroneBackend.tournament()}.onSuccess{event=it;failed=false}.onFailure{failed=true};delay(15_000)}
  }
  val now=serverNow(event?.serverTime.orEmpty(),Unit)
+ TournamentHomeStage(event,now,failed,onOpen)
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable internal fun TournamentHomeStage(event:AtelierTournament?,now:Long,failed:Boolean=false,onOpen:()->Unit) {
  GameEventStage(onClick=onOpen) {
   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
    HfGameArt(R.drawable.kelime_atolyesi_game_icon,64.dp,64.dp,description=sh("Kelime Atölyesi","Word Workshop"))
@@ -92,24 +97,7 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
  val now=serverNow(week?.serverTime.orEmpty(),Unit)
  LazyColumn(Modifier.fillMaxSize().background(SonHarfTheme.Background),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
   item { MainScreenHeader(title=sh("TAHT","THRONE"),subtitle=sh("Üç oyun · Tek haftalık yarış","Three games · One weekly race"),onBack=onBack) }
-  item { GameEventStage(gold=true) {
-   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-    EventTag(sh("HAFTANIN HÜKÜMDARI","WEEKLY RULER"))
-    Icon(Icons.Rounded.EmojiEvents,null,tint=EventInk,modifier=Modifier.size(24.dp))
-   }
-   val owner=week?.rows?.firstOrNull()
-   Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
-    ThroneSeat {
-     if(owner!=null)ProfilePhotoAvatarWithGender(owner.avatarPath,owner.gender,owner.name,78.dp,visible=owner.avatarVisibility!="hidden",userId=owner.userId)
-     else DefaultProfilePortrait(null,Modifier.size(78.dp).clip(CircleShape))
-    }
-    Text(sh("TAHT SAHİBİ","THRONE OWNER"),color=EventInk,fontSize=12.sp,fontWeight=FontWeight.Black,letterSpacing=2.sp)
-    Text(owner?.name?:sh("Yeni sahibi sen ol","Claim the throne"),color=EventInk,fontSize=28.sp,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
-    Text("${owner?.xp?:0} XP",color=EventInk,fontSize=21.sp,fontWeight=FontWeight.Black)
-    Text(sh("Taht yenileniyor: ","Throne resets in: ")+(if(now==0L)"—"else tournamentClockText(tournamentTimeMillis(week?.resetAt.orEmpty()),now)),color=EventInk,fontSize=11.sp)
-    week?.previousOwner?.let{Text(sh("Geçen haftanın sahibi: ${it.name}","Last week's owner: ${it.name}"),color=EventInk.copy(alpha=.75f),fontSize=10.sp)}
-   }
-  } }
+  item { ThroneOwnerStage(week?.rows?.firstOrNull(),tournamentTimeMillis(week?.resetAt.orEmpty()),now,week?.previousOwner) }
   item { GameEventStage {
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
     Column { Text(sh("SENİN YARIŞIN","YOUR RACE"),color=EventGold,fontSize=11.sp,fontWeight=FontWeight.Black);Text("${week?.me?.xp?:0} XP",color=Color.White,fontSize=26.sp,fontWeight=FontWeight.Black) }
@@ -219,4 +207,24 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
   }
   Text(sh("TAHTI ELE GEÇİR  ›","CLAIM THE THRONE  ›"),Modifier.align(Alignment.End),color=EventGold,fontSize=11.sp,fontWeight=FontWeight.Black)
  }
+}
+
+@Composable internal fun ThroneOwnerStage(owner:ThroneRow?,resetAt:Long,now:Long,previousOwner:ThroneOwner?=null) {
+GameEventStage(gold=true) {
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+    EventTag(sh("HAFTANIN HÜKÜMDARI","WEEKLY RULER"))
+    Icon(Icons.Rounded.EmojiEvents,null,tint=EventInk,modifier=Modifier.size(24.dp))
+   }
+   Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
+    ThroneSeat {
+     if(owner!=null)ProfilePhotoAvatarWithGender(owner.avatarPath,owner.gender,owner.name,78.dp,visible=owner.avatarVisibility!="hidden",userId=owner.userId)
+     else DefaultProfilePortrait(null,Modifier.size(78.dp).clip(CircleShape))
+    }
+    Text(sh("TAHT SAHİBİ","THRONE OWNER"),color=EventInk,fontSize=12.sp,fontWeight=FontWeight.Black,letterSpacing=2.sp)
+    Text(owner?.name?:sh("Yeni sahibi sen ol","Claim the throne"),color=EventInk,fontSize=28.sp,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
+    Text("${owner?.xp?:0} XP",color=EventInk,fontSize=21.sp,fontWeight=FontWeight.Black)
+    Text(sh("Taht yenileniyor: ","Throne resets in: ")+(if(now==0L)"—"else tournamentClockText(resetAt,now)),color=EventInk,fontSize=11.sp)
+    previousOwner?.let{Text(sh("Geçen haftanın sahibi: ${it.name}","Last week's owner: ${it.name}"),color=EventInk.copy(alpha=.75f),fontSize=10.sp)}
+   }
+  }
 }

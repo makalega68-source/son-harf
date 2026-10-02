@@ -18,7 +18,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sonharf.game.data.WordSiegeCellDto
+import com.sonharf.game.data.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
+import java.time.Instant
 
 /** Debug-only host used by CI to render the real production Compose shell for screenshots. */
 class UiScreenshotActivity : ComponentActivity() {
@@ -27,7 +35,8 @@ class UiScreenshotActivity : ComponentActivity() {
         SonHarfUiState.language = "tr"
         SonHarfCosmetics.restore(this)
         setContent {
-            if (intent.getBooleanExtra("walnut_ivory_board", false)) WalnutIvoryScreenshotFixture()
+            if (intent.hasExtra("game_stage")) GameStageFixture(intent.getStringExtra("game_stage").orEmpty())
+            else if (intent.getBooleanExtra("walnut_ivory_board", false)) WalnutIvoryScreenshotFixture()
             else PremiumUnifiedProApp(onSignedOut = {})
         }
     }
@@ -76,4 +85,23 @@ private fun WalnutIvoryScreenshotFixture() {
         }
         Text("YEŞİL  ·  SEN      KIRMIZI  ·  RAKİP", color = WordSiegeWalnutIvory.secondaryInk, fontSize = 11.sp)
     }
+}
+
+/** Seeded debug-only data; these are the same composables used by the live screens. */
+@Composable private fun GameStageFixture(stage:String) {
+ val now=Instant.parse("2026-10-02T09:34:00Z").toEpochMilli()
+ val event=AtelierTournament(serverTime="2026-10-02T09:34:00Z",nextStart="2026-10-02T11:00:00Z",eventStart="2026-10-02T09:00:00Z",active=false)
+ val players=listOf(ThroneRow(1,"preview-1","Ümit",1189,gender="erkek"),ThroneRow(2,"preview-2","Selin",357,gender="kadın"),ThroneRow(3,"preview-3","Arda",120,gender="erkek"))
+ val me=ProfileDto("preview-1","Ümit",gender="erkek",rating=617)
+ when(stage) {
+  "duel"->PremierLobby("tr",me,"",false,{}, {}, {})
+  "versus"->PremierVsScreen("tr",me,null,GameRoomDto("preview","PREVIEW","preview-1",status="playing",isBot=true,botName="Selin"))
+  else->Column(Modifier.fillMaxSize().background(SonHarfTheme.Background).statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+   when(stage) {
+    "throne"->{ThroneOwnerStage(players.first(),now+60*60*60*1000L,now);GameWeeklyPodium(players)}
+    "atelier"->{AtelierTournamentPanel(event,false){};AtelierLobby(true,null,false,false,null,null,false,180,{}, {}, {}, {}, {})}
+    else->{PremiumOtherGames({},{});TournamentHomeStage(event,now,onOpen={});GameWeeklyPodium(players)}
+   }
+  }
+ }
 }

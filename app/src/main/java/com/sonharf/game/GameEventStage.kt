@@ -87,7 +87,7 @@ internal val EventGreen = Color(0xFF226B49)
   parts.forEachIndexed { index,part ->
    if(index>0)Text(":",color=EventGold,fontSize=23.sp,fontWeight=FontWeight.Black)
    Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(3.dp)) {
-    Box(Modifier.widthIn(min=56.dp).height(52.dp).shadow(2.dp,RoundedCornerShape(10.dp)).clip(RoundedCornerShape(10.dp))
+    Box(Modifier.widthIn(min=44.dp).height(52.dp).shadow(2.dp,RoundedCornerShape(10.dp)).clip(RoundedCornerShape(10.dp))
      .background(Brush.verticalGradient(listOf(Color(0xFFFFF5CE),EventGold))).border(1.dp,Color.White.copy(alpha=.6f),RoundedCornerShape(10.dp)),contentAlignment=Alignment.Center) {
      AnimatedContent(targetState=part,label="countdown-digit") { digit->Text(digit,color=EventInk,fontSize=26.sp,fontWeight=FontWeight.Black,fontFamily=FontFamily.Monospace) }
     }

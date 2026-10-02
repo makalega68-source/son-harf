@@ -11,7 +11,7 @@ class ThroneIntegrationTest {
   assertTrue(source("CompetitionHubScreen.kt").contains("ThroneScreen(onBack = onBack"))
   val home=source("PremiumHomeV3.kt")
   assertTrue(home.contains("ThroneBackend.week().rows"))
-  assertTrue(home.contains("it.xp"));assertFalse(home.contains("getWeeklyTopV210(limit = 3)"))
+  assertTrue(source("ThroneExperience.kt").contains("it.xp"));assertFalse(home.contains("getWeeklyTopV210(limit = 3)"))
  }
  @Test fun tournamentUsesServerEntryAndAcceptedWordTranscript(){
   val screen=source("KelimeAtolyesiScreen.kt")

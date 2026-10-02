@@ -44,7 +44,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(home.contains("getMetaProgressV2().dailyPlayStreak"))
         assertTrue(home.contains("ThroneBackend.week().rows"))
         assertTrue(home.contains("GameWeeklyPodium(players)"))
-        assertTrue(home.contains("sh(\"Kelime Atölyesi\", \"Word Workshop\")"))
+        assertTrue(File("src/main/java/com/sonharf/game/ThroneExperience.kt").readText().contains("sh(\"Kelime Atölyesi\",\"Word Workshop\")"))
         assertTrue(shell.contains("PremiumBottomBar("))
         assertTrue(shell.contains("PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)"))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
