@@ -207,8 +207,11 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                         tournamentSaveFailed = false
                     }.onFailure {
                         if (roundGeneration != generation) return@onFailure
-                        tournamentSaveFailed = true
-                        dailyLine = sh("Sonuç kaydedilemedi. Süre dolmadan tekrar kaydet.", "Result could not be saved. Retry before the stage expires.")
+                        val terminal = "stage_expired" in it.message.orEmpty() || "invalid_transcript" in it.message.orEmpty() || "implausible_score" in it.message.orEmpty()
+                        tournamentSaveFailed = !terminal
+                        dailyLine = if ("stage_expired" in it.message.orEmpty()) sh("Aşamanın kayıt süresi doldu. Bir sonraki turnuvada görüşelim.", "The stage submission window closed. Join the next tournament.")
+                            else if (terminal) sh("Sunucu bu sonucu doğrulayamadı; XP eklenmedi.", "The server could not validate this result; no XP was added.")
+                            else sh("Sonuç kaydedilemedi. Süre dolmadan tekrar kaydet.", "Result could not be saved. Retry before the stage expires.")
                     }
             } finally { savingTournament = false }
         }
