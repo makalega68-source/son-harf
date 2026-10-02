@@ -49,9 +49,6 @@ object SonHarfSoundFx {
             R.raw.sfx_round_win,
             R.raw.sfx_round_lost,
             R.raw.sfx_streak,
-            R.raw.sfx_mascot_burp,
-            R.raw.sfx_mascot_chew,
-            R.raw.sfx_mascot_knock,
         ).forEach { resId ->
             sounds[resId] = pool!!.load(context.applicationContext, resId, 1)
         }
@@ -67,9 +64,6 @@ object SonHarfSoundFx {
 
     fun setEnabled(value: Boolean) { enabled = value }
 
-    fun mascotBurp() = play(R.raw.sfx_mascot_burp, .24f)
-    fun mascotChew() = play(R.raw.sfx_mascot_chew, .16f)
-    fun mascotKnock() = play(R.raw.sfx_mascot_knock, .24f)
 
     fun tap() = play(R.raw.sfx_ui_tap, .18f)
     fun typingClick() {

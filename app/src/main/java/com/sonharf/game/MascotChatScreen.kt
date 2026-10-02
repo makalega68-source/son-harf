@@ -1,17 +1,12 @@
 package com.sonharf.game
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -70,72 +65,6 @@ private object ChatShapes {
 
 private val ChatScreenHorizontal = 16.dp
 
-private class MascotVoiceController(
-    context: Context,
-    private val onSpeakingChanged: (Boolean) -> Unit,
-) : TextToSpeech.OnInitListener {
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private var engine: TextToSpeech? = null
-    private var ready = false
-
-    init {
-        engine = TextToSpeech(context.applicationContext, this)
-    }
-
-    override fun onInit(status: Int) {
-        val tts = engine ?: return
-        if (status != TextToSpeech.SUCCESS) return
-
-        val locale = Locale("tr", "TR")
-        val languageResult = tts.setLanguage(locale)
-        if (languageResult == TextToSpeech.LANG_MISSING_DATA || languageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
-            tts.setLanguage(Locale.US)
-        }
-
-        val localVoice = tts.voices
-            ?.filter { voice ->
-                !voice.isNetworkConnectionRequired &&
-                    (voice.locale.language == locale.language || voice.locale.language == Locale.ENGLISH.language)
-            }
-            ?.maxByOrNull { it.quality }
-        if (localVoice != null) tts.voice = localVoice
-
-        // A slightly brighter but slower delivery: soft/cute without becoming sharp or squeaky.
-        tts.setPitch(1.45f)
-        tts.setSpeechRate(0.85f)
-        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {
-                mainHandler.post { onSpeakingChanged(true) }
-            }
-
-            override fun onDone(utteranceId: String?) {
-                mainHandler.post { onSpeakingChanged(false) }
-            }
-
-            override fun onError(utteranceId: String?) {
-                mainHandler.post { onSpeakingChanged(false) }
-            }
-        })
-        ready = true
-    }
-
-    fun speak(text: String) {
-        if (!ready || text.isBlank()) return
-        engine?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "mascot-${System.currentTimeMillis()}")
-    }
-
-    fun stop() {
-        engine?.stop()
-        onSpeakingChanged(false)
-    }
-
-    fun shutdown() {
-        engine?.stop()
-        engine?.shutdown()
-        engine = null
-    }
-}
-
 @Composable
 internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSkin = WordSiegeMascotSkin.ORB) {
     val context = LocalContext.current
@@ -161,7 +90,6 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
     var input by remember { mutableStateOf("") }
     var voiceMode by remember { mutableStateOf(false) }
     var thinking by remember { mutableStateOf(false) }
-    var speaking by remember { mutableStateOf(false) }
     var listening by remember { mutableStateOf(false) }
     var speechError by remember { mutableStateOf<String?>(null) }
     var recognizedUtterance by remember { mutableStateOf<String?>(null) }
@@ -169,13 +97,6 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
     var downloadBytes by remember { mutableStateOf<Long?>(null) }
     var mascotActionKey by remember { mutableLongStateOf(1L) }
     var mascotAction by remember { mutableStateOf<WordSiegeMascotAction?>(WordSiegeMascotAction.PEEK) }
-
-    val voiceController = remember {
-        MascotVoiceController(context) { isSpeaking -> speaking = isSpeaking }
-    }
-    DisposableEffect(Unit) {
-        onDispose { voiceController.shutdown() }
-    }
 
     val recognizer = remember {
         if (SpeechRecognizer.isRecognitionAvailable(context)) {
@@ -255,7 +176,7 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
         }
     }
 
-    fun submit(rawText: String, speakReply: Boolean) {
+    fun submit(rawText: String) {
         val text = rawText.trim()
         if (text.isBlank() || thinking) return
         val contextBeforeMessage = messages.toList()
@@ -287,7 +208,6 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
             thinking = false
             mascotActionKey += 1L
             mascotAction = WordSiegeMascotAction.NOD
-            if (speakReply) voiceController.speak(reply)
         }
     }
 
@@ -302,7 +222,7 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
         val spokenText = recognizedUtterance ?: return@LaunchedEffect
         recognizedUtterance = null
         input = spokenText
-        submit(spokenText, speakReply = true)
+        submit(spokenText)
     }
 
     val listState = rememberLazyListState()
@@ -319,7 +239,6 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
             .imePadding(),
     ) {
         MascotChatHeader(onBack = {
-            voiceController.stop()
             recognizer?.cancel()
             onBack()
         })
@@ -368,12 +287,10 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
                     pendingCells = emptyList(),
                     playerTurn = true,
                     requestedEmotion = when {
-                        speaking -> WordSiegeMascotEmotion.SPEAKING
                         thinking -> WordSiegeMascotEmotion.FOCUS
                         else -> WordSiegeMascotEmotion.HAPPY
                     },
                     modifier = Modifier.size(286.dp),
-                    speaking = speaking,
                     actionKey = mascotActionKey,
                     action = mascotAction,
                     skin = mascotSkin,
@@ -390,8 +307,7 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
             isTurkish = isTurkish,
             onText = {
                 voiceMode = false
-                voiceController.stop()
-                recognizer?.cancel()
+                    recognizer?.cancel()
                 listening = false
             },
             onVoice = { voiceMode = true },
@@ -439,7 +355,7 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
                     requestVoiceInput()
                 }
             },
-            onSend = { submit(input, speakReply = voiceMode) },
+            onSend = { submit(input) },
         )
     }
 }

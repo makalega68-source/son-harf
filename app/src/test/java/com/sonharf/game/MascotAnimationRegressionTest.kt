@@ -82,19 +82,24 @@ class MascotAnimationRegressionTest {
     }
 
     @Test
-    fun headTurnsOccludeOnlyTheDistantEyeContinuouslyAndSymmetrically() {
-        assertEquals(1f, mascotFarEyeVisibility(0f, true), .0001f)
-        assertEquals(1f, mascotFarEyeVisibility(0f, false), .0001f)
-        assertEquals(0f, mascotFarEyeVisibility(1f, true), .0001f)
-        assertEquals(1f, mascotFarEyeVisibility(1f, false), .0001f)
-        for (i in -1000..1000) {
-            val yaw = i / 1000f
-            val left = mascotFarEyeVisibility(yaw, true)
-            val right = mascotFarEyeVisibility(yaw, false)
-            assertTrue(left in 0f..1f && right in 0f..1f)
-            assertEquals(left, mascotFarEyeVisibility(-yaw, false), .0001f)
-            assertEquals(1f, maxOf(left, right), .0001f)
-            assertTrue(abs(left - mascotFarEyeVisibility(yaw + .001f, true)) < .004f)
+    fun lookingAndBowingNeverMoveOrCompressTheFace() {
+        val pose = FloatArray(4)
+        for (yaw in -10..10) for (pitch in -10..10) for (bow in 0..10) {
+            mascotFacePose(yaw / 10f, pitch / 10f, bow / 10f, pose)
+            assertArrayEquals(floatArrayOf(0f, 0f, 1f, 1f), pose, 0f)
+        }
+    }
+
+    @Test
+    fun draggedMascotStaysReachableWhenTheKeyboardShrinksTheArena() {
+        val point = androidx.compose.ui.geometry.Offset(10000f, -10000f)
+        for (area in listOf(androidx.compose.ui.geometry.Size(360f, 720f),
+            androidx.compose.ui.geometry.Size(360f, 220f), androidx.compose.ui.geometry.Size(60f, 50f))) {
+            val clamped = mascotBoundCenter(point, area, 108f, 4f)
+            assertTrue(clamped.x in 0f..area.width && clamped.y in 0f..area.height)
+            assertEquals(clamped, mascotBoundCenter(clamped, area, 108f, 4f))
+            assertTrue(clamped.y >= minOf(58f, area.height / 2f))
+            assertTrue(clamped.x <= maxOf(area.width / 2f, area.width - 58f))
         }
     }
 
@@ -118,7 +123,8 @@ class MascotAnimationRegressionTest {
         // A worn hat hides the tuft and the robot's antenna.
         assertTrue(draw.contains("drawHat(canvas, now)"))
         assertTrue(draw.contains("decor.drawTuft(canvas, now)\n            decor.drawCrown(canvas)"))
-        assertTrue(draw.contains("rotation.coerceIn(-8f, 8f)"))
+        assertTrue(draw.contains("bodyTarget[4] = 0f"))
+        assertFalse(draw.contains("saveLayerAlpha"))
         for (allocation in listOf("floatArrayOf(", "intArrayOf(", "listOf(", "Paint(", "Path(", "RectF(", "Matrix(")) {
             assertFalse(allocation, Regex("(?<![A-Za-z0-9_])" + Regex.escape(allocation)).containsMatchIn(draw))
         }
@@ -132,6 +138,6 @@ class MascotAnimationRegressionTest {
         val home = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         assertFalse(home.contains("MascotRoom"))
         val view = File("src/main/java/com/sonharf/game/WordSiegeMascotView.kt").readText()
-        assertTrue(view.contains("rotation.coerceIn(-8f, 8f)"))
+        assertTrue(view.contains("bodyTarget[4] = 0f"))
     }
 }

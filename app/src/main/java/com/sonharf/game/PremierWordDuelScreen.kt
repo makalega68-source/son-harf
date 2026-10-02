@@ -1020,7 +1020,7 @@ internal fun PremierLobby(
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                         Text(pt(language,"Zinciri koparma.\nÜç raundun galibi ol.","Keep the chain alive.\nWin the three-round duel."),color=Color.White.copy(alpha=.9f),fontSize=14.sp,lineHeight=19.sp,fontWeight=FontWeight.Bold)
-                        EventTag(pt(language,"15 SANİYE · 10 KELİME","15 SECONDS · 10 WORDS"),gold=false)
+                        EventTag(pt(language,"15 SANİYE · 10 HAMLE","15 SECONDS · 10 TURNS"),gold=false)
                     }
                     if(skin!=null)WordSiegeMascot(moveId=null,lastMoveMine=false,pendingCells=emptyList(),playerTurn=true,requestedEmotion=WordSiegeMascotEmotion.HAPPY,modifier=Modifier.size(114.4.dp),actionKey=waveKey,action=WordSiegeMascotAction.WAVE,skin=skin)
                 }

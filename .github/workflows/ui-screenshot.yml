@@ -97,6 +97,13 @@ jobs:
             adb exec-out screencap -p > Fallback-rival-Android.png
             adb logcat -d -s AndroidRuntime:E > Fallback-runtime.log
             ! grep -q 'FATAL EXCEPTION' Fallback-runtime.log
+            python3 scripts/verify_mascot_drag.py
+            adb shell am force-stop com.sonharf.game
+            adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage mascot-face
+            sleep 3
+            timeout 25s adb exec-out screencap -p > Mascot-face-Android.png
+            sleep 2
+            timeout 25s adb exec-out screencap -p > Mascot-face-second-Android.png
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage controls-dark
             sleep 3
@@ -129,6 +136,7 @@ jobs:
             Review-*-runtime.log
             Fallback-*
             Preview-*.xml
+            Mascot-*
             app/build/test-results/testDebugUnitTest/*.xml
           if-no-files-found: error
           retention-days: 7

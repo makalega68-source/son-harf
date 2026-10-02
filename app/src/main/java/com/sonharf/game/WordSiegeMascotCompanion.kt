@@ -154,6 +154,14 @@ internal fun Modifier.wordSiegeMascotTouchWatcher(state: WordSiegeMascotTouchSta
         }
     }
 
+/** Keep the draggable hit box fully reachable, including after a keyboard/rotation resize. */
+internal fun mascotBoundCenter(point: Offset, area: Size, sizePx: Float, margin: Float): Offset {
+    val halfX = min(area.width / 2f, sizePx / 2f + margin)
+    val halfY = min(area.height / 2f, sizePx / 2f + margin)
+    return Offset(point.x.coerceIn(halfX, max(halfX, area.width - halfX)),
+        point.y.coerceIn(halfY, max(halfY, area.height - halfY)))
+}
+
 /** Friendship memory between the player and the mascot. Stored only on this device. */
 internal class WordSiegeMascotBond(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -548,6 +556,7 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
 
 private const val STAGE = -1
 private const val VISIT = -2
+private const val USER_ANCHOR = -3
 
 /** A drifting letter the mascot sometimes chases for fun. Positions are area fractions. */
 private data class WordSiegeMascotChase(val id: Int, val letter: String, val start: Offset, val end: Offset)
@@ -604,6 +613,7 @@ internal fun WordSiegeMascotCompanion(
     ambientScenes: Boolean = false,
     /** Speech belongs only in an explicitly opened mascot conversation. */
     allowSpeech: Boolean = false,
+    positionKey: String = "arena",
 ) {
     if (anchors.isEmpty()) return
     val ownedSkins = WordSiegeMascotOwnership.owned
@@ -614,16 +624,21 @@ internal fun WordSiegeMascotCompanion(
     val scope = rememberCoroutineScope()
     val lifecycle = LocalView.current.findViewTreeLifecycleOwner()?.lifecycle
     var foreground by remember { mutableStateOf(lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true) }
-    val voice = remember(context, ambientScenes, allowSpeech) { if (ambientScenes && allowSpeech) MascotAmbientVoice(context) else null }
-    DisposableEffect(lifecycle, voice) {
+    DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, _ ->
             foreground = lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true
-            if (!foreground) voice?.stop()
         }
         lifecycle?.addObserver(observer)
-        onDispose { lifecycle?.removeObserver(observer); voice?.close() }
+        onDispose { lifecycle?.removeObserver(observer) }
     }
-    val displayedSize = mascotSize * if (ambientScenes) 1.3f else 1f
+    val requestedSize = mascotSize * 1.3f
+    val placementPrefs = remember(context) { context.getSharedPreferences("mascot_placement", Context.MODE_PRIVATE) }
+    var userPoint by remember(positionKey) { mutableStateOf(
+        if (placementPrefs.contains("$positionKey:x")) Offset(
+            placementPrefs.getFloat("$positionKey:x", .5f).coerceIn(0f, 1f),
+            placementPrefs.getFloat("$positionKey:y", .5f).coerceIn(0f, 1f)) else null) }
+    var dragging by remember { mutableStateOf(false) }
+    var dragCenter by remember { mutableStateOf(Offset.Zero) }
     val firstName = playerName?.trim()?.split(' ')?.firstOrNull()?.takeIf { it.isNotBlank() && it.length <= 14 }
 
     var anchorIndex by remember { mutableIntStateOf(0) }
@@ -660,7 +675,7 @@ internal fun WordSiegeMascotCompanion(
     var ambientSceneIndex by remember { mutableIntStateOf(0) }
     LaunchedEffect(foreground) {
         if (!foreground) {
-            tripJob?.cancel(); speechJob?.cancel(); voice?.stop()
+            tripJob?.cancel(); speechJob?.cancel()
             guestSkin = null; chase = null; speech = null; stageEmotion = null
             talking = false; busy = false; watching = true
             scale.snapTo(1f)
@@ -713,6 +728,7 @@ internal fun WordSiegeMascotCompanion(
         val density = LocalDensity.current
         val areaWidth = constraints.maxWidth.toFloat()
         val areaHeight = constraints.maxHeight.toFloat()
+        val displayedSize = with(density) { min(requestedSize.toPx(), min(areaWidth, areaHeight)).toDp() }
         val baseSizePx = with(density) { displayedSize.toPx() }
         val marginPx = with(density) { 4.dp.toPx() }
         val area by rememberUpdatedState(Size(areaWidth, areaHeight))
@@ -723,21 +739,20 @@ internal fun WordSiegeMascotCompanion(
             val raw = when (index) {
                 STAGE -> Offset(w / 2f, h * stageY)
                 VISIT -> Offset(visitPoint.x * w, visitPoint.y * h)
+                USER_ANCHOR -> userPoint?.let { Offset(it.x * w, it.y * h) } ?: Offset(w / 2f, h / 2f)
                 else -> {
                     val anchor = currentAnchors[index.coerceIn(0, currentAnchors.lastIndex)]
                     Offset(anchor.x * w, anchor.y * h)
                 }
             }
-            val half = sizePx / 2f + marginPx
-            return Offset(
-                raw.x.coerceIn(half, max(half, w - half)),
-                raw.y.coerceIn(half, max(half, h - half)),
-            )
+            return mascotBoundCenter(raw, area, sizePx, marginPx)
         }
 
         fun currentCenter(): Offset {
+            if (dragging) return mascotBoundCenter(dragCenter, area, baseSizePx, marginPx)
             val sizePx = baseSizePx * scale.value
             val target = anchorCenter(anchorIndex, sizePx)
+            if (anchorIndex == USER_ANCHOR && !flying) return target
             val start = if (fromPosition.isSpecified) fromPosition else Offset(area.width + baseSizePx, -baseSizePx)
             val t = flight.value
             if (t >= 1f) return target
@@ -774,16 +789,15 @@ internal fun WordSiegeMascotCompanion(
             glanceKey += 1
         }
 
-        fun say(text: String, holdExtraMillis: Long = 0L, aloud: Boolean = false, explicitRequest: Boolean = false) {
+        fun say(text: String, holdExtraMillis: Long = 0L, explicitRequest: Boolean = false) {
             if (!allowSpeech && !explicitRequest) return
             speechJob?.cancel()
             speechId += 1
             speech = MascotVoice.style(text, skin, speechId)
-            val voiced = aloud && voice?.speak(text, SonHarfUiState.language) { talking = it } == true
             speechJob = scope.launch {
-                if (!voiced) talking = true
-                delay(if (voiced) 3_200L else text.length * 34L + 250L)
-                if (!voiced) talking = false
+                talking = true
+                delay(text.length * 34L + 250L)
+                talking = false
                 delay((1_500L + text.length * 30L + holdExtraMillis).coerceAtMost(5_500L))
                 speech = null
             }
@@ -791,7 +805,7 @@ internal fun WordSiegeMascotCompanion(
 
         suspend fun flyTo(index: Int, durationMillis: Int) {
             fromPosition = currentCenter()
-            anchorIndex = index
+            anchorIndex = if (index >= 0 && userPoint != null) USER_ANCHOR else index
             if (index >= 0) homeIndex = index
             val id = ++flightId
             flying = true
@@ -811,7 +825,7 @@ internal fun WordSiegeMascotCompanion(
          */
         fun startTrip(block: suspend CoroutineScope.() -> Unit): Job {
             tripJob?.cancel()
-            return scope.launch(block = block).also { tripJob = it }
+            return scope.launch { if (!dragging) block() }.also { tripJob = it }
         }
 
         /** Flies beside [point] (area fraction) so it does not hide what it is showing. */
@@ -839,7 +853,7 @@ internal fun WordSiegeMascotCompanion(
 
         /** Flies to another perch because a finger came close. */
         fun moveOutOfTheWay(now: Long) {
-            if (busy || flying || chase != null || now - lastEscapeAt < 1_500L) return
+            if (dragging || userPoint != null || busy || flying || chase != null || now - lastEscapeAt < 1_500L) return
             lastEscapeAt = now
             startTrip { flyTo(otherAnchor(), 750) }
         }
@@ -884,7 +898,10 @@ internal fun WordSiegeMascotCompanion(
         // Life loop: arrive, greet, then mostly watch with an occasional, never-repeating gesture.
         LaunchedEffect(Unit) {
             delay(250L)
-            if (initialOutcome == null) startTrip { flyTo(0, 1_000) }.join()
+            if (initialOutcome == null) {
+                if (userPoint != null) { anchorIndex = USER_ANCHOR; flight.snapTo(1f) }
+                else startTrip { flyTo(0, 1_000) }.join()
+            }
             if (greeting != null && initialOutcome == null) {
                 delay(300L)
                 perform(WordSiegeMascotAction.WAVE)
@@ -926,7 +943,7 @@ internal fun WordSiegeMascotCompanion(
                 // After losses it is a little quieter; after wins a little livelier.
                 val moodFactor = 1f + bond.mood * .08f
                 delay((mind.nextIdleDelay() / moodFactor.coerceIn(.6f, 1.4f)).toLong())
-                if (!foreground || busy || flying || speech != null || chase != null || guestSkin != null) continue
+                if (!foreground || dragging || busy || flying || speech != null || chase != null || guestSkin != null) continue
                 if (ambientScenes) {
                     // Rotate stories instead of repeatedly drawing the same random idle.
                     val quiet = SystemClock.uptimeMillis() - lastInteractionAt > 40_000L
@@ -940,12 +957,12 @@ internal fun WordSiegeMascotCompanion(
                                 scale.animateTo(1.65f, tween(700, easing = FastOutSlowInEasing))
                                 perform(WordSiegeMascotAction.KNOCK)
                                 delay(1_160L)
-                                repeat(3) { SonHarfSoundFx.mascotKnock(); delay(516L) }
+                                delay(1_548L)
                                 val name = currentName.orEmpty()
                                 val line = if (SonHarfUiState.language == "en") {
                                     if (name.isBlank()) "Are you there?" else "$name, are you there?"
                                 } else if (name.isBlank()) "Orada mısın?" else "$name, orada mısın?"
-                                say(line, 1_000L, aloud = true)
+                                say(line, 1_000L)
                                 delay(2_600L)
                                 scale.animateTo(1f, tween(650, easing = FastOutSlowInEasing))
                             } finally {
@@ -977,11 +994,10 @@ internal fun WordSiegeMascotCompanion(
                                         chase = null // The same black cube now belongs to the mouth/hand rig.
                                         perform(WordSiegeMascotAction.EAT)
                                         delay(1_230L)
-                                        repeat(4) { SonHarfSoundFx.mascotChew(); delay(570L) }
+                                        delay(2_280L)
                                         delay(890L)
                                         perform(WordSiegeMascotAction.BURP)
                                         delay(400L)
-                                        SonHarfSoundFx.mascotBurp()
                                         delay(1_400L)
                                         perform(WordSiegeMascotAction.HIDE_FACE)
                                         delay(1_100L)
@@ -1283,7 +1299,7 @@ internal fun WordSiegeMascotCompanion(
             if (!touch.isSpecified) return@LaunchedEffect
             val now = SystemClock.uptimeMillis()
             lastInteractionAt = now
-            if (busy) return@LaunchedEffect
+            if (busy || dragging) return@LaunchedEffect
             val here = currentCenter()
             val radius = baseSizePx * scale.value / 2f
             val distance = (touch - here).getDistance()
@@ -1295,7 +1311,7 @@ internal fun WordSiegeMascotCompanion(
         }
         LaunchedEffect(touches?.dragTick) {
             val drag = touches?.dragPosition ?: return@LaunchedEffect
-            if (!drag.isSpecified || busy) return@LaunchedEffect
+            if (!drag.isSpecified || busy || dragging || userPoint != null) return@LaunchedEffect
             val now = SystemClock.uptimeMillis()
             lastInteractionAt = now
             val here = currentCenter()
@@ -1466,6 +1482,29 @@ internal fun WordSiegeMascotCompanion(
                 skin = skin,
                 // A long press opens the character picker.
                 onLongPress = if (forcedSkin == null) ({ if (!busy) showPicker = true }) else null,
+                onDragStart = {
+                    dragCenter = currentCenter()
+                    dragging = true
+                    tripJob?.cancel()
+                    speechJob?.cancel()
+                    speech = null; talking = false; chase = null; guestSkin = null
+                    flying = false; busy = false; stageEmotion = null
+                    anchorIndex = USER_ANCHOR
+                    scope.launch { scale.snapTo(1f) }
+                    lastInteractionAt = SystemClock.uptimeMillis()
+                },
+                onDrag = { delta ->
+                    dragCenter = mascotBoundCenter(dragCenter + delta, area, baseSizePx, marginPx)
+                    userPoint = Offset(dragCenter.x / max(1f, area.width), dragCenter.y / max(1f, area.height))
+                    lastInteractionAt = SystemClock.uptimeMillis()
+                },
+                onDragEnd = {
+                    userPoint = Offset(dragCenter.x / max(1f, area.width), dragCenter.y / max(1f, area.height))
+                    dragging = false
+                    userPoint?.let { point -> placementPrefs.edit().putFloat("$positionKey:x", point.x)
+                        .putFloat("$positionKey:y", point.y).apply() }
+                    perform(WordSiegeMascotAction.NOD)
+                },
                 onTap = { touchedMascot(SystemClock.uptimeMillis()) },
             )
         }

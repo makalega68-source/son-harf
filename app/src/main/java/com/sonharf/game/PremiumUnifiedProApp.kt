@@ -435,7 +435,7 @@ private fun PremiumHomeScreen(
         // The original floating companion consumes no row or empty space in the home feed.
         WordSiegeMascotCompanion(
             anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
-            mascotSize = 83.dp,
+            mascotSize = 83.dp, positionKey = "home",
             moveId = null, lastMoveMine = false, playerTurn = false,
             modifier = Modifier.matchParentSize(),
             playerName = profile?.displayName, playerGender = profile?.gender,

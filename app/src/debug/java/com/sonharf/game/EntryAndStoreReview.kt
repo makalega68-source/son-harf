@@ -26,6 +26,24 @@ internal fun EntryAndStoreReview(stage: String) {
     ) else lightColorScheme(primary = Hf.Green, background = Hf.Ground, surface = Hf.Surface, onSurface = Hf.Text)
     MaterialTheme(colorScheme = scheme) {
         when {
+            stage == "mascot-drag" -> Box(Modifier.fillMaxSize().background(Hf.Ground).statusBarsPadding().navigationBarsPadding()) {
+                WordSiegeMascotCompanion(anchors = listOf(androidx.compose.ui.geometry.Offset(.5f,.75f)),
+                    mascotSize = 100.dp, moveId = null, lastMoveMine = false, playerTurn = false,
+                    requireOwnership = false, greet = false, positionKey = "qa-drag", modifier = Modifier.matchParentSize())
+            }
+            stage == "mascot-face" -> Column(Modifier.fillMaxSize().background(Hf.Ground).statusBarsPadding().navigationBarsPadding().padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.SURPRISED, WordSiegeMascotEmotion.TEARY,
+                    WordSiegeMascotEmotion.LAUGH, WordSiegeMascotEmotion.STRESSED).forEach { mood ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        listOf(-1f,0f,1f).forEach { gaze ->
+                            WordSiegeMascot(moveId=null,lastMoveMine=false,pendingCells=emptyList(),playerTurn=false,
+                                requestedEmotion=mood,idleGazeX=gaze, watching=true, modifier=Modifier.size(104.dp))
+                        }
+                    }
+                    Text(mood.name,color=Hf.Text,fontSize=10.sp)
+                }
+            }
             stage.startsWith("welcome") -> IntroWelcomeScreen {}
             stage.startsWith("store") -> EconomyShopScreen(onCollection = {}, onPro = {})
             stage == "inbox-dark" -> Column(Modifier.fillMaxSize().background(Hf.Ground).statusBarsPadding().padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)) {
