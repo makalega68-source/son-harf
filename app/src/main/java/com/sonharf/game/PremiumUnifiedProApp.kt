@@ -231,6 +231,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             // add statusBarsPadding() themselves (the game arenas) no longer get a second, empty band on top.
             Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
                 if (!SonHarfTheme.IsDark && !SonHarfCosmetics.darkArenaTheme && !SonHarfCosmetics.walnutTheme) SonHarfLeafBackdrop(Modifier.matchParentSize())
+                key(destination, gameLaunchRevision) {
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
                         backend = backend,
@@ -296,12 +297,12 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onBack = { destination = PremiumDestination.PRO },
                         onRoomReady = { language -> openGame(PremiumDestination.LAST_LETTER, language) },
                     )
-                    PremiumDestination.LAST_LETTER -> key(gameLaunchRevision) { OnlineGameScreenV6() }
-                    PremiumDestination.SIEGE -> key(gameLaunchRevision) { WordSiegeEntryScreen(
+                    PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()
+                    PremiumDestination.SIEGE -> WordSiegeEntryScreen(
                         startQuickDuel = startQuickDuel,
                         onExit = { leaveGame() },
                         onOpenStore = { leaveGame(PremiumDestination.SHOP) },
-                    ) }
+                    )
                     PremiumDestination.WORD_WORKSHOP -> KelimeAtolyesiScreen {
                         leaveGame()
                     }
@@ -343,6 +344,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onBack = { destination = PremiumDestination.HOME },
                         mascotSkin = chatMascotSkin(shellContext),
                     )
+                }
                 }
                 // Friend requests and game invitations are announced on every main page,
                 // not only inside the Friends page, so they never wait unseen.
