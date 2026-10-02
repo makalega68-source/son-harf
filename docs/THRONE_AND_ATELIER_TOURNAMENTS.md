@@ -27,6 +27,7 @@ Takvim Europe/Istanbul saat dilimindedir; telefon saati sonuç ve XP belirlemez.
 - Çarpan sadece turnuva aşamalarına uygulanır. Haftalık görev ödülleri çarpılmaz.
 - Antrenman puanı yerel rekora yazılır; resmî haftalık XP değildir. Eski rating/lig, coin ve sezon biletinin mevcut ödülleri değiştirilmez.
 - Her maç/aşama benzersiz bir kaynak kaydıyla yazılır. İstemci haftalık toplamı, çarpanı veya görev ödülünü belirleyemez.
+- Sistem devreye alınırken mevcut haftanın doğrulanmış üç oyun sonuçları da XP kaydına aktarılır.
 - Türkiye saatine göre pazartesi 00:00 yeni hafta başlar. Geçmiş kayıtlar korunur; yeni haftanın puanları sıfırdan toplanır.
 - Haftalık sıralama toplam XP, ilk XP kazanma zamanı ve kullanıcı kimliğiyle tek bir lider seçer. Bu haftanın lideri Taht Sahibi olarak gösterilir; geçen haftanın sahibi ayrıca yayınlanır.
 - Profil seviyesi/level eklenmez.

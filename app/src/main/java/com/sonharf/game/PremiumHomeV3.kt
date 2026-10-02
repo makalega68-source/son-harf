@@ -356,7 +356,7 @@ private fun PremiumHomeModeCard(
 @Composable
 internal fun PremiumDailyObjective(onClick: () -> Unit) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
-    var players by remember { mutableStateOf<List<WeeklyTopPlayerV210>>(emptyList()) }
+    var players by remember { mutableStateOf<List<com.sonharf.game.data.ThroneRow>>(emptyList()) }
     var loading by remember { mutableStateOf(backend != null) }
     var failed by remember { mutableStateOf(false) }
     var reloadKey by remember { mutableIntStateOf(0) }
@@ -371,7 +371,7 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
         }
         while (true) {
             failed = false
-            runCatching { activeBackend.getWeeklyTopV210(limit = 3) }
+            gameRequestResult { com.sonharf.game.data.ThroneBackend.week().rows }
                 .onSuccess { next -> next.take(3).let { if (it != players) players = it } }
                 .onFailure { if (players.isEmpty()) failed = true }
             loading = false
@@ -389,7 +389,7 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
         // Live weekly podium uses the same material palette as the home profile card.
         WeeklyPodiumArt(
             style = WeeklyPodiumStyle.HOME,
-            seats = players.map { PodiumSeat(it.userId, it.username, "${it.rp} RP", it.avatarUrl) },
+            seats = players.map { PodiumSeat(it.userId, it.name, "${it.xp} XP", it.avatarPath) },
         )
         when {
             loading -> CircularProgressIndicator(Modifier.size(22.dp), color = Hf.GoldLight, strokeWidth = 2.dp)
