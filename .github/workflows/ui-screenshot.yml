@@ -82,6 +82,15 @@ jobs:
         run: |
           test -s Ceviz-Fildisi-Android.png
           test -s Kelime-Tahti-Guncel.apk
+          python3 -m pip install --user --break-system-packages --quiet Pillow
+          python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          for path in Path('.').glob('Mascot-*-Android.png'):
+              image = Image.open(path).convert('RGB')
+              center = image.crop((100, 100, image.width - 100, image.height - 250))
+              assert max(channel[1] for channel in center.getextrema()) > 100, f'Blank mascot frame: {path}'
+          PY
           echo "SOURCE_SHA=$(git rev-parse HEAD)"
           sha256sum Kelime-Tahti-Guncel.apk Ceviz-Fildisi-Android.png
       - name: Upload APK
@@ -99,4 +108,3 @@ jobs:
             Mascot-motion-Android.mp4
           if-no-files-found: error
           retention-days: 7
-

@@ -501,7 +501,12 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
 
     init {
         contentDescription = "Maskot"
+        // The curved mutable texture and soft masks must share the same Canvas backend.
+        // A bounded software layer also avoids driver-specific mesh/bitmap cache corruption.
+        setLayerType(LAYER_TYPE_SOFTWARE, null)
         updateHandShader()
+        edgePaint.shader = decor.ringShader()
+        wingPaint.shader = decor.wingShader()
     }
 
     fun updateGame(

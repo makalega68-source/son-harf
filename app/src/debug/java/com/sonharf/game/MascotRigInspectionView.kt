@@ -23,6 +23,7 @@ internal class MascotRigInspectionView(context: Context, private val stage: Stri
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF243E32.toInt(); textAlign = Paint.Align.CENTER }
     private val fields = WordSiegeMascotView::class.java.declaredFields.associateBy { it.name }.onEach { (_, field) -> field.isAccessible = true }
     private val poseMethod = WordSiegeMascotView::class.java.getDeclaredMethod("writePose", WordSiegeMascotEmotion::class.java, FloatArray::class.java).apply { isAccessible = true }
+    init { setLayerType(LAYER_TYPE_SOFTWARE, null) }
     override fun onDraw(canvas: Canvas) {
         canvas.drawColor(0xFFF3EEE4.toInt())
         val cell = minOf(width / 3f, (height - 70f) / ((samples.size + 2) / 3))
