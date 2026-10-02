@@ -42,7 +42,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(home.contains("sh(\"OYNA\", \"PLAY\")"))
         assertTrue(home.contains("sh(\"Günlük Görevler\", \"Daily Tasks\")"))
         assertTrue(home.contains("getMetaProgressV2().dailyPlayStreak"))
-        assertTrue(home.contains("getWeeklyTopV210(limit = 3)"))
+        assertTrue(home.contains("ThroneBackend.week().rows"))
         assertTrue(home.contains("style = WeeklyPodiumStyle.HOME"))
         assertTrue(home.contains("sh(\"Kelime Atölyesi\", \"Word Workshop\")"))
         assertTrue(shell.contains("PremiumBottomBar("))
