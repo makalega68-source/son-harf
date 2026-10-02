@@ -936,14 +936,15 @@ internal fun WordSiegeMascotCompanion(
                                 flyBeside(Offset(.5f, .48f), 900, onTop = true)
                                 scale.animateTo(1.65f, tween(700, easing = FastOutSlowInEasing))
                                 perform(WordSiegeMascotAction.KNOCK)
-                                delay(900L)
-                                repeat(3) { SonHarfSoundFx.mascotKnock(); delay(510L) }
+                                delay(1_160L)
+                                repeat(3) { SonHarfSoundFx.mascotKnock(); delay(516L) }
                                 val name = currentName.orEmpty()
                                 val line = if (SonHarfUiState.language == "en") {
                                     if (name.isBlank()) "Are you there?" else "$name, are you there?"
                                 } else if (name.isBlank()) "Orada mısın?" else "$name, orada mısın?"
                                 say(line, 1_000L, aloud = true)
                                 delay(2_600L)
+                                scale.animateTo(1f, tween(650, easing = FastOutSlowInEasing))
                             } finally {
                                 busy = false
                                 scale.snapTo(1f)

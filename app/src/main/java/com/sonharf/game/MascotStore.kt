@@ -292,14 +292,18 @@ private fun MascotStoreHero() {
             )
             Spacer(Modifier.height(12.dp))
             // Obi in front and sharp; the coming-soon friends stay misted beside him.
-            Row(Modifier.fillMaxWidth().height(120.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                listOf(WordSiegeMascotSkin.PINK, WordSiegeMascotSkin.ORB, WordSiegeMascotSkin.CAT).forEach { skin ->
+            Box(Modifier.fillMaxWidth().height(156.dp)) {
+                listOf(WordSiegeMascotSkin.PINK, WordSiegeMascotSkin.CAT, WordSiegeMascotSkin.ORB).forEach { skin ->
                     WordSiegeMascot(
                         moveId = null,
                         lastMoveMine = false,
                         pendingCells = emptyList(),
                         playerTurn = false,
-                        modifier = Modifier.size(if (skin.onSale) 150.8.dp else 111.8.dp)
+                        modifier = Modifier.align(when (skin) {
+                            WordSiegeMascotSkin.ORB -> Alignment.Center
+                            WordSiegeMascotSkin.PINK -> Alignment.CenterStart
+                            else -> Alignment.CenterEnd
+                        }).size(if (skin.onSale) 150.8.dp else 111.8.dp)
                             .then(if (skin.onSale) Modifier else Modifier.mascotMist(8.dp)),
                         skin = skin,
                     )

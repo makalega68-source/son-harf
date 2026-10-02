@@ -88,6 +88,16 @@ internal fun mascotActionMillis(action: WordSiegeMascotAction): Long = when (act
     WordSiegeMascotAction.CHASE_RUN -> 4_800L
 }
 
+/** Three contacts, separated by withdrawal of the fist; zero outside the knocking beat. */
+internal fun mascotKnockPulse(t: Float): Float =
+    if (t in .25f.. .68f) abs(sin((t - .25f) / .43f * 3f * PI.toFloat())) else 0f
+
+/** The distant eye disappears smoothly as the facial plane turns around the orb. */
+internal fun mascotFarEyeVisibility(yaw: Float, left: Boolean): Float {
+    val turn = if (left) yaw else -yaw
+    return 1f - WordSiegeMascotView.easeInOut((turn - .45f) / .5f)
+}
+
 /** Four complete chew cycles between opening the mouth and swallowing. */
 internal fun mascotEatingOpen(t: Float): Float = when {
     t < .16f -> .08f + .8f * WordSiegeMascotView.easeInOut(t / .16f)
@@ -1097,8 +1107,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val lower = max(poseValue[P_LOWER], blink * .25f).coerceIn(0f, 1f)
         val water = poseValue[P_WATER].coerceIn(0f, 1f)
         val slant = poseValue[P_SLANT]
-        val farLeft = (1f - easeInOut((yaw - .45f) / .5f)).coerceIn(0f, 1f)
-        val farRight = (1f - easeInOut((-yaw - .45f) / .5f)).coerceIn(0f, 1f)
+        val farLeft = mascotFarEyeVisibility(yaw, left = true)
+        val farRight = mascotFarEyeVisibility(yaw, left = false)
         val leftGroup = canvas.saveLayerAlpha(artRect, (255f * farLeft).toInt())
         val wink = if (actionKind == WordSiegeMascotAction.WINK && faceT >= 0f) envelope else 0f
         drawEye(canvas, "eye_left", "iris_left", LEFT_EYE_X, LEFT_IRIS_X, gazeX + tremor, gazeY, water)
@@ -1455,7 +1465,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
                 motion[4] = 4f * nod
             }
             WordSiegeMascotAction.KNOCK -> {
-                val knock = if (t in .25f.. .68f) abs(sin((t - .25f) / .43f * 3f * pi)) else 0f
+                val knock = mascotKnockPulse(t)
                 motion[1] = -10f * actionEnvelope(t) + 6f * knock
                 motion[4] = -3f * knock
             }
@@ -1984,7 +1994,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             }
             WordSiegeMascotAction.KNOCK -> {
                 val t = ((now - actionStartedAt).toFloat() / mascotActionMillis(WordSiegeMascotAction.KNOCK)).coerceIn(0f, 1f)
-                val hit = if (t in .25f.. .68f) abs(sin((t - .25f) / .43f * 3f * PI.toFloat())) else 0f
+                val hit = mascotKnockPulse(t)
                 handTarget[2] = ORB_CX + 220f - 65f * hit
                 handTarget[3] = 700f - 75f * hit
             }
@@ -2021,7 +2031,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val rightX = hand[2].coerceIn(70f, 1_184f)
         if (act == WordSiegeMascotAction.KNOCK) {
             val t = ((now - actionStartedAt).toFloat() / mascotActionMillis(WordSiegeMascotAction.KNOCK)).coerceIn(0f, 1f)
-            val hit = if (t in .25f.. .68f) abs(sin((t - .25f) / .43f * 3f * PI.toFloat())) else 0f
+            val hit = mascotKnockPulse(t)
             canvas.save()
             canvas.scale(1f + .55f * hit, 1f + .55f * hit, rightX, hand[3])
             drawHand(canvas, rightX, hand[3], 1f)

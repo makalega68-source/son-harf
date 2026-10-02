@@ -65,6 +65,40 @@ class MascotAnimationRegressionTest {
     }
 
     @Test
+    fun screenKnockHasExactlyThreeSeparatedContactsAndNoBoundaryJump() {
+        var peaks = 0
+        for (i in 1 until 999) {
+            val t = i / 1000f
+            val pulse = mascotKnockPulse(t)
+            assertTrue(pulse in 0f..1f)
+            if (pulse > mascotKnockPulse(t - .001f) && pulse >= mascotKnockPulse(t + .001f)) peaks++
+        }
+        assertEquals(3, peaks)
+        assertEquals(0f, mascotKnockPulse(0f), .0001f)
+        assertEquals(0f, mascotKnockPulse(1f), .0001f)
+        for (boundary in floatArrayOf(.25f, .68f)) {
+            assertEquals(mascotKnockPulse(boundary - .00001f), mascotKnockPulse(boundary + .00001f), .001f)
+        }
+    }
+
+    @Test
+    fun headTurnsOccludeOnlyTheDistantEyeContinuouslyAndSymmetrically() {
+        assertEquals(1f, mascotFarEyeVisibility(0f, true), .0001f)
+        assertEquals(1f, mascotFarEyeVisibility(0f, false), .0001f)
+        assertEquals(0f, mascotFarEyeVisibility(1f, true), .0001f)
+        assertEquals(1f, mascotFarEyeVisibility(1f, false), .0001f)
+        for (i in -1000..1000) {
+            val yaw = i / 1000f
+            val left = mascotFarEyeVisibility(yaw, true)
+            val right = mascotFarEyeVisibility(yaw, false)
+            assertTrue(left in 0f..1f && right in 0f..1f)
+            assertEquals(left, mascotFarEyeVisibility(-yaw, false), .0001f)
+            assertEquals(1f, maxOf(left, right), .0001f)
+            assertTrue(abs(left - mascotFarEyeVisibility(yaw + .001f, true)) < .004f)
+        }
+    }
+
+    @Test
     fun mascotActionsHaveSaneDurations() {
         for (action in WordSiegeMascotAction.entries) assertTrue(mascotActionMillis(action) in 800L..6_000L)
         for (idle in listOf(WordSiegeMascotAction.LOOK_AROUND, WordSiegeMascotAction.STRETCH,

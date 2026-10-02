@@ -350,7 +350,7 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
         ) {
             Box(
                 Modifier
-                    .size(236.dp)
+                    .size(306.8.dp)
                     .background(
                         Brush.radialGradient(
                             listOf(
