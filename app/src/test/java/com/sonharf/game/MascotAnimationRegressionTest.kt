@@ -82,20 +82,56 @@ class MascotAnimationRegressionTest {
     }
 
     @Test
-    fun headTurnsOccludeOnlyTheDistantEyeContinuouslyAndSymmetrically() {
-        assertEquals(1f, mascotFarEyeVisibility(0f, true), .0001f)
-        assertEquals(1f, mascotFarEyeVisibility(0f, false), .0001f)
-        assertEquals(0f, mascotFarEyeVisibility(1f, true), .0001f)
-        assertEquals(1f, mascotFarEyeVisibility(1f, false), .0001f)
-        for (i in -1000..1000) {
-            val yaw = i / 1000f
-            val left = mascotFarEyeVisibility(yaw, true)
-            val right = mascotFarEyeVisibility(yaw, false)
-            assertTrue(left in 0f..1f && right in 0f..1f)
-            assertEquals(left, mascotFarEyeVisibility(-yaw, false), .0001f)
-            assertEquals(1f, maxOf(left, right), .0001f)
-            assertTrue(abs(left - mascotFarEyeVisibility(yaw + .001f, true)) < .004f)
+    fun curvedFaceStaysInsideSolidHeadAtEveryTurnAndNod() {
+        val mesh = FloatArray(33 * 33 * 2)
+        for (yaw in -20..20) for (pitch in -10..10) {
+            mascotFaceMesh(yaw / 20f, pitch / 10f, 32, 32, mesh)
+            for (i in mesh.indices step 2) {
+                assertTrue(mesh[i].isFinite() && mesh[i + 1].isFinite())
+                val x = (mesh[i] - 660f) / 400f
+                val y = (mesh[i + 1] - 641f) / 411f
+                assertTrue("No facial vertex outside the head", x * x + y * y <= 1.00001f)
+            }
+            for (row in 0..32) for (col in 1..32) {
+                val i = (row * 33 + col) * 2
+                assertTrue("Hidden side must collapse, never fold back over the visible eye", mesh[i] >= mesh[i - 2] - .001f)
+            }
         }
+    }
+
+    @Test
+    fun curvedFaceIsContinuousAndNeutralProjectionPreservesSockets() {
+        val before = FloatArray(33 * 33 * 2)
+        val after = FloatArray(before.size)
+        mascotFaceMesh(0f, 0f, 32, 32, before)
+        for (row in 0..32) for (col in 0..32) {
+            val x = 1254f * col / 32
+            val y = 1254f * row / 32
+            val u = (x - 660f) / 400f
+            val v = (y - 641f) / 411f
+            if (u * u + v * v < .98f) {
+                val i = (row * 33 + col) * 2
+                assertEquals(x, before[i], .001f)
+                assertEquals(y, before[i + 1], .001f)
+            }
+        }
+        for (step in -100..99) {
+            mascotFaceMesh(step / 100f, .4f, 32, 32, before)
+            mascotFaceMesh((step + 1) / 100f, .4f, 32, 32, after)
+            for (i in before.indices) assertTrue("No popping at the limb", abs(after[i] - before[i]) < 3.3f)
+        }
+    }
+
+    @Test
+    fun facialSurfaceUsesGeometricOcclusionAndHighlightsAreCoveredByLids() {
+        val view = File("src/main/java/com/sonharf/game/WordSiegeMascotView.kt").readText()
+        assertFalse(view.contains("saveLayerAlpha"))
+        assertTrue(view.contains("canvas.drawPath(headSilhouette, bodyPaint)"))
+        assertTrue(view.contains("canvas.clipPath(headSilhouette)"))
+        assertTrue(view.contains("canvas.drawBitmapMesh(faceBitmap"))
+        val eye = view.substringAfter("drawEye(faceCanvas, \"eye_left\"").substringBefore("faceCanvas.restoreToCount(eyeLayer)")
+        assertTrue(eye.indexOf("drawIrisLight") < eye.indexOf("drawLids"))
+        assertTrue(view.contains("if (amount >= .98f)"))
     }
 
     @Test

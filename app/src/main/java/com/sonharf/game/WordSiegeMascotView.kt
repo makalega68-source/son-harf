@@ -92,12 +92,6 @@ internal fun mascotActionMillis(action: WordSiegeMascotAction): Long = when (act
 internal fun mascotKnockPulse(t: Float): Float =
     if (t in .25f.. .68f) abs(sin((t - .25f) / .43f * 3f * PI.toFloat())) else 0f
 
-/** The distant eye disappears smoothly as the facial plane turns around the orb. */
-internal fun mascotFarEyeVisibility(yaw: Float, left: Boolean): Float {
-    val turn = if (left) yaw else -yaw
-    return 1f - WordSiegeMascotView.easeInOut((turn - .45f) / .5f)
-}
-
 /** Four complete chew cycles between opening the mouth and swallowing. */
 internal fun mascotEatingOpen(t: Float): Float = when {
     t < .16f -> .08f + .8f * WordSiegeMascotView.easeInOut(t / .16f)
@@ -260,21 +254,25 @@ private object WordSiegeMascotArt {
  */
 internal class WordSiegeMascotView(context: Context) : View(context) {
     private var layers: Map<String, Bitmap> = WordSiegeMascotArt.layers(context)
-    private val artScale = ART / (layers.getValue("orb_face_base").width.toFloat())
     private val artRect = RectF(0f, 0f, ART, ART)
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val atopPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
     }
-    // Eyelids are painted with the orb's own face texture so they read as the same surface.
-    private var skinShader = BitmapShader(layers.getValue("orb_face_base"), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
-    private val skinPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
-        shader = skinShader
+    // A solid shaded skin replaces the glass-ring face. Lids use the exact same material.
+    private val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val skinPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
     }
-    private val featureMatrix = Matrix()
-    private val skinMatrix = Matrix()
+    private val faceBitmap = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
+    private val faceCanvas = Canvas(faceBitmap)
+    private val faceVertices = FloatArray((32 + 1) * (32 + 1) * 2)
+    private val headSilhouette = Path().apply {
+        addOval(ORB_CX - ORB_RX, ORB_CY - ORB_RY, ORB_CX + ORB_RX, ORB_CY + ORB_RY, Path.Direction.CW)
+    }
+    private val irisClip = Path()
+
     // A soft glowing rim instead of a hard outline.
     private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -362,7 +360,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             intArrayOf(0x4DFFFFFF, 0x1AFFFFFF, 0x00FFFFFF), floatArrayOf(0f, .45f, 1f), Shader.TileMode.CLAMP)
     }
     private val glintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        shader = RadialGradient(0f, 0f, 44f, intArrayOf(0xE6FFFFFF.toInt(), 0x00FFFFFF), null, Shader.TileMode.CLAMP)
+        shader = RadialGradient(0f, 0f, 44f, intArrayOf(0x38FFFFFF, 0x00FFFFFF), null, Shader.TileMode.CLAMP)
     }
     private val rimLightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         shader = RadialGradient(ORB_CX - ORB_RX * .08f, ORB_CY - ORB_RY * .1f, ORB_RX * 1.04f,
@@ -640,8 +638,6 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         if (next == skin) return
         skin = next
         layers = WordSiegeMascotArt.layers(context, next)
-        skinShader = BitmapShader(layers.getValue("orb_face_base"), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
-        skinPaint.shader = skinShader
         decor = WordSiegeMascotDecor.of(next)
         updateHandShader()
         edgePaint.shader = decor.ringShader()
@@ -652,6 +648,9 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private fun updateHandShader() {
         handPaint.shader = RadialGradient(-18f, -23f, 74f, decor.handColors, null, Shader.TileMode.CLAMP)
         handCoverPaint.shader = handPaint.shader
+        bodyPaint.shader = RadialGradient(ORB_CX - 135f, ORB_CY - 160f, 720f,
+            intArrayOf(decor.handColors[0], decor.handColors[1]), floatArrayOf(0f, 1f), Shader.TileMode.CLAMP)
+        skinPaint.shader = bodyPaint.shader
     }
 
     /** Game context that is not tied to a single move: clock pressure, who is ahead, typing. */
@@ -938,10 +937,15 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val tremor = 0f // Stable fixation, with discrete micro-saccades above.
         val headK = 16f
         val headC = 2f * sqrt(headK)
-        headVelX += (headK * (gazeX - headX) - headC * headVelX) * dt
-        headVelY += (headK * (gazeY - headY) - headC * headVelY) * dt
-        headX += headVelX * dt
-        headY += headVelY * dt
+        var headRemaining = dt
+        while (headRemaining > 0f) {
+            val h = min(headRemaining, 1f / 120f)
+            headVelX += (headK * (gazeX.coerceIn(-1f, 1f) - headX) - headC * headVelX) * h
+            headVelY += (headK * (gazeY.coerceIn(-1f, 1f) - headY) - headC * headVelY) * h
+            headX += headVelX * h
+            headY += headVelY * h
+            headRemaining -= h
+        }
 
         // ---- Blink scheduler: quick close, slower open, occasional double blink ---------------
         if (blinkStartedAt < 0L && now >= nextBlinkAt) {
@@ -1063,7 +1067,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
 
         if (wing > .01f) drawWings(canvas, now)
         decor.drawBehind(canvas)
-        drawLayer(canvas, "orb_face_base")
+        canvas.drawPath(headSilhouette, bodyPaint)
         val sparkling = actionKind == WordSiegeMascotAction.SPARKLE && now < actionUntil
         val glow = if (mood == WordSiegeMascotEmotion.PROUD || mood == WordSiegeMascotEmotion.EXCITED || sparkling) 45f else 0f
         ovalRect.set(ORB_CX - ORB_RX, ORB_CY - ORB_RY, ORB_CX + ORB_RX, ORB_CY + ORB_RY)
@@ -1080,26 +1084,16 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         glintPaint.shader.setLocalMatrix(lightMatrix)
         canvas.drawCircle(lightX - ORB_RX * .08f, lightY - ORB_RY * .1f, 66f, glintPaint)
         canvas.drawOval(ovalRect, rimLightPaint)
-        edgePaint.alpha = (120f + 20f * sin(now / 950f) + glow).toInt().coerceIn(0, 255)
+        edgePaint.alpha = (70f + 8f * sin(now / 950f) + glow * .4f).toInt().coerceIn(0, 255)
         canvas.drawOval(ovalRect, edgePaint)
 
-        // Face features ride slightly ahead of the orb: they follow the gaze and fold downward when
-        // the head bows, which gives the round body a sense of depth.
-        // Features shift gently with the (slow) head and only a little when bowing, so the eyes
-        // stay in their sockets; the bow itself is carried by the body tilt and the gaze.
-        // A spherical turn: the facial plane travels around the orb and foreshortens.
-        // Eyes acquire the target before this damped head follows, including during travel.
+        // Compose the entire expression once, then wrap it around a single curved head surface.
+        // Geometry occludes the far eye at the silhouette; no eye ever fades through the skin.
         val yaw = headX.coerceIn(-1f, 1f)
-        featureMatrix.setTranslate(yaw * 122f, headY * 30f + bow * 18f)
-        featureMatrix.preScale(1f - .38f * abs(yaw), 1f - bow * .05f - .05f * abs(headY), FACE_CX, FACE_CY)
-        // The lid texture is counter-transformed so it always lines up with the orb underneath,
-        // otherwise the moving features would reveal seams at the lid edges.
-        if (featureMatrix.invert(skinMatrix)) {
-            skinMatrix.preScale(artScale, artScale)
-            skinShader.setLocalMatrix(skinMatrix)
-        }
-        canvas.save()
-        canvas.concat(featureMatrix)
+        faceBitmap.eraseColor(android.graphics.Color.TRANSPARENT)
+        faceCanvas.save()
+        faceCanvas.scale(faceBitmap.width / ART, faceBitmap.height / ART)
+        faceCanvas.clipPath(headSilhouette)
 
         val yawn = if (actionKind == WordSiegeMascotAction.YAWN && faceT >= 0f) sin(faceT * PI.toFloat()).let { it * it } else 0f
         val shrug = if (actionKind == WordSiegeMascotAction.SHRUG && faceT >= 0f) sin(faceT * PI.toFloat()) else 0f
@@ -1107,38 +1101,33 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val lower = max(poseValue[P_LOWER], blink * .25f).coerceIn(0f, 1f)
         val water = poseValue[P_WATER].coerceIn(0f, 1f)
         val slant = poseValue[P_SLANT]
-        val farLeft = mascotFarEyeVisibility(yaw, left = true)
-        val farRight = mascotFarEyeVisibility(yaw, left = false)
-        val leftGroup = canvas.saveLayerAlpha(artRect, (255f * farLeft).toInt())
         val wink = if (actionKind == WordSiegeMascotAction.WINK && faceT >= 0f) envelope else 0f
-        drawEye(canvas, "eye_left", "iris_left", LEFT_EYE_X, LEFT_IRIS_X, gazeX + tremor, gazeY, water)
-        drawLids(canvas, LEFT_EYE_X, EYE_Y, 128f, 128f, max(lid, wink), slant, -1f, lower)
-        canvas.restoreToCount(eyeLayer)
-        if (skin == WordSiegeMascotSkin.PINK) drawGirlLashes(canvas, LEFT_EYE_X, EYE_Y, 128f, 128f, lid, -1f)
-        canvas.restoreToCount(leftGroup)
-        val rightGroup = canvas.saveLayerAlpha(artRect, (255f * farRight).toInt())
-        drawEye(canvas, "eye_right", "iris_right", RIGHT_EYE_X, RIGHT_IRIS_X, gazeX + tremor, gazeY, water)
-        drawLids(canvas, RIGHT_EYE_X, EYE_Y, 122f, 126f, lid, slant, 1f, lower)
-        canvas.restoreToCount(eyeLayer)
-        if (skin == WordSiegeMascotSkin.PINK) drawGirlLashes(canvas, RIGHT_EYE_X, EYE_Y, 122f, 126f, lid, 1f)
-        canvas.restoreToCount(rightGroup)
-        if (abs(yaw) < .65f) drawAnimeEyes(canvas, now, mood, lid, gazeX + tremor, gazeY)
+        drawEye(faceCanvas, "eye_left", "iris_left", LEFT_EYE_X, LEFT_IRIS_X, gazeX + tremor, gazeY, water)
+        drawIrisLight(faceCanvas, now, mood, LEFT_IRIS_X, gazeX + tremor, gazeY)
+        drawLids(faceCanvas, LEFT_EYE_X, EYE_Y, 128f, 128f, max(lid, wink), slant, -1f, lower)
+        faceCanvas.restoreToCount(eyeLayer)
+        if (skin == WordSiegeMascotSkin.PINK) drawGirlLashes(faceCanvas, LEFT_EYE_X, EYE_Y, 128f, 128f, lid, -1f)
+        drawEye(faceCanvas, "eye_right", "iris_right", RIGHT_EYE_X, RIGHT_IRIS_X, gazeX + tremor, gazeY, water)
+        drawIrisLight(faceCanvas, now, mood, RIGHT_IRIS_X, gazeX + tremor, gazeY)
+        drawLids(faceCanvas, RIGHT_EYE_X, EYE_Y, 122f, 126f, lid, slant, 1f, lower)
+        faceCanvas.restoreToCount(eyeLayer)
+        if (skin == WordSiegeMascotSkin.PINK) drawGirlLashes(faceCanvas, RIGHT_EYE_X, EYE_Y, 122f, 126f, lid, 1f)
 
         val browY = poseValue[P_BROW_Y] - lid * 6f - yawn * 22f - shrug * 26f
         val browTilt = Math.toDegrees(poseValue[P_BROW_TILT].toDouble()).toFloat()
-        drawLayer(canvas, "brow_left", 0f, browY, LEFT_BROW_X, BROW_Y, -browTilt)
-        drawLayer(canvas, "brow_right", 0f, browY, RIGHT_BROW_X, BROW_Y, browTilt)
+        drawLayer(faceCanvas, "brow_left", 0f, browY, LEFT_BROW_X, BROW_Y, -browTilt)
+        drawLayer(faceCanvas, "brow_right", 0f, browY, RIGHT_BROW_X, BROW_Y, browTilt)
 
         val cheek = poseValue[P_CHEEK].coerceIn(0f, 1f)
         for (index in 0 until 2) {
             val cheekPaint = cheekPaints[index]
             val blush = if (skin == WordSiegeMascotSkin.PINK) 40f else 18f
             cheekPaint.alpha = (blush + cheek * 92f).toInt().coerceIn(0, 255)
-            canvas.drawCircle(if (index == 0) LEFT_CHEEK_X else RIGHT_CHEEK_X, CHEEK_Y, 96f, cheekPaint)
+            faceCanvas.drawCircle(if (index == 0) LEFT_CHEEK_X else RIGHT_CHEEK_X, CHEEK_Y, 96f, cheekPaint)
         }
-        drawLayer(canvas, "cheek_left", 0f, -lower * 10f)
-        drawLayer(canvas, "cheek_right", 0f, -lower * 10f)
-        drawBlushLines(canvas, mood, cheek)
+        drawLayer(faceCanvas, "cheek_left", 0f, -lower * 10f)
+        drawLayer(faceCanvas, "cheek_right", 0f, -lower * 10f)
+        drawBlushLines(faceCanvas, mood, cheek)
 
         // Talking: irregular syllables layered on the current expression.
         val mouthOpen = if (speaking && actionKind != WordSiegeMascotAction.EAT) {
@@ -1153,10 +1142,16 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         // Raw mouth targets avoid stacking two filters: ~95% response in 200 ms, including speech/yawns.
         val mouthBlend = 1f - kotlin.math.exp(-dt * 15f)
         for (i in 0 until 3) mouthValue[i] += (mouthTarget[i] - mouthValue[i]) * mouthBlend
-        drawMouth(canvas, mouthValue[0], mouthValue[1], mouthValue[2])
-        if (actionKind == WordSiegeMascotAction.EAT && faceT >= 0f) drawLetterSnack(canvas, faceT)
-        decor.drawFace(canvas, mouthTopY(mouthValue[0], mouthValue[1]), mouthValue[1])
-        if (mood == WordSiegeMascotEmotion.TEARY) drawTears(canvas, now)
+        drawMouth(faceCanvas, mouthValue[0], mouthValue[1], mouthValue[2])
+        if (actionKind == WordSiegeMascotAction.EAT && faceT >= 0f) drawLetterSnack(faceCanvas, faceT)
+        decor.drawFace(faceCanvas, mouthTopY(mouthValue[0], mouthValue[1]), mouthValue[1])
+        if (mood == WordSiegeMascotEmotion.TEARY) drawTears(faceCanvas, now)
+        faceCanvas.restore()
+
+        mascotFaceMesh(yaw, headY + bow * .25f, 32, 32, faceVertices)
+        canvas.save()
+        canvas.clipPath(headSilhouette)
+        canvas.drawBitmapMesh(faceBitmap, 32, 32, faceVertices, 0, null, 0, paint)
         canvas.restore()
 
         if (mood == WordSiegeMascotEmotion.STRESSED || urgency > .45f) drawSweat(canvas, now)
@@ -1548,6 +1543,16 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas: Canvas, cx: Float, cy: Float, rx: Float, ry: Float,
         amount: Float, slant: Float, outerSide: Float, lower: Float,
     ) {
+        if (amount >= .98f) {
+            canvas.drawRect(cx - rx - 30f, cy - ry - 30f, cx + rx + 30f, cy + ry + 30f, skinPaint)
+            path.rewind()
+            path.moveTo(cx - rx * .7f, cy + 12f)
+            path.quadTo(cx, cy + 45f, cx + rx * .7f, cy + 12f)
+            lashPaint.strokeWidth = 8f
+            lashPaint.alpha = 255
+            canvas.drawPath(path, lashPaint)
+            return
+        }
         val left = cx - rx - 12f
         val right = cx + rx + 12f
         if (amount > .01f) {
@@ -1722,44 +1727,26 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         strokeJoin = Paint.Join.ROUND
     }
 
-    /**
-     * Kira-kira eyes: a second catchlight always, four-point stars in the irises when thrilled,
-     * and "^ ^" smiling crescents when it laughs with its eyes closed.
-     */
-    private fun drawAnimeEyes(canvas: Canvas, now: Long, mood: WordSiegeMascotEmotion, lid: Float, lookX: Float, lookY: Float) {
-        val open = (1f - lid).coerceIn(0f, 1f)
-        val dx = lookX.coerceIn(-1f, 1f) * 24f
-        val dy = lookY.coerceIn(-1f, 1f) * 20f
-        val thrilled = mood == WordSiegeMascotEmotion.EXCITED || mood == WordSiegeMascotEmotion.PROUD ||
-            (actionKind == WordSiegeMascotAction.SPARKLE || actionKind == WordSiegeMascotAction.CHEER) && now < actionUntil
-        for (i in 0 until 2) {
-            val ix = if (i == 0) LEFT_IRIS_X else RIGHT_IRIS_X
-            val side = if (i == 0) -1f else 1f
-            if (open > .25f) {
-                // Small lower catchlight, the second highlight every anime eye has.
-                detailPaint.color = 0xFFFFFFFF.toInt()
-                detailPaint.alpha = (200f * open).toInt()
-                canvas.drawCircle(ix + dx + 30f, IRIS_Y + dy + 42f, 13f, detailPaint)
-            }
-            if (thrilled && open > .35f) {
-                val pulse = .8f + .2f * sin(now / 140f + side)
-                drawStar(canvas, ix + dx - 6f, IRIS_Y + dy - 8f, 46f * pulse * open, 0xFFFFF4C2.toInt(), (240f * open).toInt())
-            }
+    /** Catchlights live inside the moving iris and are covered by both eyelids. */
+    private fun drawIrisLight(canvas: Canvas, now: Long, mood: WordSiegeMascotEmotion, ix: Float, lookX: Float, lookY: Float) {
+        canvas.save()
+        canvas.translate(lookX.coerceIn(-1f, 1f) * 24f, lookY.coerceIn(-1f, 1f) * 20f)
+        val scale = poseValue[P_IRIS].coerceIn(.65f, 1.25f)
+        canvas.scale(scale, scale, ix, IRIS_Y)
+        irisClip.rewind()
+        irisClip.addOval(ix - 78f, IRIS_Y - 96f, ix + 78f, IRIS_Y + 96f, Path.Direction.CW)
+        canvas.clipPath(irisClip)
+        detailPaint.color = 0xFFFFFFFF.toInt()
+        detailPaint.alpha = 180
+        detailPaint.xfermode = atopPaint.xfermode
+        canvas.drawCircle(ix + 28f, IRIS_Y + 40f, 10f, detailPaint)
+        detailPaint.xfermode = null
+        val thrilled = mood == WordSiegeMascotEmotion.EXCITED || mood == WordSiegeMascotEmotion.PROUD
+        if (thrilled) {
+            drawStar(canvas, ix - 6f, IRIS_Y - 8f, 28f + 3f * sin(now / 240f), 0xFFFFF4C2.toInt(), 220)
         }
         detailPaint.alpha = 255
-        if (mood == WordSiegeMascotEmotion.LAUGH && lid > .7f) {
-            animePaint.color = 0xFF2A1740.toInt()
-            animePaint.strokeWidth = 16f
-            animePaint.alpha = (255f * ((lid - .7f) / .3f).coerceIn(0f, 1f)).toInt()
-            for (i in 0 until 2) {
-                val cx = if (i == 0) LEFT_EYE_X else RIGHT_EYE_X
-                path.rewind()
-                path.moveTo(cx - 70f, EYE_Y + 20f)
-                path.quadTo(cx, EYE_Y - 60f, cx + 70f, EYE_Y + 20f)
-                canvas.drawPath(path, animePaint)
-            }
-            animePaint.alpha = 255
-        }
+        canvas.restore()
     }
 
     /** "///" blush strokes over the cheeks when it is happy, proud or being petted. */

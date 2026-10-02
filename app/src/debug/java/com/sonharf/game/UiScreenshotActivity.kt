@@ -32,6 +32,10 @@ import java.time.Instant
 class UiScreenshotActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (intent.hasExtra("mascot_stage")) {
+            setContentView(MascotRigInspectionView(this, intent.getStringExtra("mascot_stage").orEmpty()))
+            return
+        }
         SonHarfUiState.language = "tr"
         SonHarfCosmetics.restore(this)
         setContent {
