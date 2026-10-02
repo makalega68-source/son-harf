@@ -94,6 +94,7 @@ private fun WalnutIvoryScreenshotFixture() {
  val players=listOf(ThroneRow(1,"preview-1","Ümit",1189,gender="erkek"),ThroneRow(2,"preview-2","Selin",357,gender="kadın"),ThroneRow(3,"preview-3","Arda",120,gender="erkek"))
  val me=ProfileDto("preview-1","Ümit",gender="erkek",rating=617)
  when(stage) {
+  "search"->PremierSearching("tr",me,{})
   "duel"->PremierLobby("tr",me,"",false,{}, {}, {})
   "versus"->PremierVsScreen("tr",me,null,GameRoomDto("preview","PREVIEW","preview-1",status="playing",isBot=true,botName="Selin"))
   else->Column(Modifier.fillMaxSize().background(SonHarfTheme.Background).statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {

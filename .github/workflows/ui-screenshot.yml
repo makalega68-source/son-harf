@@ -57,7 +57,7 @@ jobs:
             adb shell am start -n com.sonharf.game/.UiScreenshotActivity --ez walnut_ivory_board true
             sleep 8
             adb exec-out screencap -p > Ceviz-Fildisi-Android.png
-            for stage in home duel versus throne atelier; do
+            for stage in home duel search versus throne atelier; do
               adb shell am force-stop com.sonharf.game
               adb shell am start -n com.sonharf.game/.UiScreenshotActivity --es game_stage "$stage"
               sleep 3

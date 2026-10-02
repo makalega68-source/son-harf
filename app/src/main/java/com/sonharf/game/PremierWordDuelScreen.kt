@@ -992,7 +992,7 @@ internal fun PremierLobby(
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text("SON HARF", color = PremierUi.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Text(pt(language, "PREMIER 1v1 DÜELLO", "PREMIER 1v1 DUEL"), color = PremierUi.Ocean, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                Text(pt(language, "1v1 KELİME DÜELLOSU", "1v1 WORD DUEL"), color = PremierUi.Ocean, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
             }
             PremierLanguageSwitch(language, onLanguage)
         }
@@ -1100,7 +1100,7 @@ private fun PremierHowToPlay(language: String) {
 
 @Composable
 private fun PremierFeatureTile(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, detail: String, modifier: Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(17.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Border)) {
+    Surface(modifier, shape = RoundedCornerShape(17.dp), color = PremierUi.GoldSoft, border = BorderStroke(1.dp, PremierBoard.TileEdge),shadowElevation=2.dp) {
         Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, tint = PremierUi.Green, modifier = Modifier.size(21.dp))
             Spacer(Modifier.height(6.dp))
@@ -1138,95 +1138,48 @@ private fun PremierLoading(language: String) {
 
 @Composable
 internal fun PremierSearching(language: String, me: ProfileDto?, onCancel: () -> Unit) {
-    val transition = rememberInfiniteTransition(label = "search")
-    // Radar ripples around the rival slot and a gentle wave through the brand tiles.
-    val ripple by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1_800, easing = LinearEasing)), label = "ripple")
-    val wave by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1_600, easing = LinearEasing)), label = "wave")
-    val dots by transition.animateFloat(0f, 3.99f, infiniteRepeatable(tween(1_500, easing = LinearEasing)), label = "dots")
-    Column(
-        Modifier
-            .fillMaxSize()
-            // Follows the equipped theme so the (theme-coloured) text always reads.
-            .background(Brush.verticalGradient(listOf(SonHarfTheme.Surface,SonHarfTheme.Background,SonHarfTheme.SurfaceSecondary)))
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        HfTitleRule(pt(language, "Son Harf", "Last Letter"), fontSize = 24.sp)
-        Spacer(Modifier.height(28.dp))
-        Text(
-            pt(language, "Rakip aranıyor", "Finding a rival") + ".".repeat(dots.toInt()),
-            color = Hf.Text,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Black,
-        )
-        Spacer(Modifier.height(32.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    Modifier.size(104.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    ProfilePhotoAvatarWithGender(
-                        avatarPath = me?.avatarPath,
-                        gender = me?.gender,
-                        name = me?.displayName ?: pt(language, "Oyuncu", "Player"),
-                        size = 104.dp,
-                        accent = Hf.Green,
-                        visible = me?.avatarVisibility != "hidden",
-                        showGenderBadge = false,
-                        frameId = SonHarfCosmetics.profileFrameId,
-                    )
+    val transition=rememberInfiniteTransition(label="search")
+    val ripple=transition.animateFloat(0f,1f,infiniteRepeatable(tween(1800,easing=LinearEasing)),label="ripple")
+    val wave=transition.animateFloat(0f,1f,infiniteRepeatable(tween(1600,easing=LinearEasing)),label="wave")
+    val dots by transition.animateFloat(0f,3.99f,infiniteRepeatable(tween(1500,easing=LinearEasing)),label="dots")
+    Column(Modifier.fillMaxSize().background(SonHarfTheme.Background).statusBarsPadding().navigationBarsPadding().padding(horizontal=18.dp,vertical=16.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            HfGameArt(R.drawable.son_harf_game_icon,56.dp,56.dp,description="Son Harf")
+            Text("SON HARF",color=PremierUi.Ink,fontSize=24.sp,fontWeight=FontWeight.Black)
+        }
+        Spacer(Modifier.weight(1f))
+        GameEventStage {
+            EventTag(pt(language,"DÜELLO ARENASI","DUEL ARENA"))
+            Text(pt(language,"Rakip aranıyor","Finding a rival")+".".repeat(dots.toInt()),color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Black)
+            Row(Modifier.fillMaxWidth().padding(vertical=16.dp),verticalAlignment=Alignment.CenterVertically) {
+                Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    ProfilePhotoAvatarWithGender(me?.avatarPath,me?.gender,me?.displayName?:pt(language,"Oyuncu","Player"),88.dp,accent=Hf.Green,visible=me?.avatarVisibility!="hidden",showGenderBadge=false,frameId=SonHarfCosmetics.profileFrameId)
+                    Text(me?.displayName?:pt(language,"Sen","You"),color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Text("${me?.rating?:1000} RP",color=EventGold,fontSize=11.sp,fontWeight=FontWeight.Bold)
                 }
-                Spacer(Modifier.height(10.dp))
-                Text(me?.displayName ?: pt(language, "Sen", "You"), color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text("${me?.rating ?: 1000} RP", color = Hf.GoldDeep, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-            Text("VS", Modifier.padding(horizontal = 6.dp), color = Hf.GoldDeep, fontSize = 26.sp, fontWeight = FontWeight.Black)
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(104.dp), contentAlignment = Alignment.Center) {
-                    Canvas(Modifier.size(150.dp)) {
-                        val c = Offset(size.width / 2f, size.height / 2f)
-                        for (i in 0 until 3) {
-                            val t = (ripple + i / 3f) % 1f
-                            drawCircle(
-                                color = Hf.Green.copy(alpha = (1f - t) * .35f),
-                                radius = size.minDimension * (.34f + .16f * t),
-                                center = c,
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()),
-                            )
+                Text("VS",Modifier.padding(horizontal=4.dp),color=EventGold,fontSize=26.sp,fontWeight=FontWeight.Black)
+                Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.size(93.dp),contentAlignment=Alignment.Center) {
+                        Canvas(Modifier.matchParentSize()) {
+                            repeat(3){i->val t=(ripple.value+i/3f)%1f;drawCircle(EventGold.copy(alpha=(1f-t)*.45f),radius=size.minDimension*(.3f+.2f*t),style=Stroke(2.dp.toPx()))}
                         }
+                        Box(Modifier.size(70.dp).clip(CircleShape).background(Color.White.copy(alpha=.10f)).border(1.dp,EventGold.copy(alpha=.5f),CircleShape),contentAlignment=Alignment.Center){Text("?",color=EventGold,fontSize=35.sp,fontWeight=FontWeight.Black)}
                     }
-                    Box(
-                        Modifier.size(96.dp).shadow(6.dp, CircleShape).background(Hf.Surface, CircleShape).border(3.dp, Hf.Border, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text("?", color = Hf.Muted, fontSize = 40.sp, fontWeight = FontWeight.Black)
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                Text(pt(language, "Rakip", "Rival"), color = Hf.TextMuted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Text(pt(language, "aranıyor", "searching"), color = Hf.TextMuted, fontSize = 12.sp)
-            }
-        }
-        Spacer(Modifier.weight(1f))
-        // Brand tiles with a soft travelling wave: the game's own material instead of line art.
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            val letters = pt(language, "SONHARF", "LETTER").toList()
-            letters.forEachIndexed { index, ch ->
-                val phase = ((wave * letters.size - index) / 2.2f).let { it - kotlin.math.floor(it) }
-                val lift = kotlin.math.sin(phase * Math.PI).toFloat().coerceAtLeast(0f)
-                Box(Modifier.graphicsLayer { translationY = -14.dp.toPx() * lift }) {
-                    HfLetterTile(ch.toString(), 38.dp, fontSize = 20.sp)
+                    Text(pt(language,"Sıradaki rakip","Next rival"),color=Color.White,fontSize=13.sp,fontWeight=FontWeight.Black)
+                    Text(pt(language,"Bağlantı kuruluyor","Connecting"),color=EventGold,fontSize=10.sp)
                 }
             }
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp,Alignment.CenterHorizontally)) {
+                pt(language,"SONHARF","LETTER").forEachIndexed{index,ch->
+                    Box(Modifier.graphicsLayer{val phase=((wave.value*7-index)/2.2f).let{it-kotlin.math.floor(it)};translationY=-8.dp.toPx()*kotlin.math.sin(phase*Math.PI).toFloat().coerceAtLeast(0f)}){HfLetterTile(ch.toString(),30.dp,fontSize=17.sp)}
+                }
+            }
+            Text(pt(language,"Rating'ine uygun rakip eşleştiriliyor. İlk kelimeyle zinciri başlat.","Finding a rival with a similar rating. Start the chain with your first word."),color=Color.White.copy(alpha=.85f),fontSize=12.sp,lineHeight=17.sp,textAlign=TextAlign.Center)
         }
-        Spacer(Modifier.height(22.dp))
-        Text(pt(language, "Düello arenası hazırlanıyor", "Preparing the duel arena"), color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-        Text(pt(language, "Bulunamazsa seviyene uygun bir AI oynar.", "If none is found, an AI at your level plays."), color = Hf.TextMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.weight(1f))
-        HfSecondaryButton(pt(language, "Vazgeç", "Cancel"), onClick = onCancel, modifier = Modifier.fillMaxWidth(.8f))
+        Text(pt(language,"Rakip bulunamazsa AI ile düello başlar.","If no rival is found, an AI duel begins."),color=PremierUi.Muted,fontSize=11.sp,textAlign=TextAlign.Center)
+        Spacer(Modifier.height(12.dp))
+        HfSecondaryButton(pt(language,"Vazgeç","Cancel"),onClick=onCancel,modifier=Modifier.fillMaxWidth())
     }
 }
 
@@ -1273,8 +1226,10 @@ private fun PremierVsPlayerCard(language: String, name: String, avatar: String?,
                 }
                 Text(if(bot)pt(language,"AI RAKİP","AI RIVAL")else pt(language,"DÜELLO OYUNCUSU","DUEL PLAYER"),color=accent,fontSize=10.sp,fontWeight=FontWeight.Black)
                 Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                    PremierStatPill("$rating RP",EventInk)
-                    PremierStatPill("%$winRate",accent)
+                    if(bot)EventTag("AI")else {
+                        PremierStatPill("$rating RP",EventInk)
+                        PremierStatPill("%$winRate",accent)
+                    }
                 }
             }
         }
