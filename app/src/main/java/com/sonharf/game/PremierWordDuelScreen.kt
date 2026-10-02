@@ -1017,7 +1017,7 @@ internal fun PremierLobby(
                         Text(pt(language,"Zinciri koparma.\nÜç raundun galibi ol.","Keep the chain alive.\nWin the three-round duel."),color=Color.White.copy(alpha=.9f),fontSize=14.sp,lineHeight=19.sp,fontWeight=FontWeight.Bold)
                         EventTag(pt(language,"15 SANİYE · 10 KELİME","15 SECONDS · 10 WORDS"),gold=false)
                     }
-                    if(skin!=null)WordSiegeMascot(moveId=null,lastMoveMine=false,pendingCells=emptyList(),playerTurn=true,requestedEmotion=WordSiegeMascotEmotion.HAPPY,modifier=Modifier.size(88.dp),actionKey=waveKey,action=WordSiegeMascotAction.WAVE,skin=skin)
+                    if(skin!=null)WordSiegeMascot(moveId=null,lastMoveMine=false,pendingCells=emptyList(),playerTurn=true,requestedEmotion=WordSiegeMascotEmotion.HAPPY,modifier=Modifier.size(114.4.dp),actionKey=waveKey,action=WordSiegeMascotAction.WAVE,skin=skin)
                 }
             }
 
@@ -3230,6 +3230,7 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
     WordSiegeMascotCompanion(
         anchors = listOf(Offset(.84f, .14f), Offset(.16f, .14f)),
         mascotSize = 84.dp,
+                        ambientScenes = true,
         moveId = null,
         lastMoveMine = false,
         playerTurn = false,

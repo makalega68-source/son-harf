@@ -299,7 +299,7 @@ private fun MascotStoreHero() {
                         lastMoveMine = false,
                         pendingCells = emptyList(),
                         playerTurn = false,
-                        modifier = Modifier.size(if (skin.onSale) 116.dp else 86.dp)
+                        modifier = Modifier.size(if (skin.onSale) 150.8.dp else 111.8.dp)
                             .then(if (skin.onSale) Modifier else Modifier.mascotMist(8.dp)),
                         skin = skin,
                     )
@@ -347,7 +347,7 @@ private fun MascotStoreCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                Modifier.size(118.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .06f)),
+                Modifier.size(153.4.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .06f)),
                 contentAlignment = Alignment.Center,
             ) {
                 WordSiegeMascot(
@@ -355,7 +355,7 @@ private fun MascotStoreCard(
                     lastMoveMine = false,
                     pendingCells = emptyList(),
                     playerTurn = false,
-                    modifier = Modifier.size(108.dp).then(if (comingSoon) Modifier.mascotMist(10.dp) else Modifier),
+                    modifier = Modifier.size(140.4.dp).then(if (comingSoon) Modifier.mascotMist(10.dp) else Modifier),
                     skin = skin,
                 )
                 if (comingSoon) {

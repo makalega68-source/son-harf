@@ -25,6 +25,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material3.Text
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalView
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -595,6 +600,8 @@ internal fun WordSiegeMascotCompanion(
     forcedSkin: WordSiegeMascotSkin? = null,
     /** Which side of the mascot the speech bubble prefers (screens with key content above use below). */
     bubblePlacement: WordSiegeMascotBubblePlacement = WordSiegeMascotBubblePlacement.PREFER_ABOVE,
+    /** Explicit opt-in for menu scenes; game companions keep their original size and schedule. */
+    ambientScenes: Boolean = false,
 ) {
     if (anchors.isEmpty()) return
     val ownedSkins = WordSiegeMascotOwnership.owned
@@ -603,6 +610,18 @@ internal fun WordSiegeMascotCompanion(
     val bond = remember { WordSiegeMascotBond(context) }
     val mind = remember { WordSiegeMascotMind() }
     val scope = rememberCoroutineScope()
+    val lifecycle = LocalView.current.findViewTreeLifecycleOwner()?.lifecycle
+    var foreground by remember { mutableStateOf(lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true) }
+    val voice = remember(context, ambientScenes) { if (ambientScenes) MascotAmbientVoice(context) else null }
+    DisposableEffect(lifecycle, voice) {
+        val observer = LifecycleEventObserver { _, _ ->
+            foreground = lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true
+            if (!foreground) voice?.stop()
+        }
+        lifecycle?.addObserver(observer)
+        onDispose { lifecycle?.removeObserver(observer); voice?.close() }
+    }
+    val displayedSize = mascotSize * if (ambientScenes) 1.3f else 1f
     val firstName = playerName?.trim()?.split(' ')?.firstOrNull()?.takeIf { it.isNotBlank() && it.length <= 14 }
 
     var anchorIndex by remember { mutableIntStateOf(0) }
@@ -631,6 +650,20 @@ internal fun WordSiegeMascotCompanion(
     var lastEscapeAt by remember { mutableLongStateOf(0L) }
     var chase by remember { mutableStateOf<WordSiegeMascotChase?>(null) }
     val chaseProgress = remember { Animatable(0f) }
+    var snackLetter by remember { mutableStateOf("A") }
+    var guestSkin by remember { mutableStateOf<WordSiegeMascotSkin?>(null) }
+    var guestAction by remember { mutableStateOf(WordSiegeMascotAction.WAVE) }
+    var guestKey by remember { mutableLongStateOf(0L) }
+    val guestProgress = remember { Animatable(0f) }
+    var ambientSceneIndex by remember { mutableIntStateOf(0) }
+    LaunchedEffect(foreground) {
+        if (!foreground) {
+            tripJob?.cancel(); speechJob?.cancel(); voice?.stop()
+            guestSkin = null; chase = null; speech = null; stageEmotion = null
+            talking = false; busy = false; watching = true
+            scale.snapTo(1f)
+        } else lastInteractionAt = SystemClock.uptimeMillis()
+    }
     val tapTimes = remember { ArrayDeque<Long>() }
     var tapBond by remember { mutableIntStateOf(0) }
     val initialSignalKey = remember { signal?.key }
@@ -678,7 +711,7 @@ internal fun WordSiegeMascotCompanion(
         val density = LocalDensity.current
         val areaWidth = constraints.maxWidth.toFloat()
         val areaHeight = constraints.maxHeight.toFloat()
-        val baseSizePx = with(density) { mascotSize.toPx() }
+        val baseSizePx = with(density) { displayedSize.toPx() }
         val marginPx = with(density) { 4.dp.toPx() }
         val area by rememberUpdatedState(Size(areaWidth, areaHeight))
 
@@ -739,14 +772,15 @@ internal fun WordSiegeMascotCompanion(
             glanceKey += 1
         }
 
-        fun say(text: String, holdExtraMillis: Long = 0L) {
+        fun say(text: String, holdExtraMillis: Long = 0L, aloud: Boolean = false) {
             speechJob?.cancel()
             speechId += 1
             speech = MascotVoice.style(text, skin, speechId)
+            val voiced = aloud && voice?.speak(text, SonHarfUiState.language) { talking = it } == true
             speechJob = scope.launch {
-                talking = true
-                delay(text.length * 34L + 250L)
-                talking = false
+                if (!voiced) talking = true
+                delay(if (voiced) 3_200L else text.length * 34L + 250L)
+                if (!voiced) talking = false
                 delay((1_500L + text.length * 30L + holdExtraMillis).coerceAtMost(5_500L))
                 speech = null
             }
@@ -761,7 +795,7 @@ internal fun WordSiegeMascotCompanion(
             try {
                 flight.snapTo(0f)
                 flight.animateTo(1f, tween(durationMillis, easing = FastOutSlowInEasing))
-                perform(WordSiegeMascotAction.LAND)
+                if (guestSkin == null) perform(WordSiegeMascotAction.LAND)
             } finally {
                 // A newer flight may have taken over; otherwise never stay stuck "in the air".
                 if (id == flightId) flying = false
@@ -889,7 +923,121 @@ internal fun WordSiegeMascotCompanion(
                 // After losses it is a little quieter; after wins a little livelier.
                 val moodFactor = 1f + bond.mood * .08f
                 delay((mind.nextIdleDelay() / moodFactor.coerceIn(.6f, 1.4f)).toLong())
-                if (busy || flying || speech != null || chase != null) continue
+                if (!foreground || busy || flying || speech != null || chase != null || guestSkin != null) continue
+                if (ambientScenes) {
+                    // Rotate stories instead of repeatedly drawing the same random idle.
+                    val quiet = SystemClock.uptimeMillis() - lastInteractionAt > 40_000L
+                    val now = SystemClock.uptimeMillis()
+                    if (quiet && mind.ready("screen-knock", 120_000L, now)) {
+                        mind.mark("screen-knock", now)
+                        startTrip {
+                            busy = true
+                            try {
+                                flyBeside(Offset(.5f, .48f), 900, onTop = true)
+                                scale.animateTo(1.65f, tween(700, easing = FastOutSlowInEasing))
+                                perform(WordSiegeMascotAction.KNOCK)
+                                delay(900L)
+                                repeat(3) { SonHarfSoundFx.mascotKnock(); delay(510L) }
+                                val name = currentName.orEmpty()
+                                val line = if (SonHarfUiState.language == "en") {
+                                    if (name.isBlank()) "Are you there?" else "$name, are you there?"
+                                } else if (name.isBlank()) "Orada mısın?" else "$name, orada mısın?"
+                                say(line, 1_000L, aloud = true)
+                                delay(2_600L)
+                            } finally {
+                                busy = false
+                                scale.snapTo(1f)
+                            }
+                            flyTo(homeIndex, 900)
+                        }.join()
+                    } else {
+                        val story = ambientSceneIndex++ % 8
+                        startTrip {
+                            busy = true
+                            watching = false
+                            try {
+                                when (story) {
+                                    0, 4 -> {
+                                        val fromLeft = Random.nextBoolean()
+                                        val letters = if (SonHarfUiState.language == "en") "ABC" else "AÜİ"
+                                        val cube = WordSiegeMascotChase(Random.nextInt(), letters[Random.nextInt(letters.length)].toString(),
+                                            Offset(if (fromLeft) .18f else .82f, .48f), Offset(.5f, .5f))
+                                        snackLetter = cube.letter
+                                        chase = cube
+                                        chaseProgress.snapTo(0f)
+                                        perform(WordSiegeMascotAction.FOOD_LOOK)
+                                        lookAt(Offset(cube.start.x * area.width, cube.start.y * area.height))
+                                        delay(900L)
+                                        launch { chaseProgress.animateTo(1f, tween(1_200, easing = FastOutSlowInEasing)) }
+                                        flyBeside(cube.end, 1_200, onTop = true)
+                                        chase = null // The same black cube now belongs to the mouth/hand rig.
+                                        perform(WordSiegeMascotAction.EAT)
+                                        delay(1_230L)
+                                        repeat(4) { SonHarfSoundFx.mascotChew(); delay(570L) }
+                                        delay(890L)
+                                        perform(WordSiegeMascotAction.BURP)
+                                        delay(400L)
+                                        SonHarfSoundFx.mascotBurp()
+                                        delay(1_400L)
+                                        perform(WordSiegeMascotAction.HIDE_FACE)
+                                        delay(1_100L)
+                                    }
+                                    2, 6 -> {
+                                        if (!mind.ready("guest-visit", 90_000L, now)) {
+                                            perform(WordSiegeMascotAction.WINK)
+                                            delay(mascotActionMillis(WordSiegeMascotAction.WINK))
+                                        } else {
+                                            mind.mark("guest-visit", now)
+                                            guestSkin = if (story == 2) WordSiegeMascotSkin.PINK else WordSiegeMascotSkin.CAT
+                                            guestAction = WordSiegeMascotAction.WAVE
+                                            guestKey++
+                                            guestProgress.snapTo(0f)
+                                            guestProgress.animateTo(.25f, tween(1_100, easing = FastOutSlowInEasing))
+                                            lookAt(Offset(area.width * .45f, area.height * .5f))
+                                            perform(WordSiegeMascotAction.FLINCH)
+                                            delay(700L)
+                                            guestAction = if (story == 2) WordSiegeMascotAction.KISS else WordSiegeMascotAction.DANCE
+                                            guestKey++
+                                            delay(1_600L)
+                                            stageEmotion = WordSiegeMascotEmotion.ANGRY
+                                            perform(WordSiegeMascotAction.CHASE_RUN)
+                                            guestAction = WordSiegeMascotAction.CHASE_RUN
+                                            guestKey++
+                                            launch { guestProgress.animateTo(1f, tween(3_400, easing = LinearEasing)) }
+                                            repeat(8) {
+                                                val u = guestProgress.value
+                                                flyBeside(Offset((.12f + u * .85f).coerceIn(.15f, .85f), .5f + .08f * kotlin.math.sin(u * 9f)), 390, onTop = true)
+                                            }
+                                            guestSkin = null
+                                            stageEmotion = WordSiegeMascotEmotion.HAPPY
+                                            perform(WordSiegeMascotAction.WINK)
+                                            delay(1_000L)
+                                        }
+                                    }
+                                    else -> {
+                                        val move = when (story) {
+                                            1 -> WordSiegeMascotAction.WINK
+                                            3 -> WordSiegeMascotAction.HIDE_FACE
+                                            5 -> WordSiegeMascotAction.SNEEZE
+                                            else -> WordSiegeMascotAction.BALANCE
+                                        }
+                                        perform(move)
+                                        delay(mascotActionMillis(move))
+                                        if (move == WordSiegeMascotAction.SNEEZE) {
+                                            perform(WordSiegeMascotAction.GROOM)
+                                            delay(1_000L)
+                                        }
+                                    }
+                                }
+                                flyTo(homeIndex, 900)
+                            } finally {
+                                chase = null; guestSkin = null; stageEmotion = null
+                                watching = true; busy = false
+                            }
+                        }.join()
+                    }
+                    continue
+                }
                 val now = SystemClock.uptimeMillis()
                 // Nobody around for a while: just keep watching (the rig dozes off by itself).
                 if (now - lastInteractionAt > 40_000L) {
@@ -1232,15 +1380,20 @@ internal fun WordSiegeMascotCompanion(
         val direction = if (flying) sign(target.x - start.x) else 0f
 
         chase?.let { current ->
-            val p = chasePosition(current, chaseProgress.value, Size(areaWidth, areaHeight))
-            val tilePx = with(density) { 30.dp.toPx() }
+            val u = chaseProgress.value
+            val travel = chasePosition(current, u, Size(areaWidth, areaHeight))
+            val handoff = if (ambientScenes) WordSiegeMascotView.easeInOut((u - .72f) / .28f) else 0f
+            val held = center + Offset(sizePx * .240f, sizePx * .214f)
+            val p = travel + (held - travel) * handoff
+            val tileSize = 30.dp * (1f - handoff) + displayedSize * (.099f * handoff)
+            val tilePx = with(density) { tileSize.toPx() }
             Box(
                 Modifier
                     .offset { IntOffset((p.x - tilePx / 2f).roundToInt(), (p.y - tilePx / 2f).roundToInt()) }
-                    .requiredSize(30.dp)
+                    .requiredSize(tileSize)
                     .graphicsLayer {
-                        rotationZ = kotlin.math.sin(chaseProgress.value * 12f) * 12f
-                        alpha = min(1f, chaseProgress.value * 5f)
+                        rotationZ = kotlin.math.sin(u * 12f) * 12f * (1f - handoff)
+                        alpha = if (ambientScenes) 1f else min(1f, chaseProgress.value * 5f)
                     }
                     .drawBehind {
                         drawCircle(
@@ -1248,20 +1401,36 @@ internal fun WordSiegeMascotCompanion(
                             radius = size.minDimension * .9f,
                         )
                         drawRoundRect(
-                            brush = Brush.linearGradient(listOf(Color(0xFF8AF1FF), Color(0xFFB266F5))),
+                            brush = Brush.linearGradient(listOf(Color(0xFF414141), Color(0xFF090909))),
                             cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
                         )
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(current.letter, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Text(current.letter, color = Color.White, fontSize = (16f * (1f - handoff) + displayedSize.value * .053f * handoff).sp, fontWeight = FontWeight.Black)
             }
+        }
+
+        guestSkin?.let { visitor ->
+            val u = guestProgress.value
+            val guestPx = baseSizePx * .9f
+            val gx = areaWidth * (-.12f + 1.3f * u)
+            val gy = areaHeight * (.5f + .08f * kotlin.math.sin(u * 9f))
+            WordSiegeMascot(
+                moveId = null, lastMoveMine = false, pendingCells = emptyList(), playerTurn = false,
+                modifier = Modifier.offset { IntOffset((gx - guestPx / 2f).roundToInt(), (gy - guestPx / 2f).roundToInt()) }
+                    .requiredSize(displayedSize * .9f),
+                skin = visitor, action = guestAction, actionKey = guestKey,
+                requestedEmotion = if (u > .3f) WordSiegeMascotEmotion.SURPRISED else WordSiegeMascotEmotion.HAPPY,
+                idleGazeX = if (u > .3f) 1f else 0f,
+                flying = false, flightDirection = 1f, hat = WordSiegeMascotHat.NONE,
+            )
         }
 
         Box(
             Modifier
                 .offset { IntOffset((center.x - sizePx / 2f).roundToInt(), (center.y - sizePx / 2f).roundToInt()) }
-                .requiredSize(mascotSize * scale.value),
+                .requiredSize(displayedSize * scale.value),
         ) {
             WordSiegeMascot(
                 moveId = moveId,
@@ -1281,7 +1450,8 @@ internal fun WordSiegeMascotCompanion(
                 typingKey = typingKey,
                 actionKey = actionKey,
                 action = action,
-                flying = flying,
+                flying = flying && guestSkin == null,
+                snackLetter = snackLetter,
                 flightDirection = direction,
                 speaking = talking,
                 watching = watching && !busy,
@@ -1371,7 +1541,7 @@ internal fun WordSiegeMascotPicker(
                                     lastMoveMine = false,
                                     pendingCells = emptyList(),
                                     playerTurn = false,
-                                    modifier = Modifier.size(83.dp),
+                                    modifier = Modifier.size(107.9.dp),
                                     watching = true,
                                     skin = option,
                                     onTap = { if (unlocked) onPick(option) },

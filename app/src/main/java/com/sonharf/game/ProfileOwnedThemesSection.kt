@@ -387,13 +387,13 @@ private fun OwnedMascotsPicker() {
                 border = BorderStroke(if (active) 2.dp else 1.5.dp, if (active) Hf.Green else Hf.Gold.copy(alpha = .75f)),
             ) {
                 Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().height(94.dp), contentAlignment = Alignment.Center) {
                         WordSiegeMascot(
                             moveId = null,
                             lastMoveMine = false,
                             pendingCells = emptyList(),
                             playerTurn = false,
-                            modifier = Modifier.size(70.dp),
+                            modifier = Modifier.size(91.dp),
                             skin = skin,
                         )
                     }

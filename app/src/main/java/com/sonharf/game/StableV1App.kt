@@ -171,6 +171,7 @@ private fun MascotWelcomeOverlay(onDone: () -> Unit) {
                 WordSiegeMascotCompanion(
                     anchors = listOf(Offset(.5f, .6f)),
                     mascotSize = 169.dp,
+                        ambientScenes = true,
                     moveId = null,
                     lastMoveMine = false,
                     playerTurn = false,

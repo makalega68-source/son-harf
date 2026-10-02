@@ -372,7 +372,7 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
                         thinking -> WordSiegeMascotEmotion.FOCUS
                         else -> WordSiegeMascotEmotion.HAPPY
                     },
-                    modifier = Modifier.size(220.dp),
+                    modifier = Modifier.size(286.dp),
                     speaking = speaking,
                     actionKey = mascotActionKey,
                     action = mascotAction,

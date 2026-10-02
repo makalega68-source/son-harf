@@ -290,6 +290,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     WordSiegeMascotCompanion(
                         anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
                         mascotSize = 83.dp,
+                        ambientScenes = true,
                         moveId = null,
                         lastMoveMine = false,
                         playerTurn = false,
