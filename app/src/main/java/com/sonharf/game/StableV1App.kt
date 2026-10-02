@@ -90,9 +90,6 @@ fun StableV1App() {
         return
     }
 
-    // Players who skipped the language screen (e.g. an update over an older install) still get
-    // the classic mascot's welcome once, on their first entry.
-    var mascotWelcomePending by remember { mutableStateOf(false) }
     var comebackGift by remember { mutableStateOf<ComebackGiftDto?>(null) }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
@@ -100,9 +97,9 @@ fun StableV1App() {
         FirstRunLanguagePreferences.markMascotWelcomeSeen(context)
         comebackGift = runCatching { PresenceBackend.touch() }.getOrNull()?.takeIf { it.gift > 0 }
     }
-    LaunchedEffect(mascotWelcomePending) {
-        // Ask for reminder notifications once, after the welcome, never over it.
-        if (!mascotWelcomePending && ReminderNotifications.shouldAskPermission(context)) {
+    LaunchedEffect(Unit) {
+        // Ask for reminder notifications once after authentication.
+        if (ReminderNotifications.shouldAskPermission(context)) {
             ReminderNotifications.markPermissionAsked(context)
             runCatching { notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) }
         }
@@ -114,7 +111,7 @@ fun StableV1App() {
             authenticated = false
         })
         val gift = comebackGift
-        if (gift != null && !mascotWelcomePending) {
+        if (gift != null) {
             ComebackGiftDialog(gift) { comebackGift = null }
         }
     }

@@ -34,7 +34,7 @@ class RewardedPassesContractTest {
         val shop = repoFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt")
         assertTrue(shop.contains("billing.queryOneTimeProducts(com.sonharf.game.billing.ProductCatalog.keyboardProducts)"))
         assertTrue(shop.contains("onClick = { tab = 8 }"))
-        assertTrue(shop.contains("8 -> RewardCenterScreen("))
+        assertTrue(shop.contains("if (shown == 8) RewardCenterScreen("))
         assertTrue(shop.contains("oneTimePurchaseOfferDetails?.formattedPrice"))
     }
 

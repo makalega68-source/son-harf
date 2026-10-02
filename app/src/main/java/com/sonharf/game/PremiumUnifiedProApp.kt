@@ -374,16 +374,6 @@ private fun PremiumHomeScreen(
                     }
                 }
             }
-            if (WordSiegeMascotOwnership.hasAny) item(key = "mascot_stage") {
-                Box(Modifier.fillMaxWidth().height(112.dp).clipToBounds()) {
-                    WordSiegeMascotCompanion(
-                        anchors = listOf(Offset(.75f, .55f), Offset(.25f, .55f)), mascotSize = 83.dp,
-                        ambientScenes = true, moveId = null, lastMoveMine = false, playerTurn = false,
-                        modifier = Modifier.matchParentSize(), playerName = profile?.displayName,
-                        playerGender = profile?.gender, stageY = .5f,
-                    )
-                }
-            }
             item(key = "atelier_tournament") { HomeTournamentCard(onOpen = onWorkshop) }
             item(key = "social_arena") { HomeSocialArena(backend, incomingCount, onSocial, isPro = profile?.isVip == true) }
             item(key = "home_daily_tasks") {
@@ -391,6 +381,15 @@ private fun PremiumHomeScreen(
             }
 
         }
+        // The original floating companion consumes no row or empty space in the home feed.
+        WordSiegeMascotCompanion(
+            anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
+            mascotSize = 83.dp,
+            moveId = null, lastMoveMine = false, playerTurn = false,
+            modifier = Modifier.matchParentSize(),
+            playerName = profile?.displayName, playerGender = profile?.gender,
+            stageY = .5f,
+        )
     }
 }
 
