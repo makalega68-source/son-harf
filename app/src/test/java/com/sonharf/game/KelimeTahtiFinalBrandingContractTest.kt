@@ -17,10 +17,10 @@ class KelimeKusatmasiFinalBrandingContractTest {
         assertFalse(home.contains("HfTitleRule(sh(\"Ana Oyun\", \"Main Game\")"))
         assertTrue(state.contains("OYNA • Harflerini yerleştir, kelimeni oluştur"))
         assertTrue(state.contains("PLAY • Place your tiles, build your word"))
-        assertTrue(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))
-        assertTrue(state.contains(".replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
+        assertFalse(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))
+        assertFalse(state.contains(".replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
         assertFalse(state.contains(".replace(\"KELİME TAHTI\", \"KELİME KUŞATMASI\")"))
-        assertTrue(state.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
+        assertFalse(state.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
         assertTrue(
             home.contains("\"KELİME TAHTI\"") ||
                 home.contains("\"KELİME\\nKUŞATMASI\"")

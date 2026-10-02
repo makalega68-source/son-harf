@@ -4,6 +4,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -98,11 +100,17 @@ internal fun WordSiegePanMatch(
     /** Finger-dragged tiles replace the pending placements (drag-and-drop). */
     onPlacementsChange: (Map<Int, Int>) -> Unit = {},
     onDropPlacement: ((Int, Int?, Int?) -> Unit)? = null,
+    onReplay: () -> Unit = onBack,
+    onContinue: (WordSiegeGameDto) -> Unit = {},
 ) {
     var resultDismissed by androidx.compose.runtime.saveable.rememberSaveable(game.id) { mutableStateOf(false) }
-    if (game.status == "finished" && game.winnerId != null && !resultDismissed) {
-        // Dispose the live board and its mascots while the result decoder is running.
-        PanSiegeFinishedCard(game, me, onResultDismissed = { resultDismissed = true })
+    if (game.status == "finished") {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            TextButton(onClick = onBack, enabled = !busy) { Text(sh("OYUNLARIM", "MY GAMES")) }
+            PanSiegeFinishedCard(game, me, playAnimation = !resultDismissed, onResultDismissed = { resultDismissed = true })
+            SiegePostMatchPanel(game, onReplay, busy, onContinue)
+            notice?.let { Text(it, color = Hf.Red) }
+        }
         return
     }
     val mine = me?.let(profiles::get)
@@ -318,7 +326,7 @@ internal fun WordSiegePanMatch(
                 Icon(Icons.Rounded.ArrowBack, sh("Oyunlar", "Games"), tint = WordSiegeGameUi.Text)
             }
             Column(Modifier.weight(1f)) {
-                Text(sh("KELİME TAHTI", "WORD THRONE"), color = WordSiegeGameUi.Text, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = WordSiegeGameUi.Text, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(
                     if (game.status == "playing") {
                         if (visualMyTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")

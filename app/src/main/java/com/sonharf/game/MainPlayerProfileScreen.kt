@@ -51,6 +51,7 @@ internal fun MainPlayerProfileScreen(
     onCollection: () -> Unit,
     onSettings: () -> Unit,
     onSocial: () -> Unit,
+    onRivals: () -> Unit = onSocial,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
@@ -213,6 +214,8 @@ internal fun MainPlayerProfileScreen(
             ProfileStatTile(Icons.Rounded.SportsEsports, sh("Maç", "Matches"), profileGrouped(matches), Modifier.weight(1f))
             ProfileStatTile(Icons.Rounded.Star, sh("Puan", "Rating"), profileGrouped(rating), Modifier.weight(1f))
         }
+
+        ProfileRecordsSection(backend, onRivals = onRivals)
 
         HfSegmentedTabs(
             labels = collectionTabs.map { it.second },

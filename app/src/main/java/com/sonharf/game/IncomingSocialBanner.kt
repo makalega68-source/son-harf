@@ -87,7 +87,9 @@ internal fun IncomingSocialWatcher(
             if (backend.currentUserId() != null) {
                 val requests = runCatching { backend.getIncomingFriendRequests() }.getOrNull()
                 val invites = runCatching { backend.getIncomingWordSiegeInvites() }.getOrNull()
-                if (requests != null || invites != null) {
+                val fastInvites = runCatching { backend.getIncomingWordSiegeSeriesInvites() }.getOrNull()
+                val lastLetterInvites = runCatching { backend.getIncomingGameInvites() }.getOrNull()
+                if (requests != null || invites != null || fastInvites != null || lastLetterInvites != null) {
                     val requestKeys = requests.orEmpty().associate { (friendship, profile) ->
                         "friend:${friendship.requestedBy}:${friendship.createdAt}" to
                             sh("${profile.displayName} sana arkadaşlık isteği gönderdi.", "${profile.displayName} sent you a friend request.")
@@ -95,7 +97,13 @@ internal fun IncomingSocialWatcher(
                     val inviteKeys = invites.orEmpty().associate { invite ->
                         "siege:${invite.id}" to sh("Yeni bir Kelime Tahtı davetin var.", "You have a new Kelime Tahtı invitation.")
                     }
-                    val all = requestKeys + inviteKeys
+                    val fastKeys = fastInvites.orEmpty().associate { invite ->
+                        "series:${invite.id}" to sh("Yeni bir Hızlı Düello davetin var", "You have a new Quick Duel invitation")
+                    }
+                    val lastKeys = lastLetterInvites.orEmpty().associate { invite ->
+                        "last:${invite.id}" to sh("Yeni bir Son Harf davetin var", "You have a new Last Letter invitation")
+                    }
+                    val all = requestKeys + inviteKeys + fastKeys + lastKeys
                     onCount(all.size)
                     val previous = seen
                     if (previous != null) {

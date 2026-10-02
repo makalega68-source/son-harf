@@ -204,7 +204,7 @@ internal fun WordSiegeEntryScreen(
                     }
                     Column(Modifier.weight(1f)) {
                         Text(
-                            sh("KELİME TAHTI", "WORD THRONE"),
+                            sh("KELİME KUŞATMASI", "WORD SIEGE"),
                             color = SonHarfTheme.TextPrimary,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Black,

@@ -451,7 +451,7 @@ private fun WordSiegePracticeContent(
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Text(
-                            sh("KELİME TAHTI", "WORD THRONE"),
+                            sh("KELİME KUŞATMASI", "WORD SIEGE"),
                             color = WordSiegeGameUi.Text,
                             fontSize = if (compact) 16.sp else 18.sp,
                             lineHeight = if (compact) 18.sp else 21.sp,

@@ -149,6 +149,18 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         exchangeSelection = emptySet()
     }
 
+    fun replayFinishedGame(finished: WordSiegeGameDto) {
+        if (busy) return
+        busy = true
+        scope.launch {
+            try {
+                gameRequestResult { backend.findOrCreateWordSiegeGame(finished.language) }
+                    .onSuccess { next -> applyGame(next); selectedGameId = next.id }
+                    .onFailure { showError(it.message.orEmpty()) }
+            } finally { busy = false }
+        }
+    }
+
     fun runGameAction(
         successNotice: String? = null,
         action: suspend () -> WordSiegeGameDto,
@@ -291,6 +303,8 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             } else {
                 WordSiegePanMatch(
                     game = game,
+                    onReplay = { replayFinishedGame(game) },
+                    onContinue = { next -> applyGame(next); selectedGameId = next.id },
                     me = me,
                     profiles = profiles,
                     moves = moves,
@@ -516,7 +530,7 @@ private fun WordSiegeGamesList(
                     Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME TAHTI", "WORD THRONE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh("Süre yok • 1v1 • En fazla 10 devam eden oyun", "No timer • 1v1 • Up to 10 ongoing games"),
                         color = MainUi.Muted,
@@ -740,7 +754,7 @@ private fun WordSiegeMatch(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, sh("Oyunlar", "Games"), tint = MainUi.Text) }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME TAHTI", "KELİME TAHTI"), color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
                     Text(
                         if (game.status == "playing") {
                             if (myTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")

@@ -602,6 +602,8 @@ internal fun WordSiegeMascotCompanion(
     bubblePlacement: WordSiegeMascotBubblePlacement = WordSiegeMascotBubblePlacement.PREFER_ABOVE,
     /** Explicit opt-in for menu scenes; game companions keep their original size and schedule. */
     ambientScenes: Boolean = false,
+    /** Speech belongs only in an explicitly opened mascot conversation. */
+    allowSpeech: Boolean = false,
 ) {
     if (anchors.isEmpty()) return
     val ownedSkins = WordSiegeMascotOwnership.owned
@@ -612,7 +614,7 @@ internal fun WordSiegeMascotCompanion(
     val scope = rememberCoroutineScope()
     val lifecycle = LocalView.current.findViewTreeLifecycleOwner()?.lifecycle
     var foreground by remember { mutableStateOf(lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true) }
-    val voice = remember(context, ambientScenes) { if (ambientScenes) MascotAmbientVoice(context) else null }
+    val voice = remember(context, ambientScenes) { if (ambientScenes && allowSpeech) MascotAmbientVoice(context) else null }
     DisposableEffect(lifecycle, voice) {
         val observer = LifecycleEventObserver { _, _ ->
             foreground = lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true
@@ -773,6 +775,7 @@ internal fun WordSiegeMascotCompanion(
         }
 
         fun say(text: String, holdExtraMillis: Long = 0L, aloud: Boolean = false) {
+            if (!allowSpeech) return
             speechJob?.cancel()
             speechId += 1
             speech = MascotVoice.style(text, skin, speechId)

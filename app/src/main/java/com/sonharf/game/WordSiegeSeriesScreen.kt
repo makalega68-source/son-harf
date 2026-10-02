@@ -117,6 +117,18 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
             .sortedWith(seriesGameComparator(me))
     }
 
+    fun replayFinishedGame(finished: WordSiegeGameDto) {
+        if (busy) return
+        busy = true
+        scope.launch {
+            try {
+                gameRequestResult { backend.findOrCreateWordSiegeSeriesGame(finished.language, finished.turnDurationMinutes ?: turnMinutes) }
+                    .onSuccess { next -> applyGame(next); selectedGameId = next.id }
+                    .onFailure { showError(it.message.orEmpty()) }
+            } finally { busy = false }
+        }
+    }
+
     fun runGameAction(action: suspend () -> WordSiegeGameDto) {
         if (busy) return
         busy = true
@@ -303,6 +315,8 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                     Box(Modifier.fillMaxSize()) {
                         WordSiegePanMatch(
                             game = game,
+                    onReplay = { replayFinishedGame(game) },
+                    onContinue = { next -> applyGame(next); selectedGameId = next.id },
                             me = me,
                             profiles = profiles,
                             moves = moves,

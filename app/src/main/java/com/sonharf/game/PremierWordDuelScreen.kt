@@ -51,6 +51,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -1394,7 +1395,7 @@ private fun PremierArena(
     var stripHint by remember(room.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(hintRequest?.first, mascotShown) {
         val text = hintRequest?.second
-        if (text == null || mascotShown) {
+        if (text == null) {
             stripHint = null
             return@LaunchedEffect
         }
@@ -1783,22 +1784,21 @@ private fun PremierArena(
         }
 
         val slotCenter = mascotSlotCenter
-        val mascotAnchors = if (slotCenter == null || arenaSize.width == 0 || arenaSize.height == 0) {
-            emptyList()
-        } else {
-            val home = Offset(
-                (slotCenter.x - arenaOrigin.x) / arenaSize.width,
-                (slotCenter.y - arenaOrigin.y) / arenaSize.height,
-            )
-            listOf(home, Offset(1f - home.x, home.y))
-        }
+        val mascotAnchors = if (slotCenter == null) emptyList() else listOf(Offset(.5f, .5f))
+        val mascotDensity = LocalDensity.current
+        val mascotBoxPx = with(mascotDensity) { mascotSize.toPx() }
         WordSiegeMascotCompanion(
             anchors = mascotAnchors,
             mascotSize = mascotSize,
             moveId = latestMove?.id,
             lastMoveMine = latestMoveMine,
             playerTurn = myTurn,
-            modifier = Modifier.matchParentSize(),
+            modifier = Modifier.offset {
+                androidx.compose.ui.unit.IntOffset(
+                    ((slotCenter?.x ?: 0f) - arenaOrigin.x - mascotBoxPx / 2f).toInt(),
+                    ((slotCenter?.y ?: 0f) - arenaOrigin.y - mascotBoxPx / 2f).toInt(),
+                )
+            }.size(mascotSize).clipToBounds(),
             moveScore = latestMoveScore,
             requestedEmotion = mascotEmotion,
             urgency = mascotUrgency,

@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -29,7 +30,7 @@ import kotlinx.coroutines.delay
 private enum class PremiumDestination {
     HOME, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
     LAST_LETTER, SIEGE, WORD_WORKSHOP,
-    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP, PRO, PRIVATE_ROOM, MASCOT_CHAT
+    ACTIVITY, EVENTS, RIVALS, SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP, PRO, PRIVATE_ROOM, MASCOT_CHAT
 }
 
 @Composable
@@ -46,8 +47,6 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var uiLanguageBeforeGame by rememberSaveable { mutableStateOf<String?>(null) }
     val shellMascotTouches = remember { WordSiegeMascotTouchState() }
     var shellProfile by remember { mutableStateOf<ProfileDto?>(null) }
-    var shellMascotAnnouncement by remember { mutableStateOf<Pair<Int, String>?>(null) }
-    val shellMascotVisited = remember { mutableSetOf<PremiumDestination>() }
     val shellContext = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
@@ -57,21 +56,6 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         RewardPassState.refresh()
         shellProfile = backend.currentUserId()?.let { id -> runCatching { backend.getProfile(id) }.getOrNull() }
     }
-    // A short, page-appropriate remark on the first visit of a page in this session.
-    LaunchedEffect(destination) {
-        if (!shellMascotVisited.add(destination)) return@LaunchedEffect
-        val line = when (destination) {
-            PremiumDestination.SHOP -> sh("Alışveriş zamanı! 🛍️", "Shopping time! 🛍️")
-            PremiumDestination.PROFILE -> sh("Profilin çok havalı!", "Your profile looks great!")
-            PremiumDestination.SOCIAL -> sh("Arkadaşlarını çağır, birlikte oynayalım! 👋", "Invite your friends, let's play together! 👋")
-            PremiumDestination.COMPETE -> sh("Tahtın sahibi kim olacak?", "Who will own the throne?")
-            PremiumDestination.COLLECTION -> sh("Ne güzel bir koleksiyon ✨", "What a lovely collection ✨")
-            else -> null
-        } ?: return@LaunchedEffect
-        delay(900)
-        shellMascotAnnouncement = (shellMascotAnnouncement?.first ?: 0) + 1 to line
-    }
-
     fun openGame(target: PremiumDestination, language: String, quickDuel: Boolean = false) {
         startQuickDuel = quickDuel
         if (uiLanguageBeforeGame == null) uiLanguageBeforeGame = SonHarfUiState.language
@@ -116,6 +100,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         destination = when (destination) {
             PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION, PremiumDestination.PRO -> PremiumDestination.PROFILE
             PremiumDestination.PRIVATE_ROOM -> PremiumDestination.PRO
+            PremiumDestination.RIVALS -> PremiumDestination.PROFILE
             PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.HOME
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
             PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP -> {
@@ -215,6 +200,12 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
                         onSocial = { destination = PremiumDestination.SOCIAL },
+                        onActivity = { destination = PremiumDestination.ACTIVITY },
+                        onEvents = { destination = PremiumDestination.EVENTS },
+                        onResume = { game ->
+                            com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
+                            openGame(PremiumDestination.SIEGE, game.language)
+                        },
                         incomingCount = incomingSocialCount,
                     )
                     PremiumDestination.GAMES -> PremiumGameCenter(
@@ -241,6 +232,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         { destination = PremiumDestination.COLLECTION },
                         { destination = PremiumDestination.SETTINGS },
                         { destination = PremiumDestination.SOCIAL },
+                        onRivals = { destination = PremiumDestination.RIVALS },
                     )
                     PremiumDestination.COLLECTION -> PlayerCollectionScreen(backend) { destination = PremiumDestination.PROFILE }
                     PremiumDestination.SHOP -> EconomyShopScreen(
@@ -269,8 +261,24 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.WORD_WORKSHOP -> KelimeAtolyesiScreen {
                         leaveGame()
                     }
-                    PremiumDestination.SOCIAL -> MainSocialScreen(
+                    PremiumDestination.ACTIVITY -> SocialActivityScreen(backend,
+                        onBack = { destination = PremiumDestination.HOME },
+                        onFriends = { destination = PremiumDestination.SOCIAL },
+                        onOpenGame = { game ->
+                            com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
+                            openGame(PremiumDestination.SIEGE, game.language)
+                        })
+                    PremiumDestination.EVENTS -> EventsCalendarScreen(
+                        onBack = { destination = PremiumDestination.HOME },
+                        onAtelier = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
+                        onThrone = { destination = PremiumDestination.COMPETE })
+                    PremiumDestination.SOCIAL, PremiumDestination.RIVALS -> MainSocialScreen(
                         backend = backend,
+                        initialTab = if (destination == PremiumDestination.RIVALS) 2 else 0,
+                        onOpenSiege = { game ->
+                            com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
+                            openGame(PremiumDestination.SIEGE, game.language)
+                        },
                         onPlay = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onSiege = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                     )
@@ -291,31 +299,13 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         mascotSkin = chatMascotSkin(shellContext),
                     )
                 }
-                // Outside the games the mascot keeps the player company from a bottom corner:
-                // it mostly watches, says a word on some pages and flies aside when touched.
-                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP, PremiumDestination.MASCOT_CHAT)) {
-                    WordSiegeMascotCompanion(
-                        anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
-                        mascotSize = 83.dp,
-                        ambientScenes = true,
-                        moveId = null,
-                        lastMoveMine = false,
-                        playerTurn = false,
-                        modifier = Modifier.matchParentSize(),
-                        playerName = shellProfile?.displayName,
-                        playerGender = shellProfile?.gender,
-                        touches = shellMascotTouches,
-                        announcement = shellMascotAnnouncement,
-                        stageY = .5f,
-                    )
-                }
                 // Friend requests and game invitations are announced on every main page,
                 // not only inside the Friends page, so they never wait unseen.
                 IncomingSocialWatcher(
                     backend = backend,
                     enabled = topLevel,
                     onCount = { incomingSocialCount = it },
-                    onOpen = { destination = PremiumDestination.SOCIAL },
+                    onOpen = { destination = PremiumDestination.ACTIVITY },
                     modifier = Modifier.align(Alignment.TopCenter),
                     onAcceptedSiege = { game ->
                         com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
@@ -346,6 +336,9 @@ private fun PremiumHomeScreen(
     onLastLetter: () -> Unit,
     onWorkshop: () -> Unit,
     onSocial: () -> Unit,
+    onActivity: () -> Unit,
+    onEvents: () -> Unit,
+    onResume: (com.sonharf.game.data.WordSiegeGameDto) -> Unit,
     incomingCount: Int,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -364,6 +357,32 @@ private fun PremiumHomeScreen(
         ) {
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onPro, onSettings)
+            }
+            item(key = "ongoing_games") { HomeSessions(backend, onResume, onPrimary) }
+            item(key = "league_progress") { HomeLeague(backend, onCompete) }
+            item(key = "activity_events") {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onActivity, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Rounded.Notifications, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text(sh("AKTİVİTE", "ACTIVITY"), fontSize = 11.sp)
+                    }
+                    OutlinedButton(onClick = onEvents, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Rounded.Event, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text(sh("ETKİNLİKLER", "EVENTS"), fontSize = 11.sp)
+                    }
+                }
+            }
+            item(key = "mascot_stage") {
+                Box(Modifier.fillMaxWidth().height(146.dp).clipToBounds()) {
+                    WordSiegeMascotCompanion(
+                        anchors = listOf(Offset(.75f, .55f), Offset(.25f, .55f)), mascotSize = 83.dp,
+                        ambientScenes = true, moveId = null, lastMoveMine = false, playerTurn = false,
+                        modifier = Modifier.matchParentSize(), playerName = profile?.displayName,
+                        playerGender = profile?.gender, stageY = .5f,
+                    )
+                }
             }
             item(key = "home_secondary_modes") {
                 PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
@@ -427,7 +446,7 @@ private fun PremiumGameCenter(
         item {
             PremiumGameCard(
                 icon = Icons.Rounded.GridView,
-                title = sh("KELİME TAHTI", "KELİME TAHTI"),
+                title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
                 artRes = R.drawable.kelime_tahti_game_icon,
                 subtitle = sh("Ana oyun • taktik alan savaşı", "Main game • tactical territory battle"),
                 language = siegeLanguage,

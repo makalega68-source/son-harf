@@ -19,7 +19,7 @@ object SonHarfUiState {
  *
  * Kelime Tahtı is the canonical user-visible product brand. Older source strings may still
  * contain the previous Kelime Tahtı / Word Throne labels for compatibility with untouched screens,
- * but they are normalized here before rendering. Technical identifiers (WordSiege, package names,
+ * and game-mode names stay distinct when rendering. Technical identifiers (WordSiege, package names,
  * database contracts and deep links) are intentionally unaffected.
  */
 fun sh(tr: String, en: String): String {
@@ -40,12 +40,8 @@ fun sh(tr: String, en: String): String {
         return "PLAY • Place your tiles, build your word"
     }
 
+    // Product: Kelime Tahtı. Game mode: Kelime Kuşatması / Word Siege.
     return localized
-        // The brand is Kelime Tahtı (Word Throne); any legacy Kuşatma / Siege name maps to it.
-        .replace("KELİME KUŞATMASI", "KELİME TAHTI")
-        .replace("Kelime Kuşatması", "Kelime Tahtı")
-        .replace("WORD SIEGE", "WORD THRONE")
-        .replace("Word Siege", "Word Throne")
         .replace("KUŞATMA SENİN!", "TAHT SENİN!")
         .replace("SIEGE WON!", "THE THRONE IS YOURS!")
 }

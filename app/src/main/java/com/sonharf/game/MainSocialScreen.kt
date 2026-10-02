@@ -31,9 +31,11 @@ internal fun MainSocialScreen(
     backend: OnlineGameBackend,
     onPlay: () -> Unit,
     onSiege: () -> Unit = onPlay,
+    initialTab: Int = 0,
+    onOpenSiege: (WordSiegeGameDto) -> Unit = { game -> WordSiegeLaunchConfig.open(game); onSiege() },
 ) {
     val scope = rememberCoroutineScope()
-    var tab by remember { mutableIntStateOf(0) }
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
     var isPro by remember { mutableStateOf(false) }
     var proChecked by remember { mutableStateOf(false) }
     var vipDialog by remember { mutableStateOf(false) }
@@ -44,6 +46,7 @@ internal fun MainSocialScreen(
     var siegeInvites by remember { mutableStateOf<List<WordSiegeInviteDto>>(emptyList()) }
     var inviteProfiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
     var rivals by remember { mutableStateOf<List<RivalHistoryDto>>(emptyList()) }
+    var siegeHistory by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
     var matchHistory by remember { mutableStateOf<List<MatchHistoryDto>>(emptyList()) }
     var archRival by remember { mutableStateOf<ArchRivalDto?>(null) }
     var loading by remember { mutableStateOf(true) }
@@ -81,6 +84,13 @@ internal fun MainSocialScreen(
         val siegeInviteTask = async { gameRequestResult { backend.getIncomingWordSiegeInvites() }.getOrDefault(emptyList()) }
         val rivalTask = async { gameRequestResult { backend.getRivalHistory(30) }.getOrDefault(emptyList()) }
         val historyTask = async { gameRequestResult { backend.getMatchHistory(30) }.getOrDefault(emptyList()) }
+        val siegeHistoryTask = async {
+            val classic = async { gameRequestResult { backend.getWordSiegeGames() } }
+            val series = async { gameRequestResult { backend.getWordSiegeSeriesGames() } }
+            val a = classic.await(); val b = series.await()
+            (a.getOrElse { siegeHistory.filter { it.gameMode == "classic" } } + b.getOrElse { siegeHistory.filter { it.gameMode == "series" } }).distinctBy { it.id }
+                .filter { it.status == "finished" }.sortedByDescending { it.finishedAt ?: it.updatedAt }
+        }
         val archTask = async { gameRequestResult { backend.getArchRival() }.getOrNull() }
         friends = friendTask.await().sortedByDescending { it.second.presenceStatus == "online" }
         friendships = friendshipTask.await()
@@ -90,8 +100,9 @@ internal fun MainSocialScreen(
         rivals = rivalTask.await()
         matchHistory = historyTask.await()
         archRival = archTask.await()
+        siegeHistory = siegeHistoryTask.await()
         val senders = linkedMapOf<String, ProfileDto>()
-        (invites.map { it.senderId } + siegeInvites.map { it.senderId }).distinct().forEach { id ->
+        (invites.map { it.senderId } + siegeInvites.map { it.senderId } + siegeHistory.flatMap { listOfNotNull(it.playerOneId, it.playerTwoId) }).distinct().forEach { id ->
             gameRequestResult { backend.getProfile(id) }.getOrNull()?.let { senders[id] = it }
         }
         inviteProfiles = senders
@@ -99,7 +110,7 @@ internal fun MainSocialScreen(
         // Someone waiting for an answer is the first thing to show.
         if (!autoTabDone) {
             autoTabDone = true
-            if (requests.isNotEmpty() || siegeInvites.isNotEmpty() || invites.isNotEmpty()) tab = 1
+            if (initialTab == 0 && (requests.isNotEmpty() || siegeInvites.isNotEmpty() || invites.isNotEmpty())) tab = 1
         }
     }
 
@@ -438,9 +449,8 @@ internal fun MainSocialScreen(
                                             gameRequestResult { backend.respondWordSiegeInvite(invite.id, true) }
                                                 .onSuccess { game ->
                                                     if (game != null) {
-                                                        WordSiegeLaunchConfig.open(game)
                                                         notice = sh("Maç hazır.", "Match is ready.")
-                                                        onSiege()
+                                                        onOpenSiege(game)
                                                     }
                                                 }
                                                 .onFailure { notice = sh("Oyun daveti artık kullanılamıyor.", "The game invite is no longer available."); reload() }
@@ -568,6 +578,17 @@ internal fun MainSocialScreen(
                     }
                 }
 
+                if (siegeHistory.isNotEmpty()) item { MainSectionTitle(sh("KUŞATMA · RAKİP GEÇMİŞİ", "SIEGE · RIVAL HISTORY")) }
+                items(siegeHistory.take(20), key = { "siege:${it.id}" }) { game ->
+                    val me = backend.currentUserId()
+                    val opponent = if (game.playerOneId == me) game.playerTwoId else game.playerOneId
+                    val myScore = if (game.playerOneId == me) game.playerOneWordScore + game.playerOneAreaScore else game.playerTwoWordScore + game.playerTwoAreaScore
+                    val theirScore = if (game.playerOneId == me) game.playerTwoWordScore + game.playerTwoAreaScore else game.playerOneWordScore + game.playerOneAreaScore
+                    ActivityTile(inviteProfiles[opponent]?.displayName ?: sh("Rakip", "Rival")) {
+                        Text("$myScore : $theirScore · " + socialDate(game.finishedAt ?: game.updatedAt), color = MainUi.Muted, fontSize = 11.sp)
+                        TextButton(onClick = { onOpenSiege(game) }) { Text(sh("SONUÇ VE RÖVANŞ", "RESULT & REMATCH"), color = MainUi.Green) }
+                    }
+                }
                 if (matchHistory.isNotEmpty()) item { MainSectionTitle(sh("SON MAÇLAR", "RECENT MATCHES")) }
                 items(matchHistory.take(12), key = { it.matchId }) { match ->
                     val won = match.result == "win"
@@ -593,7 +614,7 @@ internal fun MainSocialScreen(
                     }
                 }
 
-                if (rivals.isEmpty() && matchHistory.isEmpty() && !loading) {
+                if (rivals.isEmpty() && matchHistory.isEmpty() && siegeHistory.isEmpty() && !loading) {
                     item {
                         MainSocialEmpty(
                             icon = Icons.Rounded.SportsKabaddi,

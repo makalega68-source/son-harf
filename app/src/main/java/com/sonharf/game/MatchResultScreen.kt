@@ -60,11 +60,11 @@ internal fun MatchResultScreen(
 ) {
     val reveal = remember { Animatable(0f) }
     LaunchedEffect(Unit) { reveal.animateTo(1f, tween(500)) }
-    val accent = if (won) Color(0xFFFFD36B) else Color(0xFF9CC3FF)
+    val accent = if (won) Color(0xFFFFD36B) else Hf.Red
     val background = if (won) {
-        listOf(Color(0xFF0B1430), Color(0xFF1B2F5E), Color(0xFF0E1A3A))
+        listOf(Color(0xFF132119), Color(0xFF294333), Color(0xFF132119))
     } else {
-        listOf(Color(0xFF10141F), Color(0xFF1E2638), Color(0xFF121826))
+        listOf(Color(0xFF10141F), Color(0xFF362522), Color(0xFF121826))
     }
     val mineNumeric = mine.score.toIntOrNull()
     val rivalNumeric = rival.score.toIntOrNull()
@@ -194,7 +194,7 @@ internal fun MatchResultScreen(
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = accent,
-                                contentColor = if (won) Color(0xFF3A2400) else Color(0xFF0E1A3A),
+                                contentColor = if (won) Color(0xFF3A2400) else Color(0xFF132119),
                             ),
                         ) {
                             Text(primaryLabel, fontSize = 15.sp, fontWeight = FontWeight.Black, maxLines = 1)
