@@ -39,7 +39,7 @@ function response(status: number, body: unknown) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== "POST") return response(405, { error: "method_not_allowed" });
+  if (req.method !== "POST" && req.method !== "GET") return response(405, { error: "method_not_allowed" });
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return response(401, { error: "unauthorized" });
 
@@ -50,6 +50,15 @@ Deno.serve(async (req: Request) => {
   const packageName = Deno.env.get("GOOGLE_PLAY_PACKAGE_NAME") || "com.sonharf.game";
   if (!url || !publishableKey || !serviceRole) return response(500, { error: "supabase_not_configured" });
   if (!serviceAccountJson) return response(503, { error: "google_play_not_configured" });
+  // Read-only readiness check before the Android client opens a paid Play flow.
+  // JWT validation remains enabled at the gateway; no credentials are returned.
+  if (req.method === "GET") {
+    try {
+      const account = JSON.parse(serviceAccountJson);
+      if (!account.client_email || !account.private_key) return response(503, { error: "invalid_google_service_account_json" });
+      return response(200, { available: true });
+    } catch { return response(503, { error: "invalid_google_service_account_json" }); }
+  }
 
   let input: { productId?: string; purchaseToken?: string };
   try { input = await req.json(); } catch { return response(400, { error: "invalid_json" }); }

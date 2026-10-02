@@ -26,8 +26,8 @@ class PlayerFeedbackBatchContractTest {
     }
 
     @Test fun framesShowOnPlayersEverywhere() {
-        assertTrue(source("ProfilePhotoRuntime.kt").contains("if (framed) ProfileFrameArt(frameId, size)"))
-        assertTrue(source("ProfileFrameCollection.kt").contains("\"get_public_profile_frame_v1\""))
+        assertTrue(source("ProfilePhotoRuntime.kt").contains("if (framed) ProfileFrameArt(resolvedFrame, size)"))
+        assertTrue(source("ProfileFrameCollection.kt").contains("\"get_public_profile_frame_v2\""))
         assertTrue(source("WordSiegePanMatch.kt").contains("frameId = rememberPlayerFrame(profile?.id)"))
         assertTrue(source("PremierWordDuelScreen.kt").contains("frameId = if (room.isBot) null else rememberPlayerFrame(opponent?.id)"))
         assertTrue(source("CompetitionRankingView.kt").contains("frameId = rememberPlayerFrame(userId)"))
@@ -162,8 +162,9 @@ class PlayerFeedbackBatchContractTest {
     }
 
 
-    @Test fun storeOnlySellsAndTheProfileManages() {
-        assertTrue(source("ProfileFrameStore.kt").contains("if (equipped || owned) sh(\"SATIN ALINDI\", \"PURCHASED\") else price"))
+    @Test fun ownedFramesCanBeEquippedInTheStoreAndProfile() {
+        assertTrue(source("ProfileFrameStore.kt").contains("b.equipShopItem(frame.id)"))
+        assertTrue(source("ProfileFrameStore.kt").contains("else if (owned) sh(\"TAK\", \"EQUIP\")"))
         assertTrue(source("MascotStore.kt").contains("Text(sh(\"SATIN ALINDI\", \"PURCHASED\")"))
         assertTrue(source("ProfileOwnedThemesSection.kt").contains("private fun OwnedMascotsPicker()"))
     }

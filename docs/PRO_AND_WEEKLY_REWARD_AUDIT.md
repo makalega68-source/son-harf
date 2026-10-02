@@ -31,3 +31,9 @@ Bu oyunların hesaplayıcı, harf tablosu, hızlı oyun, arkadaş listesi ve ki�
 Canlı `son-harf` Supabase projesinde ödül, hafta sınırı, eşitlik, boş hafta, mağazadan kaldırma, PRO hakları ve ücretli RPC katılımcı kontrolü testleri transaction/rollback ile geçti. Mevcut turnuva ve Kuşatma davet/presence regresyonları da geçti. Yeni çerçeve RPC'si anon'a kapalı, özel kazanan hesaplayıcısı authenticated rolüne kapalı; yeni genel v2 fonksiyonu SECURITY INVOKER.
 
 Android derleme/test sonucu commit CI'sından ayrıca doğrulanacaktır. Emülatör/görsel kontrol ve gerçek cihaz Google Play satın alma işlemi bu denetimde yapılmadı. Ürünlerin Play Console hesap/bölge tekliflerinin gerçek cihazda kullanılabilirliği, sunucu erişim testiyle kanıtlanmış sayılmaz. APK teslim edilmedi.
+
+## Canlı ödeme engeli
+
+Canlı `verify-play-purchase` servisi 2 Ekim 2026 denetiminde HTTP 503 / `google_play_not_configured` döndürdü. Google Play servis hesabı `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` yapılandırılmamış. Özel anahtar sağlanmadan gerçek ücretli ürün teslimatı açılamaz.
+
+Yeni GET hazır olma kontrolü hiçbir satın alma/ödül işlemi yapmaz; JWT kontrolü açık kalır. Ortak BillingManager tüm ücretli ürünlerde ödeme ekranını açmadan bu kontrolü yapar. Hizmet hazır değilse ödeme başlatılmaz. Mevcut doğrulanmış PRO hakları ve Son Coin işlemleri bundan bağımsız çalışır. Bu kontrol Play Console ürün tekliflerinin veya Google hesabı yetkilerinin gerçek ödeme testi yerine geçmez.

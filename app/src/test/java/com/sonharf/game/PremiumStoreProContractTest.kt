@@ -18,10 +18,11 @@ class PremiumStoreProContractTest {
     }
 
     @Test
-    fun `premium store has no restore purchases ui and uses text free runtime artwork`() {
+    fun `premium store restores purchases and uses text free runtime artwork`() {
         val store = repoFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
-        assertFalse(store.contains("Satın Almaları Geri Yükle", ignoreCase = true))
-        assertFalse(store.contains("Restore Purchases", ignoreCase = true))
+        assertTrue(store.contains("SATIN ALIMLARI GERİ YÜKLE"))
+        assertTrue(store.contains("Restore Purchases", ignoreCase = true))
+        assertTrue(store.contains("manager.restorePurchases(ProductCatalog.permanentPremiumProducts)"))
         assertTrue(store.contains("R.drawable.premium_series_game"))
         assertTrue(store.contains("R.drawable.premium_letter_table"))
         assertTrue(store.contains("R.drawable.premium_score_calculator"))
