@@ -37,7 +37,7 @@ fun EconomyShopScreen(
     onCollection: () -> Unit = {},
     onPro: () -> Unit = {},
 ) {
-    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 3)) }
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 8)) }
     var kindFilter by remember { mutableStateOf<String?>(null) }
     var balance by remember { mutableStateOf<Int?>(null) }
     var rewards by remember { mutableStateOf(false) }
@@ -459,8 +459,8 @@ private fun StoreProBanner(active: Boolean, onClick: () -> Unit) {
             }
             Spacer(Modifier.width(12.dp))
             Text(
-                if (active) sh("PRO üyeliğin aktif. Ayrıcalıklarını gör.", "Your PRO membership is active. See your perks.")
-                else sh("Reklamsız oyun, özel içerikler ve daha fazlası!", "Ad-free play, exclusive content and more!"),
+                if (active) sh("PRO aktif", "Your PRO membership is active. See your perks.")
+                else sh("Reklamsız · Profil · Analiz", "Ad-free play, exclusive content and more!"),
                 modifier = Modifier.weight(1f),
                 color = Hf.OnAccent,
                 fontSize = 14.sp,

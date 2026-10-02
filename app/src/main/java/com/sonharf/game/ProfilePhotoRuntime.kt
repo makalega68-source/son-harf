@@ -189,7 +189,8 @@ internal fun ProfilePhotoAvatarWithGender(
     frameId: String? = null,
     userId: String? = null,
 ) {
-    val framed = ProfileFrameCollection.find(frameId) != null
+    val resolvedFrame = if (userId != null) rememberPlayerFrame(userId) else frameId
+    val framed = ProfileFrameCollection.find(resolvedFrame) != null
     var bytes by remember(avatarPath, visible, userId) { mutableStateOf<ByteArray?>(null) }
     var resolvedGender by remember(avatarPath, gender, userId) { mutableStateOf(gender) }
     LaunchedEffect(avatarPath, visible, gender, userId) {
@@ -211,7 +212,7 @@ internal fun ProfilePhotoAvatarWithGender(
             }
         }
         // The player's frame is drawn around the photo wherever the avatar appears.
-        if (framed) ProfileFrameArt(frameId, size)
+        if (framed) ProfileFrameArt(resolvedFrame, size)
     }
 }
 

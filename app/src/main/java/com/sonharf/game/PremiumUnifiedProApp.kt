@@ -37,6 +37,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     var destination by remember { mutableStateOf(PremiumDestination.HOME) }
     var isPro by remember { mutableStateOf(false) }
+    var startQuickDuel by remember { mutableStateOf(false) }
     val homeRequest = SonHarfUiState.homeRequest
     val defaultGameLanguage = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
     var siegeLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
@@ -71,7 +72,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         shellMascotAnnouncement = (shellMascotAnnouncement?.first ?: 0) + 1 to line
     }
 
-    fun openGame(target: PremiumDestination, language: String) {
+    fun openGame(target: PremiumDestination, language: String, quickDuel: Boolean = false) {
+        startQuickDuel = quickDuel
         if (uiLanguageBeforeGame == null) uiLanguageBeforeGame = SonHarfUiState.language
         SonHarfUiState.language = SharedDictionaryService.canonicalLanguage(language)
         destination = target
@@ -251,6 +253,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         backend = backend,
                         onBack = { destination = PremiumDestination.PROFILE },
                         onPrivateRoom = { destination = PremiumDestination.PRIVATE_ROOM },
+                        onFriends = { destination = PremiumDestination.SOCIAL },
+                        onQuickDuel = { openGame(PremiumDestination.SIEGE, siegeLanguage, quickDuel = true) },
                     )
                     PremiumDestination.PRIVATE_ROOM -> PrivateRoomCenterScreen(
                         onBack = { destination = PremiumDestination.PRO },
@@ -258,6 +262,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     )
                     PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()
                     PremiumDestination.SIEGE -> WordSiegeEntryScreen(
+                        startQuickDuel = startQuickDuel,
                         onExit = { leaveGame() },
                         onOpenStore = { leaveGame(PremiumDestination.SHOP) },
                     )

@@ -150,7 +150,7 @@ internal fun MainPlayerProfileScreen(
                     gender = p?.gender,
                     name = p?.displayName ?: sh("Oyuncu", "Player"),
                     size = 104.dp,
-                    frameId = SonHarfCosmetics.profileFrameId,
+                    frameId = rememberPlayerFrame(p?.id),
                     accent = Hf.Gold,
                     visible = p?.avatarVisibility != "hidden",
                     isPro = p?.isVip == true,

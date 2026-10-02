@@ -49,3 +49,7 @@ Görev ödülleri otomatik ve haftada bir defa eklenir. Deneyim görevinin ilerl
 XP kayıtlarına doğrudan istemci yazamaz; RLS ve RPC izinleri uygulanır. Sunucu süreyi, aşama katılımını, skor/kelime/görev sınırlarını, benzersiz kelime listesini ve sözlük üyeliğini denetler. Atölye motoru cihazda çalışır; tüm harf havuzu geçişlerini sunucuda yeniden oynatan tam bir hile denetimi bu sürümde yoktur. Eski günlük atölye sonuçları da mevcut makullük denetimleriyle kabul edilir.
 
 Test: `supabase/tests/throne_tournament_regression.sql` bütün denemeleri transaction içinde yapıp geri alır. Android birim testleri İstanbul sayaç sınırlarını ve mevcut oyun regresyonlarını doğrular.
+
+## Taht sahibinin haftalık ödülü
+
+Tamamlanan haftanın birincisi, sonraki pazartesi 00:00’a kadar 1 rozetli altın çerçeve taşır. Çerçeve satılmaz, kalıcı envantere eklenmez; süre sonunda sıradaki haftanın birincisine geçer. Boş haftada önceki sahibin ödülü uzatılmaz. PRO üyelik çerçevesi ayrı bir üründür.

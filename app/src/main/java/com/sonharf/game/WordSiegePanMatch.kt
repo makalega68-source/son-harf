@@ -39,6 +39,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.getVipEntitlements
+import com.sonharf.game.data.previewPremiumWordSiegeMove
+import com.sonharf.game.data.WordSiegePlacement
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.WordSiegeCellDto
 import com.sonharf.game.data.WordSiegeGameDto
@@ -239,20 +243,41 @@ internal fun WordSiegePanMatch(
         turkish = !SonHarfUiState.isEnglish,
     )
     val tileDrag = remember(game.id) { WordSiegeTileDrag() }
-    // Green check on a valid word; PRO also sees its points above the word.
+    // Local validity remains free. Paid score data comes from the entitlement-gated RPC.
+    val premiumBackend = remember { OnlineGameBackend() }
+    var scoreAccess by remember(game.id) { mutableStateOf(false) }
+    var scoreRetry by remember(game.id) { mutableIntStateOf(0) }
+    var scoreError by remember(game.id) { mutableStateOf(false) }
     var pendingScore by remember(game.id) { mutableStateOf<Int?>(null) }
-    var pendingFor by remember(game.id) { mutableStateOf<Map<Int, Int>>(emptyMap()) }
-    LaunchedEffect(placements, game.board, rack) {
-        pendingScore = null
-        if (placements.isEmpty()) return@LaunchedEffect
-        val tiles = placements
-        delay(90L)
-        pendingScore = withContext(Dispatchers.Default) {
-            runCatching { WordSiegePracticeEngine.previewValidScore(game.board, rack, tiles, game.language) }.getOrNull()
-        }
-        pendingFor = tiles
+    var pendingValid by remember(game.id) { mutableStateOf(false) }
+    LaunchedEffect(game.id, game.moveCount, scoreRetry) {
+        runCatching { premiumBackend.getVipEntitlements() }
+            .onSuccess { scoreAccess = it.scoreCalculatorAccess; scoreError = false }
+            .onFailure { scoreError = true }
     }
-    val pendingValid = pendingScore != null && pendingFor == placements
+    LaunchedEffect(placements, game.board, rack, canAct, scoreAccess, scoreRetry) {
+        pendingScore = null
+        pendingValid = false
+        if (placements.isEmpty() || !canAct) return@LaunchedEffect
+        val tiles = placements.toMap()
+        delay(150L)
+        pendingValid = withContext(Dispatchers.Default) {
+            runCatching { WordSiegePracticeEngine.previewValidScore(game.board, rack, tiles, game.language) }.getOrNull() != null
+        }
+        if (scoreAccess) {
+            val orientation = runCatching { WordSiegeFinalRules.detectOrientation(game.board, tiles.keys) }.getOrNull()
+                ?: return@LaunchedEffect
+            runCatching {
+                premiumBackend.previewPremiumWordSiegeMove(game.id,
+                    tiles.entries.sortedBy { it.key }.map { WordSiegePlacement(index=it.key,rackIndex=it.value) },
+                    orientation == WordSiegeOrientation.HORIZONTAL)
+            }.onSuccess {
+                pendingValid = it.valid
+                pendingScore = it.totalScore.takeIf { _ -> it.valid }
+                scoreError = false
+            }.onFailure { scoreError = true }
+        }
+    }
     fun dropTile(rackIndex: Int, fromCell: Int?, target: Int?) {
         if (!canAct) return
         if (onDropPlacement != null) onDropPlacement(rackIndex, fromCell, target)
@@ -424,7 +449,7 @@ internal fun WordSiegePanMatch(
             tileDrag = tileDrag,
             onTileDrop = ::dropTile,
             pendingValid = pendingValid,
-            pendingScore = pendingScore.takeIf { mine?.isVip == true },
+            pendingScore = pendingScore.takeIf { scoreAccess },
             onCell = onBoardCell,
             onChat = onChat,
         )
@@ -443,6 +468,9 @@ internal fun WordSiegePanMatch(
         }
 
         if (game.status == "playing") {
+            if (scoreError) TextButton(onClick = { scoreRetry++ }, contentPadding = PaddingValues(0.dp)) {
+                Text(sh("Önizleme alınamadı · Yenile", "Preview unavailable · Retry"), color = WordSiegeGameUi.Gold, fontSize = 9.sp)
+            }
             if (boardViewportMode == WordSiegeBoardViewportMode.FIT) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     if (placements.isNotEmpty()) {

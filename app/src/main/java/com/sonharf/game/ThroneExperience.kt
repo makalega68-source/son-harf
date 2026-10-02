@@ -97,7 +97,7 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
  val now=serverNow(week?.serverTime.orEmpty(),Unit)
  LazyColumn(Modifier.fillMaxSize().background(SonHarfTheme.Background),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
   item { MainScreenHeader(title=sh("TAHT","THRONE"),subtitle=sh("Üç oyun · Tek haftalık yarış","Three games · One weekly race"),onBack=onBack) }
-  item { ThroneOwnerStage(week?.rows?.firstOrNull(),tournamentTimeMillis(week?.resetAt.orEmpty()),now,week?.previousOwner) }
+  item { ThroneOwnerStage(week?.previousOwner?.let { ThroneRow(rank=1,userId=it.userId,name=it.name,xp=it.xp,avatarPath=it.avatarPath,gender=it.gender,avatarVisibility=it.avatarVisibility) },tournamentTimeMillis(week?.resetAt.orEmpty()),now) }
   item { GameEventStage {
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
     Column { Text(sh("SENİN YARIŞIN","YOUR RACE"),color=EventGold,fontSize=11.sp,fontWeight=FontWeight.Black);Text("${week?.me?.xp?:0} XP",color=Color.White,fontSize=26.sp,fontWeight=FontWeight.Black) }
@@ -128,7 +128,7 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
    Text(r.name,Modifier.weight(1f),color=SonHarfTheme.TextPrimary,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
    Text("${r.xp} XP",color=SonHarfTheme.Primary,fontSize=12.sp,fontWeight=FontWeight.Black)
   }} }
-  item { Text(sh("Resmî maç: 35 XP; galibiyet: +85 XP. Atölye puanı süreye göre XP'ye çevrilir. Turnuva çarpanı yalnız turnuva aşamalarında geçerlidir. Görev ödülleri otomatik eklenir. Antrenmanlar haftalık puan vermez.","Official match: 35 XP; win: +85 XP. Workshop score converts to XP by duration. Tournament multipliers apply only to tournament stages. Mission rewards are automatic. Practice does not award weekly XP."),color=SonHarfTheme.TextSecondary,fontSize=11.sp) }
+  item { Text(sh("Maç 35 XP · Galibiyet +85 XP · Görevler 100/150/200 XP. Sıfırlama: pazartesi 00:00.","Official match: 35 XP; win: +85 XP. Workshop score converts to XP by duration. Tournament multipliers apply only to tournament stages. Mission rewards are automatic. Practice does not award weekly XP."),color=SonHarfTheme.TextSecondary,fontSize=11.sp) }
   item { OutlinedButton(onClick=onLegacy,modifier=Modifier.fillMaxWidth()){Text(sh("Ligler · Kupa · Rakipler","Leagues · Cup · Rivals"))} }
   if(week==null)item { if(error)Text(sh("Taht yüklenemedi. Bağlantı tekrar deneniyor.","Unable to load the throne. Reconnecting."),color=SonHarfTheme.TextSecondary)else CircularProgressIndicator(color=SonHarfTheme.Primary) }
  }
@@ -221,9 +221,10 @@ GameEventStage(gold=true) {
      else DefaultProfilePortrait(null,Modifier.size(78.dp).clip(CircleShape))
     }
     Text(sh("TAHT SAHİBİ","THRONE OWNER"),color=EventInk,fontSize=12.sp,fontWeight=FontWeight.Black,letterSpacing=2.sp)
-    Text(owner?.name?:sh("Yeni sahibi sen ol","Claim the throne"),color=EventInk,fontSize=28.sp,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
+    Text(owner?.name?:sh("İlk şampiyon bekleniyor","Awaiting the first champion"),color=EventInk,fontSize=28.sp,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
     Text("${owner?.xp?:0} XP",color=EventInk,fontSize=21.sp,fontWeight=FontWeight.Black)
-    Text(sh("Taht yenileniyor: ","Throne resets in: ")+(if(now==0L)"—"else tournamentClockText(resetAt,now)),color=EventInk,fontSize=11.sp)
+    Text(sh("Ödül süresi: ","Reward expires in: ")+(if(now==0L)"—"else tournamentClockText(resetAt,now)),color=EventInk,fontSize=11.sp)
+    Text(sh("Altın çerçeve · 1 rozeti · 7 gün","Gold frame · No. 1 badge · 7 days"),color=EventInk,fontSize=11.sp,fontWeight=FontWeight.Bold)
     previousOwner?.let{Text(sh("Geçen haftanın sahibi: ${it.name}","Last week's owner: ${it.name}"),color=EventInk.copy(alpha=.75f),fontSize=10.sp)}
    }
   }

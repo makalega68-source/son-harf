@@ -1193,7 +1193,7 @@ internal fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profil
         Text(pt(language, "RAKİP BULUNDU!", "RIVAL FOUND!"), color = PremierUi.Ocean, fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
         Text(pt(language, "Maç 3 saniye içinde başlıyor", "Match starts in 3 seconds"), color = PremierUi.Muted, fontSize = 12.sp)
         Spacer(Modifier.weight(1f))
-        PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Green, nameColor = SonHarfCosmetics.playerNameColor, nameEmblem = true, frameId = SonHarfCosmetics.profileFrameId)
+        PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Green, nameColor = SonHarfCosmetics.playerNameColor, nameEmblem = true, frameId = rememberPlayerFrame(me?.id))
         Spacer(Modifier.height(16.dp))
         Surface(shape = RoundedCornerShape(99.dp), color = Color.Transparent) {
             Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.OceanDeep, Color(0xFF2C3E55)))).padding(horizontal = 27.dp, vertical = 10.dp)) {
@@ -2173,7 +2173,7 @@ private fun PremierArenaHeader(
             mirrored = false,
             modifier = Modifier.weight(1f).height(cardHeight),
             nameColor = SonHarfCosmetics.playerNameColor,
-            frameId = SonHarfCosmetics.profileFrameId,
+            frameId = rememberPlayerFrame(me?.id),
         )
         PremierSymmetricPlayerCard(
             language = language,

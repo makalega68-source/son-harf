@@ -89,7 +89,7 @@ private fun HomeStatusRow(
                     gender = profile?.gender,
                     name = profile?.displayName ?: sh("Oyuncu", "Player"),
                     size = 50.dp,
-                    frameId = SonHarfCosmetics.profileFrameId,
+                    frameId = rememberPlayerFrame(profile?.id),
                     accent = Hf.Gold,
                     visible = profile?.avatarVisibility != "hidden",
                     isPro = pro,

@@ -70,7 +70,9 @@ internal object ProfileFrameCollection {
     /** PRO-only frame: never sold, granted with PRO membership. */
     val proFrame = Frame("frame_round_golden_avatar", R.drawable.profile_frame_round_golden_avatar, "PRO Kraliyet Altın", "PRO Royal Gold")
 
-    val all = coinFrames + premiumFrames + proFrame
+    val throneFrame = Frame("frame_throne_champion", R.drawable.profile_frame_premium_gold, "Taht Birincisi", "Throne Champion")
+    val saleFrames = premiumFrames.filter { it.id != ProductCatalog.PROFILE_FRAME_GOLD_CREST }
+    val all = coinFrames + premiumFrames + proFrame + throneFrame
     val coinIds = coinFrames.map { it.id }.toSet()
     val allIds = all.map { it.id }.toSet()
     val premiumProductIds = premiumFrames.mapNotNull { it.playProductId }
@@ -94,12 +96,13 @@ internal fun ProfileFrameArt(frameId: String?, size: Dp, modifier: Modifier = Mo
             contentScale = ContentScale.Fit,
         )
         if (frame == ProfileFrameCollection.proFrame) ProFramePlate(size)
+        if (frame == ProfileFrameCollection.throneFrame) ProFramePlate(size, "1")
     }
 }
 
 /** Ruby-and-gold "PRO" plate sitting on the PRO frame's bottom jewel; scales with the avatar. */
 @Composable
-private fun ProFramePlate(size: Dp) {
+private fun ProFramePlate(size: Dp, label: String = "PRO") {
     val scale = size.value / 100f
     Box(
         Modifier
@@ -119,7 +122,7 @@ private fun ProFramePlate(size: Dp) {
         // Tight line box: the default body line height made the plate tall on small avatars.
         val fontSize = (13f * scale).coerceAtLeast(6f).sp
         Text(
-            "PRO",
+            label,
             color = Color(0xFFFFE6A0),
             fontSize = fontSize,
             lineHeight = fontSize,
@@ -138,21 +141,31 @@ private fun ProFramePlate(size: Dp) {
 }
 
 @kotlinx.serialization.Serializable
-private data class PublicFrameDto(@kotlinx.serialization.SerialName("profile_frame_id") val profileFrameId: String? = null)
+private data class PublicFrameDto(
+    @kotlinx.serialization.SerialName("profile_frame_id") val profileFrameId: String? = null,
+    @kotlinx.serialization.SerialName("expires_at") val expiresAt: String? = null,
+    @kotlinx.serialization.SerialName("server_time") val serverTime: String? = null,
+)
 
-/** Other players' equipped frames (server `get_public_profile_frame_v1`), fetched once per player. */
+/** Effective frames with bounded cache and a server-derived reward expiry. */
 internal object PublicFrames {
-    private val cache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private data class Entry(val frame: String?, val savedAt: Long, val week: String, val expiresAt: Long?)
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, Entry>()
+    private fun weekKey(): String = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Istanbul"))
+        .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)).toString()
+
+    fun rewardDeadline(userId: String): Long? = cache[userId]?.expiresAt
 
     suspend fun get(userId: String): String? {
-        cache[userId]?.let { return it.ifBlank { null } }
-        val frame = runCatching {
-            com.sonharf.game.data.SupabaseProvider.client.postgrest.rpc(
-                "get_public_profile_frame_v1",
-                kotlinx.serialization.json.buildJsonObject { put("p_user_id", userId) },
-            ).decodeList<PublicFrameDto>().firstOrNull()?.profileFrameId
-        }.getOrNull()
-        cache[userId] = frame.orEmpty()
+        val now = System.currentTimeMillis()
+        cache[userId]?.takeIf { it.week == weekKey() && now - it.savedAt < 30_000L && (it.expiresAt == null || now < it.expiresAt) }?.let { return it.frame }
+        val result = com.sonharf.game.data.SupabaseProvider.client.postgrest.rpc(
+            "get_public_profile_frame_v2",
+            kotlinx.serialization.json.buildJsonObject { put("p_user_id", userId) },
+        ).decodeList<PublicFrameDto>().firstOrNull()
+        val deadline = throneRewardDeadline(result?.serverTime, result?.expiresAt, now)
+        val frame = result?.profileFrameId?.takeIf { deadline == null || deadline > now }
+        cache[userId] = Entry(frame, now, weekKey(), deadline)
         return frame
     }
 }
@@ -162,10 +175,28 @@ internal object PublicFrames {
 internal fun rememberPlayerFrame(userId: String?): String? {
     if (userId.isNullOrBlank()) return null
     val me = remember { runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull() }
-    if (userId == me) return SonHarfCosmetics.profileFrameId
-    var frame by remember(userId) { mutableStateOf<String?>(null) }
-    LaunchedEffect(userId) {
-        if (com.sonharf.game.data.SupabaseProvider.configured) frame = PublicFrames.get(userId)
+    val localFrame = if (userId == me) SonHarfCosmetics.profileFrameId else null
+    var frame by remember(userId) { mutableStateOf<String?>(localFrame) }
+    LaunchedEffect(userId, localFrame) {
+        if (!com.sonharf.game.data.SupabaseProvider.configured) return@LaunchedEffect
+        while (true) {
+            // Timed rewards fail closed; permanent cosmetics retain the local selection.
+            if (frame == ProfileFrameCollection.throneFrame.id) frame = localFrame
+            runCatching { PublicFrames.get(userId) }.onSuccess { frame = it ?: localFrame }
+            val zone = java.time.ZoneId.of("Europe/Istanbul")
+            val boundary = java.time.LocalDate.now(zone)
+                .with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.MONDAY))
+                .atStartOfDay(zone).toInstant().toEpochMilli()
+            kotlinx.coroutines.delay((minOf(boundary, PublicFrames.rewardDeadline(userId)?.takeIf { it > System.currentTimeMillis() } ?: Long.MAX_VALUE) - System.currentTimeMillis()).coerceIn(100L, 30_000L))
+        }
     }
     return frame
+}
+
+/** Convert the server's remaining reward time to a client deadline, even with clock skew. */
+internal fun throneRewardDeadline(serverTime: String?, expiresAt: String?, receivedAt: Long): Long? {
+    if (expiresAt == null) return null
+    return runCatching {
+        receivedAt + (java.time.Instant.parse(expiresAt).toEpochMilli() - java.time.Instant.parse(serverTime).toEpochMilli())
+    }.getOrDefault(receivedAt)
 }

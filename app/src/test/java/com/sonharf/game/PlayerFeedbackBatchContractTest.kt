@@ -57,7 +57,7 @@ class PlayerFeedbackBatchContractTest {
     @Test fun proSeesTheMoveScoreBeforeConfirming() {
         assertTrue(source("WordSiegePracticeEngine.kt").contains("fun previewScore(board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>): Int?"))
         // The score floats above the word on the board, only for PRO.
-        assertTrue(source("WordSiegePanMatch.kt").contains("pendingScore = pendingScore.takeIf { mine?.isVip == true }"))
+        assertTrue(source("WordSiegePanMatch.kt").contains("pendingScore = pendingScore.takeIf { scoreAccess }"))
         assertTrue(source("WordSiegePracticeScreen.kt").contains("pendingScore = pendingMove?.takeIf { playerProfile?.isVip == true && it.placements == placements }?.wordScore"))
         assertFalse(source("WordSiegePracticeScreen.kt").contains("\" • +\$it\""))
     }

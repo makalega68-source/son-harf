@@ -74,7 +74,9 @@ private val SiegeEntryControlShape = RoundedCornerShape(13.dp)
 internal fun WordSiegeEntryScreen(
     onExit: () -> Unit,
     onOpenStore: () -> Unit,
+    startQuickDuel: Boolean = false,
 ) {
+    var quickLaunchConsumed by remember { mutableStateOf(false) }
     var mode by remember { mutableStateOf<WordSiegeEntryMode?>(
         if (WordSiegeLaunchConfig.pendingGameId == null) null
         else if (WordSiegeLaunchConfig.pendingGameMode == "series") WordSiegeEntryMode.SERIES
@@ -139,6 +141,12 @@ internal fun WordSiegeEntryScreen(
     val shownGames = if (libraryTab == WordSiegeLibraryTab.ACTIVE) activeGames else finishedGames
     val access = entitlements
     val seriesOwned = access?.seriesGameAccess == true
+    LaunchedEffect(startQuickDuel, seriesOwned) {
+        if (startQuickDuel && seriesOwned && mode == null && !quickLaunchConsumed) {
+            quickLaunchConsumed = true
+            mode = WordSiegeEntryMode.SERIES
+        }
+    }
     // Quick Duel is a paid mode; one rewarded video opens five games to try it (non-PRO only).
     var showQuickOffer by remember { mutableStateOf(false) }
     var quickNotice by remember { mutableStateOf<String?>(null) }

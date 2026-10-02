@@ -80,7 +80,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                             .onFailure { error ->
                                 notice = when {
                                     "google_play_not_configured" in error.message.orEmpty() -> sh("Google Play sunucu doğrulaması production hesabıyla henüz etkin değil.", "Google Play server verification is not enabled with the production account yet.")
-                                    else -> sh("Ödeme doğrulaması tamamlanamadı. Aynı satın alma tekrar ödül vermez; yeniden deneyebilirsin.", "Purchase verification failed. The same purchase cannot grant twice; you can retry.")
+                                    else -> sh("Ödeme doğrulanamadı. Yeniden dene.", "Purchase verification failed. The same purchase cannot grant twice; you can retry.")
                                 }
                             }
                         busy = null
@@ -92,7 +92,10 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
     }
 
     DisposableEffect(manager) {
-        manager.connect { manager.queryOneTimeProducts(ProductCatalog.oneTimeProducts) { products = it } }
+        manager.connect {
+            manager.queryOneTimeProducts(ProductCatalog.oneTimeProducts) { products = it }
+            manager.restorePurchases(ProductCatalog.permanentPremiumProducts)
+        }
         onDispose { manager.close() }
     }
 
@@ -118,7 +121,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(sh("PREMİUM ÖZELLİKLER", "PREMIUM FEATURES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 16.sp)
             Text(
-                sh("Tek ödeme ile kalıcı kullanım. PRO; reklamsız kullanım, prestij profil, arkadaş listesi, konfor araçları, 50 aktif oyun limiti ve 100 Son Coin sunar.", "One payment, permanent access. PRO gives ad-free play, a prestige profile, friends list, comfort tools, a 50 active-game limit and 100 Son Coins."),
+                sh("Kalıcı erişim · Google Play", "Permanent access · Google Play"),
                 color = SonHarfMuted,
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
@@ -151,7 +154,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
             ) { buy(ProductCatalog.SCORE_CALCULATOR) }
             PremiumProductRow(
                 title = "PRO",
-                subtitle = sh("Tüm premium özellikler", "All premium features"),
+                subtitle = sh("PRO ayrıcalıkları", "PRO benefits"),
                 imageRes = R.drawable.premium_pro,
                 product = products[ProductCatalog.PRO_LIFETIME],
                 busy = busy != null,
@@ -160,11 +163,9 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
 
             HorizontalDivider(color = SonHarfTheme.Border)
             Text("SON COIN", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
-            Text(
-                sh("Coin yalnızca kozmetik ve mağaza ürünlerinde kullanılır; maç gücü satılmaz.", "Coins are only for cosmetics and store items; match power is never sold."),
-                color = SonHarfMuted,
-                fontSize = 9.sp,
-            )
+            TextButton(onClick = { manager.restorePurchases(ProductCatalog.permanentPremiumProducts) }, enabled = busy == null) {
+                Text(sh("SATIN ALIMLARI GERİ YÜKLE", "RESTORE PURCHASES"), color = SonHarfTheme.Primary)
+            }
 
             CoinProductRow(
                 amount = 500,

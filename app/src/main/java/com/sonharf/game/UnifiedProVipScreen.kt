@@ -33,7 +33,7 @@ private val UProSurface = Color(0xFF0F172A)
 private val UProBorder = Color(0xFF334155)
 private val UProText = Color(0xFFF8FAFC)
 private val UProMuted = Color(0xFF94A3B8)
-private val UProBlue = Color(0xFF3B82F6)
+private val UProBlue = Color(0xFF10B981)
 private val UProGold = Color(0xFFF59E0B)
 private val UProGreen = Color(0xFF10B981)
 
@@ -42,6 +42,8 @@ internal fun UnifiedProVipScreen(
     backend: OnlineGameBackend,
     onBack: () -> Unit = {},
     onPrivateRoom: () -> Unit = {},
+    onFriends: () -> Unit = {},
+    onQuickDuel: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -80,7 +82,7 @@ internal fun UnifiedProVipScreen(
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, null, tint = UProText) }
                 Column(Modifier.weight(1f)) {
                     Text("KELİME TAHTI PRO", color = UProText, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Premier üyelik ve fair-play ayrıcalıkları", "Premier membership and fair-play benefits"), color = UProBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(sh("Üyelik ayrıcalıkları", "Premier membership and fair-play benefits"), color = UProBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
                 Icon(Icons.Rounded.WorkspacePremium, null, tint = UProGold, modifier = Modifier.size(30.dp))
             }
@@ -122,10 +124,16 @@ internal fun UnifiedProVipScreen(
                     Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(sh("PRO ARAÇLARI", "PRO TOOLS"), color = UProText, fontWeight = FontWeight.Black)
                         Text(
-                            sh("Satın aldığın özellikleri buradan doğrudan kullanabilirsin.", "Use your purchased benefits directly from here."),
+                            sh("PRO araçların", "Use your purchased benefits directly from here."),
                             color = UProMuted,
                             fontSize = 10.sp,
                         )
+                        if (e?.savedFriendList == true) OutlinedButton(onClick = onFriends, modifier = Modifier.fillMaxWidth()) {
+                            Text(sh("ARKADAŞLAR", "FRIENDS"), color = UProGreen)
+                        }
+                        if (e?.seriesGameAccess == true) OutlinedButton(onClick = onQuickDuel, modifier = Modifier.fillMaxWidth()) {
+                            Text(sh("HIZLI DÜELLO", "QUICK DUEL"), color = UProGold)
+                        }
                         if (e?.postMatchAnalysis == true) {
                             PremiumAnalysisCenterLauncher(Modifier.fillMaxWidth())
                         }

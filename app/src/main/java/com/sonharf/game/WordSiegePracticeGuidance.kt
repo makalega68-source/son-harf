@@ -51,7 +51,7 @@ internal fun wordSiegePracticeZoneExplanation(code: String, turkish: Boolean): S
         "WORD SURGE+ • A word reaching this cell scores triple in total."
     }
     WordSiegeBoardSpec.CenterBonus -> if (turkish) {
-        "BAŞLANGIÇ MÜHRÜ • Oyunu açan kelime mühürden geçer ve toplamı dört kat yazılır."
+        "MERKEZ • Açılış kelimesi merkezden geçer ve toplamı dört kat yazılır."
     } else {
         "STARTING SEAL • The opening word passes through the seal and scores four times its total."
     }
@@ -84,7 +84,7 @@ internal fun WordSiegePracticeZoneInfoDialog(
                     color = MainUi.Text,
                 )
                 // All bonuses side by side, as they look on the board.
-                WordSiegeBonusLegend(compact = false, modifier = Modifier.fillMaxWidth())
+                Text(if (turkish) "Bonus yalnız hücreye ilk taş yerleştiğinde işler." else "A bonus applies only to the first tile placed in that cell.")
             }
         },
         confirmButton = {
@@ -107,7 +107,7 @@ internal fun WordSiegePracticeTutorialCard(
     val title = when (step) {
         0 -> if (turkish) "KELİME TAHTI • KISA TUR" else "WORD THRONE • QUICK TOUR"
         1 -> if (turkish) "1/4 • TAŞINI AL" else "1/4 • TAKE A TILE"
-        2 -> if (turkish) "2/4 • MÜHRÜ AÇ" else "2/4 • OPEN THE SEAL"
+        2 -> if (turkish) "2/4 • MERKEZDEN BAŞLA" else "2/4 • OPEN THE SEAL"
         3 -> if (turkish) "3/4 • KELİMEYİ KİLİTLE" else "3/4 • LOCK IN THE WORD"
         else -> if (turkish) "4/4 • BÖLGE VE BONUSLAR" else "4/4 • GROUND AND BONUSES"
     }
@@ -118,12 +118,12 @@ internal fun WordSiegePracticeTutorialCard(
             "Build words with your tiles and win ground on the board. Every new word must touch a letter already on the board along a row or column. Highest word plus territory total wins."
         }
         1 -> if (turkish) {
-            "Alt sıradaki taşlarından birine dokun; seçtiğin taş öne çıkar."
+            "Elinden bir harf seç."
         } else {
-            "Tap one of your tiles at the bottom; the chosen tile lifts up."
+            "Select a tile from your rack."
         }
         2 -> if (turkish) {
-            "Şimdi boş bir hücreye dokun. Açılış kelimen Başlangıç Mührü'nden geçmeli."
+            "Açılış kelimesini tahta merkezinden geçecek şekilde yerleştir."
         } else {
             "Now tap an empty cell. Your opening word must pass through the Starting Seal."
         }
@@ -165,7 +165,11 @@ internal fun WordSiegePracticeTutorialCard(
                 lineHeight = if (compact) 12.sp else 14.sp,
             )
             // The last step shows every bonus as it looks on the board, with one short line each.
-            if (step >= 4) WordSiegeBonusLegend(compact = compact, modifier = Modifier.fillMaxWidth())
+            if (step >= 4) Text(
+                if (turkish) "Harf bonusu: harf değeri iki veya üç kat. Kelime bonusu: kelime toplamı iki veya üç kat. Açılış: kelime toplamı dört kat. Ödül bölgesi: 25 ek puan."
+                else "Letter bonus: double or triple tile value. Word bonus: double or triple word total. Opening: quadruple word total. Reward cell: 25 extra points.",
+                color = Color(0xFF3F554A), fontSize = if (compact) 9.sp else 10.sp,
+            )
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,

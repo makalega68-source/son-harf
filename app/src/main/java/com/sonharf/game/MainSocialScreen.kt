@@ -109,6 +109,10 @@ internal fun MainSocialScreen(
         }.getOrDefault(false)
         proChecked = true
         reload()
+        while (true) {
+            kotlinx.coroutines.delay(30_000L)
+            if (busyKey == null) reload()
+        }
     }
 
     val onlineCount = friends.count { it.second.presenceStatus == "online" }
@@ -315,7 +319,7 @@ internal fun MainSocialScreen(
                     val relationStatus = relation?.status ?: if (player.id in sentRequests) "pending" else null
                     Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = if (player.isVip) MainUi.Gold else MainUi.Blue, visible = player.avatarVisibility != "hidden")
+                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = if (player.isVip) MainUi.Gold else MainUi.Blue, visible = player.avatarVisibility != "hidden", userId = player.id)
                             Spacer(Modifier.width(9.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(player.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -329,7 +333,7 @@ internal fun MainSocialScreen(
                                         gameRequestResult { backend.sendFriendRequest(player.id) }
                                             .onSuccess {
                                                 sentRequests = sentRequests + player.id
-                                                notice = sh("Arkadaşlık isteği gönderildi. ${player.displayName} kabul edince arkadaş olacaksınız.", "Friend request sent. You become friends once ${player.displayName} accepts.")
+                                                notice = sh("İstek gönderildi.", "Request sent.")
                                                 reload()
                                             }
                                             .onFailure { notice = friendRequestError(it) }
@@ -358,7 +362,7 @@ internal fun MainSocialScreen(
                 if (requests.isEmpty() && !loading) {
                     item {
                         Text(
-                            sh("Sana gelen arkadaşlık istekleri burada görünür. Kabul ettiğinde ikiniz de arkadaş listesine eklenirsiniz.", "Friend requests you receive appear here. Once you accept, you are added to each other's friend list."),
+                            sh("Bekleyen istek yok.", "Friend requests you receive appear here. Once you accept, you are added to each other's friend list."),
                             color = MainUi.Muted,
                             fontSize = 10.sp,
                         )
@@ -367,7 +371,7 @@ internal fun MainSocialScreen(
                 items(requests, key = { it.second.id }) { (_, player) ->
                     Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .28f))) {
                         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = MainUi.Blue, visible = player.avatarVisibility != "hidden")
+                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = MainUi.Blue, visible = player.avatarVisibility != "hidden", userId = player.id)
                             Spacer(Modifier.width(9.dp))
                             Text(player.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f), maxLines = 1)
                             IconButton(

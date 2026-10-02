@@ -343,8 +343,8 @@ internal fun MainVipScreen(
                     Text(sh("PRO OYUN YARDIMLARI", "PRO GAME HELPERS"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh(
-                            "PRO; İpucu, Harf Değiştirici ve 2x Skor dahil sunucu doğrulamalı oyun yardımcıları sunar.",
-                            "PRO includes server-validated gameplay helpers such as Hint, Letter Swap and 2x Score.",
+                            "PRO: Hamle Önizleme, Kalan Harfler ve kelime geçmişi.",
+                            "PRO: Move Preview, Letters Left and word history.",
                         ),
                         color = MainUi.Text,
                         fontSize = 11.sp,

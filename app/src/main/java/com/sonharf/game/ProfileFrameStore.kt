@@ -89,7 +89,7 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Un
                         runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
                             .onSuccess {
                                 reload()
-                                notice = sh("Çerçeve satın alındı! Profil > Çerçeve'den takabilirsin.", "Frame purchased! Wear it from Profile > Frame.")
+                                notice = sh("Çerçeve koleksiyonuna eklendi.", "Frame added to your collection.")
                             }
                             .onFailure { error ->
                                 notice = when {
@@ -121,7 +121,13 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Un
         val b = backend ?: return
         when {
             // Owned frames are worn, changed and removed from the profile.
-            frame.id in owned -> notice = sh("Bu çerçeve sende var. Profil > Çerçeve'den takabilirsin.", "You own this frame. Wear it from Profile > Frame.")
+            frame.id in owned -> scope.launch {
+                busy = frame.id
+                runCatching { b.equipShopItem(frame.id); reload() }
+                    .onSuccess { notice = sh("Çerçeve takıldı.", "Frame equipped.") }
+                    .onFailure { notice = sh("Çerçeve takılamadı. Yeniden dene.", "Could not equip frame. Retry.") }
+                busy = null
+            }
             // The PRO frame comes with PRO membership; the button leads to PRO.
             frame == ProfileFrameCollection.proFrame -> onPro()
             frame.playProductId != null -> {
@@ -142,7 +148,7 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Un
                 runCatching { b.purchaseShopItem(frame.id) }
                     .onSuccess {
                         reload()
-                        notice = sh("Çerçeve satın alındı! Profil > Çerçeve'den takabilirsin.", "Frame purchased! Wear it from Profile > Frame.")
+                        notice = sh("Çerçeve koleksiyonuna eklendi.", "Frame added to your collection.")
                     }
                     .onFailure {
                         notice = if ("insufficient_diamonds" in it.message.orEmpty()) sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
@@ -163,21 +169,17 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Un
                 price = sh("PRO ol", "Go PRO"), premium = true) { onFrame(frame) }
         }
         FrameSectionTitle(sh("PREMIUM ÇERÇEVELER", "PREMIUM FRAMES"), sh("Kalıcı • Google Play ile", "Permanent • via Google Play"))
-        FrameGrid(ProfileFrameCollection.premiumFrames) { frame ->
+        FrameGrid(ProfileFrameCollection.saleFrames) { frame ->
             val offer = frame.playProductId?.let { products[it]?.oneTimePurchaseOfferDetails }
             FrameCard(frame, owned = frame.id in owned, equipped = equipped == frame.id, busy = busy != null,
-                price = offer?.formattedPrice ?: sh("Yakında", "Soon"), premium = true) { onFrame(frame) }
+                price = offer?.formattedPrice ?: sh("Satışta değil", "Unavailable"), premium = true, available = offer != null || frame.id in owned) { onFrame(frame) }
         }
         FrameSectionTitle(sh("SON COIN ÇERÇEVELERİ", "SON COIN FRAMES"), sh("Sade halkalar • Son Coin ile", "Simple rings • for Son Coin"))
         FrameGrid(ProfileFrameCollection.coinFrames.filter { it.id in coinItems || it.id in owned }) { frame ->
             FrameCard(frame, owned = frame.id in owned, equipped = equipped == frame.id, busy = busy != null,
                 price = coinItems[frame.id]?.let { "${it.diamondPrice} SC" } ?: "—", premium = false) { onFrame(frame) }
         }
-        Text(
-            sh("Çerçeveler yalnızca görünümdür; oyun gücü vermez. Çerçevesiz görünüme Profil > Çerçeve'den dönebilirsin.",
-                "Frames are purely cosmetic. Go back to no frame from Profile > Frame."),
-            color = Hf.TextMuted, fontSize = 11.sp, lineHeight = 15.sp,
-        )
+
     }
 }
 
@@ -207,6 +209,7 @@ private fun FrameCard(
     busy: Boolean,
     price: String,
     premium: Boolean,
+    available: Boolean = true,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -227,7 +230,7 @@ private fun FrameCard(
             Text(sh(frame.nameTr, frame.nameEn), color = Hf.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             Surface(
                 onClick = onClick,
-                enabled = !busy && !equipped && !owned,
+                enabled = !busy && !equipped && available,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp),
                 shape = Hf.PillShape,
                 color = when {
@@ -239,7 +242,7 @@ private fun FrameCard(
                 Row(Modifier.padding(horizontal = 6.dp, vertical = 6.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     if (!owned && !premium) { HfCoin(14.dp); Spacer(Modifier.width(4.dp)) }
                     Text(
-                        if (equipped || owned) sh("SATIN ALINDI", "PURCHASED") else price,
+                        if (equipped) sh("TAKILI", "EQUIPPED") else if (owned) sh("TAK", "EQUIP") else price,
                         color = if (equipped || owned) Hf.OnAccent else Hf.Text,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Black,

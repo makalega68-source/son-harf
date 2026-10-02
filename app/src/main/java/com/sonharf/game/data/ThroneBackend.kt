@@ -21,7 +21,7 @@ import kotlinx.serialization.json.put
 @Serializable internal data class TournamentResult(val xp:Int=0,val score:Int=0,@SerialName("already_saved") val alreadySaved:Boolean=false)
 @Serializable internal data class ThroneRow(val rank:Int=0,@SerialName("user_id") val userId:String="",val name:String="",val xp:Long=0,@SerialName("avatar_path") val avatarPath:String?=null,val gender:String?=null,@SerialName("avatar_visibility") val avatarVisibility:String="public")
 @Serializable internal data class ThroneMe(val rank:Int=0,val xp:Long=0)
-@Serializable internal data class ThroneOwner(val name:String="",val xp:Long=0,@SerialName("week_start") val weekStart:String="")
+@Serializable internal data class ThroneOwner(val name:String="",val xp:Long=0,@SerialName("week_start") val weekStart:String="",@SerialName("user_id") val userId:String="",@SerialName("expires_at") val expiresAt:String="",@SerialName("avatar_path") val avatarPath:String?=null,val gender:String?=null,@SerialName("avatar_visibility") val avatarVisibility:String="public")
 @Serializable internal data class ThroneMission(val game:String,val id:String,val target:Int,val reward:Int,val progress:Int=0,val awarded:Boolean=false)
 @Serializable internal data class ThroneGameTotal(val game:String,val xp:Long=0,val rounds:Int=0,val wins:Int=0,val tasks:Int=0)
 @Serializable internal data class ThroneWeek(
