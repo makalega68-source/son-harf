@@ -25,7 +25,7 @@ class GameModeBrandingAndVisibleActionContractTest {
         assertTrue(siegeDrawable.readText().contains("<vector"))
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.png")?.exists() == true)
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.webp")?.exists() == true)
-        assertTrue(games.contains("title = sh(\"KELİME TAHTI\", \"KELİME TAHTI\")"))
+        assertTrue(games.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(games.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(games.contains("title = sh(\"KELİME ATÖLYESİ\", \"WORD WORKSHOP\")"))
         assertTrue(games.contains("PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)"))

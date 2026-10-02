@@ -26,9 +26,9 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(siegeVector.readText().contains("<vector"))
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.png").exists())
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.webp").exists())
-        assertTrue(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
+        assertFalse(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
         assertFalse(localization.contains("replace(\"Kelime Tahtı\", \"Kelime Kuşatması\")"))
-        assertTrue(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
+        assertFalse(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
 
         assertTrue(
             home.contains("\"KELİME TAHTI\"") ||
@@ -48,7 +48,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(shell.contains("PremiumBottomBar("))
         assertTrue(shell.contains("PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)"))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
-        assertTrue(shell.contains("title = sh(\"KELİME TAHTI\", \"KELİME TAHTI\")"))
+        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(shell.contains("title = sh(\"KELİME ATÖLYESİ\", \"WORD WORKSHOP\")"))
 

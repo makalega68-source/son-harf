@@ -38,7 +38,9 @@ class WordSiegePanAreaContractTest {
         assertFalse(pan.contains("detectTapGestures"))
         assertFalse(pan.contains("Çift dokun:"))
         assertFalse(pan.contains("LazyColumn("))
-        assertFalse(pan.contains("verticalScroll("))
+        // The live board never scrolls vertically; only the post-match summary may scroll.
+        assertFalse(pan.substringAfter("WordSiegeGameTheme {").contains("verticalScroll("))
+        assertTrue(pan.substringBefore("WordSiegeGameTheme {").contains("verticalScroll("))
     }
 
     @Test fun boardKeepsReadableOwnershipAndTapPlacementContract() {

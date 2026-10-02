@@ -22,7 +22,8 @@ internal fun SiegePostMatchPanel(game: WordSiegeGameDto, onReplay: () -> Unit, r
     var friends by remember(game.id) { mutableStateOf<List<ProfileDto>?>(null) }
     var history by remember(game.id) { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
     var missions by remember(game.id) { mutableStateOf<List<UnifiedMissionDto>>(emptyList()) }
-    var pro by remember(game.id) { mutableStateOf(false) }
+    var pro by remember(game.id) { mutableStateOf<Boolean?>(null) }
+    var failed by remember(game.id) { mutableStateOf(false) }
     var loaded by remember(game.id) { mutableStateOf(false) }
     var busy by remember(game.id) { mutableStateOf(false) }
     var notice by remember(game.id) { mutableStateOf<String?>(null) }
@@ -31,13 +32,16 @@ internal fun SiegePostMatchPanel(game: WordSiegeGameDto, onReplay: () -> Unit, r
     var retry by remember(game.id) { mutableIntStateOf(0) }
     LaunchedEffect(game.id, retry) {
         coroutineScope {
-            pro = gameRequestResult { me?.let { backend.getProfile(it).isVip } ?: false }.getOrDefault(false)
-            val f = async { if (pro) gameRequestResult { backend.getFriends() }.getOrNull()?.map { it.second } else emptyList() }
+            pro = gameRequestResult { me?.let { backend.getProfile(it).isVip } ?: false }.getOrNull()
+            val f = async { if (pro == true) gameRequestResult { backend.getFriends() }.getOrNull()?.map { it.second } else emptyList() }
             val h = async { gameRequestResult { if (game.gameMode == "series") backend.getWordSiegeSeriesGames() else backend.getWordSiegeGames() }.getOrNull() }
             val m = async { gameRequestResult { backend.getUnifiedMissions() }.getOrNull() }
             friends = f.await()
-            h.await()?.let { history = it }
-            missions = m.await().orEmpty().filter { it.modeKey == "word_siege" && it.completed && !it.claimed }
+            val historyResult = h.await()
+            val missionResult = m.await()
+            failed = pro == null || friends == null || historyResult == null || missionResult == null
+            historyResult?.let { history = it }
+            missions = missionResult.orEmpty().filter { it.modeKey == "word_siege" && it.completed && !it.claimed }
             loaded = true
         }
     }
@@ -107,12 +111,12 @@ internal fun SiegePostMatchPanel(game: WordSiegeGameDto, onReplay: () -> Unit, r
                         }
                     } finally { busy = false }
                 }
-            }, enabled = loaded && pro && friends != null && !busy && !replayBusy && !invitationSent, modifier = Modifier.weight(1f)) {
+            }, enabled = loaded && pro == true && friends != null && !busy && !replayBusy && !invitationSent, modifier = Modifier.weight(1f)) {
                 Text(if (invitationSent) sh("GÖNDERİLDİ", "SENT") else if (friend != null) sh("RÖVANŞ", "REMATCH") else sh("ARKADAŞ EKLE", "ADD FRIEND"), fontSize = 11.sp)
             }
         }
-        if (!pro && loaded) Text(sh("Arkadaş davetleri ve rövanş · PRO", "Friend invitations and rematches · PRO"), color = Hf.Gold, fontSize = 11.sp)
-        if (pro && loaded && friends == null) TextButton(onClick = { retry++ }) { Text(sh("Arkadaşlar yüklenemedi · Yenile", "Friends unavailable · Retry")) }
+        if (pro == false && loaded) Text(sh("Arkadaş davetleri ve rövanş · PRO", "Friend invitations and rematches · PRO"), color = Hf.Gold, fontSize = 11.sp)
+        if (failed && loaded) TextButton(onClick = { retry++ }) { Text(sh("Sonuç ayrıntıları eksik · Yenile", "Incomplete result details · Retry")) }
         notice?.let { Text(it, color = Hf.TextMuted, fontSize = 12.sp) }
         missions.forEach { mission ->
             Text((if (SonHarfUiState.isEnglish) mission.titleEn else mission.titleTr) + " · +${mission.rewardCoins} Son Coin", color = Hf.Gold, fontSize = 12.sp)

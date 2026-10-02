@@ -45,8 +45,6 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var lastLetterLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var workshopLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var uiLanguageBeforeGame by rememberSaveable { mutableStateOf<String?>(null) }
-    val shellMascotTouches = remember { WordSiegeMascotTouchState() }
-    var shellProfile by remember { mutableStateOf<ProfileDto?>(null) }
     val shellContext = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
@@ -54,7 +52,6 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         WordSiegeMascotOwnership.refresh(shellContext)
         // Rewarded-video passes: banked hints and a day's keyboard or theme.
         RewardPassState.refresh()
-        shellProfile = backend.currentUserId()?.let { id -> runCatching { backend.getProfile(id) }.getOrNull() }
     }
     fun openGame(target: PremiumDestination, language: String, quickDuel: Boolean = false) {
         startQuickDuel = quickDuel
@@ -186,7 +183,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         ) { padding ->
             // consumeWindowInsets: the Scaffold padding already contains the status bar, so screens that
             // add statusBarsPadding() themselves (the game arenas) no longer get a second, empty band on top.
-            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).wordSiegeMascotTouchWatcher(shellMascotTouches)) {
+            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
                 if (!SonHarfTheme.IsDark && !SonHarfCosmetics.darkArenaTheme && !SonHarfCosmetics.walnutTheme) SonHarfLeafBackdrop(Modifier.matchParentSize())
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
@@ -374,8 +371,8 @@ private fun PremiumHomeScreen(
                     }
                 }
             }
-            item(key = "mascot_stage") {
-                Box(Modifier.fillMaxWidth().height(146.dp).clipToBounds()) {
+            if (WordSiegeMascotOwnership.hasAny) item(key = "mascot_stage") {
+                Box(Modifier.fillMaxWidth().height(194.dp).clipToBounds()) {
                     WordSiegeMascotCompanion(
                         anchors = listOf(Offset(.75f, .55f), Offset(.25f, .55f)), mascotSize = 83.dp,
                         ambientScenes = true, moveId = null, lastMoveMine = false, playerTurn = false,

@@ -614,7 +614,7 @@ internal fun WordSiegeMascotCompanion(
     val scope = rememberCoroutineScope()
     val lifecycle = LocalView.current.findViewTreeLifecycleOwner()?.lifecycle
     var foreground by remember { mutableStateOf(lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true) }
-    val voice = remember(context, ambientScenes) { if (ambientScenes && allowSpeech) MascotAmbientVoice(context) else null }
+    val voice = remember(context, ambientScenes, allowSpeech) { if (ambientScenes && allowSpeech) MascotAmbientVoice(context) else null }
     DisposableEffect(lifecycle, voice) {
         val observer = LifecycleEventObserver { _, _ ->
             foreground = lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true
@@ -774,8 +774,8 @@ internal fun WordSiegeMascotCompanion(
             glanceKey += 1
         }
 
-        fun say(text: String, holdExtraMillis: Long = 0L, aloud: Boolean = false) {
-            if (!allowSpeech) return
+        fun say(text: String, holdExtraMillis: Long = 0L, aloud: Boolean = false, explicitRequest: Boolean = false) {
+            if (!allowSpeech && !explicitRequest) return
             speechJob?.cancel()
             speechId += 1
             speech = MascotVoice.style(text, skin, speechId)
@@ -1156,7 +1156,7 @@ internal fun WordSiegeMascotCompanion(
             perform(WordSiegeMascotAction.THINK)
             delay(1_300L)
             perform(WordSiegeMascotAction.POINT)
-            say(text, holdExtraMillis = 3_500L)
+            say(text, holdExtraMillis = 3_500L, explicitRequest = true)
         }
 
         // Game moments: support, praise and comfort, chosen with restraint.
