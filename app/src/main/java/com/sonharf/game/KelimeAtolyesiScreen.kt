@@ -180,6 +180,39 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var startingDaily by remember { mutableStateOf(false) }
     var raceBoard by remember { mutableStateOf<AtelierBoardDto?>(null) }
     var dailyLine by remember { mutableStateOf<String?>(null) }
+    var tournament by remember { mutableStateOf<com.sonharf.game.data.AtelierTournament?>(null) }
+    var tournamentEntry by remember { mutableStateOf<com.sonharf.game.data.TournamentEntry?>(null) }
+    var savingTournament by remember { mutableStateOf(false) }
+    var tournamentSaveFailed by remember { mutableStateOf(false) }
+    LaunchedEffect(mode) {
+        if (!online || mode != AtelierMode.LOBBY) return@LaunchedEffect
+        while (true) {
+            gameRequestResult { com.sonharf.game.data.ThroneBackend.tournament() }.onSuccess { tournament = it }
+            delay(10_000)
+        }
+    }
+    fun saveTournament(finished: AtelierState) {
+        val entry = tournamentEntry ?: return
+        if (savingTournament) return
+        savingTournament = true
+        tournamentSaveFailed = false
+        dailyLine = sh("Turnuva sonucu kaydediliyor…", "Saving tournament result…")
+        val generation = roundGeneration
+        scope.launch {
+            try {
+                gameRequestResult { com.sonharf.game.data.ThroneBackend.finish(entry, finished.score, finished.words, finished.completedTasks) }
+                    .onSuccess { result ->
+                        if (roundGeneration != generation) return@onSuccess
+                        dailyLine = sh("${entry.stage}. aşama tamamlandı · +${result.xp} XP · ×${entry.multiplier}", "Stage ${entry.stage} completed · +${result.xp} XP · ×${entry.multiplier}")
+                        tournamentSaveFailed = false
+                    }.onFailure {
+                        if (roundGeneration != generation) return@onFailure
+                        tournamentSaveFailed = true
+                        dailyLine = sh("Sonuç kaydedilemedi. Süre dolmadan tekrar kaydet.", "Result could not be saved. Retry before the stage expires.")
+                    }
+            } finally { savingTournament = false }
+        }
+    }
 
     LaunchedEffect(language, roundSeconds) { best = AtelierRecords.best(context, language, roundSeconds) }
 
@@ -205,6 +238,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         newBest = finished.score > best
         best = AtelierRecords.save(context, language, finished.score, roundSeconds)
         if (finished.everySetDone) SonHarfSoundFx.victory() else SonHarfSoundFx.softNotify()
+        if (mode == AtelierMode.TOURNAMENT) saveTournament(finished)
         if (mode == AtelierMode.DAILY) {
             dailyLine = sh("Puanın kaydediliyor…", "Saving your score…")
             val finishedGeneration = roundGeneration
@@ -268,6 +302,25 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         engine = built
         // Rounds start from the lobby: the official daily race or free practice.
         if (mode != AtelierMode.LOBBY) startRound()
+    }
+
+    fun startTournament() {
+        if (startingDaily || startingRound || busy || engine == null) return
+        startingDaily = true
+        val generation = roundGeneration
+        scope.launch {
+            try {
+                gameRequestResult { com.sonharf.game.data.ThroneBackend.start(language) }
+                    .onSuccess { entry ->
+                        if (generation != roundGeneration) return@onSuccess
+                        tournamentEntry = entry
+                        roundSeconds = entry.seconds
+                        mode = AtelierMode.TOURNAMENT
+                        dailyLine = null
+                        startRound(KelimeAtolyesiEngine.dailySeed(language, entry.seedKey))
+                    }.onFailure { lobbyNotice = sh("Bu aşamaya girilemedi. Önceki aşamayı ve kalan süreyi kontrol et.", "Unable to enter. Check the previous stage and remaining time.") }
+            } finally { startingDaily = false }
+        }
     }
 
     fun startPractice() {
@@ -495,7 +548,10 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             )
             when {
                 loadFailed -> AtelierLoadError { loadNonce += 1 }
-                mode == AtelierMode.LOBBY -> AtelierLobby(
+                mode == AtelierMode.LOBBY -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    AtelierTournamentPanel(tournament, startingDaily || startingRound, onJoin = { startTournament() })
+                    lobbyNotice?.let { Text(it, color = AtelierUi.Ink, fontSize = 12.sp) }
+                    AtelierLobby(
                     online = online,
                     board = board,
                     weekly = weeklyBoard,
@@ -510,27 +566,35 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     onPractice = { if (engine != null) startPractice() },
                     onClaim = { claimReward() },
                 )
+                }
                 current == null -> Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         CircularProgressIndicator(color = AtelierUi.Green)
                         Text(sh("Harfler hazırlanıyor…", "Preparing letters…"), color = AtelierUi.InkMuted, fontSize = 14.sp)
                     }
                 }
-                current.over -> AtelierResult(
+                current.over -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (mode == AtelierMode.TOURNAMENT && tournamentSaveFailed) {
+                        Button(onClick = { saveTournament(current) }, enabled = !savingTournament) { Text(sh("Sonucu tekrar kaydet", "Retry saving result")) }
+                    }
+                    AtelierResult(
                     state = current,
                     language = language,
                     best = best,
                     newBest = newBest,
-                    daily = mode == AtelierMode.DAILY,
+                    daily = mode == AtelierMode.DAILY || mode == AtelierMode.TOURNAMENT,
                     dailyLine = dailyLine,
-                    onNewRound = { if (mode == AtelierMode.DAILY) toLobby() else startRound() },
+                    tournament = mode == AtelierMode.TOURNAMENT,
+                    onNewRound = { if (mode != AtelierMode.PRACTICE) toLobby() else startRound() },
                     onLobby = { toLobby() },
                     onExit = onExit,
                 )
+                }
                 else -> {
                     // Tasks and the word slot on top; the letter pool sits at the bottom right above
                     // Temizle / Gönder, where the thumbs are.
                     if (mode == AtelierMode.DAILY) AtelierRivalStrip(raceBoard, current.score)
+                    if (mode == AtelierMode.TOURNAMENT) Text(sh("Turnuva · ${tournamentEntry?.stage}/3 · ×${tournamentEntry?.multiplier} XP", "Tournament · ${tournamentEntry?.stage}/3 · ×${tournamentEntry?.multiplier} XP"), color = AtelierUi.Ink, fontWeight = FontWeight.Bold)
                     AtelierMatchProgressCard(roundSeconds, secondsLeft, current, combo, best)
                     AtelierTasks(current, language)
                     AtelierSlot(current, language, gain = gain, gainNonce = gainNonce, shakeNonce = shakeNonce) { index ->
@@ -960,6 +1024,7 @@ private fun AtelierResult(
     onNewRound: () -> Unit,
     onLobby: () -> Unit,
     onExit: () -> Unit,
+    tournament: Boolean = false,
 ) {
     Column(
         Modifier
@@ -979,7 +1044,7 @@ private fun AtelierResult(
         )
         Text("${state.score}", color = AtelierUi.Green, fontSize = 44.sp, fontWeight = FontWeight.Bold)
         if (daily) {
-            Text(sh("GÜNLÜK YARIŞ", "DAILY RACE"), color = AtelierUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(if (tournament) sh("TURNUVA", "TOURNAMENT") else sh("GÜNLÜK YARIŞ", "DAILY RACE"), color = AtelierUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
             dailyLine?.let { Text(it, color = AtelierUi.Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) }
         }
         Text(

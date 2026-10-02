@@ -37,7 +37,7 @@ import com.sonharf.game.data.AtelierBoardRowDto
 import com.sonharf.game.data.AtelierWeeklyRewardDto
 
 /** Which kind of round the workshop is showing. */
-internal enum class AtelierMode { LOBBY, PRACTICE, DAILY }
+internal enum class AtelierMode { LOBBY, PRACTICE, DAILY, TOURNAMENT }
 
 private object CompUi {
     val Cream = Color(0xFFFCF8F0)

@@ -75,7 +75,7 @@ internal fun CompetitionRankingView(onCup: () -> Unit, onRivals: () -> Unit) {
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item { HfTitleRule(sh("Rekabet", "Compete"), fontSize = 34.sp) }
+        item { HfTitleRule(sh("Taht", "Throne"), fontSize = 34.sp) }
         item { RankingLeagueCard(profile) }
         // Gold and ivory podium art; its banner already reads "Haftalık Sıralama".
         item { RankingPodium(weekly.take(3), loading) }

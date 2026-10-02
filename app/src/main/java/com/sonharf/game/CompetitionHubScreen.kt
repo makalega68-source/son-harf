@@ -31,7 +31,13 @@ import kotlinx.coroutines.launch
 fun CompetitionHubScreen(onBack: () -> Unit, clubEntry: Boolean = false) {
     // clubEntry retained for source compatibility; the club surface is hidden everywhere.
     @Suppress("UNUSED_PARAMETER") val ignoredClubEntry = clubEntry
-    // 0 = ranking (08 preview), 1 = weekly cup, 2 = rivals.
+    var showThrone by remember { mutableStateOf(true) }
+    if (showThrone) {
+        ThroneScreen(onBack = onBack, onLegacy = { showThrone = false })
+        return
+    }
+    androidx.activity.compose.BackHandler { showThrone = true }
+    // Existing leagues, cup and rivals remain accessible from the throne.
     var tab by remember { mutableIntStateOf(0) }
     androidx.activity.compose.BackHandler(enabled = tab != 0) { tab = 0 }
     Column(Modifier.fillMaxSize().background(SonHarfBg)) {

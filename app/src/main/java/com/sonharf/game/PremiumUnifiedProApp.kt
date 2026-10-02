@@ -63,7 +63,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             PremiumDestination.SHOP -> sh("Alışveriş zamanı! 🛍️", "Shopping time! 🛍️")
             PremiumDestination.PROFILE -> sh("Profilin çok havalı!", "Your profile looks great!")
             PremiumDestination.SOCIAL -> sh("Arkadaşlarını çağır, birlikte oynayalım! 👋", "Invite your friends, let's play together! 👋")
-            PremiumDestination.COMPETE -> sh("Kupa bizim olacak! 🏆", "That cup will be ours! 🏆")
+            PremiumDestination.COMPETE -> sh("Tahtın sahibi kim olacak?", "Who will own the throne?")
             PremiumDestination.COLLECTION -> sh("Ne güzel bir koleksiyon ✨", "What a lovely collection ✨")
             else -> null
         } ?: return@LaunchedEffect
@@ -355,6 +355,7 @@ private fun PremiumHomeScreen(
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onPro, onSettings)
             }
+            item(key = "atelier_tournament") { HomeTournamentCard(onOpen = onWorkshop) }
             item(key = "home_secondary_modes") {
                 PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
             }
@@ -556,7 +557,7 @@ private fun PremiumBottomBar(
         Triple(PremiumDestination.HOME, R.drawable.hf_ic_home, sh("Ana Sayfa", "Home")) to onHome,
         Triple(PremiumDestination.SHOP, R.drawable.hf_ic_store, sh("Mağaza", "Store")) to onShop,
         Triple(PremiumDestination.SOCIAL, R.drawable.hf_ic_club, sh("Arkadaşlar", "Friends")) to onSocial,
-        Triple(PremiumDestination.COMPETE, R.drawable.hf_ic_compete, sh("Rekabet", "Compete")) to onCompete,
+        Triple(PremiumDestination.COMPETE, R.drawable.hf_ic_compete, sh("Taht", "Throne")) to onCompete,
         Triple(PremiumDestination.PROFILE, R.drawable.hf_ic_profile, sh("Profil", "Profile")) to onProfile,
     )
     Surface(color = SonHarfTheme.NavigationSurface) {
