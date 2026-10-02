@@ -363,7 +363,11 @@ fun PremierWordDuelScreen() {
     LaunchedEffect(Unit) {
         gameRequestResult {
             val player = ensureMe()
-            val found = backend.findPremierActiveRoom()
+            val requested = SonHarfLaunchConfig.pendingRoomId
+            SonHarfLaunchConfig.pendingRoomId = null
+            val found = if (requested != null) backend.getRoom(requested).also {
+                check(player.id == it.hostId || player.id == it.guestId) { "not_room_member" }
+            } else backend.findPremierActiveRoom()
             val active = if (found?.isBot == true && found.isPremierLive()) {
                 gameRequestResult { backend.resumePremierBotMatch(found.id) }.getOrDefault(found)
             } else {

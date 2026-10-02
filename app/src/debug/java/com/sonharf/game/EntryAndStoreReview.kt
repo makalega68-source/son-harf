@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.sonharf.game.data.ShopItemDto
+import com.sonharf.game.data.SocialActivityDto
 
 /** Debug-only verification of production entry, navigation, product cards and adaptive icons. */
 @Composable
@@ -27,6 +28,12 @@ internal fun EntryAndStoreReview(stage: String) {
         when {
             stage.startsWith("welcome") -> IntroWelcomeScreen {}
             stage.startsWith("store") -> EconomyShopScreen(onCollection = {}, onPro = {})
+            stage == "inbox-dark" -> Column(Modifier.fillMaxSize().background(Hf.Ground).statusBarsPadding().padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                Text("AKTİVİTE",color=Hf.Text,fontSize=24.sp,fontWeight=FontWeight.Black)
+                listOf("your_turn","rematch","friend_accepted").forEachIndexed { i,kind ->
+                    SocialInboxRow(SocialActivityDto("preview-$i","preview-me",kind=kind,targetKind="activity",createdAt="2026-10-02T10:00:00Z",readAt=if(i==2) "2026-10-02T10:01:00Z" else null),"Selin") {}
+                }
+            }
             stage == "home-dark" -> PremiumUnifiedProApp(onSignedOut = {})
             else -> Column(Modifier.fillMaxSize().background(Hf.Ground).statusBarsPadding().navigationBarsPadding()
                 .verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {

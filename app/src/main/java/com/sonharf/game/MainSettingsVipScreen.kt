@@ -121,7 +121,7 @@ internal fun MainSettingsScreen(
                     SonHarfPreferences.setFriendRequestNotificationsEnabled(context, it)
                 }
                 HorizontalDivider(color = MainUi.Border)
-                MainToggleSetting(Icons.Rounded.Notifications, sh("Sistem duyuruları", "System announcements"), sh("Ödül, bakım ve önemli haberler", "Rewards, maintenance and important news"), systemNotifications) {
+                MainToggleSetting(Icons.Rounded.Notifications, sh("Maç bildirimleri", "Match notifications"), sh("Sıra sende ve maç sonuçları", "Your turn and match results"), systemNotifications) {
                     systemNotifications = it
                     SonHarfPreferences.setSystemNotificationsEnabled(context, it)
                 }
@@ -234,7 +234,7 @@ internal fun MainSettingsScreen(
         AlertDialog(
             onDismissRequest = { logoutDialog = false },
             title = { Text(sh("Çıkış yapılsın mı?", "Sign out?"), fontWeight = FontWeight.Black) },
-            text = { Text(sh("Bu cihazdaki Kelime Tahtı oturumu kapatılacak.", "Your Word Throne session on this device will end.")) },
+            text = { Text(sh("Bu cihazdaki Kelime Tahtı oturumu kapatılacak.", "Your Kelime Tahtı session on this device will end.")) },
             dismissButton = { TextButton(onClick = { logoutDialog = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
             confirmButton = {
                 Button(
@@ -242,6 +242,7 @@ internal fun MainSettingsScreen(
                         scope.launch {
                             runCatching { backend.setPresence("offline") }
                             runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.signOut() }
+                            MatchNotifications.signedOut(context)
                             RememberedCredentialVault.clear(context)
                             SonHarfPreferences.setRememberLogin(context, false)
                             logoutDialog = false

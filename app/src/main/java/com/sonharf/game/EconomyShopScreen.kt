@@ -230,7 +230,7 @@ private fun EconomyCatalogScreen(
                         busy = productId
                         runCatching { com.sonharf.game.billing.PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
                             .onSuccess {
-                                notice = sh("Klavye satın alındı! Profil > Koleksiyon'dan kullanabilirsin.", "Keyboard purchased! Use it from Profile > Collection.")
+                                notice = sh("Klavye koleksiyonuna eklendi.", "Keyboard added to your collection.")
                                 SonHarfSoundFx.bonus()
                                 reload()
                             }
@@ -321,9 +321,10 @@ private fun EconomyCatalogScreen(
                         balance = profile?.diamonds,
                         wins = profile?.wins,
                         playPrice = if (playKeyboard) {
-                            keyboardOffers[item.id]?.oneTimePurchaseOfferDetails?.formattedPrice ?: sh("PLAY’DE YOK", "NOT ON PLAY")
+                            keyboardOffers[item.id]?.oneTimePurchaseOfferDetails?.formattedPrice ?: sh("ŞU AN SATIŞTA DEĞİL", "CURRENTLY UNAVAILABLE")
                         } else null,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
+                        onCollection = onCollection,
                     ) {
                         val b = backend
                         if (b == null || busy != null) return@VerifiedStoreProductCard
@@ -347,12 +348,12 @@ private fun EconomyCatalogScreen(
                             val displayName = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
                             if (mine) {
                                 // Owned items are managed (worn, changed, removed) only from the profile.
-                                notice = sh("$displayName sende var. Profil > Koleksiyon'dan kullanabilirsin.", "You own $displayName. Use it from Profile > Collection.")
+                                notice = sh("$displayName koleksiyonunda.", "$displayName is in your collection.")
                             } else {
                                 runCatching { b.purchaseShopItem(item.id) }
                                     .onSuccess {
                                         // Buying only adds it to the collection; the player wears it from the profile.
-                                        notice = sh("$displayName satın alındı! Profil > Koleksiyon'dan kullanabilirsin.", "$displayName purchased! Use it from Profile > Collection.")
+                                        notice = sh("$displayName koleksiyonuna eklendi.", "$displayName added to your collection.")
                                         SonHarfSoundFx.bonus()
                                         reload()
                                     }
@@ -474,8 +475,8 @@ private fun StoreProBanner(active: Boolean, onClick: () -> Unit) {
             }
             Spacer(Modifier.width(12.dp))
             Text(
-                if (active) sh("PRO aktif", "Your PRO membership is active. See your perks.")
-                else sh("Reklamsız · Profil · Analiz", "Ad-free play, exclusive content and more!"),
+                if (active) sh("PRO aktif", "PRO active")
+                else sh("Reklamsız · Profil · Analiz", "Ad-free · Profile · Analysis"),
                 modifier = Modifier.weight(1f),
                 color = Hf.OnAccent,
                 fontSize = 14.sp,
@@ -499,8 +500,10 @@ internal fun VerifiedStoreProductCard(
     wins: Int? = null,
     playPrice: String? = null,
     modifier: Modifier = Modifier,
+    onCollection: () -> Unit = {},
     onAction: () -> Unit,
 ) {
+    var previewOpen by remember(item.id) { mutableStateOf(false) }
     val name = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
     val lockedByPro = item.vipOnly && !proActive && !owned
     val tier = StoreTier.from(item.economyTier, item.rarity)
@@ -513,8 +516,8 @@ internal fun VerifiedStoreProductCard(
     }
 
     Surface(
-        onClick = onAction,
-        enabled = !busy && !owned && !equipped && !lockedByPro,
+        onClick = { if (owned || equipped) onCollection() else onAction() },
+        enabled = !busy && !lockedByPro,
         modifier = modifier,
         shape = Hf.CardShape,
         color = Hf.Ivory,
@@ -614,8 +617,26 @@ internal fun VerifiedStoreProductCard(
                     Icon(painterResource(R.drawable.hf_ic_lock), null, tint = Hf.Gold, modifier = Modifier.size(34.dp))
                 }
             }
+            IconButton(onClick = { previewOpen = true }, modifier = Modifier.align(Alignment.TopEnd).size(38.dp)) {
+                Icon(Icons.Rounded.ZoomIn, sh("Önizle", "Preview"), tint = Hf.TextMuted, modifier = Modifier.size(20.dp))
+            }
         }
     }
+    if (previewOpen) AlertDialog(
+        onDismissRequest = { previewOpen = false },
+        containerColor = Hf.Surface,
+        title = { Text(name, color = Hf.Text, fontWeight = FontWeight.Black) },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            StoreProductPreview(item, Modifier.fillMaxWidth().height(230.dp), expanded = true)
+            storeItemEffect(item)?.let { Text(it, color = Hf.TextMuted) }
+            Text(if (owned || equipped) sh("Koleksiyonunda", "In your collection") else if (lockedByPro) sh("PRO'ya özel", "PRO exclusive") else playPrice ?: "${item.diamondPrice} Son Coin", color = Hf.Gold, fontWeight = FontWeight.Bold)
+        } },
+        confirmButton = { Button(enabled = !busy && !lockedByPro, onClick = {
+            previewOpen = false
+            if (owned || equipped) onCollection() else onAction()
+        }) { Text(if (owned || equipped) sh("KOLEKSİYONUM", "MY COLLECTION") else sh("SATIN AL", "BUY")) } },
+        dismissButton = { TextButton(onClick = { previewOpen = false }) { Text(sh("KAPAT", "CLOSE")) } },
+    )
 }
 
 @Composable

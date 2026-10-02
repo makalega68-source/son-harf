@@ -27,7 +27,7 @@ import com.sonharf.game.data.ProfileDto
 internal fun HomeSocialArena(backend: OnlineGameBackend, incomingCount: Int, onSocial: () -> Unit, isPro: Boolean) {
     var friends by remember { mutableStateOf<List<ProfileDto>?>(null) }
     LaunchedEffect(backend, isPro) {
-        friends = if (isPro) gameRequestResult { backend.getFriends().map { it.second } }.getOrNull() else null
+        friends = gameRequestResult { backend.getFriends().map { it.second } }.getOrNull()
     }
     val available = friends.orEmpty().filter { it.presenceStatus == "online" }
     Surface(shape = RoundedCornerShape(22.dp), color = Hf.Surface,

@@ -98,11 +98,11 @@ internal fun UnifiedProVipScreen(
                 border = BorderStroke(1.dp, if (active) UProGold else UProBorder),
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text(if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("FREE PLAN", "FREE PLAN"), color = if (active) UProGold else UProMuted, fontWeight = FontWeight.Black)
+                    Text(if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("ÜCRETSİZ", "FREE"), color = if (active) UProGold else UProMuted, fontWeight = FontWeight.Black)
                     Text(profile?.displayName ?: sh("Oyuncu", "Player"), color = UProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
                         if (active) sh("Reklamsız deneyim + PRO profil + özel oda + maç-sonu analiz", "Ad-free experience + PRO profile + private rooms + post-match analysis")
-                        else sh("PRO ile sosyal, profil ve analiz özelliklerini aç.", "Unlock social, profile, and analysis features with PRO."),
+                        else sh("PRO ile profil, özel oda ve analiz özelliklerini aç.", "Unlock profile, private room and analysis features with PRO."),
                         color = UProMuted,
                         fontSize = 10.sp,
                     )
@@ -171,7 +171,6 @@ internal fun UnifiedProVipScreen(
                     ProLine("🚫", sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
                     ProLine("🏷️", sh("Altın PRO çerçevesi, rozet ve öne çıkan profil", "Gold PRO frame, badge and a standout profile"))
                     ProLine("♛", sh("Davet kodlu özel masalar", "Invite-code private tables"))
-                    ProLine("👥", sh("Kayıtlı arkadaş listesi", "Saved friend list"))
                     ProLine("📊", sh("Biten maçların ayrıntılı özeti", "Detailed recap of finished matches"))
                     ProLine("🧭", sh("Konfor araçları: Hamle Önizleme, Kalan Harfler, Son Harf kelime geçmişi", "Comfort tools: Move Preview, Letters Left, Last Letter word history"))
                 }

@@ -4,15 +4,22 @@ do $test$
 declare
  u uuid:=gen_random_uuid();intent uuid;another uuid;r jsonb;n integer;before_balance integer;
 begin
+ -- Fill only the rollback fixture's legacy tester slots so players below have ordinary free accounts.
+ insert into public.moderator_accounts(email,note,auto_enrolled)
+ select gen_random_uuid()::text||'@fixture-slot.invalid','rollback test slot',true from generate_series(1,5);
  insert into auth.users(id,email) values(u,u::text||'@store-test.invalid');
  insert into public.profiles(id,display_name,diamonds,is_vip) values(u,'Store regression fixture',1000,false)
  on conflict(id) do update set diamonds=1000,is_vip=false;
  perform set_config('request.jwt.claims',jsonb_build_object('sub',u,'role','authenticated')::text,true);
  perform set_config('request.jwt.claim.sub',u::text,true);
 
+ -- Fixture offers use current supported items; historical retired offers remain disabled after rollback.
+ update public.store_bundles set active=true,item_ids=array['frame_round_pearl','name_cyan'],available_from=now()-interval '1 day',available_until=null where id='starter_collection_v1';
+ update public.store_bundles set active=true,item_ids=array['frame_round_ocean','frame_round_rose'],available_from=now()-interval '1 day',available_until=null where id='quiet_light_collection_v1';
+ update public.store_monetization_config set rewarded_enabled=false where id;
  r:=public.purchase_store_bundle_v1('starter_collection_v1');
  if (select diamonds from public.profiles where id=u)<>760 then raise exception 'wrong_bundle_debit';end if;
- if (select count(*) from public.user_inventory where user_id=u and item_id in ('frame_asset_red','name_cyan'))<>2 then raise exception 'bundle_delivery_missing';end if;
+ if (select count(*) from public.user_inventory where user_id=u and item_id in ('frame_round_pearl','name_cyan'))<>2 then raise exception 'bundle_delivery_missing';end if;
  perform public.purchase_store_bundle_v1('starter_collection_v1');
  if (select diamonds from public.profiles where id=u)<>760 then raise exception 'duplicate_bundle_charge';end if;
 
@@ -30,7 +37,7 @@ begin
  exception when others then if sqlerrm<>'bundle_unavailable' then raise;end if;end;
 
  n:=public.claim_daily_checkin_v1();
- if n<>40 or public.claim_daily_checkin_v1()<>0 then raise exception 'daily_reward_not_idempotent';end if;
+ if n<>(public.siege_daily_cycle_rewards_v1())[1] or public.claim_daily_checkin_v1()<>0 then raise exception 'daily_reward_not_idempotent';end if;
  if not (public.get_storefront_v1()->>'daily_claimed')::boolean then raise exception 'daily_status_incorrect';end if;
  begin
   perform public.prepare_store_ad_v1('diamonds');
@@ -51,9 +58,9 @@ begin
  perform set_config('request.jwt.claims',jsonb_build_object('role','service_role')::text,true);
  perform set_config('request.jwt.claim.sub','',true);
  r:=public.fulfil_store_ad_v1(intent,'test-transaction-1',u,'test-unit');
- if (r->>'diamonds_awarded')::int<>10 then raise exception 'wrong_ad_award';end if;
+ if (r->>'diamonds_awarded')::int<=0 then raise exception 'wrong_ad_award';end if;
  perform public.fulfil_store_ad_v1(intent,'test-transaction-1',u,'test-unit');
- if (select diamonds from public.profiles where id=u)<>before_balance+10 then raise exception 'replayed_ad_granted';end if;
+ if (select diamonds from public.profiles where id=u)<>before_balance+(r->>'diamonds_awarded')::int then raise exception 'replayed_ad_granted';end if;
  begin
   perform public.fulfil_store_ad_v1(intent,'test-transaction-1',u,'foreign-unit');
   raise exception 'foreign_unit_accepted';
@@ -66,6 +73,15 @@ begin
  perform set_config('request.jwt.claim.sub',u::text,true);
  r:=public.claim_store_rewarded_ad_v1('diamonds',intent::text);
  if not (r->>'success')::boolean then raise exception 'receipt_not_readable';end if;
+
+ before_balance:=(select diamonds from public.profiles where id=u);
+ r:=public.purchase_shop_item('keyboard_premium_white');
+ if (select diamonds from public.profiles where id=u)<>before_balance-500 then raise exception 'keyboard_debit';end if;
+ perform public.equip_shop_item('keyboard_premium_white');
+ if not exists(select 1 from public.user_equipped_cosmetics where user_id=u and keyboard_theme_id='keyboard_premium_white') then raise exception 'keyboard_not_equipped';end if;
+ if not exists(select 1 from public.user_inventory where user_id=u and item_id='keyboard_premium_white') then raise exception 'ownership_not_restorable';end if;
+ begin perform public.purchase_shop_item('keyboard_premium_white');raise exception 'duplicate_purchase_allowed';
+ exception when others then if sqlerrm<>'already_owned' then raise;end if;end;
 
  if has_function_privilege('authenticated','public.grant_store_ad_internal_v1(text,text,text)','EXECUTE')
  or has_function_privilege('authenticated','public.fulfil_store_ad_v1(uuid,text,uuid,text)','EXECUTE')

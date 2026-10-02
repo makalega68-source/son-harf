@@ -59,75 +59,86 @@ internal fun socialDate(value: String): String = runCatching {
     DateTimeFormatter.ofPattern("dd.MM HH:mm").withZone(ZoneId.of("Europe/Istanbul")).format(Instant.parse(value))
 }.getOrDefault("—")
 
+internal data class UnifiedHomeMatch(
+    val id: String, val kind: String, val rivalId: String?, val turn: HomeTurn,
+    val createdAt: String, val deadline: String?, val siege: WordSiegeGameDto?=null, val duel: GameRoomDto?=null,
+)
+internal fun unifiedHomeMatches(games: List<WordSiegeGameDto>, rooms: List<GameRoomDto>, me: String?): List<UnifiedHomeMatch> {
+    if(me==null) return emptyList()
+    val siege=homeGames(games,me).map { g -> UnifiedHomeMatch(g.id,if(g.gameMode=="series") "series" else "siege",
+        if(g.playerOneId==me) g.playerTwoId else g.playerOneId,requireNotNull(homeTurn(g,me)),g.createdAt,g.turnDeadline,siege=g) }
+    val duels=rooms.distinctBy { it.id }.filter { (it.hostId==me || it.guestId==me) && it.status in setOf("waiting","playing","quiz","final","sudden_death","paused") }
+        .map { g -> UnifiedHomeMatch(g.id,"son_harf",if(g.hostId==me) g.guestId else g.hostId,
+            if(g.status=="waiting" || g.status=="paused") HomeTurn.WAITING else if(g.currentPlayerId==me && !g.botTurn) HomeTurn.YOURS else HomeTurn.RIVAL,
+            g.createdAt,g.turnDeadline,duel=g) }
+    return (siege+duels).sortedWith(compareBy<UnifiedHomeMatch> { if(it.turn==HomeTurn.YOURS) 0 else 1 }.thenByDescending { it.createdAt })
+}
+
 @Composable
-internal fun HomeSessions(backend: OnlineGameBackend, onOpen: (WordSiegeGameDto) -> Unit, onAll: () -> Unit) {
+internal fun HomeSessions(backend: OnlineGameBackend, onOpen: (WordSiegeGameDto) -> Unit, onAll: () -> Unit,
+    onLastLetter: (GameRoomDto) -> Unit) {
     var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
+    var rooms by remember { mutableStateOf<List<GameRoomDto>>(emptyList()) }
     var profiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
     var loaded by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
     var filter by remember { mutableStateOf<HomeTurn?>(null) }
-    val me = backend.currentUserId()
-    val foreground = rememberAppForeground()
-    LaunchedEffect(me, foreground, retry) {
-        if (me == null || !foreground) return@LaunchedEffect
-        while (true) {
+    var expanded by remember { mutableStateOf(false) }
+    val me=backend.currentUserId()
+    val foreground=rememberAppForeground()
+    LaunchedEffect(me,foreground,retry) {
+        if(me==null) { loaded=true; return@LaunchedEffect }
+        if(!foreground) return@LaunchedEffect
+        while(true) {
             coroutineScope {
-                val classic = async { gameRequestResult { backend.getWordSiegeGames() } }
-                val series = async { gameRequestResult { backend.getWordSiegeSeriesGames() } }
-                val a = classic.await(); val b = series.await()
-                failed = a.isFailure || b.isFailure
-                // Do not silently erase the other pool after a partial connection failure.
-                games = homeGames(a.getOrElse { games.filter { it.gameMode == "classic" } } +
-                    b.getOrElse { games.filter { it.gameMode == "series" } }, me)
-                games.mapNotNull { if (it.playerOneId == me) it.playerTwoId else it.playerOneId }.distinct()
-                    .filterNot(profiles::containsKey).map { id -> async {
-                        gameRequestResult { backend.getProfile(id) }.getOrNull()?.let { id to it }
-                    } }.forEach { it.await()?.let { row -> profiles = profiles + row } }
-                loaded = true
+                val classic=async { gameRequestResult { backend.getWordSiegeGames() } }
+                val series=async { gameRequestResult { backend.getWordSiegeSeriesGames() } }
+                val last=async { gameRequestResult { backend.getLastLetterRooms() } }
+                val a=classic.await(); val b=series.await(); val c=last.await()
+                failed=a.isFailure || b.isFailure || c.isFailure
+                games=homeGames(a.getOrElse { games.filter { it.gameMode=="classic" } }+b.getOrElse { games.filter { it.gameMode=="series" } },me)
+                c.onSuccess { rooms=it }
+                unifiedHomeMatches(games,rooms,me).mapNotNull { it.rivalId }.distinct().filterNot(profiles::containsKey).forEach { id ->
+                    gameRequestResult { backend.getProfile(id) }.getOrNull()?.let { profiles=profiles+(id to it) }
+                }
+                loaded=true
             }
             delay(15_000)
         }
     }
-    Surface(shape = RoundedCornerShape(20.dp), color = Hf.Surface, border = BorderStroke(1.dp, Hf.Border)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(sh("OYUNLARIM", "MY GAMES"), Modifier.weight(1f), color = Hf.Text, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                TextButton(onClick = onAll) { Text(sh("TÜMÜ", "ALL"), color = Hf.Green, fontSize = 11.sp) }
-            }
-            if (games.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(null, HomeTurn.YOURS, HomeTurn.RIVAL).forEach { turn ->
-                    val label = when (turn) { HomeTurn.YOURS -> sh("Sıra sende", "Your turn"); HomeTurn.RIVAL -> sh("Rakibin sırası", "Their turn"); else -> sh("Tümü", "All") }
-                    HomeSessionFilter(
-                        "$label ${games.count { turn == null || homeTurn(it, me) == turn }}",
-                        selected = filter == turn, onClick = { filter = turn },
-                    )
+    val matches=unifiedHomeMatches(games,rooms,me)
+    Surface(shape=RoundedCornerShape(20.dp),color=Hf.Surface,border=BorderStroke(1.dp,Hf.Border)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment=Alignment.CenterVertically) {
+                Text(sh("OYUNLARIM", "MY GAMES"),Modifier.weight(1f),color=Hf.Text,fontWeight=FontWeight.Black,fontSize=16.sp)
+                TextButton(onClick={ if(matches.isEmpty()) onAll() else expanded=!expanded }) {
+                    Text(if(matches.isEmpty()) sh("OYNA", "PLAY") else if(expanded) sh("DAHA AZ", "LESS") else sh("TÜMÜ", "ALL"),color=Hf.Green,fontSize=11.sp)
                 }
             }
-            if (!loaded) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Green)
-            if (failed) Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(sh("Maçlar güncellenemedi", "Games could not be refreshed"), Modifier.weight(1f), color = Hf.Red, fontSize = 11.sp)
-                TextButton(onClick = { retry++ }) { Text(sh("YENİLE", "RETRY"), fontSize = 10.sp) }
+            if(matches.isNotEmpty()) Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                listOf(null,HomeTurn.YOURS,HomeTurn.RIVAL).forEach { turn ->
+                    val label=when(turn) { HomeTurn.YOURS->sh("Sıra sende", "Your turn"); HomeTurn.RIVAL->sh("Rakip", "Rival"); else->sh("Tümü", "All") }
+                    HomeSessionFilter("$label ${matches.count { turn==null || it.turn==turn }}",filter==turn) { filter=turn }
+                }
             }
-            val shown = games.filter { filter == null || homeTurn(it, me) == filter }
-            if (loaded && shown.isEmpty() && !failed) Text(sh("Devam eden maçın yok", "No ongoing games"), color = Hf.TextMuted, fontSize = 12.sp)
-            shown.take(5).forEach { game ->
-                val id = if (game.playerOneId == me) game.playerTwoId else game.playerOneId
-                val rival = id?.let(profiles::get)
-                val turn = homeTurn(game, me)
-                Surface(Modifier.fillMaxWidth().clickable { onOpen(game) }, shape = RoundedCornerShape(13.dp),
-                    color = Hf.Ground, border = BorderStroke(1.dp, if (turn == HomeTurn.YOURS) Hf.Green.copy(alpha = .5f) else Hf.Border)) {
-                    Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(if (turn == HomeTurn.YOURS) Icons.Rounded.PlayArrow else Icons.Rounded.Schedule, null, tint = Hf.Green)
+            if(!loaded) LinearProgressIndicator(Modifier.fillMaxWidth(),color=Hf.Green)
+            if(failed) TextButton(onClick={retry++}) { Text(sh("Maçlar güncellenemedi · Yenile", "Games unavailable · Retry"),color=Hf.Red) }
+            val shown=matches.filter { filter==null || it.turn==filter }
+            if(loaded && shown.isEmpty() && !failed) Text(sh("Devam eden maçın yok", "No ongoing games"),color=Hf.TextMuted,fontSize=12.sp)
+            shown.take(if(expanded) Int.MAX_VALUE else 3).forEach { match ->
+                Surface(Modifier.fillMaxWidth().clickable { match.siege?.let(onOpen); match.duel?.let(onLastLetter) },shape=RoundedCornerShape(13.dp),
+                    color=Hf.Ground,border=BorderStroke(1.dp,if(match.turn==HomeTurn.YOURS) Hf.Green else Hf.Border)) {
+                    Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically) {
+                        Icon(if(match.turn==HomeTurn.YOURS) Icons.Rounded.PlayArrow else Icons.Rounded.Schedule,null,tint=Hf.Green)
                         Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(rival?.displayName ?: if (turn == HomeTurn.WAITING) sh("Rakip aranıyor", "Finding rival") else sh("Rakip", "Rival"), color = Hf.Text, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text((if (game.gameMode == "series") sh("Hızlı Düello", "Quick Duel") else sh("Kelime Kuşatması", "Word Siege")) + " · " + when (turn) {
-                                HomeTurn.YOURS -> sh("Sıra sende", "Your turn"); HomeTurn.RIVAL -> sh("Rakibin sırası", "Their turn"); else -> sh("Eşleşme", "Matchmaking")
-                            }, color = Hf.TextMuted, fontSize = 10.sp)
-                            game.turnDeadline?.let { Text(sh("Son hamle: ", "Turn deadline: ") + socialDate(it), color = Hf.TextMuted, fontSize = 10.sp) }
+                            Text(profiles[match.rivalId]?.displayName ?: if(match.duel?.isBot==true) (match.duel.botName ?: "AI") else sh("Rakip", "Rival"),color=Hf.Text,fontWeight=FontWeight.Bold,maxLines=1)
+                            Text((when(match.kind) { "son_harf"->"Son Harf"; "series"->sh("Hızlı Düello", "Quick Duel"); else->sh("Kuşatma", "Siege") })+" · "+
+                                when(match.turn) { HomeTurn.YOURS->sh("Sıra sende", "Your turn"); HomeTurn.RIVAL->sh("Rakibin sırası", "Their turn"); else->sh("Bekliyor", "Waiting") },color=Hf.TextMuted,fontSize=10.sp)
+                            match.deadline?.let { Text(socialDate(it),color=Hf.TextMuted,fontSize=10.sp) }
                         }
-                        Icon(Icons.Rounded.ChevronRight, null, tint = Hf.Gold)
+                        Icon(Icons.Rounded.ChevronRight,null,tint=Hf.Gold)
                     }
                 }
             }

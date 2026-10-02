@@ -28,7 +28,6 @@ internal fun PlayerCollectionScreen(backend: OnlineGameBackend, onBack: () -> Un
             IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = SonHarfTheme.TextPrimary) }
             Column(Modifier.padding(start = 6.dp)) {
                 Text(sh("KOLEKSİYONUM", "MY COLLECTION"), color = SonHarfTheme.TextPrimary, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                Text(sh("Alınan ürünleri burada kullan ve değiştir.", "Equip and change owned items here."), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
             }
         }
         LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)) {

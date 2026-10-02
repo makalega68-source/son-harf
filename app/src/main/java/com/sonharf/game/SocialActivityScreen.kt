@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 internal fun SocialActivityScreen(backend: OnlineGameBackend, onBack: () -> Unit,
-    onFriends: () -> Unit, onOpenGame: (WordSiegeGameDto) -> Unit) {
+    onFriends: () -> Unit, onOpenGame: (WordSiegeGameDto) -> Unit, onOpenTarget: (String, String?) -> Unit) {
     val scope = rememberCoroutineScope()
     val foreground = rememberAppForeground()
     var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
@@ -43,9 +43,7 @@ internal fun SocialActivityScreen(backend: OnlineGameBackend, onBack: () -> Unit
         val fastInviteTask = async { gameRequestResult { backend.getIncomingWordSiegeSeriesInvites() } }
         val requestTask = async { gameRequestResult { backend.getIncomingFriendRequests() } }
         val legacyTask = async { gameRequestResult { backend.getIncomingGameInvites() } }
-        val pro = gameRequestResult { me?.let { backend.getProfile(it).isVip } ?: false }.getOrDefault(false)
-        if (pro) gameRequestResult { backend.getFriends() }.onSuccess { friends = it.map { it.second } }.onFailure { error = true }
-        else friends = emptyList()
+        gameRequestResult { backend.getFriends() }.onSuccess { friends = it.map { it.second } }.onFailure { error = true }
         val a = classicTask.await(); val b = seriesTask.await()
         games = (a.getOrElse { games.filter { it.gameMode == "classic" } } + b.getOrElse { games.filter { it.gameMode == "series" } }).distinctBy { it.id }
             .filter { me != null && me in listOf(it.playerOneId, it.playerTwoId) }
@@ -83,6 +81,7 @@ internal fun SocialActivityScreen(backend: OnlineGameBackend, onBack: () -> Unit
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { MainScreenHeader(sh("Aktivite", "Activity"), "", onBack = onBack) }
+        item { SocialInboxHistory(backend, onOpenTarget) }
         item { TextButton(onClick = { retry++ }, enabled = busy == null) { Text(sh("YENİLE", "REFRESH")) } }
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Green) }
         if (error) item { Text(sh("Bazı aktiviteler güncellenemedi", "Some activity could not be refreshed"), color = Hf.Red) }

@@ -36,9 +36,6 @@ internal fun MainSocialScreen(
 ) {
     val scope = rememberCoroutineScope()
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
-    var isPro by remember { mutableStateOf(false) }
-    var proChecked by remember { mutableStateOf(false) }
-    var vipDialog by remember { mutableStateOf(false) }
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var friendships by remember { mutableStateOf<List<FriendshipDto>>(emptyList()) }
     var requests by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
@@ -62,8 +59,7 @@ internal fun MainSocialScreen(
         val raw = error.message.orEmpty()
         return when {
             "pro_friend_list_required" in raw -> {
-                vipDialog = true
-                sh("Arkadaş eklemek için PRO gerekli.", "PRO is required to add friends.")
+                sh("Arkadaşlık isteği şu anda gönderilemiyor.", "Friend request is currently unavailable.")
             }
             "blocked_relationship" in raw -> sh("Bu oyuncuyla engelleme olduğu için istek gönderilemiyor.", "You can't send a request because of a block.")
             "cannot_friend_self" in raw -> sh("Kendine istek gönderemezsin.", "You can't add yourself.")
@@ -115,10 +111,6 @@ internal fun MainSocialScreen(
     }
 
     LaunchedEffect(Unit) {
-        isPro = gameRequestResult {
-            backend.currentUserId()?.let { backend.getProfile(it).isVip } ?: false
-        }.getOrDefault(false)
-        proChecked = true
         reload()
         while (true) {
             kotlinx.coroutines.delay(30_000L)
@@ -141,6 +133,7 @@ internal fun MainSocialScreen(
             )
         }
 
+        item(key = "friend_code") { PlayerInviteCard(backend) }
         item(key = "share_invite") { InviteFriendsCard(playerName = null) }
         item(key = "social_refresh") {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -219,9 +212,7 @@ internal fun MainSocialScreen(
 
         when (tab) {
             0 -> {
-                if (proChecked && !isPro) {
-                    item { ProFriendListLock(onUpgrade = { vipDialog = true }) }
-                } else {
+                run {
                 if (friends.isEmpty() && !loading) {
                     item {
                         MainSocialEmpty(
@@ -638,55 +629,7 @@ internal fun MainSocialScreen(
         item { Spacer(Modifier.height(6.dp)) }
     }
 
-    if (vipDialog) {
-        VipPurchaseDialog(
-            onVerified = {
-                isPro = true
-                vipDialog = false
-            },
-            onDismiss = { vipDialog = false },
-        )
-    }
-}
 
-@Composable
-private fun ProFriendListLock(onUpgrade: () -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f))) {
-        Column(
-            Modifier.fillMaxWidth().padding(22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Surface(shape = CircleShape, color = MainUi.Gold.copy(alpha = .18f)) {
-                Icon(Icons.Rounded.Lock, null, tint = MainUi.Gold, modifier = Modifier.padding(14.dp).size(32.dp))
-            }
-            Text(
-                sh("Arkadaş listesi Pro'ya özel", "Friend list is Pro-only"),
-                color = MainUi.Text,
-                fontWeight = FontWeight.Black,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                sh(
-                    "Pro üyelikle arkadaşlarını kaydet, davet et ve haftalık sıralamada rakip ol.",
-                    "Save friends, invite them and race in the weekly ranking with Pro.",
-                ),
-                color = MainUi.Muted,
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
-            )
-            Button(
-                onClick = onUpgrade,
-                modifier = Modifier.fillMaxWidth().height(46.dp),
-                shape = RoundedCornerShape(15.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold),
-            ) {
-                Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(18.dp), tint = MainUi.Text)
-                Spacer(Modifier.width(8.dp))
-                Text(sh("PRO'YA GEÇ", "GO PRO"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
-            }
-        }
-    }
 }
 
 @Composable

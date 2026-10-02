@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
+import com.sonharf.game.data.getInviteCode
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -29,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,16 +64,17 @@ internal enum class InviteChannel(
 }
 
 internal object SonHarfInvite {
+    var playerCode: String? = null
     const val STORE_LINK = "https://play.google.com/store/apps/details?id=com.sonharf.game"
 
     fun message(playerName: String?): String {
         val name = playerName?.trim()?.takeIf { it.isNotBlank() }
         return if (SonHarfUiState.language == "en") {
-            (if (name != null) "$name invites you to Word Board! 🎮\n" else "Join me on Word Board! 🎮\n") +
-                "Word duels, territory battles and daily puzzles. Can you beat me? ⚔️\n$STORE_LINK"
+            (if (name != null) "$name invites you to Kelime Tahtı! 🎮\n" else "Join me on Kelime Tahtı! 🎮\n") +
+                "Word duels, territory battles and daily puzzles. Can you beat me? ⚔️\n$STORE_LINK" + (playerCode?.let { "\n" + sh("Arkadaş kodum: ", "My friend code: ") + it + "\nkelimetahti://invite/$it" } ?: "")
         } else {
             (if (name != null) "$name seni Kelime Tahtı'na davet ediyor! 🎮\n" else "Kelime Tahtı'nda benimle oyna! 🎮\n") +
-                "Kelime düelloları, alan savaşları ve günlük bulmacalar. Beni yenebilir misin? ⚔️\n$STORE_LINK"
+                "Kelime düelloları, alan savaşları ve günlük bulmacalar. Beni yenebilir misin? ⚔️\n$STORE_LINK" + (playerCode?.let { "\n" + sh("Arkadaş kodum: ", "My friend code: ") + it + "\nkelimetahti://invite/$it" } ?: "")
         }
     }
 
@@ -127,7 +130,7 @@ internal object SonHarfInvite {
             InviteChannel.EMAIL -> try {
                 context.startActivity(
                     Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
-                        .putExtra(Intent.EXTRA_SUBJECT, sh("Kelime Tahtı daveti", "Word Board invite"))
+                        .putExtra(Intent.EXTRA_SUBJECT, sh("Kelime Tahtı daveti", "Kelime Tahtı invite"))
                         .putExtra(Intent.EXTRA_TEXT, text)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
@@ -182,6 +185,11 @@ internal fun InviteFriendsCard(playerName: String?, modifier: Modifier = Modifie
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun InviteFriendsSheet(playerName: String?, onDismiss: () -> Unit) {
+    var codeReady by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        SonHarfInvite.playerCode = runCatching { com.sonharf.game.data.OnlineGameBackend().getInviteCode() }.getOrNull()
+        codeReady = true
+    }
     val context = LocalContext.current
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Hf.Surface) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
@@ -200,6 +208,7 @@ private fun InviteFriendsSheet(playerName: String?, onDismiss: () -> Unit) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Surface(
+                                enabled = codeReady,
                                 onClick = {
                                     SonHarfInvite.share(context, channel, playerName)
                                     onDismiss()

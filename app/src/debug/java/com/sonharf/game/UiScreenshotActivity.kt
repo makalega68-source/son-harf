@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -97,6 +99,7 @@ private fun WalnutIvoryScreenshotFixture() {
  val players=listOf(ThroneRow(1,"preview-1","Ümit",1189,gender="erkek"),ThroneRow(2,"preview-2","Selin",357,gender="kadın"),ThroneRow(3,"preview-3","Arda",120,gender="erkek"))
  val me=ProfileDto("preview-1","Ümit",gender="erkek",rating=617)
  when(stage) {
+  "fallback"->FallbackRuntimeFixture()
   "search"->PremierSearching("tr",me,{})
   "duel"->PremierLobby("tr",me,"",false,{}, {}, {})
   "versus"->PremierVsScreen("tr",me,null,GameRoomDto("preview","PREVIEW","preview-1",status="playing",isBot=true,botName="Selin"))
@@ -108,4 +111,16 @@ private fun WalnutIvoryScreenshotFixture() {
    }
   }
  }
+}
+
+
+/** Real production fallback timer; only rival arrival is seeded at 25 seconds. No account writes. */
+@Composable private fun FallbackRuntimeFixture() {
+    var rivalArrived by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { delay(25_000); rivalArrived=true }
+    val game=WordSiegeGameDto("00000000-0000-0000-0000-000000000123","preview-1",
+        playerTwoId=if(rivalArrived) "preview-2" else null,status=if(rivalArrived) "playing" else "waiting",
+        currentPlayerId="preview-1",board=List(225) { WordSiegeCellDto() },playerOneRack="KALEMİR")
+    WordSiegePanMatch(game,"preview-1",mapOf("preview-1" to ProfileDto("preview-1","Ümit"),"preview-2" to ProfileDto("preview-2","Selin")),
+        emptyList(),emptyMap(),null,false,null,{}, {}, {}, {}, {}, {}, {}, {}, {})
 }

@@ -25,6 +25,9 @@ import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.getWordSiegeGame
+import com.sonharf.game.data.useInviteCode
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
 private enum class PremiumDestination {
@@ -45,6 +48,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var lastLetterLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var workshopLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var uiLanguageBeforeGame by rememberSaveable { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     val shellContext = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
@@ -64,6 +68,46 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
         uiLanguageBeforeGame = null
         destination = target
+    }
+
+    fun openPlayerTarget(kind: String, id: String?) {
+        scope.launch {
+            try {
+                when (kind) {
+                    "invite" -> {
+                        backend.useInviteCode(requireNotNull(id))
+                        destination = PremiumDestination.SOCIAL
+                        android.widget.Toast.makeText(shellContext, sh("Arkadaşlık isteği gönderildi", "Friend request sent"), android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    "social" -> destination = PremiumDestination.SOCIAL
+                    "activity" -> destination = PremiumDestination.ACTIVITY
+                    "siege", "series" -> {
+                        val game = backend.getWordSiegeGame(requireNotNull(id))
+                        val me = backend.currentUserId()
+                        check(me != null && (me == game.playerOneId || me == game.playerTwoId))
+                        com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
+                        openGame(PremiumDestination.SIEGE, game.language)
+                    }
+                    "son_harf" -> {
+                        val room = backend.getRoom(requireNotNull(id))
+                        val me = backend.currentUserId()
+                        check(me != null && (me == room.hostId || me == room.guestId))
+                        SonHarfLaunchConfig.pendingRoomId = room.id
+                        openGame(PremiumDestination.LAST_LETTER, room.language)
+                    }
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                android.widget.Toast.makeText(shellContext, sh("Bağlantı açılamadı. Aktivite ekranından tekrar dene.", "Could not open. Try again from Activity."), android.widget.Toast.LENGTH_LONG).show()
+                destination = PremiumDestination.ACTIVITY
+            }
+        }
+    }
+    LaunchedEffect(PlayerLinks.pending) {
+        PlayerLinks.take(shellContext)?.let { openPlayerTarget(it.kind, it.id) }
+    }
+    LaunchedEffect(Unit) {
+        MatchNotifications.schedule(shellContext)
     }
 
     LaunchedEffect(Unit) {
@@ -203,6 +247,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                             com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
                             openGame(PremiumDestination.SIEGE, game.language)
                         },
+                        onLastLetterResume = { room -> openPlayerTarget("son_harf", room.id) },
                         incomingCount = incomingSocialCount,
                     )
                     PremiumDestination.GAMES -> PremiumGameCenter(
@@ -259,6 +304,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         leaveGame()
                     }
                     PremiumDestination.ACTIVITY -> SocialActivityScreen(backend,
+                        onOpenTarget = ::openPlayerTarget,
                         onBack = { destination = PremiumDestination.HOME },
                         onFriends = { destination = PremiumDestination.SOCIAL },
                         onOpenGame = { game ->
@@ -336,6 +382,7 @@ private fun PremiumHomeScreen(
     onActivity: () -> Unit,
     onEvents: () -> Unit,
     onResume: (com.sonharf.game.data.WordSiegeGameDto) -> Unit,
+    onLastLetterResume: (com.sonharf.game.data.GameRoomDto) -> Unit,
     incomingCount: Int,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -355,7 +402,7 @@ private fun PremiumHomeScreen(
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onPro, onSettings)
             }
-            item(key = "ongoing_games") { HomeSessions(backend, onResume, onPrimary) }
+            item(key = "ongoing_games") { HomeSessions(backend, onResume, onPrimary, onLastLetterResume) }
             item(key = "home_secondary_modes") {
                 PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
             }
