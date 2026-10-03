@@ -766,7 +766,7 @@ private fun AtelierMascotRow(
             pendingCells = emptyList(),
             playerTurn = true,
             requestedEmotion = mood,
-            modifier = Modifier.size(76.dp),
+            modifier = Modifier.size(98.8.dp),
             actionKey = actionKey,
             action = action,
             skin = skin,

@@ -1765,7 +1765,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
      */
     private fun drawAnimeEyes(canvas: Canvas, now: Long, mood: WordSiegeMascotEmotion, lid: Float, lookX: Float, lookY: Float) {
         if (mood == WordSiegeMascotEmotion.LAUGH && lid > .7f) {
-            animePaint.color = 0xFF2A1740.toInt()
+            animePaint.color = if (skin == WordSiegeMascotSkin.PINK) 0xFF672050.toInt() else 0xFFADB2E3.toInt()
             animePaint.strokeWidth = 16f
             animePaint.alpha = (255f * ((lid - .7f) / .3f).coerceIn(0f, 1f)).toInt()
             for (i in 0 until 2) {
@@ -2268,7 +2268,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         //                                   browY  tilt   lid   slant  lower smile  open  width cheek bow    puff   tilt water iris
         val CALM_POSE = floatArrayOf(        0f,    0f,   .06f,  0f,   .06f,  .55f, .45f, 1f,   .3f,  0f,    0f,    0f,  0f,  1f)
         val FOCUS_POSE = floatArrayOf(       10f,  -.12f, .24f, -.12f, .04f,  .08f, .06f, .78f, .15f, .05f,   0f,    0f,  0f,  .96f)
-        val HAPPY_POSE = floatArrayOf(      -24f,   .04f, .28f,  0f,   .5f,   1f,   .78f, 1.28f, .85f, 0f,   .01f,   0f,  0f,  1.02f)
+        val HAPPY_POSE = floatArrayOf(      -24f,   .04f, .08f,  0f,   .18f,  1f,   .68f, 1.18f, .85f, 0f,   .01f,   0f,  0f,  1.02f)
         val LAUGH_POSE = floatArrayOf(      -28f,   .08f, .78f,  0f,   .82f,  1f,   .9f,  1.32f, 1f,  -.05f, .015f,  0f,  0f,  1f)
         val EXCITED_POSE = floatArrayOf(    -32f,   .02f,  0f,   0f,   .22f,  .95f, .92f, 1.2f, .95f, -.1f,  .025f,  0f,  0f,  1.05f)
         val SURPRISED_POSE = floatArrayOf(  -38f,   .1f,   0f,   0f,   0f,    0f,   .95f, .74f, .35f, -.12f, .02f,   0f,  0f,  .84f)

@@ -10,6 +10,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Pets
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -231,12 +238,15 @@ internal fun MascotStoreSection() {
         }
     }
 
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        MascotStoreHero()
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item(key = "hero") { MascotStoreHero() }
         if (notice.isNotBlank()) {
+            item(key = "notice") {
             Text(notice, color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            }
         }
-        WordSiegeMascotSkin.entries.forEach { skin ->
+        items(WordSiegeMascotSkin.entries, key = { it.id }) { skin ->
             val owned = skin in WordSiegeMascotOwnership.owned
             MascotStoreCard(
                 skin = skin,
@@ -252,7 +262,7 @@ internal fun MascotStoreSection() {
                 },
             )
         }
-        Text(
+        item(key = "purchase_info") { Text(
             sh(
                 "Maskotlar tek ödemeyle kalıcıdır. Her maçta 3 ipucu verir; puan satın alınmaz.",
                 "Mascots are a one-time, permanent purchase. They give 3 hints every match; score is never sold.",
@@ -262,7 +272,7 @@ internal fun MascotStoreSection() {
             lineHeight = 15.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
-        )
+        ) }
     }
 }
 
@@ -284,7 +294,7 @@ private fun MascotStoreHero() {
             Text(sh("MASKOTLAR", "MASCOTS"), color = MascotShop.Gold, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
             Spacer(Modifier.height(4.dp))
             Text(
-                sh("Seni tanıyan, sevinen ve konuşan bir oyun arkadaşı.", "A game buddy that knows you, cheers and talks."),
+                sh("Maçlarına eşlik eden oyun arkadaşın.", "Your companion for every match."),
                 color = MascotShop.Body,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
@@ -294,6 +304,10 @@ private fun MascotStoreHero() {
             // Obi in front and sharp; the coming-soon friends stay misted beside him.
             Box(Modifier.fillMaxWidth().height(156.dp)) {
                 listOf(WordSiegeMascotSkin.PINK, WordSiegeMascotSkin.CAT, WordSiegeMascotSkin.ORB).forEach { skin ->
+                    if (!skin.onSale) {
+                        Icon(Icons.Rounded.Pets, null, tint = MascotShop.Faint.copy(alpha = .4f),
+                            modifier = Modifier.align(if (skin == WordSiegeMascotSkin.PINK) Alignment.CenterStart else Alignment.CenterEnd).size(84.dp))
+                    } else {
                     WordSiegeMascot(
                         moveId = null,
                         lastMoveMine = false,
@@ -307,6 +321,7 @@ private fun MascotStoreHero() {
                             .then(if (skin.onSale) Modifier else Modifier.mascotMist(8.dp)),
                         skin = skin,
                     )
+                    }
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -354,7 +369,8 @@ private fun MascotStoreCard(
                 Modifier.size(153.4.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .06f)),
                 contentAlignment = Alignment.Center,
             ) {
-                WordSiegeMascot(
+                if (comingSoon) Icon(Icons.Rounded.Pets, null, tint = MascotShop.Faint.copy(alpha = .4f), modifier = Modifier.size(92.dp))
+                else WordSiegeMascot(
                     moveId = null,
                     lastMoveMine = false,
                     pendingCells = emptyList(),

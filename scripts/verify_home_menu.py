@@ -60,10 +60,15 @@ node(returned, "Kelime Kuşatması")
 mascots = center(node(returned, "Maskotlar"))
 adb("shell", "input", "tap", str(mascots[0]), str(mascots[1]))
 time.sleep(4)
+capture("Home-mascots-Android.png")
 store = tree("Home-mascots.xml")
 node(store, "Mağaza")
 assert node(store, "Maskotlar").get("selected") == "true", "Mascot purchase category must open directly"
 capture("Home-mascots-Android.png")
+node(store, "Obi")
+adb("shell", "input", "keyevent", "4")
+time.sleep(2)
+node(tree("Home-mascots-return.xml"), "Kelime Kuşatması")
 runtime = adb("logcat", "-d", "-s", "AndroidRuntime:E")
 assert b"FATAL EXCEPTION" not in runtime, runtime
 with open("Home-menu-runtime.log", "wb") as f:

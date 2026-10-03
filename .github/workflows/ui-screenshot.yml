@@ -100,7 +100,7 @@ jobs:
             python3 scripts/verify_mascot_drag.py
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage mascot-face
-            sleep 3
+            sleep 6
             timeout 25s adb exec-out screencap -p > Mascot-face-Android.png
             sleep 2
             timeout 25s adb exec-out screencap -p > Mascot-face-second-Android.png

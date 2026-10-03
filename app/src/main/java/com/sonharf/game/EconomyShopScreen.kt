@@ -98,9 +98,7 @@ fun EconomyShopScreen(
             // Mascot characters, each a permanent Google Play product.
             // Optional rewarded videos: coins, a day's keyboard or theme, Quick Duels, hints.
             if (shown == 8) RewardCenterScreen()
-            else if (shown == 4) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
-                MascotStoreSection()
-            }
+            else if (shown == 4) MascotStoreSection()
             // Profile frames: ornate crests via Google Play, simple rings for Son Coin.
             else if (shown == 7) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
                 ProfileFrameStoreSection(onBalance = { balance = it }, onPro = { tab = 3 })
@@ -668,4 +666,3 @@ private fun storeKindLabel(kind: String?): String = when (kind) {
     "victory_effect", "vfx" -> sh("Efekt", "Effect")
     else -> kind.replace('_', ' ').replaceFirstChar { it.uppercase() }
 }
-
