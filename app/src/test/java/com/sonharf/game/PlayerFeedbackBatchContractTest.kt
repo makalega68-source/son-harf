@@ -31,7 +31,12 @@ class PlayerFeedbackBatchContractTest {
         assertTrue(source("WordSiegePanMatch.kt").contains("frameId = rememberPlayerFrame(profile?.id)"))
         assertTrue(source("PremierWordDuelScreen.kt").contains("frameId = if (room.isBot) null else rememberPlayerFrame(opponent?.id)"))
         assertTrue(source("CompetitionRankingView.kt").contains("frameId = rememberPlayerFrame(userId)"))
-        assertTrue(source("PremiumHomeV3.kt").contains("PRO: a compact gold badge when active, an invitation otherwise."))
+        // Verify the avatar's actual frame and entitlement wiring instead of a removed badge comment.
+        val homeProfile = source("PremiumHomeV3.kt").substringAfter("private fun HomeStatusRow(")
+            .substringBefore("private fun homeGrouped")
+        assertTrue(homeProfile.contains("FramedProfilePhotoAvatar("))
+        assertTrue(homeProfile.contains("frameId = rememberPlayerFrame(profile?.id)"))
+        assertTrue(homeProfile.contains("isPro = profile?.isVip == true"))
     }
 
     @Test fun rivalsMascotIsVisibleWithoutOwningOne() {

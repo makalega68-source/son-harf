@@ -123,7 +123,7 @@ internal fun HomeSiegeHero(onSiege: () -> Unit) {
         color = Hf.GreenPressed, border = BorderStroke(1.dp, Hf.GreenLight.copy(alpha = .55f))) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                HfGameArt(R.drawable.kelime_tahti_game_icon, 56.dp, 56.dp, description = null)
+                HfGameArt(R.drawable.kelime_tahti_brand_logo, 56.dp, 56.dp, description = null)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(sh("Kelime Kuşatması", "Word Siege"), color = Color.White,
