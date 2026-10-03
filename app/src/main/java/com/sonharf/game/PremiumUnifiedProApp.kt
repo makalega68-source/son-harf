@@ -396,6 +396,7 @@ private fun PremiumHomeScreen(
     incomingCount: Int,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var showCommunityDetails by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
@@ -422,10 +423,27 @@ private fun PremiumHomeScreen(
                 HomeQuickMenu(profile?.isVip == true, onPro, onMascots, onActivity, onEvents)
             }
             item(key = "ongoing_games") { HomeSessions(backend, onResume, onPrimary, onLastLetterResume) }
-            item(key = "league_progress") { HomeLeague(backend, onCompete) }
-            item(key = "social_arena") { HomeSocialArena(backend, incomingCount, onSocial, isPro = profile?.isVip == true) }
             item(key = "home_daily_tasks") {
                 PremiumHomeDailyTasks(onClick = onCompete)
+            }
+            item(key = "community_summary") {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { showCommunityDetails = !showCommunityDetails },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                        Text(sh("Lig ve arkadaşlar", "League and friends"), color = Hf.Text, fontSize = 13.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Icon(if (showCommunityDetails) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                            if (showCommunityDetails) sh("Daralt", "Collapse") else sh("Genişlet", "Expand"),
+                            tint = Hf.TextMuted)
+                    }
+                    if (incomingCount > 0) TextButton(onClick = onSocial) {
+                        Text(sh("$incomingCount davet", "$incomingCount invites"), color = Hf.Green, fontSize = 12.sp)
+                    }
+                }
+            }
+            if (showCommunityDetails) {
+                item(key = "league_progress") { HomeLeague(backend, onCompete) }
+                item(key = "social_arena") { HomeSocialArena(backend, incomingCount, onSocial, isPro = profile?.isVip == true) }
             }
 
         }

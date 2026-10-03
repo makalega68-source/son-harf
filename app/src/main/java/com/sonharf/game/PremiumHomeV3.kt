@@ -56,9 +56,15 @@ internal fun PremiumHomeCommandDeck(
     onPro: () -> Unit,
     onSettings: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("KELİME TAHTI", color = Hf.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        HomeStatusRow(profile, onProfile, onShop, onPro, onSettings)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("KELİME TAHTI", Modifier.weight(1f), color = Hf.Text,
+                fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            IconButton(onClick = onSettings, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.Rounded.Settings, sh("Ayarlar", "Settings"), tint = Hf.TextMuted)
+            }
+        }
+        HomeStatusRow(profile, onProfile, onShop)
     }
 }
 
@@ -67,94 +73,42 @@ private fun HomeStatusRow(
     profile: ProfileDto?,
     onProfile: () -> Unit,
     onShop: () -> Unit,
-    onPro: () -> Unit,
-    onSettings: () -> Unit,
 ) {
-    val pro = profile?.isVip == true
-    // Theme-aware profile material, with a restrained gold rim and high-contrast text.
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .shadow(2.dp, RoundedCornerShape(22.dp))
-            .clip(RoundedCornerShape(22.dp))
-            .background(Brush.linearGradient(listOf(SonHarfTheme.Surface, SonHarfTheme.SurfaceSecondary)))
-            .border(.8.dp, SonHarfTheme.PremiumGold.copy(alpha = .45f), RoundedCornerShape(22.dp))
-            .padding(horizontal = 10.dp, vertical = 9.dp),
-    ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.clickable(onClick = onProfile)) {
-                FramedProfilePhotoAvatar(
-                    avatarPath = profile?.avatarPath,
-                    gender = profile?.gender,
-                    name = profile?.displayName ?: sh("Oyuncu", "Player"),
-                    size = 50.dp,
-                    frameId = rememberPlayerFrame(profile?.id),
-                    accent = Hf.Gold,
-                    visible = profile?.avatarVisibility != "hidden",
-                    isPro = pro,
-                )
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f).clip(HomeControlShape)
+            .clickable(onClickLabel = sh("Profili aç", "Open profile"), onClick = onProfile)
+            .heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+            FramedProfilePhotoAvatar(
+                avatarPath = profile?.avatarPath, gender = profile?.gender,
+                name = profile?.displayName ?: sh("Oyuncu", "Player"), size = 46.dp,
+                frameId = rememberPlayerFrame(profile?.id), accent = Hf.Gold,
+                visible = profile?.avatarVisibility != "hidden", isPro = profile?.isVip == true,
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(profile?.displayName?.ifBlank { null } ?: sh("Oyuncu", "Player"),
+                    color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(profile?.let { homeLeagueName(ratingLeagueProgress(it.rating).leagueName) + sh(" Lig", " League") }
+                    ?: sh("Profilim", "My profile"), color = Hf.TextMuted, fontSize = 12.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Spacer(Modifier.width(8.dp))
-            Column(Modifier.weight(1f).clickable(onClick = onProfile), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    profile?.displayName?.ifBlank { null } ?: sh("Oyuncu", "Player"),
-                    color = SonHarfTheme.TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Black,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.WorkspacePremium, null, tint = SonHarfTheme.PremiumGold, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(3.dp))
-                    Text(
-                        profile?.let { homeLeagueName(ratingLeagueProgress(it.rating).leagueName) + sh(" Lig", " League") } ?: sh("Lig", "League"),
-                        color = SonHarfTheme.TextSecondary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+        }
+        Spacer(Modifier.width(12.dp))
+        Surface(onClick = onShop, shape = HomeControlShape, color = Hf.Surface,
+            border = BorderStroke(1.dp, Hf.Border)) {
+            Row(Modifier.heightIn(min = 48.dp).padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                HfCoin(20.dp)
+                Spacer(Modifier.width(7.dp))
+                Column {
+                    Text(profile?.diamonds?.let { homeGrouped(it) } ?: "—", color = Hf.Text,
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text("Son Coin", color = Hf.TextMuted, fontSize = 10.sp)
                 }
-            }
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                // Coins: tap to open the store.
-                Row(
-                    Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(SonHarfTheme.SurfaceElevated)
-                        .border(1.dp, SonHarfTheme.PremiumGold.copy(alpha = .35f), RoundedCornerShape(50))
-                        .clickable(onClick = onShop)
-                        .padding(horizontal = 9.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    HfCoin(17.dp)
-                    Spacer(Modifier.width(5.dp))
-                    Text(profile?.diamonds?.let { homeGrouped(it) } ?: "—", color = SonHarfTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                }
-                // PRO: a compact gold badge when active, an invitation otherwise.
-                Row(
-                    Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(Brush.verticalGradient(listOf(Color(0xFFFFE08A), Color(0xFFD4A21F))))
-                        .clickable(onClick = onPro)
-                        .padding(horizontal = 9.dp, vertical = 3.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Rounded.WorkspacePremium, null, tint = Color(0xFF3A2400), modifier = Modifier.size(13.dp))
-                    Spacer(Modifier.width(3.dp))
-                    Text(
-                        if (pro) "PRO" else sh("PRO OL", "GO PRO"),
-                        color = Color(0xFF3A2400),
-                        fontSize = 11.sp,
-                        lineHeight = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        maxLines = 1,
-                    )
-                }
-            }
-            IconButton(onClick = onSettings, modifier = Modifier.size(42.dp)) {
-                Icon(Icons.Rounded.Settings, sh("Ayarlar", "Settings"), tint = SonHarfTheme.PremiumGold, modifier = Modifier.size(26.dp))
+                Spacer(Modifier.width(5.dp))
+                Icon(Icons.Rounded.Add, sh("Mağazayı aç", "Open store"), tint = Hf.TextMuted,
+                    modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -165,28 +119,48 @@ private fun homeGrouped(value: Int): String = homeGrouped(value.toLong())
 
 @Composable
 internal fun HomeSiegeHero(onSiege: () -> Unit) {
-    HomeGameRow(title = sh("Kelime Kuşatması", "Word Siege"), subtitle = sh("Tahtayı ele geçir", "Capture the board"),
-        art = R.drawable.kelime_tahti_brand_logo, onClick = onSiege)
+    Surface(onClick = onSiege, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp),
+        color = Hf.GreenPressed, border = BorderStroke(1.dp, Hf.GreenLight.copy(alpha = .55f))) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HfGameArt(R.drawable.kelime_tahti_game_icon, 56.dp, 56.dp, description = null)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(sh("Kelime Kuşatması", "Word Siege"), color = Color.White,
+                        fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Kelimeni kur, tahtayı ele geçir.", "Build words. Capture the board."),
+                        color = Color.White.copy(alpha = .85f), fontSize = 13.sp)
+                }
+            }
+            // One click target for the entire card, with a clear visual play affordance.
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(HomeControlShape)
+                .background(Color(0xFFF3E8CF)).padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.PlayArrow, null, tint = Color(0xFF214D37), modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(sh("OYNA", "PLAY"), color = Color(0xFF214D37), fontSize = 16.sp,
+                    fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            }
+        }
+    }
 }
 
 @Composable
 internal fun HomeGameRow(title: String, subtitle: String, art: Int, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
-        color = Hf.GreenPressed, border = BorderStroke(1.dp, Hf.GreenLight.copy(alpha = .65f))) {
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            HfGameArt(art, 64.dp, 60.dp, description = null)
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = HomeCardShape,
+        color = Hf.Surface, border = BorderStroke(1.dp, Hf.Border)) {
+        Row(Modifier.heightIn(min = 80.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            HfGameArt(art, 56.dp, 52.dp, description = null)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black,
+                Text(title, color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(subtitle, color = Color.White.copy(alpha = .85f), fontSize = 12.sp,
+                Text(subtitle, color = Hf.TextMuted, fontSize = 12.sp,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.width(8.dp))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Rounded.PlayArrow, null, tint = Hf.Gold, modifier = Modifier.size(25.dp))
-                Text(sh("OYNA", "PLAY"), color = Hf.Gold, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-            }
+            Icon(Icons.Rounded.ChevronRight, null, tint = Hf.TextMuted, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -194,15 +168,23 @@ internal fun HomeGameRow(title: String, subtitle: String, art: Int, onClick: () 
 @Composable
 internal fun HomeQuickMenu(isPro: Boolean, onPro: () -> Unit, onMascots: () -> Unit,
     onActivity: () -> Unit, onEvents: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             HomeQuickAction(if (isPro) sh("PRO üyeliğim", "My PRO membership") else sh("PRO üyelik", "PRO membership"),
-                Icons.Rounded.WorkspacePremium, Hf.Gold, Modifier.weight(1f), onPro)
-            HomeQuickAction(sh("Maskotlar", "Mascots"), Icons.Rounded.Pets, Hf.Green, Modifier.weight(1f), onMascots)
+                Icons.Rounded.WorkspacePremium, SonHarfTheme.PremiumGold, Modifier.weight(1f).fillMaxHeight(), onPro)
+            HomeQuickAction(sh("Maskotlar", "Mascots"), Icons.Rounded.Pets, Hf.Green, Modifier.weight(1f).fillMaxHeight(), onMascots)
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HomeQuickAction(sh("Aktivite", "Activity"), Icons.Rounded.Notifications, Hf.Green, Modifier.weight(1f), onActivity)
-            HomeQuickAction(sh("Etkinlikler", "Events"), Icons.Rounded.Event, Hf.Green, Modifier.weight(1f), onEvents)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            TextButton(onClick = onActivity, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                Icon(Icons.Rounded.NotificationsNone, null, tint = Hf.TextMuted, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(sh("Aktivite", "Activity"), color = Hf.TextMuted, fontSize = 12.sp)
+            }
+            TextButton(onClick = onEvents, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                Icon(Icons.Rounded.Event, null, tint = Hf.TextMuted, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(sh("Etkinlikler", "Events"), color = Hf.TextMuted, fontSize = 12.sp)
+            }
         }
     }
 }
@@ -210,9 +192,9 @@ internal fun HomeQuickMenu(isPro: Boolean, onPro: () -> Unit, onMascots: () -> U
 @Composable
 private fun HomeQuickAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
     accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(14.dp),
+    Surface(onClick = onClick, modifier = modifier, shape = HomeCardShape,
         color = Hf.Surface, border = BorderStroke(1.dp, Hf.Border)) {
-        Row(Modifier.heightIn(min = 56.dp).padding(horizontal = 10.dp, vertical = 10.dp),
+        Row(Modifier.heightIn(min = 56.dp).padding(horizontal = 12.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
             Text(label, color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold,
@@ -245,34 +227,29 @@ internal fun PremiumHomeDailyTasks(onClick: () -> Unit) {
     val completedTasks = (if (checkInDone) 1 else 0) + (if (challengeDone) 1 else 0)
     val progress = if (dashboard == null) 0f else (((if (checkInDone) 1f else 0f) + matches / 3f) / 2f).coerceIn(0f, 1f)
 
-    HfGamePanel(HfPanel.GoldSet, Modifier.fillMaxWidth(), onClick = onClick) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(50.dp).background(Color.White.copy(alpha = .9f), CircleShape), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.AssignmentTurnedIn, null, tint = HfPanel.GoldSet[2], modifier = Modifier.size(30.dp))
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(sh("Günlük Görevler", "Daily Tasks"), color = Hf.Ink, fontSize = 18.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                Text(
-                    if (streakDays > 0) sh("🔥 $streakDays gün seri", "🔥 $streakDays-day streak") else sh("Bugünün ödüllerini topla", "Collect today's rewards"),
-                    color = Hf.Ink.copy(alpha = .78f),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(8.dp))
-                Box(Modifier.fillMaxWidth().height(10.dp).background(Color.White.copy(alpha = .55f), CircleShape)) {
-                    Box(Modifier.fillMaxWidth(progress.coerceAtLeast(.04f)).fillMaxHeight().background(Hf.Green, CircleShape))
-                }
-            }
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = HomeCardShape,
+        color = Hf.Surface, border = BorderStroke(1.dp, Hf.Border)) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.AssignmentTurnedIn, null, tint = Hf.Green, modifier = Modifier.size(28.dp))
             Spacer(Modifier.width(12.dp))
-            Box(Modifier.size(52.dp).background(Hf.Ink.copy(alpha = .85f), CircleShape), contentAlignment = Alignment.Center) {
-                Text(if (loading) "…" else "$completedTasks/2", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(sh("Günlük Görevler", "Daily Tasks"), Modifier.weight(1f), color = Hf.Text,
+                        fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(if (loading || dashboard == null) "—" else "$completedTasks/2", color = Hf.TextMuted,
+                        fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Text(if (streakDays > 0) sh("$streakDays günlük seri", "$streakDays-day streak")
+                    else sh("Bugünün ödüllerini keşfet", "Discover today's rewards"),
+                    color = Hf.TextMuted, fontSize = 12.sp)
+                LinearProgressIndicator(progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
+                    color = Hf.Green, trackColor = SonHarfTheme.SurfaceSecondary)
             }
         }
     }
 }
+
 
 
 @Composable
@@ -319,7 +296,7 @@ internal fun PremiumLeagueProgress(profile: ProfileDto?, onLeague: () -> Unit) {
 @Composable
 internal fun PremiumOtherGames(onLastLetter: () -> Unit, onWorkshop: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        HomeGameRow("Son Harf", sh("1v1 kelime düellosu", "1v1 word duel"), R.drawable.son_harf_game_icon, onLastLetter)
+        HomeGameRow(sh("Son Harf", "Last Letter"), sh("1v1 kelime düellosu", "1v1 word duel"), R.drawable.son_harf_game_icon, onLastLetter)
         HomeTournamentCard(onOpen = onWorkshop, compact = true)
     }
 }
