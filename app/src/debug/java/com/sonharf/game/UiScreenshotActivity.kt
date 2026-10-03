@@ -36,6 +36,9 @@ class UiScreenshotActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SonHarfUiState.language = "tr"
         SonHarfCosmetics.restore(this)
+        if (intent.getStringExtra("review_stage") == "mascot-drag" && intent.getBooleanExtra("reset_mascot_position", false)) {
+            getSharedPreferences("mascot_placement", MODE_PRIVATE).edit().remove("qa-drag:x").remove("qa-drag:y").commit()
+        }
         if (intent.hasExtra("review_stage")) SonHarfCosmetics.gameThemeId =
             if (intent.getStringExtra("review_stage").orEmpty().contains("dark")) "theme_black" else null
         setContent {

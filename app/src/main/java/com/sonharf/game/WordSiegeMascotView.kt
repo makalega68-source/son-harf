@@ -3,7 +3,6 @@ package com.sonharf.game
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.BitmapShader
 import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Matrix
@@ -308,23 +307,21 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     }
 
     private var layers: Map<String, Bitmap> = WordSiegeMascotArt.layers(context)
-    private val artScale = ART / (layers.getValue("orb_face_base").width.toFloat())
     private val artRect = RectF(0f, 0f, ART, ART)
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val atopPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
     }
-    // Eyelids are painted with the orb's own face texture so they read as the same surface.
-    private var skinShader = BitmapShader(layers.getValue("orb_face_base"), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
-    private val skinPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
-        shader = skinShader
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+    // Remove covered eye pixels from the isolated eye layer. The shaded body underneath
+    // becomes the lid, with no darker rectangular texture patches or visible seams.
+    private val skinPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF000000.toInt()
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
     }
     private val facePose = FloatArray(4)
     private val faceClip = Path()
     private val featureMatrix = Matrix()
-    private val skinMatrix = Matrix()
     // A soft glowing rim instead of a hard outline.
     private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -690,8 +687,6 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         if (next == skin) return
         skin = next
         layers = WordSiegeMascotArt.layers(context, next)
-        skinShader = BitmapShader(layers.getValue("orb_face_base"), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
-        skinPaint.shader = skinShader
         decor = WordSiegeMascotDecor.of(next)
         updateHandShader()
         edgePaint.shader = decor.ringShader()
@@ -1140,12 +1135,6 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         mascotFacePose(yaw, headY, bow, facePose)
         featureMatrix.setTranslate(facePose[0], facePose[1])
         featureMatrix.preScale(facePose[2], facePose[3], FACE_CX, FACE_CY)
-        // The lid texture is counter-transformed so it always lines up with the orb underneath,
-        // otherwise the moving features would reveal seams at the lid edges.
-        if (featureMatrix.invert(skinMatrix)) {
-            skinMatrix.preScale(artScale, artScale)
-            skinShader.setLocalMatrix(skinMatrix)
-        }
         canvas.save()
         faceClip.rewind()
         faceClip.addOval(ORB_CX - ORB_RX, ORB_CY - ORB_RY, ORB_CX + ORB_RX, ORB_CY + ORB_RY, Path.Direction.CW)
@@ -2334,7 +2323,11 @@ internal fun WordSiegeMascot(
 ) {
     AndroidView(
         modifier = modifier,
-        factory = { context -> WordSiegeMascotView(context).apply { isClickable = true; contentDescription = "Maskot" } },
+        factory = { context -> WordSiegeMascotView(context).apply {
+            isClickable = true
+            contentDescription = "Maskot"
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        } },
         update = {
             it.dragStarted = onDragStart
             it.dragMoved = onDrag

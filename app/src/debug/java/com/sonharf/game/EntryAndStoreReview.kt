@@ -27,6 +27,7 @@ internal fun EntryAndStoreReview(stage: String) {
     MaterialTheme(colorScheme = scheme) {
         when {
             stage == "mascot-drag" -> Box(Modifier.fillMaxSize().background(Hf.Ground).statusBarsPadding().navigationBarsPadding()) {
+                Text("MASKOT · SÜRÜKLE", Modifier.align(Alignment.TopCenter).padding(16.dp), color = Hf.Text)
                 WordSiegeMascotCompanion(anchors = listOf(androidx.compose.ui.geometry.Offset(.5f,.75f)),
                     mascotSize = 100.dp, moveId = null, lastMoveMine = false, playerTurn = false,
                     requireOwnership = false, greet = false, positionKey = "qa-drag", modifier = Modifier.matchParentSize())
@@ -52,7 +53,7 @@ internal fun EntryAndStoreReview(stage: String) {
                     SocialInboxRow(SocialActivityDto("preview-$i","preview-me",kind=kind,targetKind="activity",createdAt="2026-10-02T10:00:00Z",readAt=if(i==2) "2026-10-02T10:01:00Z" else null),"Selin") {}
                 }
             }
-            stage == "home-dark" -> PremiumUnifiedProApp(onSignedOut = {})
+            stage.startsWith("home-") -> PremiumUnifiedProApp(onSignedOut = {})
             else -> Column(Modifier.fillMaxSize().background(Hf.Ground).statusBarsPadding().navigationBarsPadding()
                 .verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("KELİME TAHTI", color = Hf.Text, fontSize = 22.sp, fontWeight = FontWeight.Bold)

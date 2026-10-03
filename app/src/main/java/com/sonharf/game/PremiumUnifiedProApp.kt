@@ -40,6 +40,8 @@ private enum class PremiumDestination {
 fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     var destination by remember { mutableStateOf(PremiumDestination.HOME) }
+    var shopInitialTab by rememberSaveable { mutableIntStateOf(0) }
+    var proReturn by remember { mutableStateOf(PremiumDestination.PROFILE) }
     var isPro by remember { mutableStateOf(false) }
     var startQuickDuel by remember { mutableStateOf(false) }
     var gameLaunchRevision by remember { mutableIntStateOf(0) }
@@ -141,7 +143,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
-            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION, PremiumDestination.PRO -> PremiumDestination.PROFILE
+            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION -> PremiumDestination.PROFILE
+            PremiumDestination.PRO -> proReturn
             PremiumDestination.PRIVATE_ROOM -> PremiumDestination.PRO
             PremiumDestination.RIVALS -> PremiumDestination.PROFILE
             PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.HOME
@@ -218,7 +221,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumBottomBar(
                         destination = destination,
                         onHome = { destination = PremiumDestination.HOME },
-                        onShop = { destination = PremiumDestination.SHOP },
+                        onShop = { shopInitialTab = 0; destination = PremiumDestination.SHOP },
                         onSocial = { destination = PremiumDestination.SOCIAL },
                         onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
@@ -238,8 +241,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onPrimary = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                         onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
-                        onShop = { destination = PremiumDestination.SHOP },
-                        onPro = { destination = PremiumDestination.PRO },
+                        onShop = { shopInitialTab = 0; destination = PremiumDestination.SHOP },
+                        onPro = { proReturn = PremiumDestination.HOME; destination = PremiumDestination.PRO },
+                        onMascots = { shopInitialTab = 4; destination = PremiumDestination.SHOP },
                         onSettings = { destination = PremiumDestination.SETTINGS },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
@@ -273,7 +277,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE_DETAILS },
-                        { destination = PremiumDestination.PRO },
+                        { proReturn = PremiumDestination.PROFILE; destination = PremiumDestination.PRO },
                         { destination = PremiumDestination.COLLECTION },
                         { destination = PremiumDestination.SETTINGS },
                         { destination = PremiumDestination.SOCIAL },
@@ -281,14 +285,15 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     )
                     PremiumDestination.COLLECTION -> PlayerCollectionScreen(backend) { destination = PremiumDestination.PROFILE }
                     PremiumDestination.SHOP -> EconomyShopScreen(
+                        initialTab = shopInitialTab,
                         onBack = { destination = PremiumDestination.HOME },
                         onMembershipChanged = { isPro = it },
                         onCollection = { destination = PremiumDestination.COLLECTION },
-                        onPro = { destination = PremiumDestination.PRO },
+                        onPro = { proReturn = PremiumDestination.SHOP; destination = PremiumDestination.PRO },
                     )
                     PremiumDestination.PRO -> UnifiedProVipScreen(
                         backend = backend,
-                        onBack = { destination = PremiumDestination.PROFILE },
+                        onBack = { destination = proReturn },
                         onPrivateRoom = { destination = PremiumDestination.PRIVATE_ROOM },
                         onFriends = { destination = PremiumDestination.SOCIAL },
                         onQuickDuel = { openGame(PremiumDestination.SIEGE, siegeLanguage, quickDuel = true) },
@@ -301,7 +306,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.SIEGE -> WordSiegeEntryScreen(
                         startQuickDuel = startQuickDuel,
                         onExit = { leaveGame() },
-                        onOpenStore = { leaveGame(PremiumDestination.SHOP) },
+                        onOpenStore = { shopInitialTab = 0; leaveGame(PremiumDestination.SHOP) },
                     )
                     PremiumDestination.WORD_WORKSHOP -> KelimeAtolyesiScreen {
                         leaveGame()
@@ -379,6 +384,7 @@ private fun PremiumHomeScreen(
     onProfile: () -> Unit,
     onShop: () -> Unit,
     onPro: () -> Unit,
+    onMascots: () -> Unit,
     onSettings: () -> Unit,
     onLastLetter: () -> Unit,
     onWorkshop: () -> Unit,
@@ -401,31 +407,22 @@ private fun PremiumHomeScreen(
         LazyColumn(
             modifier = Modifier.widthIn(max = 600.dp).fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item(key = "home_hero") {
-                PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onPro, onSettings)
+                PremiumHomeCommandDeck(profile, onProfile, onShop, onPro, onSettings)
             }
-            item(key = "ongoing_games") { HomeSessions(backend, onResume, onPrimary, onLastLetterResume) }
-            item(key = "home_secondary_modes") {
-                PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
-            }
-            item(key = "league_progress") { HomeLeague(backend, onCompete) }
-            item(key = "activity_events") {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onActivity, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.Notifications, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(5.dp))
-                        Text(sh("AKTİVİTE", "ACTIVITY"), fontSize = 11.sp)
-                    }
-                    OutlinedButton(onClick = onEvents, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.Event, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(5.dp))
-                        Text(sh("ETKİNLİKLER", "EVENTS"), fontSize = 11.sp)
-                    }
+            item(key = "home_games") {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HomeSiegeHero(onPrimary)
+                    PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
                 }
             }
-            item(key = "atelier_tournament") { HomeTournamentCard(onOpen = onWorkshop) }
+            item(key = "home_quick_menu") {
+                HomeQuickMenu(profile?.isVip == true, onPro, onMascots, onActivity, onEvents)
+            }
+            item(key = "ongoing_games") { HomeSessions(backend, onResume, onPrimary, onLastLetterResume) }
+            item(key = "league_progress") { HomeLeague(backend, onCompete) }
             item(key = "social_arena") { HomeSocialArena(backend, incomingCount, onSocial, isPro = profile?.isVip == true) }
             item(key = "home_daily_tasks") {
                 PremiumHomeDailyTasks(onClick = onCompete)

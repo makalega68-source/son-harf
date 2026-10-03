@@ -10,16 +10,33 @@ def adb(*args):
 
 
 def bounds(name):
-    adb("shell", "uiautomator", "dump", "/sdcard/mascot.xml")
-    adb("pull", "/sdcard/mascot.xml", name)
-    node = next(n for n in ET.parse(name).iter("node") if n.get("content-desc") == "Maskot")
+    # UiAutomator can return a null root just after a cold activity launch.
+    # Never reuse a stale dump, and keep evidence if all bounded retries fail.
+    node = None
+    for attempt in range(3):
+        adb("shell", "rm", "-f", "/sdcard/mascot.xml")
+        adb("shell", "uiautomator", "dump", "--compressed", "/sdcard/mascot.xml")
+        try:
+            adb("pull", "/sdcard/mascot.xml", name)
+            node = next((n for n in ET.parse(name).iter("node") if n.get("content-desc") == "Maskot"), None)
+        except (subprocess.CalledProcessError, ET.ParseError):
+            pass
+        if node is not None:
+            break
+        time.sleep(2)
+    if node is None:
+        with open("Mascot-drag-failure-Android.png", "wb") as f:
+            f.write(adb("exec-out", "screencap", "-p"))
+        with open("Mascot-drag-runtime.log", "wb") as f:
+            f.write(adb("logcat", "-d", "-s", "AndroidRuntime:E"))
+        raise AssertionError("Visible mascot missing from accessibility tree")
     x1, y1, x2, y2 = map(int, re.findall(r"\d+", node.get("bounds")))
     return ((x1 + x2) // 2, (y1 + y2) // 2)
 
 
 adb("shell", "am", "force-stop", "com.sonharf.game")
 adb("logcat", "-c")
-adb("shell", "am", "start", "-W", "-n", "com.sonharf.game/.UiScreenshotActivity", "--es", "review_stage", "mascot-drag")
+adb("shell", "am", "start", "-W", "-n", "com.sonharf.game/.UiScreenshotActivity", "--es", "review_stage", "mascot-drag", "--ez", "reset_mascot_position", "true")
 time.sleep(3)
 start = bounds("Mascot-drag-before.xml")
 adb("shell", "input", "swipe", str(start[0]), str(start[1]), str(start[0] - 180), str(start[1] - 400), "800")

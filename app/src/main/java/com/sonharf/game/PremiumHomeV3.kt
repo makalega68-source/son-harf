@@ -52,14 +52,13 @@ private val HomeHairline = Color(0xFFD2DBE5)
 internal fun PremiumHomeCommandDeck(
     profile: ProfileDto?,
     onProfile: () -> Unit,
-    onSiege: () -> Unit,
     onShop: () -> Unit,
     onPro: () -> Unit,
     onSettings: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("KELİME TAHTI", color = Hf.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         HomeStatusRow(profile, onProfile, onShop, onPro, onSettings)
-        HomeSiegeHero(onSiege)
     }
 }
 
@@ -164,26 +163,61 @@ private fun HomeStatusRow(
 private fun homeGrouped(value: Long): String = String.format(java.util.Locale("tr", "TR"), "%,d", value)
 private fun homeGrouped(value: Int): String = homeGrouped(value.toLong())
 
-/** The Kelime Tahtı logo is the main game's banner; it breathes gently above the play button. */
 @Composable
-private fun HomeSiegeHero(onSiege: () -> Unit) {
-    val pulse = rememberInfiniteTransition(label = "home-logo")
-    val breathe by pulse.animateFloat(1f, 1.035f, infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "home-logo-scale")
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        HfGameArt(
-            R.drawable.kelime_tahti_brand_logo,
-            220.dp,
-            100.dp,
-            modifier = Modifier.clickable(onClick = onSiege).graphicsLayer { scaleX = breathe; scaleY = breathe },
-            description = "KELİME TAHTI",
-        )
-        HfPrimaryButton(
-            sh("OYNA", "PLAY"),
-            onClick = onSiege,
-            modifier = Modifier.widthIn(max = 320.dp).padding(horizontal = 8.dp),
-            height = 58.dp,
-            fontSize = 24.sp,
-        )
+internal fun HomeSiegeHero(onSiege: () -> Unit) {
+    HomeGameRow(title = sh("Kelime Kuşatması", "Word Siege"), subtitle = sh("Tahtayı ele geçir", "Capture the board"),
+        art = R.drawable.kelime_tahti_brand_logo, onClick = onSiege)
+}
+
+@Composable
+internal fun HomeGameRow(title: String, subtitle: String, art: Int, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
+        color = Hf.GreenPressed, border = BorderStroke(1.dp, Hf.GreenLight.copy(alpha = .65f))) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            HfGameArt(art, 64.dp, 60.dp, description = null)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(subtitle, color = Color.White.copy(alpha = .85f), fontSize = 12.sp,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Rounded.PlayArrow, null, tint = Hf.Gold, modifier = Modifier.size(25.dp))
+                Text(sh("OYNA", "PLAY"), color = Hf.Gold, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+@Composable
+internal fun HomeQuickMenu(isPro: Boolean, onPro: () -> Unit, onMascots: () -> Unit,
+    onActivity: () -> Unit, onEvents: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HomeQuickAction(if (isPro) sh("PRO üyeliğim", "My PRO membership") else sh("PRO üyelik", "PRO membership"),
+                Icons.Rounded.WorkspacePremium, Hf.Gold, Modifier.weight(1f), onPro)
+            HomeQuickAction(sh("Maskotlar", "Mascots"), Icons.Rounded.Pets, Hf.Green, Modifier.weight(1f), onMascots)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HomeQuickAction(sh("Aktivite", "Activity"), Icons.Rounded.Notifications, Hf.Green, Modifier.weight(1f), onActivity)
+            HomeQuickAction(sh("Etkinlikler", "Events"), Icons.Rounded.Event, Hf.Green, Modifier.weight(1f), onEvents)
+        }
+    }
+}
+
+@Composable
+private fun HomeQuickAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color, modifier: Modifier, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(14.dp),
+        color = Hf.Surface, border = BorderStroke(1.dp, Hf.Border)) {
+        Row(Modifier.heightIn(min = 56.dp).padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
+            Text(label, color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        }
     }
 }
 
@@ -284,16 +318,9 @@ internal fun PremiumLeagueProgress(profile: ProfileDto?, onLeague: () -> Unit) {
 
 @Composable
 internal fun PremiumOtherGames(onLastLetter: () -> Unit, onWorkshop: () -> Unit) {
-    GameEventStage(onClick=onLastLetter) {
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            HfGameArt(R.drawable.son_harf_game_icon,76.dp,76.dp,description="Son Harf")
-            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                EventTag(sh("1v1 KELİME DÜELLOSU","1v1 WORD DUEL"))
-                Text("Son Harf",color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Black)
-                Text(sh("Zinciri sürdür. Rakibini geç.","Keep the chain. Outplay your rival."),color=Color.White.copy(alpha=.85f),fontSize=12.sp)
-            }
-        }
-        EventAction(sh("DÜELLOYA GİR","ENTER DUEL"),onLastLetter)
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        HomeGameRow("Son Harf", sh("1v1 kelime düellosu", "1v1 word duel"), R.drawable.son_harf_game_icon, onLastLetter)
+        HomeTournamentCard(onOpen = onWorkshop, compact = true)
     }
 }
 
