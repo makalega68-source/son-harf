@@ -43,8 +43,12 @@ home = tree("Home-menu.xml")
 games = [center(node(home, title)) for title in ("Kelime Kuşatması", "Son Harf", "Kelime Atölyesi")]
 assert games[0][1] < games[1][1] < games[2][1], games
 left_edges = [int(re.findall(r"\d+", node(home, title).get("bounds"))[0])
-              for title in ("Kelime Kuşatması", "Son Harf", "Kelime Atölyesi")]
+              for title in ("Son Harf", "Kelime Atölyesi")]
 assert max(left_edges) - min(left_edges) < 8, left_edges
+# The flagship now has a centered stage, with its play button below the title.
+play = center(node(home, "OYNA"))
+assert abs(play[0] - games[0][0]) < 8, (play, games[0])
+assert games[0][1] < play[1] < games[1][1], (play, games)
 pro = center(node(home, "PRO üyelik"))
 mascots = center(node(home, "Maskotlar"))
 assert abs(pro[1] - mascots[1]) < 15 and pro[0] < mascots[0], (pro, mascots)

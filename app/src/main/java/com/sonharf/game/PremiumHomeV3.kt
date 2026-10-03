@@ -48,6 +48,18 @@ private val HomeControlShape = RoundedCornerShape(12.dp)
 private val HomeMicroShape = RoundedCornerShape(10.dp)
 private val HomeHairline = Color(0xFFD2DBE5)
 
+
+/** Home-only materials: the player's purchased theme still governs all game screens. */
+internal object HomeLobbyStyle {
+    val Ground: Color get() = if (SonHarfTheme.IsDark) Color(0xFF181D18) else Color(0xFFF6F0E3)
+    val Paper: Color get() = if (SonHarfTheme.IsDark) Color(0xFF252C24) else Color(0xFFFFFAEF)
+    val Ink: Color get() = if (SonHarfTheme.IsDark) Color(0xFFF4EDD9) else Color(0xFF343D30)
+    val Muted: Color get() = if (SonHarfTheme.IsDark) Color(0xFFBEBEAA) else Color(0xFF777664)
+    val Line: Color get() = if (SonHarfTheme.IsDark) Color(0xFF4B5141) else Color(0xFFDCD0B5)
+    val Gold: Color get() = if (SonHarfTheme.IsDark) Color(0xFFE5C47B) else Color(0xFF8D692C)
+    val Green = Color(0xFF296B47)
+}
+
 @Composable
 internal fun PremiumHomeCommandDeck(
     profile: ProfileDto?,
@@ -56,15 +68,14 @@ internal fun PremiumHomeCommandDeck(
     onPro: () -> Unit,
     onSettings: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("KELİME TAHTI", Modifier.weight(1f), color = Hf.Text,
-                fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-            IconButton(onClick = onSettings, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Rounded.Settings, sh("Ayarlar", "Settings"), tint = Hf.TextMuted)
-            }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f)) { HomeStatusRow(profile, onProfile, onShop) }
+        Spacer(Modifier.width(6.dp))
+        IconButton(onClick = onSettings, modifier = Modifier.size(48.dp)
+            .border(1.dp, HomeLobbyStyle.Line, CircleShape)) {
+            Icon(Icons.Rounded.Settings, sh("Ayarlar", "Settings"), tint = HomeLobbyStyle.Muted,
+                modifier = Modifier.size(21.dp))
         }
-        HomeStatusRow(profile, onProfile, onShop)
     }
 }
 
@@ -80,34 +91,34 @@ private fun HomeStatusRow(
             .heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
             FramedProfilePhotoAvatar(
                 avatarPath = profile?.avatarPath, gender = profile?.gender,
-                name = profile?.displayName ?: sh("Oyuncu", "Player"), size = 46.dp,
+                name = profile?.displayName ?: sh("Oyuncu", "Player"), size = 42.dp,
                 frameId = rememberPlayerFrame(profile?.id), accent = Hf.Gold,
                 visible = profile?.avatarVisibility != "hidden", isPro = profile?.isVip == true,
             )
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(profile?.displayName?.ifBlank { null } ?: sh("Oyuncu", "Player"),
-                    color = Hf.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                    color = HomeLobbyStyle.Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(profile?.let { homeLeagueName(ratingLeagueProgress(it.rating).leagueName) + sh(" Lig", " League") }
-                    ?: sh("Profilim", "My profile"), color = Hf.TextMuted, fontSize = 12.sp,
+                    ?: sh("Profilim", "My profile"), color = HomeLobbyStyle.Muted, fontSize = 10.sp,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        Spacer(Modifier.width(12.dp))
-        Surface(onClick = onShop, shape = HomeControlShape, color = Hf.Surface,
-            border = BorderStroke(1.dp, Hf.Border)) {
-            Row(Modifier.heightIn(min = 48.dp).padding(horizontal = 12.dp),
+        Spacer(Modifier.width(6.dp))
+        Surface(onClick = onShop, shape = HomeControlShape, color = HomeLobbyStyle.Paper,
+            border = BorderStroke(1.dp, HomeLobbyStyle.Line)) {
+            Row(Modifier.heightIn(min = 48.dp).padding(horizontal = 9.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 HfCoin(20.dp)
                 Spacer(Modifier.width(7.dp))
                 Column {
-                    Text(profile?.diamonds?.let { homeGrouped(it) } ?: "—", color = Hf.Text,
+                    Text(profile?.diamonds?.let { homeGrouped(it) } ?: "—", color = HomeLobbyStyle.Ink,
                         fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                    Text("Son Coin", color = Hf.TextMuted, fontSize = 10.sp)
+                    Text("Son Coin", color = HomeLobbyStyle.Muted, fontSize = 10.sp)
                 }
                 Spacer(Modifier.width(5.dp))
-                Icon(Icons.Rounded.Add, sh("Mağazayı aç", "Open store"), tint = Hf.TextMuted,
+                Icon(Icons.Rounded.Add, sh("Mağazayı aç", "Open store"), tint = HomeLobbyStyle.Muted,
                     modifier = Modifier.size(16.dp))
             }
         }
@@ -119,27 +130,40 @@ private fun homeGrouped(value: Int): String = homeGrouped(value.toLong())
 
 @Composable
 internal fun HomeSiegeHero(onSiege: () -> Unit) {
-    Surface(onClick = onSiege, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp),
-        color = Hf.GreenPressed, border = BorderStroke(1.dp, Hf.GreenLight.copy(alpha = .55f))) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                HfGameArt(R.drawable.kelime_tahti_brand_logo, 56.dp, 56.dp, description = null)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(sh("Kelime Kuşatması", "Word Siege"), color = Color.White,
-                        fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Kelimeni kur, tahtayı ele geçir.", "Build words. Capture the board."),
-                        color = Color.White.copy(alpha = .85f), fontSize = 13.sp)
-                }
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        // The original 3D brand is the stage artwork; every action remains a native control.
+        Box(Modifier.fillMaxWidth().height(138.dp), contentAlignment = Alignment.Center) {
+            val glow = if (SonHarfTheme.IsDark) Color(0xFF576849) else Color(0xFFE3C98F)
+            Canvas(Modifier.matchParentSize()) {
+                drawOval(Brush.radialGradient(listOf(glow.copy(alpha = .34f), Color.Transparent),
+                    center = center, radius = size.width * .48f))
             }
-            // One click target for the entire card, with a clear visual play affordance.
-            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(HomeControlShape)
-                .background(Color(0xFFF3E8CF)).padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.PlayArrow, null, tint = Color(0xFF214D37), modifier = Modifier.size(24.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(sh("OYNA", "PLAY"), color = Color(0xFF214D37), fontSize = 16.sp,
-                    fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            HfGameArt(R.drawable.kelime_tahti_brand_logo, 268.dp, 134.dp, description = "KELİME TAHTI")
+        }
+        Row(Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.width(24.dp).height(1.dp).background(HomeLobbyStyle.Line))
+            Text(sh("Kelime Kuşatması", "Word Siege"), color = HomeLobbyStyle.Ink,
+                fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = .4.sp)
+            Box(Modifier.width(24.dp).height(1.dp).background(HomeLobbyStyle.Line))
+        }
+        // The offset base gives the button a tactile edge without a raster hit area.
+        Box(Modifier.fillMaxWidth(.88f).padding(bottom = 5.dp)) {
+            Box(Modifier.matchParentSize().offset(y = 5.dp)
+                .background(Color(0xFF184D32), RoundedCornerShape(18.dp)))
+            Surface(onClick = onSiege, modifier = Modifier.fillMaxWidth()
+                .sonHarfPressScale(pressedScale = .975f), shape = RoundedCornerShape(18.dp),
+                color = HomeLobbyStyle.Green, border = BorderStroke(1.dp, Color(0xFF5A9870)),
+                shadowElevation = 4.dp) {
+                Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color(0xFF3B8055), HomeLobbyStyle.Green)))
+                    .heightIn(min = 56.dp).padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.PlayArrow, null, tint = Color(0xFFFFF7DF), modifier = Modifier.size(26.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(sh("OYNA", "PLAY"), color = Color(0xFFFFF7DF), fontSize = 22.sp,
+                        fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                }
             }
         }
     }
@@ -147,20 +171,37 @@ internal fun HomeSiegeHero(onSiege: () -> Unit) {
 
 @Composable
 internal fun HomeGameRow(title: String, subtitle: String, art: Int, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = HomeCardShape,
-        color = Hf.Surface, border = BorderStroke(1.dp, Hf.Border)) {
-        Row(Modifier.heightIn(min = 80.dp).padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            HfGameArt(art, 56.dp, 52.dp, description = null)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(subtitle, color = Hf.TextMuted, fontSize = 12.sp,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+    val workshop = art == R.drawable.kelime_atolyesi_game_icon
+    val dark = SonHarfTheme.IsDark
+    val accent = if (workshop) Color(0xFF946923) else Color(0xFFA15240)
+    val paper = if (dark) {
+        if (workshop) Color(0xFF342D20) else Color(0xFF342724)
+    } else {
+        if (workshop) Color(0xFFF6E7BD) else Color(0xFFF4E2D7)
+    }
+    val ink = if (dark) Color(0xFFF5E8CF) else Color(0xFF493C2D)
+    Box(Modifier.fillMaxWidth().padding(bottom = 3.dp)) {
+        Box(Modifier.matchParentSize().offset(y = 3.dp)
+            .background(accent.copy(alpha = .36f), RoundedCornerShape(19.dp)))
+        Surface(onClick = onClick, modifier = Modifier.fillMaxWidth()
+            .sonHarfPressScale(pressedScale = .985f), shape = RoundedCornerShape(19.dp),
+            color = paper, border = BorderStroke(1.dp, accent.copy(alpha = .3f))) {
+            Row(Modifier.heightIn(min = 82.dp).padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                HfGameArt(art, 64.dp, 60.dp, description = null)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(title, color = ink, fontSize = 18.sp, fontWeight = FontWeight.Black,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(subtitle, color = ink.copy(alpha = .8f), fontSize = 12.sp,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                Spacer(Modifier.width(8.dp))
+                Box(Modifier.size(30.dp).background(accent.copy(alpha = .12f), CircleShape),
+                    contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.ChevronRight, null, tint = ink, modifier = Modifier.size(21.dp))
+                }
             }
-            Spacer(Modifier.width(8.dp))
-            Icon(Icons.Rounded.ChevronRight, null, tint = Hf.TextMuted, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -171,19 +212,19 @@ internal fun HomeQuickMenu(isPro: Boolean, onPro: () -> Unit, onMascots: () -> U
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             HomeQuickAction(if (isPro) sh("PRO üyeliğim", "My PRO membership") else sh("PRO üyelik", "PRO membership"),
-                Icons.Rounded.WorkspacePremium, SonHarfTheme.PremiumGold, Modifier.weight(1f).fillMaxHeight(), onPro)
-            HomeQuickAction(sh("Maskotlar", "Mascots"), Icons.Rounded.Pets, Hf.Green, Modifier.weight(1f).fillMaxHeight(), onMascots)
+                Icons.Rounded.WorkspacePremium, HomeLobbyStyle.Gold, Modifier.weight(1f).fillMaxHeight(), onPro)
+            HomeQuickAction(sh("Maskotlar", "Mascots"), Icons.Rounded.Pets, HomeLobbyStyle.Green, Modifier.weight(1f).fillMaxHeight(), onMascots)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             TextButton(onClick = onActivity, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                Icon(Icons.Rounded.NotificationsNone, null, tint = Hf.TextMuted, modifier = Modifier.size(18.dp))
+                Icon(Icons.Rounded.NotificationsNone, null, tint = HomeLobbyStyle.Muted, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(sh("Aktivite", "Activity"), color = Hf.TextMuted, fontSize = 12.sp)
+                Text(sh("Aktivite", "Activity"), color = HomeLobbyStyle.Muted, fontSize = 12.sp)
             }
             TextButton(onClick = onEvents, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                Icon(Icons.Rounded.Event, null, tint = Hf.TextMuted, modifier = Modifier.size(18.dp))
+                Icon(Icons.Rounded.Event, null, tint = HomeLobbyStyle.Muted, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(sh("Etkinlikler", "Events"), color = Hf.TextMuted, fontSize = 12.sp)
+                Text(sh("Etkinlikler", "Events"), color = HomeLobbyStyle.Muted, fontSize = 12.sp)
             }
         }
     }
@@ -193,11 +234,11 @@ internal fun HomeQuickMenu(isPro: Boolean, onPro: () -> Unit, onMascots: () -> U
 private fun HomeQuickAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
     accent: Color, modifier: Modifier, onClick: () -> Unit) {
     Surface(onClick = onClick, modifier = modifier, shape = HomeCardShape,
-        color = Hf.Surface, border = BorderStroke(1.dp, Hf.Border)) {
+        color = HomeLobbyStyle.Paper, border = BorderStroke(1.dp, HomeLobbyStyle.Line)) {
         Row(Modifier.heightIn(min = 56.dp).padding(horizontal = 12.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
-            Text(label, color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+            Text(label, color = HomeLobbyStyle.Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold,
                 maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         }
     }
@@ -228,23 +269,23 @@ internal fun PremiumHomeDailyTasks(onClick: () -> Unit) {
     val progress = if (dashboard == null) 0f else (((if (checkInDone) 1f else 0f) + matches / 3f) / 2f).coerceIn(0f, 1f)
 
     Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = HomeCardShape,
-        color = Hf.Surface, border = BorderStroke(1.dp, Hf.Border)) {
+        color = HomeLobbyStyle.Paper, border = BorderStroke(1.dp, HomeLobbyStyle.Line)) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.AssignmentTurnedIn, null, tint = Hf.Green, modifier = Modifier.size(28.dp))
+            Icon(Icons.Rounded.AssignmentTurnedIn, null, tint = HomeLobbyStyle.Green, modifier = Modifier.size(28.dp))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(sh("Günlük Görevler", "Daily Tasks"), Modifier.weight(1f), color = Hf.Text,
+                    Text(sh("Günlük Görevler", "Daily Tasks"), Modifier.weight(1f), color = HomeLobbyStyle.Ink,
                         fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text(if (loading || dashboard == null) "—" else "$completedTasks/2", color = Hf.TextMuted,
+                    Text(if (loading || dashboard == null) "—" else "$completedTasks/2", color = HomeLobbyStyle.Muted,
                         fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(if (streakDays > 0) sh("$streakDays günlük seri", "$streakDays-day streak")
                     else sh("Bugünün ödüllerini keşfet", "Discover today's rewards"),
-                    color = Hf.TextMuted, fontSize = 12.sp)
+                    color = HomeLobbyStyle.Muted, fontSize = 12.sp)
                 LinearProgressIndicator(progress = { progress },
                     modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
-                    color = Hf.Green, trackColor = SonHarfTheme.SurfaceSecondary)
+                    color = HomeLobbyStyle.Green, trackColor = HomeLobbyStyle.Line)
             }
         }
     }

@@ -108,6 +108,8 @@ internal fun HomeSessions(backend: OnlineGameBackend, onOpen: (WordSiegeGameDto)
         }
     }
     val matches=unifiedHomeMatches(games,rooms,me)
+    // An empty lobby needs no extra play panel; loading and retry remain visible.
+    if (loaded && !failed && matches.isEmpty()) return
     Surface(shape=RoundedCornerShape(20.dp),color=Hf.Surface,border=BorderStroke(1.dp,Hf.Border)) {
         Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically) {

@@ -404,11 +404,11 @@ private fun PremiumHomeScreen(
             runCatching { backend.getProfile(id) }.getOrNull()
         }
     }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.fillMaxSize().background(HomeLobbyStyle.Ground), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
-            modifier = Modifier.widthIn(max = 600.dp).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.widthIn(max = 480.dp).fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onShop, onPro, onSettings)
@@ -430,11 +430,11 @@ private fun PremiumHomeScreen(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { showCommunityDetails = !showCommunityDetails },
                         modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                        Text(sh("Lig ve arkadaşlar", "League and friends"), color = Hf.Text, fontSize = 13.sp)
+                        Text(sh("Lig ve arkadaşlar", "League and friends"), color = HomeLobbyStyle.Ink, fontSize = 13.sp)
                         Spacer(Modifier.width(6.dp))
                         Icon(if (showCommunityDetails) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
                             if (showCommunityDetails) sh("Daralt", "Collapse") else sh("Genişlet", "Expand"),
-                            tint = Hf.TextMuted)
+                            tint = HomeLobbyStyle.Muted)
                     }
                     if (incomingCount > 0) TextButton(onClick = onSocial) {
                         Text(sh("$incomingCount davet", "$incomingCount invites"), color = Hf.Green, fontSize = 12.sp)
@@ -647,7 +647,7 @@ private fun PremiumBottomBar(
         Triple(PremiumDestination.COMPETE, R.drawable.hf_ic_compete, sh("Taht", "Throne")) to onCompete,
         Triple(PremiumDestination.PROFILE, R.drawable.hf_ic_profile, sh("Profil", "Profile")) to onProfile,
     )
-    Surface(color = SonHarfTheme.NavigationSurface) {
+    Surface(color = if (destination == PremiumDestination.HOME) HomeLobbyStyle.Paper else SonHarfTheme.NavigationSurface) {
         Column(Modifier.navigationBarsPadding()) {
             HorizontalDivider(thickness = 1.dp, color = Hf.Gold.copy(alpha = .22f))
             Row(Modifier.fillMaxWidth().height(72.dp), verticalAlignment = Alignment.CenterVertically) {
