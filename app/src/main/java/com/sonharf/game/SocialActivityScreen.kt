@@ -85,7 +85,7 @@ internal fun SocialActivityScreen(backend: OnlineGameBackend, onBack: () -> Unit
         item { TextButton(onClick = { retry++ }, enabled = busy == null) { Text(sh("YENİLE", "REFRESH")) } }
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Green) }
         if (error) item { Text(sh("Bazı aktiviteler güncellenemedi", "Some activity could not be refreshed"), color = Hf.Red) }
-        notice?.let { item { Text(it, color = Hf.TextMuted) } }
+        notice?.let { item { Text(it, color = LobbyPalette.Muted) } }
         if (requests + legacy > 0) item {
             ActivityTile(sh("$requests arkadaşlık isteği · $legacy Son Harf daveti", "$requests friend requests · $legacy Last Letter invitations")) {
                 TextButton(onClick = onFriends) { Text(sh("İSTEKLERİ AÇ", "OPEN REQUESTS")) }
@@ -116,12 +116,12 @@ internal fun SocialActivityScreen(backend: OnlineGameBackend, onBack: () -> Unit
         items(games.filter { it.status == "finished" }.sortedByDescending { it.finishedAt ?: it.updatedAt }.take(10), key = { "result:${it.id}" }) { game ->
             val opponent = if (game.playerOneId == me) game.playerTwoId else game.playerOneId
             ActivityTile(sh("Maç bitti · ${profiles[opponent]?.displayName ?: "Rakip"}", "Match finished · ${profiles[opponent]?.displayName ?: "Rival"}")) {
-                Text(socialDate(game.finishedAt ?: game.updatedAt), color = Hf.TextMuted, fontSize = 11.sp)
+                Text(socialDate(game.finishedAt ?: game.updatedAt), color = LobbyPalette.Muted, fontSize = 11.sp)
                 TextButton(onClick = { onOpenGame(game) }) { Text(sh("SONUÇ VE RÖVANŞ", "RESULT & REMATCH")) }
             }
         }
         if (!loading && !error && requests + legacy == 0 && invites.isEmpty() && series.isEmpty() && turns.isEmpty() && friends.none { it.presenceStatus == "online" } && games.none { it.status == "finished" }) item {
-            Text(sh("Yeni aktivite yok", "No new activity"), color = Hf.TextMuted)
+            Text(sh("Yeni aktivite yok", "No new activity"), color = LobbyPalette.Muted)
         }
     }
 }
@@ -130,15 +130,15 @@ internal fun SocialActivityScreen(backend: OnlineGameBackend, onBack: () -> Unit
 private fun InviteActions(busy: Boolean, onDecline: () -> Unit, onAccept: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = onDecline, enabled = !busy) { Text(sh("REDDET", "DECLINE"), color = Hf.Red) }
-        Button(onClick = onAccept, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = Hf.Green)) { Text(sh("KABUL ET", "ACCEPT")) }
+        Button(onClick = onAccept, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = Hf.Green, contentColor = androidx.compose.ui.graphics.Color.White)) { Text(sh("KABUL ET", "ACCEPT")) }
     }
 }
 
 @Composable
 internal fun ActivityTile(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = Hf.Surface, border = BorderStroke(1.dp, Hf.Border)) {
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = LobbyPalette.Paper, border = BorderStroke(1.dp, LobbyPalette.Line)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, color = Hf.Text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(title, color = LobbyPalette.Ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             content()
         }
     }

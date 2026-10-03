@@ -102,8 +102,8 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
  var error by remember{mutableStateOf(false)}
  LaunchedEffect(Unit){if(!SupabaseProvider.configured){error=true;return@LaunchedEffect};while(true){gameRequestResult{ThroneBackend.week()}.onSuccess{week=it;error=false}.onFailure{error=true};delay(20_000)}}
  val now=serverNow(week?.serverTime.orEmpty(),Unit)
- LazyColumn(Modifier.fillMaxSize().background(SonHarfTheme.Background),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-  item { MainScreenHeader(title=sh("TAHT","THRONE"),subtitle=sh("Üç oyun · Tek haftalık yarış","Three games · One weekly race"),onBack=onBack) }
+ LazyColumn(Modifier.fillMaxSize().background(LobbyPalette.Ground),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+  item { MainScreenHeader(title=sh("Taht","Throne"),subtitle=sh("Üç oyun · Tek haftalık yarış","Three games · One weekly race"),onBack=onBack) }
   item { ThroneOwnerStage(week?.previousOwner?.let { ThroneRow(rank=1,userId=it.userId,name=it.name,xp=it.xp,avatarPath=it.avatarPath,gender=it.gender,avatarVisibility=it.avatarVisibility) },tournamentTimeMillis(week?.resetAt.orEmpty()),now) }
   item { GameEventStage {
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
@@ -118,26 +118,26 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
     }
    }
   } }
-  item { Text(sh("HAFTALIK GÖREVLER","WEEKLY MISSIONS"),color=SonHarfTheme.TextPrimary,fontWeight=FontWeight.Bold) }
-  items(week?.missions.orEmpty(),key={"${it.game}:${it.id}"}){m->Surface(shape=RoundedCornerShape(18.dp),color=SonHarfTheme.Surface,border=BorderStroke(1.dp,SonHarfTheme.PremiumGold.copy(alpha=.4f))){Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+  item { Text(sh("HAFTALIK GÖREVLER","WEEKLY MISSIONS"),color=LobbyPalette.Ink,fontWeight=FontWeight.Bold) }
+  items(week?.missions.orEmpty(),key={"${it.game}:${it.id}"}){m->Surface(shape=RoundedCornerShape(18.dp),color=LobbyPalette.Paper,border=BorderStroke(1.dp,SonHarfTheme.PremiumGold.copy(alpha=.4f))){Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
     Icon(if(m.awarded)Icons.Rounded.Verified else Icons.Rounded.Flag,null,tint=SonHarfTheme.Primary,modifier=Modifier.size(28.dp))
-    Column(Modifier.weight(1f)){Text(throneGameName(m.game).uppercase(),color=SonHarfTheme.TextSecondary,fontSize=9.sp,fontWeight=FontWeight.Black);Text(throneMissionText(m),color=SonHarfTheme.TextPrimary,fontSize=13.sp,fontWeight=FontWeight.Bold)}
+    Column(Modifier.weight(1f)){Text(throneGameName(m.game).uppercase(),color=LobbyPalette.Muted,fontSize=9.sp,fontWeight=FontWeight.Black);Text(throneMissionText(m),color=LobbyPalette.Ink,fontSize=13.sp,fontWeight=FontWeight.Bold)}
     EventTag("+${m.reward} XP")
    }
-   LinearProgressIndicator(progress={(m.progress.toFloat()/m.target.coerceAtLeast(1)).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(7.dp).clip(CircleShape),color=SonHarfTheme.Primary,trackColor=SonHarfTheme.SurfaceElevated)
-   Text("${m.progress}/${m.target}"+if(m.awarded)sh(" · ÖDÜL KAZANILDI"," · REWARD EARNED")else "",color=SonHarfTheme.TextSecondary,fontSize=10.sp,fontWeight=FontWeight.Bold)
+   LinearProgressIndicator(progress={(m.progress.toFloat()/m.target.coerceAtLeast(1)).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(7.dp).clip(CircleShape),color=SonHarfTheme.Primary,trackColor=LobbyPalette.Soft)
+   Text("${m.progress}/${m.target}"+if(m.awarded)sh(" · ÖDÜL KAZANILDI"," · REWARD EARNED")else "",color=LobbyPalette.Muted,fontSize=10.sp,fontWeight=FontWeight.Bold)
   }} }
   item { GameWeeklyPodium(week?.rows.orEmpty().take(3)) }
-  items(week?.rows.orEmpty().drop(3),key={it.userId}){r->Surface(shape=RoundedCornerShape(14.dp),color=SonHarfTheme.Surface){Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+  items(week?.rows.orEmpty().drop(3),key={it.userId}){r->Surface(shape=RoundedCornerShape(14.dp),color=LobbyPalette.Paper){Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
    Text("${r.rank}",Modifier.width(24.dp),color=SonHarfTheme.PremiumGold,fontWeight=FontWeight.Black)
    ProfilePhotoAvatarWithGender(r.avatarPath,r.gender,r.name,36.dp,visible=r.avatarVisibility!="hidden",userId=r.userId)
-   Text(r.name,Modifier.weight(1f),color=SonHarfTheme.TextPrimary,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+   Text(r.name,Modifier.weight(1f),color=LobbyPalette.Ink,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
    Text("${r.xp} XP",color=SonHarfTheme.Primary,fontSize=12.sp,fontWeight=FontWeight.Black)
   }} }
-  item { Text(sh("Maç 35 XP · Galibiyet +85 XP · Görevler 100/150/200 XP. Sıfırlama: pazartesi 00:00.","Official match: 35 XP; win: +85 XP. Workshop score converts to XP by duration. Tournament multipliers apply only to tournament stages. Mission rewards are automatic. Practice does not award weekly XP."),color=SonHarfTheme.TextSecondary,fontSize=11.sp) }
+  item { Text(sh("Maç 35 XP · Galibiyet +85 XP · Görevler 100/150/200 XP. Sıfırlama: pazartesi 00:00.","Official match: 35 XP; win: +85 XP. Workshop score converts to XP by duration. Tournament multipliers apply only to tournament stages. Mission rewards are automatic. Practice does not award weekly XP."),color=LobbyPalette.Muted,fontSize=11.sp) }
   item { OutlinedButton(onClick=onLegacy,modifier=Modifier.fillMaxWidth()){Text(sh("Ligler · Kupa · Rakipler","Leagues · Cup · Rivals"))} }
-  if(week==null)item { if(error)Text(sh("Taht yüklenemedi. Bağlantı tekrar deneniyor.","Unable to load the throne. Reconnecting."),color=SonHarfTheme.TextSecondary)else CircularProgressIndicator(color=SonHarfTheme.Primary) }
+  if(week==null)item { if(error)Text(sh("Taht yüklenemedi. Bağlantı tekrar deneniyor.","Unable to load the throne. Reconnecting."),color=LobbyPalette.Muted)else CircularProgressIndicator(color=SonHarfTheme.Primary) }
  }
 }
 

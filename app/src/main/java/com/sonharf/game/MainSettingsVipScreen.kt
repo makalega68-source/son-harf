@@ -185,7 +185,7 @@ internal fun MainSettingsScreen(
             MainSettingsGroup(sh("HESAP", "ACCOUNT")) {
                 val email = runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.currentUserOrNull()?.email }.getOrNull().orEmpty()
                 if (email.isNotBlank()) {
-                    Text(email, color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(email, color = LobbyPalette.Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(3.dp))
                 }
                 MainSettingsLink(Icons.Rounded.ManageAccounts, sh("Hesap ve gizlilik", "Account & privacy"), sh("Engellenenler ve hesap silme", "Blocked users and account deletion"), onAccount)
@@ -361,7 +361,7 @@ internal fun MainVipScreen(
                     onClick = { showPurchase = true },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(17.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue, contentColor = androidx.compose.ui.graphics.Color.White),
                 ) {
                     Text(sh("VIP PLANLARINI GÖR", "VIEW VIP PLANS"), fontWeight = FontWeight.Black)
                     Spacer(Modifier.width(7.dp))
@@ -393,8 +393,8 @@ internal fun MainVipScreen(
 @Composable
 private fun MainSettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, color = Hf.Gold, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp, modifier = Modifier.padding(start = 4.dp))
-        Surface(shape = Hf.CardShape, color = Hf.Ivory, contentColor = Hf.Text, border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .6f))) {
+        Text(title, color = LobbyPalette.Gold, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp, modifier = Modifier.padding(start = 4.dp))
+        Surface(shape = Hf.CardShape, color = LobbyPalette.Paper, contentColor = LobbyPalette.Ink, border = BorderStroke(1.dp, LobbyPalette.Line)) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 content()
             }
@@ -402,7 +402,7 @@ private fun MainSettingsGroup(title: String, content: @Composable ColumnScope.()
     }
 }
 
-private val SettingsMutedInk = Color(0xFF4A504D)
+private val SettingsMutedInk: Color get() = LobbyPalette.Muted
 
 @Composable
 private fun MainToggleSetting(
@@ -414,10 +414,10 @@ private fun MainToggleSetting(
     onChange: (Boolean) -> Unit,
 ) {
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = Hf.Text, modifier = Modifier.size(30.dp))
+        Icon(icon, null, tint = LobbyPalette.Ink, modifier = Modifier.size(30.dp))
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = LobbyPalette.Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Text(subtitle, color = SettingsMutedInk, fontSize = 12.sp)
         }
         Switch(
@@ -425,12 +425,12 @@ private fun MainToggleSetting(
             onCheckedChange = onChange,
             enabled = enabled,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Hf.Text,
-                checkedTrackColor = Hf.Green,
-                checkedBorderColor = Hf.Green,
-                uncheckedThumbColor = Hf.Text,
-                uncheckedTrackColor = Color(0xFF4F5553),
-                uncheckedBorderColor = Color(0xFF4F5553),
+                checkedThumbColor = Color.White,
+                checkedTrackColor = LobbyPalette.Green,
+                checkedBorderColor = LobbyPalette.Green,
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = LobbyPalette.Ground,
+                uncheckedBorderColor = LobbyPalette.Line,
             ),
         )
     }
@@ -444,10 +444,10 @@ private fun MainSettingsLink(
     onClick: () -> Unit,
 ) {
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = Hf.Text, modifier = Modifier.size(30.dp))
+        Icon(icon, null, tint = LobbyPalette.Ink, modifier = Modifier.size(30.dp))
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = LobbyPalette.Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Text(subtitle, color = SettingsMutedInk, fontSize = 12.sp)
         }
         Icon(Icons.Rounded.ChevronRight, null, tint = Hf.GoldDeep, modifier = Modifier.size(28.dp))

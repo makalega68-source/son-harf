@@ -506,7 +506,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(AtelierUi.WoodTop, AtelierUi.WoodBottom))),
+            .background(Brush.verticalGradient(if (mode == AtelierMode.LOBBY) listOf(LobbyPalette.Ground, LobbyPalette.Ground) else listOf(AtelierUi.WoodTop, AtelierUi.WoodBottom))),
     ) {
         Column(
             Modifier

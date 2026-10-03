@@ -128,13 +128,11 @@ internal fun MainSocialScreen(
     ) {
         item {
             MainScreenHeader(
-                title = sh("OYUN ARKADAŞLARIN", "YOUR GAME FRIENDS"),
-                subtitle = sh("Arkadaşların, oyun davetlerin ve ezeli rakiplerin", "Friends, game invitations and rivals"),
+                title = sh("Arkadaşlar", "Friends"),
+                subtitle = sh("Birlikte oyna, rekabeti paylaş", "Play together, share the rivalry"),
             )
         }
 
-        item(key = "friend_code") { PlayerInviteCard(backend) }
-        item(key = "share_invite") { InviteFriendsCard(playerName = null) }
         item(key = "social_refresh") {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(sh("Bir davet, yeni bir rekabet", "One invitation, a new rivalry"), color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
@@ -159,11 +157,11 @@ internal fun MainSocialScreen(
                     onClick = onSiege,
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(15.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue, contentColor = Color.White),
                 ) {
                     Icon(Icons.Rounded.Shield, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 12.sp)
                 }
                 OutlinedButton(
                     // Search, "EKLE" and incoming requests all live on the Requests tab.
@@ -174,40 +172,18 @@ internal fun MainSocialScreen(
                 ) {
                     Icon(Icons.Rounded.GroupAdd, null, tint = MainUi.Gold, modifier = Modifier.size(17.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(sh("ARKADAŞ DAVETİ", "FRIEND INVITE"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                    Text(sh("ARKADAŞ DAVETİ", "FRIEND INVITE"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 11.sp)
                 }
             }
         }
 
         item {
-            ScrollableTabRow(
-                selectedTabIndex = tab,
-                edgePadding = 0.dp,
-                containerColor = Color.Transparent,
-                divider = {},
-            ) {
-                listOf(
-                    sh("ARKADAŞLAR", "FRIENDS"),
-                    sh("İSTEKLER", "REQUESTS"),
-                    sh("RAKİPLER", "RIVALS"),
-                ).forEachIndexed { index, label ->
-                    Tab(
-                        selected = tab == index,
-                        onClick = { tab = index },
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(label, color = if (tab == index) MainUi.Blue else MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                                if (index == 1 && incomingCount > 0) {
-                                    Spacer(Modifier.width(5.dp))
-                                    Surface(shape = CircleShape, color = MainUi.Red) {
-                                        Text(incomingCount.toString(), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = MainUi.Text, fontSize = 7.sp, fontWeight = FontWeight.Black)
-                                    }
-                                }
-                            }
-                        },
-                    )
-                }
-            }
+            LobbyTabs(
+                labels = listOf(sh("Arkadaşlar", "Friends"),
+                    sh("İstekler", "Requests") + if (incomingCount > 0) " ($incomingCount)" else "",
+                    sh("Rakipler", "Rivals")),
+                selected = tab, onSelect = { tab = it },
+            )
         }
 
         when (tab) {
@@ -278,6 +254,8 @@ internal fun MainSocialScreen(
             }
 
             1 -> {
+                item(key = "friend_code") { PlayerInviteCard(backend) }
+                item(key = "share_invite") { InviteFriendsCard(playerName = null) }
                 item {
                     Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -310,7 +288,7 @@ internal fun MainSocialScreen(
                                 enabled = query.trim().length >= 2 && busyKey == null,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(13.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue, contentColor = Color.White),
                             ) { Text(if (busyKey == "search") "…" else sh("ARA", "SEARCH"), fontWeight = FontWeight.Black) }
                         }
                     }
@@ -325,7 +303,7 @@ internal fun MainSocialScreen(
                             Spacer(Modifier.width(9.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(player.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("${ratingLeagueProgress(player.rating).leagueName} • ${player.rating}", color = MainUi.Muted, fontSize = 9.sp)
+                                Text("${ratingLeagueProgress(player.rating).leagueName} • ${player.rating}", color = MainUi.Muted, fontSize = 11.sp)
                             }
                             Button(
                                 onClick = {
@@ -416,7 +394,7 @@ internal fun MainSocialScreen(
                                 Spacer(Modifier.width(9.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(sender?.displayName ?: sh("Oyun daveti", "Game invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                                    Text(sh("Kelime Tahtı • ", "Kelime Tahtı • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
+                                    Text(sh("Kelime Tahtı • ", "Kelime Tahtı • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 11.sp)
                                 }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -466,7 +444,7 @@ internal fun MainSocialScreen(
                                 Spacer(Modifier.width(9.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(sender?.displayName ?: sh("Son Harf daveti", "Last Letter invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                                    Text(sh("Son Harf • ", "Last Letter • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
+                                    Text(sh("Son Harf • ", "Last Letter • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 11.sp)
                                 }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -494,7 +472,7 @@ internal fun MainSocialScreen(
                                         }
                                     },
                                     modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue, contentColor = Color.White),
                                 ) { Text(if (busyKey == "legacy:${invite.id}") "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
                             }
                         }
@@ -521,7 +499,7 @@ internal fun MainSocialScreen(
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(rival.displayName, color = MainUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                                        Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L", color = MainUi.Muted, fontSize = 9.sp)
+                                        Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L", color = MainUi.Muted, fontSize = 11.sp)
                                     }
                                     Text("${rival.myPoints}:${rival.theirPoints}", color = MainUi.Text, fontSize = 22.sp, fontWeight = FontWeight.Black)
                                 }
@@ -669,7 +647,7 @@ private fun MainFriendCard(
             Button(
                 onClick = onInvite,
                 enabled = !busy && !playing,
-                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Green),
+                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Green, contentColor = androidx.compose.ui.graphics.Color.White),
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp),
             ) { Text(if (busy) "…" else if (playing) sh("OYUNDA", "PLAYING") else sh("DAVET ET", "INVITE"), fontSize = 8.sp, fontWeight = FontWeight.Black) }

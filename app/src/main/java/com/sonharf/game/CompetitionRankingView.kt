@@ -80,14 +80,14 @@ internal fun CompetitionRankingView(onCup: () -> Unit, onRivals: () -> Unit) {
         // Gold and ivory podium art; its banner already reads "Haftalık Sıralama".
         item { RankingPodium(weekly.take(3), loading) }
         item {
-            HfSegmentedTabs(
+            LobbyTabs(
                 labels = listOf(sh("Haftalık", "Weekly"), sh("Genel", "Overall")),
                 selected = period,
                 onSelect = { period = it },
             )
         }
         item {
-            HfCard(modifier = Modifier.fillMaxWidth()) {
+            LobbyCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     when {
                         loading || (period == 1 && overall == null && backend != null) -> Box(
@@ -97,7 +97,7 @@ internal fun CompetitionRankingView(onCup: () -> Unit, onRivals: () -> Unit) {
                         rows.isEmpty() -> Text(
                             sh("Sıralama henüz oluşmadı.", "No ranking yet."),
                             Modifier.fillMaxWidth().padding(20.dp),
-                            color = Hf.TextMuted,
+                            color = LobbyPalette.Muted,
                             textAlign = TextAlign.Center,
                         )
                         else -> rows.take(10).forEachIndexed { index, row ->
@@ -110,7 +110,7 @@ internal fun CompetitionRankingView(onCup: () -> Unit, onRivals: () -> Unit) {
         }
         if (profile != null) {
             item {
-                HfCard(modifier = Modifier.fillMaxWidth(), borderColor = Hf.Gold) {
+                LobbyCard(modifier = Modifier.fillMaxWidth(), borderColor = Hf.Gold) {
                     RankingListRow(
                         rank = if (myIndex >= 0) myIndex + 1 else null,
                         name = sh("Sen", "You"),
@@ -134,23 +134,23 @@ internal fun CompetitionRankingView(onCup: () -> Unit, onRivals: () -> Unit) {
 @Composable
 private fun RankingLeagueCard(profile: ProfileDto?) {
     val league = ratingLeagueProgress(profile?.rating ?: 1000)
-    HfCard(modifier = Modifier.fillMaxWidth()) {
+    LobbyCard(modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             RankingLeagueGem(52.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1.2f)) {
-                Text(rankingLeagueName(league.leagueName) + sh(" Lig", " League"), color = Hf.Text, fontSize = 24.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                Text(sh("En iyiler burada yarışıyor", "The best compete here"), color = Hf.TextMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(rankingLeagueName(league.leagueName) + sh(" Lig", " League"), color = LobbyPalette.Ink, fontSize = 24.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text(sh("En iyiler burada yarışıyor", "The best compete here"), color = LobbyPalette.Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Box(Modifier.width(1.dp).fillMaxHeight().padding(vertical = 4.dp).background(Hf.Gold.copy(alpha = .5f)))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh("Lig ilerlemesi", "League progress"), color = Hf.Text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(sh("Lig ilerlemesi", "League progress"), color = LobbyPalette.Ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     HfProgressBar(league.progress, Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
-                    Text("%${(league.progress * 100).toInt()}", color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("%${(league.progress * 100).toInt()}", color = LobbyPalette.Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -163,7 +163,7 @@ private fun RankingLeagueGem(size: Dp) {
         val c = this.size.width / 2f
         fun diamond(r: Float) = Path().apply { moveTo(c, c - r); lineTo(c + r, c); lineTo(c, c + r); lineTo(c - r, c); close() }
         drawPath(diamond(c), Brush.linearGradient(listOf(Hf.GoldLight, Hf.Gold, Hf.GoldDeep)))
-        drawPath(diamond(c * .62f), Hf.Ground.copy(alpha = .35f))
+        drawPath(diamond(c * .62f), LobbyPalette.Ground.copy(alpha = .35f))
         drawPath(diamond(c * .62f), Hf.GoldLight, style = Stroke(width = 1.5.dp.toPx()))
         drawPath(diamond(c * .30f), Hf.Gold)
     }
@@ -186,11 +186,11 @@ private fun RankingListRow(rank: Int?, name: String, score: Int?, avatarPath: St
         1 -> Hf.Gold
         2 -> RankSilver
         3 -> RankBronze
-        else -> if (mine) Hf.Gold else Hf.Surface
+        else -> if (mine) Hf.Gold else LobbyPalette.Paper
     }
     Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(34.dp).background(chip, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-            Text(rank?.toString() ?: "—", color = if (chip == Hf.Surface) Hf.Text else Hf.Ink, fontSize = 15.sp, fontWeight = FontWeight.Black)
+            Text(rank?.toString() ?: "—", color = if (chip == LobbyPalette.Paper) LobbyPalette.Ink else Hf.Ink, fontSize = 15.sp, fontWeight = FontWeight.Black)
         }
         Spacer(Modifier.width(12.dp))
         ProfilePhotoAvatarWithGender(
@@ -208,7 +208,7 @@ private fun RankingListRow(rank: Int?, name: String, score: Int?, avatarPath: St
         Text(
             name,
             Modifier.weight(1f),
-            color = if (mine) Hf.GoldDeep else Hf.Text,
+            color = if (mine) Hf.GoldDeep else LobbyPalette.Ink,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,

@@ -189,7 +189,7 @@ internal fun WordSiegeEntryScreen(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().background(LobbyPalette.Ground),
         contentAlignment = Alignment.TopCenter,
     ) {
         LazyColumn(
@@ -198,46 +198,33 @@ internal fun WordSiegeEntryScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item(key = "header") {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onExit) {
-                        Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfTheme.TextPrimary)
-                    }
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            sh("KELİME KUŞATMASI", "WORD SIEGE"),
-                            color = SonHarfTheme.TextPrimary,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                        )
-                        Text(
-                            sh("Oyunlarını yönet veya yeni bir kuşatma başlat.", "Manage your games or start a new siege."),
-                            color = SonHarfTheme.TextSecondary,
-                            fontSize = 11.sp,
-                        )
-                    }
-                }
+                MainScreenHeader(
+                    title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                    subtitle = sh("Oyununa devam et veya yeni bir maç başlat", "Continue a game or start a new match"),
+                    onBack = onExit,
+                )
             }
 
             item(key = "my_games") {
                 Surface(
                     shape = SiegeEntryCardShape,
-                    color = SonHarfTheme.Surface,
-                    border = BorderStroke(1.dp, SonHarfTheme.Border),
+                    color = LobbyPalette.Paper,
+                    border = BorderStroke(1.dp, LobbyPalette.Line),
                     shadowElevation = 2.dp,
                 ) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.SportsEsports, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(22.dp))
+                            Icon(Icons.Rounded.SportsEsports, null, tint = LobbyPalette.Accent, modifier = Modifier.size(22.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 sh("OYUNLARIM", "MY GAMES"),
                                 modifier = Modifier.weight(1f),
-                                color = SonHarfTheme.TextPrimary,
+                                color = LobbyPalette.Ink,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = .4.sp,
                             )
-                            if (libraryLoading) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp, color = SonHarfTheme.Primary)
+                            if (libraryLoading) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp, color = LobbyPalette.Accent)
                         }
 
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -261,7 +248,7 @@ internal fun WordSiegeEntryScreen(
                             libraryLoading && games.isEmpty() -> {
                                 Text(
                                     sh("Oyunların yükleniyor…", "Loading your games…"),
-                                    color = SonHarfTheme.TextSecondary,
+                                    color = LobbyPalette.Muted,
                                     fontSize = 10.sp,
                                     modifier = Modifier.padding(vertical = 8.dp),
                                 )
@@ -271,7 +258,7 @@ internal fun WordSiegeEntryScreen(
                                     Text(
                                         sh("Oyun listesi yenilenemedi.", "Game list could not refresh."),
                                         modifier = Modifier.weight(1f),
-                                        color = SonHarfTheme.TextSecondary,
+                                        color = LobbyPalette.Muted,
                                         fontSize = 10.sp,
                                     )
                                     TextButton(onClick = { retry++ }) {
@@ -288,7 +275,7 @@ internal fun WordSiegeEntryScreen(
                                     } else {
                                         sh("Henüz biten oyunun yok.", "You have no finished games yet.")
                                     },
-                                    color = SonHarfTheme.TextSecondary,
+                                    color = LobbyPalette.Muted,
                                     fontSize = 10.sp,
                                     modifier = Modifier.padding(vertical = 8.dp),
                                 )
@@ -321,14 +308,14 @@ internal fun WordSiegeEntryScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
                         sh("YENİ OYUN", "NEW GAME"),
-                        color = SonHarfTheme.TextPrimary,
+                        color = LobbyPalette.Ink,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = .5.sp,
                     )
                     Text(
                         sh("Hamle süresini veya oyun tipini seç.", "Choose a turn timer or game type."),
-                        color = SonHarfTheme.TextSecondary,
+                        color = LobbyPalette.Muted,
                         fontSize = 10.sp,
                     )
                 }
@@ -338,10 +325,10 @@ internal fun WordSiegeEntryScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     SiegeModeCard(
                         modifier = Modifier.weight(1f),
-                        icon = { Icon(Icons.Rounded.Schedule, null, tint = SonHarfTheme.Primary) },
+                        icon = { Icon(Icons.Rounded.Schedule, null, tint = LobbyPalette.Accent) },
                         title = sh("12 SAAT", "12 HOURS"),
                         subtitle = sh("Her hamle için 12 saat", "12 hours for each turn"),
-                        accent = SonHarfTheme.Primary,
+                        accent = LobbyPalette.Accent,
                         onClick = {
                             selectedClassicHours = 12
                             WordSiegeLaunchConfig.classicTurnHours = 12
@@ -350,10 +337,10 @@ internal fun WordSiegeEntryScreen(
                     )
                     SiegeModeCard(
                         modifier = Modifier.weight(1f),
-                        icon = { Icon(Icons.Rounded.History, null, tint = SonHarfTheme.SoftBlue) },
+                        icon = { Icon(Icons.Rounded.History, null, tint = LobbyPalette.Gold) },
                         title = sh("24 SAAT", "24 HOURS"),
                         subtitle = sh("Her hamle için 24 saat", "24 hours for each turn"),
-                        accent = SonHarfTheme.SoftBlue,
+                        accent = LobbyPalette.Gold,
                         onClick = {
                             selectedClassicHours = 24
                             WordSiegeLaunchConfig.classicTurnHours = 24
@@ -394,10 +381,10 @@ internal fun WordSiegeEntryScreen(
                     )
                     SiegeModeCard(
                         modifier = Modifier.weight(1f),
-                        icon = { Icon(Icons.Rounded.GridView, null, tint = SonHarfTheme.Lavender) },
+                        icon = { Icon(Icons.Rounded.GridView, null, tint = LobbyPalette.Accent) },
                         title = sh("AI İLE OYNA", "PLAY AI"),
                         subtitle = sh("Anında antrenman maçı", "Instant practice match"),
-                        accent = SonHarfTheme.Lavender,
+                        accent = LobbyPalette.Accent,
                         onClick = { mode = WordSiegeEntryMode.AI },
                     )
                 }
@@ -406,18 +393,18 @@ internal fun WordSiegeEntryScreen(
             item(key = "pro_note") {
                 Surface(
                     shape = SiegeEntryControlShape,
-                    color = SonHarfTheme.SurfaceElevated,
-                    border = BorderStroke(1.dp, SonHarfTheme.Lavender.copy(alpha = .25f)),
+                    color = LobbyPalette.Soft,
+                    border = BorderStroke(1.dp, LobbyPalette.Accent.copy(alpha = .25f)),
                 ) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Lock, null, tint = SonHarfTheme.Lavender, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Rounded.Lock, null, tint = LobbyPalette.Accent, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
                             sh(
                                 "PRO: Hamle Önizleme ve Kalan Harfler maç içinde konfor aracı olarak açılır.",
                                 "PRO: Move Preview and Letters Left open in the match as comfort tools.",
                             ),
-                            color = SonHarfTheme.TextSecondary,
+                            color = LobbyPalette.Muted,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             lineHeight = 12.sp,
@@ -443,8 +430,8 @@ private fun SiegeLibraryTabButton(
         shape = SiegeEntryControlShape,
         colors = ButtonDefaults.buttonColors(
             // Solid brand green when selected so the white label always reads.
-            containerColor = if (selected) Color(0xFF2E8B45) else SonHarfTheme.SurfaceSecondary,
-            contentColor = if (selected) Color.White else SonHarfTheme.TextPrimary,
+            containerColor = if (selected) Color(0xFF2E8B45) else LobbyPalette.Paper,
+            contentColor = if (selected) Color.White else LobbyPalette.Ink,
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
         contentPadding = PaddingValues(horizontal = 10.dp),
@@ -453,12 +440,12 @@ private fun SiegeLibraryTabButton(
         Spacer(Modifier.weight(1f))
         Surface(
             shape = RoundedCornerShape(99.dp),
-            color = if (selected) Color.White.copy(alpha = .16f) else SonHarfTheme.Surface,
+            color = if (selected) Color.White.copy(alpha = .16f) else LobbyPalette.Paper,
         ) {
             Text(
                 "$count",
                 Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
-                color = if (selected) Color.White else SonHarfTheme.TextSecondary,
+                color = if (selected) Color.White else LobbyPalette.Muted,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Black,
             )
@@ -485,20 +472,20 @@ private fun SiegeGameLibraryRow(game: WordSiegeGameDto, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = SiegeEntryControlShape,
-        color = SonHarfTheme.SurfaceSecondary.copy(alpha = .72f),
-        border = BorderStroke(1.dp, SonHarfTheme.Border.copy(alpha = .72f)),
+        color = LobbyPalette.Paper.copy(alpha = .72f),
+        border = BorderStroke(1.dp, LobbyPalette.Line.copy(alpha = .72f)),
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(
                 modifier = Modifier.size(34.dp),
                 shape = RoundedCornerShape(10.dp),
-                color = if (isSeries) SonHarfTheme.ActionOrange.copy(alpha = .12f) else SonHarfTheme.Primary.copy(alpha = .10f),
+                color = if (isSeries) SonHarfTheme.ActionOrange.copy(alpha = .12f) else LobbyPalette.Accent.copy(alpha = .10f),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         if (isSeries) Icons.Rounded.Bolt else Icons.Rounded.GridView,
                         null,
-                        tint = if (isSeries) SonHarfTheme.ActionOrange else SonHarfTheme.Primary,
+                        tint = if (isSeries) SonHarfTheme.ActionOrange else LobbyPalette.Accent,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -507,19 +494,19 @@ private fun SiegeGameLibraryRow(game: WordSiegeGameDto, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(
                     if (isSeries) sh("Hızlı Düello", "Quick Duel") else sh("Klasik Oyun", "Classic Game"),
-                    color = SonHarfTheme.TextPrimary,
+                    color = LobbyPalette.Ink,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
                 )
                 Text(
                     "$modeLabel • $statusLabel",
-                    color = SonHarfTheme.TextSecondary,
+                    color = LobbyPalette.Muted,
                     fontSize = 9.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(18.dp))
+            Icon(Icons.Rounded.ChevronRight, null, tint = LobbyPalette.Muted, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -539,8 +526,8 @@ private fun SiegeModeCard(
         enabled = enabled,
         modifier = modifier.heightIn(min = 142.dp),
         shape = SiegeEntryCardShape,
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(1.dp, if (enabled) SonHarfTheme.Border else SonHarfTheme.Border.copy(alpha = .45f)),
+        color = LobbyPalette.Paper,
+        border = BorderStroke(1.dp, if (enabled) LobbyPalette.Line else LobbyPalette.Line.copy(alpha = .45f)),
         shadowElevation = if (enabled) 2.dp else 0.dp,
     ) {
         Column(Modifier.fillMaxWidth()) {
@@ -558,14 +545,14 @@ private fun SiegeModeCard(
                 }
                 Text(
                     title,
-                    color = SonHarfTheme.TextPrimary.copy(alpha = if (enabled) 1f else .55f),
+                    color = LobbyPalette.Ink.copy(alpha = if (enabled) 1f else .55f),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
                 )
                 Text(
                     subtitle,
-                    color = SonHarfTheme.TextSecondary.copy(alpha = if (enabled) 1f else .55f),
+                    color = LobbyPalette.Muted.copy(alpha = if (enabled) 1f else .55f),
                     fontSize = 9.sp,
                     lineHeight = 12.sp,
                     minLines = 2,

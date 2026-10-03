@@ -53,21 +53,21 @@ fun EconomyShopScreen(
         val b = OnlineGameBackend()
         balance = b.currentUserId()?.let { id -> runCatching { b.getProfile(id).diamonds }.getOrNull() }
     }
-    Column(Modifier.fillMaxSize().background(SonHarfBg)) {
+    Column(Modifier.fillMaxSize().background(LobbyPalette.Ground)) {
         StoreTitleBar(balance = balance, onBack = onBack)
-        HorizontalDivider(color = Hf.Gold.copy(alpha = .18f))
+        HorizontalDivider(color = LobbyPalette.Line.copy(alpha = .6f))
         // Keep every category visible; related products share one group instead of a hidden strip.
         val shown = if (tab in setOf(0, 2, 3, 4, 5, 6, 7, 8)) tab else 0
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             TextButton(onClick = onCollection) {
                 Icon(Icons.Rounded.Checkroom, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(sh("Koleksiyonum", "My collection"), color = Hf.Text, fontSize = 12.sp)
+                Text(sh("Koleksiyonum", "My collection"), color = LobbyPalette.Ink, fontSize = 12.sp)
             }
             TextButton(onClick = { tab = 8 }) {
                 Icon(Icons.Rounded.Redeem, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(sh("Ödüller", "Rewards"), color = Hf.Text, fontSize = 12.sp)
+                Text(sh("Ödüller", "Rewards"), color = LobbyPalette.Ink, fontSize = 12.sp)
             }
         }
         val selectedGroup = when (shown) { 4 -> 5; 6 -> 2; else -> shown }
@@ -76,10 +76,10 @@ fun EconomyShopScreen(
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             categories.forEach { (index, label) ->
                 Surface(onClick = { tab = index; kindFilter = null }, modifier = Modifier.weight(1f).heightIn(min = 44.dp),
-                    shape = RoundedCornerShape(12.dp), color = if (selectedGroup == index) Hf.GreenPressed else Hf.Surface,
-                    border = BorderStroke(1.dp, if (selectedGroup == index) Hf.GreenLight else Hf.Border)) {
+                    shape = RoundedCornerShape(12.dp), color = if (selectedGroup == index) LobbyPalette.Green else LobbyPalette.Paper,
+                    border = BorderStroke(1.dp, if (selectedGroup == index) LobbyPalette.Green else LobbyPalette.Line)) {
                     Box(Modifier.padding(horizontal = 4.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
-                        Text(label, color = if (selectedGroup == index) Hf.OnAccent else Hf.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text(label, color = if (selectedGroup == index) Hf.OnAccent else LobbyPalette.Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                     }
                 }
             }
@@ -89,8 +89,8 @@ fun EconomyShopScreen(
                 else listOf(5 to sh("Aksesuar & Zafer", "Hats & Victory"), 4 to sh("Maskotlar", "Mascots"))
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 choices.forEach { (index, label) -> FilterChip(selected = shown == index, onClick = { tab = index },
-                    colors = FilterChipDefaults.filterChipColors(containerColor = Hf.Surface, labelColor = Hf.TextMuted,
-                        selectedContainerColor = SonHarfTheme.PrimarySoft, selectedLabelColor = Hf.Text),
+                    colors = FilterChipDefaults.filterChipColors(containerColor = LobbyPalette.Paper, labelColor = LobbyPalette.Muted,
+                        selectedContainerColor = SonHarfTheme.PrimarySoft, selectedLabelColor = LobbyPalette.Ink),
                     label = { Text(label, fontSize = 12.sp) }) }
             }
         }
@@ -131,19 +131,15 @@ private fun StoreTitleBar(balance: Int?, onBack: (() -> Unit)?) {
         } else {
             Spacer(Modifier.width(8.dp))
         }
-        Text(
-            sh("Mağaza", "Store"),
-            modifier = Modifier.weight(1f),
-            color = Hf.Text,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Black,
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-        )
-        HfPill(modifier = Modifier.padding(end = 6.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(sh("Mağaza", "Store"), color = LobbyPalette.Ink, fontSize = 27.sp,
+                fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(sh("Oyununa renk kat", "Make it yours"), color = LobbyPalette.Muted, fontSize = 12.sp)
+        }
+        HfPill(modifier = Modifier.padding(end = 6.dp), color = LobbyPalette.Paper, borderColor = LobbyPalette.Line) {
             HfCoin(20.dp)
             Spacer(Modifier.width(8.dp))
-            Text(balance?.let { storeGrouped(it) } ?: "—", color = Hf.Text, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(balance?.let { storeGrouped(it) } ?: "—", color = LobbyPalette.Ink, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
 }
@@ -274,7 +270,7 @@ private fun EconomyCatalogScreen(
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (section == 0) {
             item { StoreProBanner(profile?.isVip == true) { onSection(3) } }
@@ -288,15 +284,15 @@ private fun EconomyCatalogScreen(
             }
         }
 
-        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Gold, trackColor = Hf.Surface) }
+        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Gold, trackColor = LobbyPalette.Paper) }
 
         if (filtered.isEmpty() && !loading && section in setOf(2, 5, 6)) {
             item {
-                HfCard(modifier = Modifier.fillMaxWidth()) {
+                LobbyCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         sh("Bu kategoride şu anda satışta ürün yok.", "Nothing in this category is on sale right now."),
                         modifier = Modifier.fillMaxWidth().padding(18.dp),
-                        color = Hf.TextMuted,
+                        color = LobbyPalette.Muted,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
                     )
@@ -396,7 +392,7 @@ private fun EconomyCatalogScreen(
             bundles.filter { it.section == "starter" || it.section == "limited" }.forEach { bundle ->
                 item { StoreBundleCard(bundle, owned, busy != null || loading) { selectedBundle = bundle } }
             }
-            if (storefront?.rewardedEnabled == true) item { TextButton(onClick = onRewards) { Text(sh("İsteğe bağlı reklam ödülleri", "Optional ad rewards"), color = Hf.Gold) } }
+            if (storefront?.rewardedEnabled == true) item { TextButton(onClick = onRewards) { Text(sh("İsteğe bağlı reklam ödülleri", "Optional ad rewards"), color = LobbyPalette.Gold) } }
         }
         if (section == 3) {
             val proActive = profile?.isVip == true
@@ -404,21 +400,21 @@ private fun EconomyCatalogScreen(
             item { StoreProBenefits() }
             if (proActive) item {
                 TextButton(onClick = onPro, modifier = Modifier.fillMaxWidth()) {
-                    Text(sh("PRO ARAÇLARINI AÇ", "OPEN PRO TOOLS"), fontWeight = FontWeight.Black, color = Hf.Gold)
+                    Text(sh("PRO ARAÇLARINI AÇ", "OPEN PRO TOOLS"), fontWeight = FontWeight.Black, color = LobbyPalette.Gold)
                 }
             }
         }
 
         if (!notice.isNullOrBlank()) item {
-            HfCard(modifier = Modifier.fillMaxWidth(), color = Hf.Surface) {
-                Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = Hf.Text, fontSize = 13.sp, textAlign = TextAlign.Center)
+            LobbyCard(modifier = Modifier.fillMaxWidth(), color = LobbyPalette.Paper) {
+                Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = LobbyPalette.Ink, fontSize = 13.sp, textAlign = TextAlign.Center)
             }
         }
         item { Spacer(Modifier.height(10.dp)) }
     }
 
     if (showVip) VipPurchaseDialog(onVerified = { scope.launch { reload() } }) { showVip = false }
-    if (showCoins) ModalBottomSheet(onDismissRequest = { showCoins = false }, containerColor = SonHarfSurface) {
+    if (showCoins) ModalBottomSheet(onDismissRequest = { showCoins = false }, containerColor = LobbyPalette.Paper) {
         GooglePlayProductsCard { scope.launch { reload() } }
         Spacer(Modifier.navigationBarsPadding().height(12.dp))
     }
@@ -462,7 +458,7 @@ private fun StoreProBanner(active: Boolean, onClick: () -> Unit) {
     ) {
         Row(
             Modifier
-                .background(Brush.horizontalGradient(listOf(Hf.Navy, Color(0xFF34496A), Color(0xFF3E5577))))
+                .background(Brush.horizontalGradient(listOf(Color(0xFF244D35), Color(0xFF296B47), Color(0xFF367C54))))
                 .padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -507,7 +503,7 @@ internal fun VerifiedStoreProductCard(
     val tier = StoreTier.from(item.economyTier, item.rarity)
     val goal = StoreGoalProgress.of(item.diamondPrice, balance, item.requiredWins, wins)
     val tierColor = when (tier) {
-        StoreTier.STARTER, StoreTier.COMMON -> Hf.TextMuted
+        StoreTier.STARTER, StoreTier.COMMON -> LobbyPalette.Muted
         StoreTier.RARE -> Color(0xFF3E9F4D)
         StoreTier.EPIC -> Color(0xFF8A4FC7)
         StoreTier.LEGENDARY, StoreTier.PRESTIGE -> Hf.GoldDeep
@@ -518,7 +514,7 @@ internal fun VerifiedStoreProductCard(
         enabled = !busy && !lockedByPro,
         modifier = modifier,
         shape = Hf.CardShape,
-        color = Hf.Ivory,
+        color = LobbyPalette.Paper,
         // Legendary and prestige get a slightly stronger rim, nothing louder.
         border = BorderStroke(if (tier.rank >= StoreTier.LEGENDARY.rank) 2.5.dp else 1.5.dp, if (owned || equipped) Hf.Green else if (tier.rank >= StoreTier.RARE.rank) tierColor else Hf.Gold),
         shadowElevation = 3.dp,
@@ -533,7 +529,7 @@ internal fun VerifiedStoreProductCard(
                 Spacer(Modifier.height(2.dp))
                 Text(
                     name,
-                    color = Hf.Text,
+                    color = LobbyPalette.Ink,
                     fontSize = 13.sp,
                     lineHeight = 16.sp,
                     fontWeight = FontWeight.Black,
@@ -546,7 +542,7 @@ internal fun VerifiedStoreProductCard(
                     Spacer(Modifier.height(2.dp))
                     Text(
                         effect,
-                        color = Hf.TextMuted,
+                        color = LobbyPalette.Muted,
                         fontSize = 10.sp,
                         lineHeight = 13.sp,
                         textAlign = TextAlign.Center,
@@ -561,7 +557,7 @@ internal fun VerifiedStoreProductCard(
                     if (goal.winsNeeded != null) {
                         Text(
                             sh("${minOf(goal.winsHave, goal.winsNeeded)}/${goal.winsNeeded} galibiyet", "${minOf(goal.winsHave, goal.winsNeeded)}/${goal.winsNeeded} wins"),
-                            color = if (goal.requirementMet) Hf.Green else Hf.TextMuted,
+                            color = if (goal.requirementMet) Hf.Green else LobbyPalette.Muted,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -572,9 +568,9 @@ internal fun VerifiedStoreProductCard(
                             progress = { goal.coinFraction },
                             modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).height(4.dp),
                             color = tierColor.takeIf { tier.rank >= StoreTier.RARE.rank } ?: Hf.Gold,
-                            trackColor = Hf.Border,
+                            trackColor = LobbyPalette.Line,
                         )
-                        Text("%${goal.percent}", color = Hf.TextMuted, fontSize = 9.sp, maxLines = 1)
+                        Text("%${goal.percent}", color = LobbyPalette.Muted, fontSize = 9.sp, maxLines = 1)
                     }
                 }
                 if (owned || equipped) {
@@ -595,39 +591,39 @@ internal fun VerifiedStoreProductCard(
                             if (lockedByPro) {
                                 Icon(Icons.Rounded.WorkspacePremium, null, tint = Hf.GoldDeep, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("PRO", color = Hf.Text, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                                Text("PRO", color = LobbyPalette.Ink, fontSize = 15.sp, fontWeight = FontWeight.Black)
                             } else if (playPrice != null) {
                                 // A Google Play product: its store price, not Son Coin.
                                 Icon(Icons.Rounded.ShoppingCart, null, tint = Hf.GoldDeep, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(playPrice, color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                                Text(playPrice, color = LobbyPalette.Ink, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
                             } else {
                                 HfCoin(18.dp)
                                 Spacer(Modifier.width(6.dp))
-                                Text(storeGrouped(item.diamondPrice), color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                                Text(storeGrouped(item.diamondPrice), color = LobbyPalette.Ink, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
                             }
                         }
                     }
                 }
             }
             if (lockedByPro) {
-                Box(Modifier.matchParentSize().background(Hf.Ground.copy(alpha = .35f)), contentAlignment = Alignment.Center) {
+                Box(Modifier.matchParentSize().background(LobbyPalette.Ground.copy(alpha = .35f)), contentAlignment = Alignment.Center) {
                     Icon(painterResource(R.drawable.hf_ic_lock), null, tint = Hf.Gold, modifier = Modifier.size(34.dp))
                 }
             }
             IconButton(onClick = { previewOpen = true }, modifier = Modifier.align(Alignment.TopEnd).size(38.dp)) {
-                Icon(Icons.Rounded.ZoomIn, sh("Önizle", "Preview"), tint = Hf.TextMuted, modifier = Modifier.size(20.dp))
+                Icon(Icons.Rounded.ZoomIn, sh("Önizle", "Preview"), tint = LobbyPalette.Muted, modifier = Modifier.size(20.dp))
             }
         }
     }
     if (previewOpen) AlertDialog(
         onDismissRequest = { previewOpen = false },
-        containerColor = Hf.Surface,
-        title = { Text(name, color = Hf.Text, fontWeight = FontWeight.Black) },
+        containerColor = LobbyPalette.Paper,
+        title = { Text(name, color = LobbyPalette.Ink, fontWeight = FontWeight.Black) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             StoreProductPreview(item, Modifier.fillMaxWidth().height(230.dp), expanded = true)
-            storeItemEffect(item)?.let { Text(it, color = Hf.TextMuted) }
-            Text(if (owned || equipped) sh("Koleksiyonunda", "In your collection") else if (lockedByPro) sh("PRO'ya özel", "PRO exclusive") else playPrice ?: "${item.diamondPrice} Son Coin", color = Hf.Gold, fontWeight = FontWeight.Bold)
+            storeItemEffect(item)?.let { Text(it, color = LobbyPalette.Muted) }
+            Text(if (owned || equipped) sh("Koleksiyonunda", "In your collection") else if (lockedByPro) sh("PRO'ya özel", "PRO exclusive") else playPrice ?: "${item.diamondPrice} Son Coin", color = LobbyPalette.Gold, fontWeight = FontWeight.Bold)
         } },
         confirmButton = { Button(enabled = !busy && !lockedByPro, onClick = {
             previewOpen = false
@@ -639,19 +635,19 @@ internal fun VerifiedStoreProductCard(
 
 @Composable
 private fun ProShopCard(active: Boolean, onClick: () -> Unit) {
-    HfCard(onClick = onClick, modifier = Modifier.fillMaxWidth(), borderColor = Hf.Gold) {
+    LobbyCard(onClick = onClick, modifier = Modifier.fillMaxWidth(), borderColor = Hf.Gold) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(Icons.Rounded.WorkspacePremium, null, Modifier.size(40.dp), tint = Hf.Gold)
                     Column {
-                        Text("PRO", color = Hf.Gold, fontSize = 26.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Reklamsız + profil + analiz", "Ad-free + profile + analysis"), color = Hf.TextMuted, fontSize = 12.sp)
+                        Text("PRO", color = LobbyPalette.Gold, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                        Text(sh("Reklamsız + profil + analiz", "Ad-free + profile + analysis"), color = LobbyPalette.Muted, fontSize = 12.sp)
                     }
                 }
                 Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) Hf.GreenLight else Hf.Gold, fontWeight = FontWeight.Black)
             }
-            Text(sh("Reklamsız • PRO profil • özel oda • maç özeti • konfor araçları", "Ad-free • PRO profile • private rooms • match recap • comfort tools"), color = Hf.Text, fontSize = 13.sp)
+            Text(sh("Reklamsız • PRO profil • özel oda • maç özeti • konfor araçları", "Ad-free • PRO profile • private rooms • match recap • comfort tools"), color = LobbyPalette.Ink, fontSize = 13.sp)
         }
     }
 }

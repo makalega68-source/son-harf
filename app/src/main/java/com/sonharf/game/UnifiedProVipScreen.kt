@@ -28,14 +28,14 @@ import com.sonharf.game.data.VipEntitlementsDto
 import com.sonharf.game.data.getVipEntitlements
 import kotlinx.coroutines.launch
 
-private val UProBg = Color(0xFF020617)
-private val UProSurface = Color(0xFF0F172A)
-private val UProBorder = Color(0xFF334155)
-private val UProText = Color(0xFFF8FAFC)
-private val UProMuted = Color(0xFF94A3B8)
-private val UProBlue = Color(0xFF10B981)
-private val UProGold = Color(0xFFF59E0B)
-private val UProGreen = Color(0xFF10B981)
+private val UProBg: Color get() = LobbyPalette.Ground
+private val UProSurface: Color get() = LobbyPalette.Paper
+private val UProBorder: Color get() = LobbyPalette.Line
+private val UProText: Color get() = LobbyPalette.Ink
+private val UProMuted: Color get() = LobbyPalette.Muted
+private val UProBlue: Color get() = LobbyPalette.Green
+private val UProGold: Color get() = LobbyPalette.Gold
+private val UProGreen: Color get() = LobbyPalette.Accent
 
 @Composable
 internal fun UnifiedProVipScreen(
@@ -78,14 +78,11 @@ internal fun UnifiedProVipScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, null, tint = UProText) }
-                Column(Modifier.weight(1f)) {
-                    Text("KELİME TAHTI PRO", color = UProText, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Üyelik ayrıcalıkları", "Premier membership and fair-play benefits"), color = UProBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-                Icon(Icons.Rounded.WorkspacePremium, null, tint = UProGold, modifier = Modifier.size(30.dp))
-            }
+            MainScreenHeader(
+                title = "KELİME TAHTI PRO",
+                subtitle = sh("Oyun keyfine daha fazlasını ekle", "More ways to enjoy your game"),
+                onBack = onBack,
+            )
         }
 
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = UProBlue, trackColor = UProBorder) }
@@ -104,7 +101,7 @@ internal fun UnifiedProVipScreen(
                         if (active) sh("Reklamsız deneyim + PRO profil + özel oda + maç-sonu analiz", "Ad-free experience + PRO profile + private rooms + post-match analysis")
                         else sh("PRO ile profil, özel oda ve analiz özelliklerini aç.", "Unlock profile, private room and analysis features with PRO."),
                         color = UProMuted,
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                     )
                 }
             }
@@ -126,7 +123,7 @@ internal fun UnifiedProVipScreen(
                         Text(
                             sh("PRO araçların", "Use your purchased benefits directly from here."),
                             color = UProMuted,
-                            fontSize = 10.sp,
+                            fontSize = 13.sp,
                         )
                         if (e?.savedFriendList == true) OutlinedButton(onClick = onFriends, modifier = Modifier.fillMaxWidth()) {
                             Text(sh("ARKADAŞLAR", "FRIENDS"), color = UProGreen)
@@ -142,7 +139,7 @@ internal fun UnifiedProVipScreen(
                                 onClick = onPrivateRoom,
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = UProGold, contentColor = UProBg),
+                                colors = ButtonDefaults.buttonColors(containerColor = UProGold, contentColor = if (SonHarfTheme.IsDark) Color(0xFF343D30) else Color.White),
                             ) {
                                 Icon(Icons.Rounded.MeetingRoom, null)
                                 Spacer(Modifier.width(8.dp))
@@ -183,7 +180,7 @@ internal fun UnifiedProVipScreen(
                     onClick = { showPurchase = true },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = UProBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = UProBlue, contentColor = Color.White),
                 ) { Text(sh("PRO PLANLARINI GÖR", "VIEW PRO PLANS"), fontWeight = FontWeight.Black) }
             }
         }
@@ -191,7 +188,7 @@ internal fun UnifiedProVipScreen(
         notice?.let { message ->
             item {
                 Surface(shape = RoundedCornerShape(14.dp), color = UProBlue.copy(alpha = .12f)) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = UProText, fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = UProText, fontSize = 13.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -214,7 +211,7 @@ private fun ProAccessCard(icon: String, label: String, enabled: Boolean, accent:
         Column(Modifier.padding(11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(icon, color = accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
             Text(if (enabled) "✓" else "—", color = if (enabled) UProGreen else UProMuted, fontSize = 18.sp, fontWeight = FontWeight.Black)
-            Text(label, color = UProMuted, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(label, color = UProMuted, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
 }
@@ -224,6 +221,6 @@ private fun ProLine(icon: String, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(icon, fontSize = 16.sp)
         Spacer(Modifier.width(9.dp))
-        Text(text, color = UProText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(text, color = UProText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }

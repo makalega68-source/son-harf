@@ -105,7 +105,7 @@ internal fun AtelierLobby(
     onClaim: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(sh("YARIŞ SÜRENİ SEÇ","CHOOSE YOUR RACE"),color=CompUi.Ink,fontSize=14.sp,fontWeight=FontWeight.Black,letterSpacing=1.sp)
+        Text(sh("YARIŞ SÜRENİ SEÇ","CHOOSE YOUR RACE"),color=LobbyPalette.Ink,fontSize=14.sp,fontWeight=FontWeight.Black,letterSpacing=1.sp)
         // Round length for both the race and practice; each length has its own daily race and board.
         listOf(
             60 to sh("1 Dakika · 6 görev", "1 Minute · 6 tasks"),
@@ -118,21 +118,21 @@ internal fun AtelierLobby(
                     val selected = seconds == value
                     Box(
                         Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
-                            .background(Brush.verticalGradient(if(selected)listOf(Color(0xFFFFE4A0),Color(0xFFEBC06B))else listOf(CompUi.Cream,Color(0xFFEEE5D4))))
+                            .background(Brush.verticalGradient(if(selected)listOf(Color(0xFFFFE4A0),Color(0xFFEBC06B))else listOf(LobbyPalette.Paper,LobbyPalette.Paper)))
                             .border(1.dp, if (selected) CompUi.Gold else CompUi.Edge, RoundedCornerShape(14.dp))
                             .clickable(enabled = !starting) { onSeconds(value) }.padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
                             Icon(if(selected)Icons.Rounded.Bolt else Icons.Rounded.Timer,null,tint=CompUi.Green,modifier=Modifier.size(23.dp))
-                            Text(label, color = CompUi.Ink, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                            Text(when(value){60->sh("HIZLI ISINMA","QUICK WARM-UP");120->sh("TAKTİK YARIŞ","TACTICAL RACE");180->sh("UZUN MÜCADELE","LONG CHALLENGE");else->sh("USTALIK KOŞUSU","MASTERY RUN")},color=CompUi.InkMuted,fontSize=8.sp,fontWeight=FontWeight.Bold)
+                            Text(label, color = if (selected) CompUi.Ink else LobbyPalette.Ink, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                            Text(when(value){60->sh("HIZLI ISINMA","QUICK WARM-UP");120->sh("TAKTİK YARIŞ","TACTICAL RACE");180->sh("UZUN MÜCADELE","LONG CHALLENGE");else->sh("USTALIK KOŞUSU","MASTERY RUN")},color=if(selected)CompUi.InkMuted else LobbyPalette.Muted,fontSize=10.sp,fontWeight=FontWeight.Bold)
                         }
                     }
                 }
             }
         }
-        Text(sh("Kelime kur, görevleri tamamla, kombo yap. Her yeni görev setinde mücadele büyür.","Build words, complete tasks, chain combos. Each new task set raises the challenge."),color=CompUi.InkMuted,fontSize=12.sp,lineHeight=17.sp)
+        Text(sh("Kelime kur, görevleri tamamla, kombo yap. Her yeni görev setinde mücadele büyür.","Build words, complete tasks, chain combos. Each new task set raises the challenge."),color=LobbyPalette.Muted,fontSize=12.sp,lineHeight=17.sp)
         val today = board?.today
         // Official daily race card.
         GameEventStage {

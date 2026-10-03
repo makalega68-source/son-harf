@@ -61,12 +61,12 @@ internal fun EventsCalendarScreen(onBack: () -> Unit, onAtelier: () -> Unit, onT
         tournament?.let { event ->
             if (event.active) item {
                 ActivityTile(sh("ŞİMDİ · Atölye ×${event.multiplier} XP", "LIVE · Atelier ×${event.multiplier} XP")) {
-                    Text(sh("${event.stage}. tur · Bitiş ", "Stage ${event.stage} · Ends ") + socialDate(event.stageEnds), color = Hf.TextMuted)
+                    Text(sh("${event.stage}. tur · Bitiş ", "Stage ${event.stage} · Ends ") + socialDate(event.stageEnds), color = LobbyPalette.Muted)
                     Button(onClick = onAtelier) { Text(sh("KATIL", "JOIN")) }
                 }
             }
             if (now > 0) {
-                item { Text(sh("YAKLAŞAN TURNUVALAR", "UPCOMING TOURNAMENTS"), color = Hf.Text, fontWeight = FontWeight.Black) }
+                item { Text(sh("YAKLAŞAN TURNUVALAR", "UPCOMING TOURNAMENTS"), color = LobbyPalette.Ink, fontWeight = FontWeight.Black) }
                 atelierCalendar(now).forEach { (start, multiplier) -> item(key = start) {
                     ActivityTile(socialDate(Instant.ofEpochMilli(start).toString()) + " · ×$multiplier XP") {
                         Text(tournamentClockText(start, now), color = Hf.Green)
@@ -77,8 +77,8 @@ internal fun EventsCalendarScreen(onBack: () -> Unit, onAtelier: () -> Unit, onT
         }
         week?.let { w -> item {
             ActivityTile(sh("BU HAFTA · Taht yarışı", "THIS WEEK · Throne race")) {
-                Text("${w.me.xp} XP · " + sh("Sıra ", "Rank ") + (w.me.rank.takeIf { it > 0 }?.toString() ?: "—"), color = Hf.Text)
-                Text(sh("Sıfırlama: ", "Reset: ") + socialDate(w.resetAt), color = Hf.TextMuted)
+                Text("${w.me.xp} XP · " + sh("Sıra ", "Rank ") + (w.me.rank.takeIf { it > 0 }?.toString() ?: "—"), color = LobbyPalette.Ink)
+                Text(sh("Sıfırlama: ", "Reset: ") + socialDate(w.resetAt), color = LobbyPalette.Muted)
                 TextButton(onClick = onThrone) { Text(sh("TAHTI AÇ", "OPEN THRONE")) }
             }
         } }

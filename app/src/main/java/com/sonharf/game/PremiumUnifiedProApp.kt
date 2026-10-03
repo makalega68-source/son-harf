@@ -206,13 +206,26 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         )
     }
 
+    val inGame = destination in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)
+    val pageScheme = if (inGame) scheme else scheme.copy(
+        primary = LobbyPalette.Accent, onPrimary = if (SonHarfTheme.IsDark) Color(0xFF193523) else Color.White,
+        primaryContainer = LobbyPalette.Soft, onPrimaryContainer = LobbyPalette.Ink,
+        secondary = LobbyPalette.Gold, secondaryContainer = LobbyPalette.Soft,
+        onSecondaryContainer = LobbyPalette.Ink, background = LobbyPalette.Ground,
+        surface = LobbyPalette.Paper, surfaceVariant = LobbyPalette.Soft,
+        surfaceContainer = LobbyPalette.Paper, surfaceContainerHigh = LobbyPalette.Paper,
+        surfaceContainerHighest = LobbyPalette.Soft, surfaceContainerLow = LobbyPalette.Paper,
+        surfaceContainerLowest = LobbyPalette.Ground,
+        onBackground = LobbyPalette.Ink, onSurface = LobbyPalette.Ink,
+        onSurfaceVariant = LobbyPalette.Muted, outline = LobbyPalette.Line, outlineVariant = LobbyPalette.Line,
+    )
     MaterialTheme(
-        colorScheme = scheme,
+        colorScheme = pageScheme,
         typography = SonHarfTypography,
         shapes = SonHarfShapes,
     ) {
         Scaffold(
-            containerColor = SonHarfTheme.Background,
+            containerColor = if (inGame) SonHarfTheme.Background else LobbyPalette.Ground,
             topBar = {
                 if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
             },
@@ -233,7 +246,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             // consumeWindowInsets: the Scaffold padding already contains the status bar, so screens that
             // add statusBarsPadding() themselves (the game arenas) no longer get a second, empty band on top.
             Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
-                if (!SonHarfTheme.IsDark && !SonHarfCosmetics.darkArenaTheme && !SonHarfCosmetics.walnutTheme) SonHarfLeafBackdrop(Modifier.matchParentSize())
+                // Clean paper menus; the game arenas retain their own surfaces.
                 key(destination, gameLaunchRevision) {
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
@@ -647,13 +660,13 @@ private fun PremiumBottomBar(
         Triple(PremiumDestination.COMPETE, R.drawable.hf_ic_compete, sh("Taht", "Throne")) to onCompete,
         Triple(PremiumDestination.PROFILE, R.drawable.hf_ic_profile, sh("Profil", "Profile")) to onProfile,
     )
-    Surface(color = if (destination == PremiumDestination.HOME) HomeLobbyStyle.Paper else SonHarfTheme.NavigationSurface) {
+    Surface(color = LobbyPalette.Paper) {
         Column(Modifier.navigationBarsPadding()) {
-            HorizontalDivider(thickness = 1.dp, color = Hf.Gold.copy(alpha = .22f))
+            HorizontalDivider(thickness = 1.dp, color = LobbyPalette.Line)
             Row(Modifier.fillMaxWidth().height(72.dp), verticalAlignment = Alignment.CenterVertically) {
                 items.forEachIndexed { index, (item, onClick) ->
                     val selected = destination == item.first
-                    if (index > 0) Box(Modifier.width(1.dp).height(34.dp).background(Hf.Gold.copy(alpha = .16f)))
+                    if (index > 0) Box(Modifier.width(1.dp).height(34.dp).background(LobbyPalette.Line.copy(alpha = .5f)))
                     Column(
                         Modifier.weight(1f).fillMaxHeight().clickable(onClick = onClick),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -663,7 +676,7 @@ private fun PremiumBottomBar(
                             Icon(
                                 painterResource(item.second),
                                 null,
-                                tint = if (selected) Hf.Green else Hf.Text.copy(alpha = .78f),
+                                tint = if (selected) LobbyPalette.Accent else LobbyPalette.Muted,
                                 modifier = Modifier.size(28.dp),
                             )
                             if (item.first == PremiumDestination.SOCIAL && socialBadge > 0) {
@@ -685,7 +698,7 @@ private fun PremiumBottomBar(
                         Spacer(Modifier.height(3.dp))
                         Text(
                             item.third,
-                            color = if (selected) Hf.Green else Hf.Text.copy(alpha = .78f),
+                            color = if (selected) LobbyPalette.Accent else LobbyPalette.Muted,
                             fontSize = 12.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                             maxLines = 1,
@@ -693,7 +706,7 @@ private fun PremiumBottomBar(
                         Spacer(Modifier.height(4.dp))
                         Box(
                             Modifier.width(44.dp).height(3.dp).background(
-                                if (selected) Hf.Green else Color.Transparent,
+                                if (selected) LobbyPalette.Accent else Color.Transparent,
                                 RoundedCornerShape(99.dp),
                             ),
                         )

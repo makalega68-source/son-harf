@@ -989,15 +989,15 @@ internal fun PremierLobby(
     var waveKey by remember { mutableStateOf(0L) }
     LaunchedEffect(Unit) { delay(600); waveKey = 1L }
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp),
+        Modifier.fillMaxSize().background(LobbyPalette.Ground).statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onHome) { Icon(Icons.Rounded.ArrowBack, null, tint = PremierUi.Ink) }
+            IconButton(onClick = onHome) { Icon(Icons.Rounded.ArrowBack, null, tint = LobbyPalette.Ink) }
             HfGameArt(R.drawable.son_harf_game_icon, 64.dp, 64.dp, description = "Son Harf")
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
-                Text("SON HARF", color = PremierUi.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Text(pt(language, "1v1 KELİME DÜELLOSU", "1v1 WORD DUEL"), color = PremierUi.Ocean, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                Text("SON HARF", color = LobbyPalette.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                Text(pt(language, "1v1 KELİME DÜELLOSU", "1v1 WORD DUEL"), color = LobbyPalette.Gold, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
             }
             PremierLanguageSwitch(language, onLanguage)
         }
@@ -1034,8 +1034,8 @@ internal fun PremierLobby(
                 PremierFeatureTile(Icons.Rounded.Groups, pt(language, "CANLI", "LIVE"), "1v1", Modifier.weight(1f))
             }
             if (notice.isNotBlank()) {
-                Surface(shape = RoundedCornerShape(15.dp), color = PremierUi.Ice, border = BorderStroke(1.dp, PremierUi.Border)) {
-                    Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = PremierUi.OceanDeep, fontSize = 12.sp, textAlign = TextAlign.Center)
+                Surface(shape = RoundedCornerShape(15.dp), color = LobbyPalette.Soft, border = BorderStroke(1.dp, LobbyPalette.Line)) {
+                    Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = LobbyPalette.Ink, fontSize = 12.sp, textAlign = TextAlign.Center)
                 }
             }
         }
@@ -1048,7 +1048,7 @@ internal fun PremierLobby(
                 .graphicsLayer { if (!busy) { scaleX = playPulse.value; scaleY = playPulse.value } }
                 .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = PremierUi.Green)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Brush.verticalGradient(listOf(Color(0xFF52B360), PremierUi.Green, Color(0xFF2F8A3E))))
+                .background(Brush.verticalGradient(listOf(Color(0xFF367C54), LobbyPalette.Green, Color(0xFF22553A))))
                 .border(1.dp, Color.White.copy(alpha = .35f), RoundedCornerShape(20.dp))
                 .clickable(enabled = !busy, onClick = onPlay),
             contentAlignment = Alignment.Center,
@@ -1060,7 +1060,7 @@ internal fun PremierLobby(
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(pt(language, "Rakip bulunamazsa seviye uyumlu AI devreye girer.", "If no rival is found, a level-appropriate AI takes over."), Modifier.fillMaxWidth(), color = PremierUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+        Text(pt(language, "Rakip bulunamazsa seviye uyumlu AI devreye girer.", "If no rival is found, a level-appropriate AI takes over."), Modifier.fillMaxWidth(), color = LobbyPalette.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
     }
 }
 
@@ -1073,10 +1073,10 @@ private fun PremierHowToPlay(language: String) {
     val chain = if (language == "en") listOf("APPLE", "EAGLE", "EARTH") else listOf("KALEM", "MASA", "ARI")
     var step by remember(language){mutableIntStateOf(0)}
     LaunchedEffect(language){while(true){delay(1800);step=(step+1)%3}}
-    Surface(shape=RoundedCornerShape(20.dp),color=PremierUi.Surface,border=BorderStroke(1.dp,PremierBoard.TileEdge)) {
+    Surface(shape=RoundedCornerShape(20.dp),color=LobbyPalette.Paper,border=BorderStroke(1.dp,PremierBoard.TileEdge)) {
         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                Text(pt(language,"ZİNCİRİ BÖYLE KUR","BUILD THE CHAIN"),color=PremierUi.Ink,fontSize=12.sp,fontWeight=FontWeight.Black,letterSpacing=1.sp)
+                Text(pt(language,"ZİNCİRİ BÖYLE KUR","BUILD THE CHAIN"),color=LobbyPalette.Ink,fontSize=12.sp,fontWeight=FontWeight.Black,letterSpacing=1.sp)
                 Icon(Icons.Rounded.Link,null,tint=PremierUi.Green,modifier=Modifier.size(22.dp))
             }
             chain.forEachIndexed { index,word->
@@ -1098,19 +1098,19 @@ private fun PremierHowToPlay(language: String) {
                 }
             }
             Text(pt(language,"KALEM → M ile MASA → A ile ARI","APPLE → E starts EAGLE → E starts EARTH"),color=PremierUi.Green,fontSize=11.sp,fontWeight=FontWeight.Bold)
-            Text(pt(language,"Son harften başla. Tekrar kullanmadan yeni kelime kur. Uzun kelimelerle daha çok puan kazan.","Start with the last letter. Build a new word without repeating. Longer words earn more points."),color=PremierUi.Muted,fontSize=12.sp,lineHeight=17.sp)
+            Text(pt(language,"Son harften başla. Tekrar kullanmadan yeni kelime kur. Uzun kelimelerle daha çok puan kazan.","Start with the last letter. Build a new word without repeating. Longer words earn more points."),color=LobbyPalette.Muted,fontSize=12.sp,lineHeight=17.sp)
         }
     }
 }
 
 @Composable
 private fun PremierFeatureTile(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, detail: String, modifier: Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(17.dp), color = PremierUi.GoldSoft, border = BorderStroke(1.dp, PremierBoard.TileEdge),shadowElevation=2.dp) {
+    Surface(modifier, shape = RoundedCornerShape(17.dp), color = LobbyPalette.Paper, border = BorderStroke(1.dp, PremierBoard.TileEdge),shadowElevation=2.dp) {
         Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, tint = PremierUi.Green, modifier = Modifier.size(21.dp))
             Spacer(Modifier.height(6.dp))
-            Text(title, color = PremierUi.Ink, fontWeight = FontWeight.Black, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 1)
-            Text(detail, color = PremierUi.Muted, fontSize = 9.sp, textAlign = TextAlign.Center)
+            Text(title, color = LobbyPalette.Ink, fontWeight = FontWeight.Black, fontSize = 11.sp, textAlign = TextAlign.Center, maxLines = 1)
+            Text(detail, color = LobbyPalette.Muted, fontSize = 11.sp, textAlign = TextAlign.Center)
         }
     }
 }

@@ -45,7 +45,7 @@ internal fun ProfileRecordsSection(backend: OnlineGameBackend, onRivals: () -> U
             RecordRow(sh("En iyi galibiyet serisi", "Best win streak"), "${r.bestStreak}")
         }
         siege?.let { s ->
-            HorizontalDivider(color = Hf.Border)
+            HorizontalDivider(color = LobbyPalette.Line)
             RecordRow(sh("Kuşatma · kayıtlı biten maçlar", "Siege · recorded finished matches"), "${s.count}")
             RecordRow(sh("Kuşatma galibiyet oranı", "Siege win rate"), if (s.count == 0) "—" else "${s.wins * 100L / s.count}%")
             RecordRow(sh("Ortalama skor", "Average score"), if (s.count == 0) "—" else "${s.averageScore}")
@@ -61,7 +61,7 @@ internal fun ProfileRecordsSection(backend: OnlineGameBackend, onRivals: () -> U
 @Composable
 private fun RecordRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, Modifier.weight(1f), color = Hf.TextMuted, fontSize = 12.sp)
-        Text(value, color = Hf.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(label, Modifier.weight(1f), color = LobbyPalette.Muted, fontSize = 12.sp)
+        Text(value, color = LobbyPalette.Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }

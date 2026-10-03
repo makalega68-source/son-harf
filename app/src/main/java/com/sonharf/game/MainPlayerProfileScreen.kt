@@ -127,85 +127,91 @@ internal fun MainPlayerProfileScreen(
         MainScreenHeader(
             title = sh("Profil", "Profile"),
             subtitle = "",
-            actionIcon = null,
-            onAction = null,
+            actionIcon = Icons.Rounded.Settings,
+            actionDescription = sh("Ayarlar", "Settings"),
+            onAction = onSettings,
         )
 
         if (loading) {
             LinearProgressIndicator(
                 modifier = Modifier.fillMaxWidth(),
                 color = Hf.Gold,
-                trackColor = Hf.Surface,
+                trackColor = LobbyPalette.Paper,
             )
         }
 
         val hasEquippedNameStyle = !SonHarfCosmetics.nameStyleId.isNullOrBlank()
         val displayNameColor = when {
             hasEquippedNameStyle -> SonHarfCosmetics.playerNameColor
-            else -> Hf.Text
+            else -> LobbyPalette.Ink
         }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.clickable(onClick = onEdit)) {
-                FramedProfilePhotoAvatar(
-                    avatarPath = p?.avatarPath,
-                    gender = p?.gender,
-                    name = p?.displayName ?: sh("Oyuncu", "Player"),
-                    size = 104.dp,
-                    frameId = rememberPlayerFrame(p?.id),
-                    accent = Hf.Gold,
-                    visible = p?.avatarVisibility != "hidden",
-                    isPro = p?.isVip == true,
-                )
-            }
-            Spacer(Modifier.width(18.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        p?.displayName ?: sh("Oyuncu", "Player"),
-                        modifier = Modifier.weight(1f, fill = false),
-                        color = displayNameColor,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Black,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+        LobbyCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.clickable(onClick = onEdit)) {
+                    FramedProfilePhotoAvatar(
+                        avatarPath = p?.avatarPath,
+                        gender = p?.gender,
+                        name = p?.displayName ?: sh("Oyuncu", "Player"),
+                        size = 84.dp,
+                        frameId = rememberPlayerFrame(p?.id),
+                        accent = Hf.Gold,
+                        visible = p?.avatarVisibility != "hidden",
+                        isPro = p?.isVip == true,
                     )
-                    if (hasEquippedNameStyle) {
-                        Spacer(Modifier.width(6.dp))
-                        NameStyleEmblem(30.dp)
-                    }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(painterResource(R.drawable.hf_ic_club), null, tint = Hf.Gold, modifier = Modifier.size(24.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        profileLeagueName(league.leagueName) + sh(" Lig", " League"),
-                        color = Hf.Gold,
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                    )
-                    if (p?.isVip == true) {
+                Spacer(Modifier.width(18.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            p?.displayName ?: sh("Oyuncu", "Player"),
+                            modifier = Modifier.weight(1f, fill = false),
+                            color = displayNameColor,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (hasEquippedNameStyle) {
+                            Spacer(Modifier.width(6.dp))
+                            NameStyleEmblem(30.dp)
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(painterResource(R.drawable.hf_ic_club), null, tint = Hf.Gold, modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(8.dp))
-                        Surface(shape = Hf.PillShape, color = Hf.Gold) {
-                            Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 2.dp), color = Hf.Ink, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        Text(
+                            profileLeagueName(league.leagueName) + sh(" Lig", " League"),
+                            modifier = Modifier.weight(1f), overflow = TextOverflow.Ellipsis,
+                            color = LobbyPalette.Gold,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                        )
+                        if (p?.isVip == true) {
+                            Spacer(Modifier.width(8.dp))
+                            Surface(shape = Hf.PillShape, color = Hf.Gold) {
+                                Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 2.dp), color = Hf.Ink, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                            }
                         }
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = onEdit, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp)) {
-                        Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp), tint = Hf.Gold)
-                        Spacer(Modifier.width(5.dp))
-                        Text(sh("Profili düzenle", "Edit profile"), color = Hf.TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    TextButton(onClick = { renaming = true }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp)) {
-                        Text(sh("Adı değiştir", "Change name"), color = Hf.Gold, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                    }
-                    Spacer(Modifier.weight(1f))
-                    IconButton(onClick = onSettings, modifier = Modifier.size(44.dp)) {
-                        Icon(painterResource(R.drawable.hf_ic_settings), sh("Ayarlar", "Settings"), tint = Hf.Gold, modifier = Modifier.size(28.dp))
-                    }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(onClick = onEdit, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                    border = BorderStroke(1.dp, LobbyPalette.Line)) {
+                    Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp), tint = LobbyPalette.Accent)
+                    Spacer(Modifier.width(6.dp))
+                    Text(sh("Profili düzenle", "Edit profile"), color = LobbyPalette.Ink, fontSize = 13.sp)
                 }
+                OutlinedButton(onClick = { renaming = true }, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                    border = BorderStroke(1.dp, LobbyPalette.Line)) {
+                    Text(sh("Adı değiştir", "Change name"), color = LobbyPalette.Ink, fontSize = 13.sp)
+                }
+            }
+
             }
         }
 
@@ -217,14 +223,14 @@ internal fun MainPlayerProfileScreen(
 
         ProfileRecordsSection(backend, onRivals = onRivals)
 
-        HfSegmentedTabs(
+        LobbyTabs(
             labels = collectionTabs.map { it.second },
             selected = collectionTab,
             onSelect = { collectionTab = it },
         )
         ProfileOwnedThemesSection(backend, category = collectionTabs[collectionTab].first)
 
-        HfCard(
+        LobbyCard(
             onClick = onSocial,
             modifier = Modifier.fillMaxWidth(),
             borderColor = if (p?.isVip == true) Hf.Gold.copy(alpha = .75f) else Hf.Gold,
@@ -241,14 +247,14 @@ internal fun MainPlayerProfileScreen(
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(sh("Arkadaşlar", "Friends"), color = Hf.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(sh("Arkadaşlar", "Friends"), color = LobbyPalette.Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(
                         if (p?.isVip == true) {
                             "$friendCount ${sh("arkadaş", "friends")} • $onlineFriendCount ${sh("çevrimiçi", "online")}"
                         } else {
                             sh("PRO ile arkadaş listesi ve yönetimi", "Friends list and management with PRO")
                         },
-                        color = Hf.TextMuted,
+                        color = LobbyPalette.Muted,
                         fontSize = 12.sp,
                     )
                 }
@@ -277,17 +283,16 @@ private fun ProfileStatTile(icon: androidx.compose.ui.graphics.vector.ImageVecto
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
-        color = Hf.Ivory,
-        border = BorderStroke(1.5.dp, Hf.Gold),
+        color = LobbyPalette.Paper,
+        border = BorderStroke(1.dp, LobbyPalette.Line),
         shadowElevation = 2.dp,
     ) {
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = Hf.Gold, modifier = Modifier.size(26.dp))
-            Spacer(Modifier.width(6.dp))
-            Column {
-                Text(label, color = Hf.TextMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(value, color = Hf.Text, fontSize = 20.sp, fontWeight = FontWeight.Black, maxLines = 1)
-            }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Icon(icon, null, tint = LobbyPalette.Gold, modifier = Modifier.size(22.dp))
+            Text(value, color = LobbyPalette.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(label, color = LobbyPalette.Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -321,17 +326,17 @@ private fun ProfilePill(text: String, accent: Color) {
 @Composable
 private fun SimpleProfileMetric(value: String, label: String, modifier: Modifier = Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = SonHarfTheme.TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        Text(value, color = LobbyPalette.Ink, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
         Spacer(Modifier.height(2.dp))
-        Text(label, color = SonHarfTheme.TextSecondary, fontSize = 8.sp, textAlign = TextAlign.Center)
+        Text(label, color = LobbyPalette.Muted, fontSize = 8.sp, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
 private fun InlineProfileStat(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.widthIn(min = 72.dp)) {
-        Text(value, color = SonHarfTheme.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Black)
-        Text(label, color = SonHarfTheme.TextSecondary, fontSize = 8.sp, textAlign = TextAlign.Center)
+        Text(value, color = LobbyPalette.Ink, fontSize = 18.sp, fontWeight = FontWeight.Black)
+        Text(label, color = LobbyPalette.Muted, fontSize = 8.sp, textAlign = TextAlign.Center)
     }
 }
 
@@ -357,7 +362,7 @@ private fun ChangeNameDialog(current: String, onDismiss: () -> Unit, onChanged: 
                 )
                 Text(
                     error ?: sh("2-24 karakter. Günde bir kez değiştirilebilir.", "2-24 characters. Can be changed once a day."),
-                    color = if (error != null) Color(0xFFD9534F) else Hf.TextMuted,
+                    color = if (error != null) Color(0xFFD9534F) else LobbyPalette.Muted,
                     fontSize = 12.sp,
                 )
             }
