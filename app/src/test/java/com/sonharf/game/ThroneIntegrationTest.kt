@@ -6,10 +6,14 @@ class ThroneIntegrationTest {
  private fun source(n:String)=File("src/main/java/com/sonharf/game/$n").readText()
  @Test fun liveShellRoutesTheThroneAndCountdown(){
   val shell=source("PremiumUnifiedProApp.kt")
-  assertTrue(shell.contains("HomeTournamentCard(onOpen = onWorkshop)"))
+  assertTrue(shell.contains("PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)"))
   assertTrue(shell.contains("sh(\"Taht\", \"Throne\")"))
   assertTrue(source("CompetitionHubScreen.kt").contains("ThroneScreen(onBack = onBack"))
   val home=source("PremiumHomeV3.kt")
+  assertTrue(home.contains("HomeTournamentCard(onOpen = onWorkshop, compact = true)"))
+  val tournament=source("ThroneExperience.kt")
+  assertTrue(tournament.contains("ThroneBackend.tournament()"))
+  assertTrue(tournament.contains("tournamentClockText(tournamentNextRegular(now),now)"))
   assertTrue(home.contains("ThroneBackend.week().rows"))
   assertTrue(source("ThroneExperience.kt").contains("it.xp"));assertFalse(home.contains("getWeeklyTopV210(limit = 3)"))
  }
