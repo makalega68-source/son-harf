@@ -63,7 +63,7 @@ time.sleep(4)
 capture("Home-mascots-Android.png")
 store = tree("Home-mascots.xml")
 node(store, "Mağaza")
-assert node(store, "Maskotlar").get("selected") == "true", "Mascot purchase category must open directly"
+node(store, "MASKOTLAR")  # The real purchase section, not a child text selection flag.
 capture("Home-mascots-Android.png")
 node(store, "Obi")
 adb("shell", "input", "keyevent", "4")

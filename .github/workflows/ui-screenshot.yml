@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: branch-apk-${{ github.ref }}
@@ -25,6 +26,7 @@ concurrency:
 
 jobs:
   build:
+    if: "!contains(github.event.head_commit.message, '[reuse-apk:e948d04]')"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -140,5 +142,69 @@ jobs:
             Mascot-*
             Home-*
             app/build/test-results/testDebugUnitTest/*.xml
+          if-no-files-found: error
+          retention-days: 7
+
+  verify_existing:
+    if: contains(github.event.head_commit.message, '[reuse-apk:e948d04]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+      - name: Verify application code matches the tested APK
+        run: |
+          git diff --exit-code e948d046713c965e7f393b0af291b80f0832f241 HEAD -- app supabase
+          echo APK_SOURCE_SHA=e948d046713c965e7f393b0af291b80f0832f241
+      - uses: actions/download-artifact@v4
+        with:
+          name: ceviz-fildisi-android-teslim
+          run-id: 37082051150
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: verified-apk
+      - name: Verify the original APK checksum
+        working-directory: verified-apk
+        run: sha256sum -c Kelime-Tahti-Guncel.sha256
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Complete menu and product-preview checks on the same APK
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          cores: 2
+          ram-size: 2048M
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          disable-animations: false
+          script: |
+            adb wait-for-device
+            adb install -r -t verified-apk/Kelime-Tahti-Guncel.apk
+            python3 scripts/verify_home_menu.py
+            adb shell am force-stop com.sonharf.game
+            adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage controls-dark
+            sleep 4
+            adb shell uiautomator dump /sdcard/preview.xml
+            adb pull /sdcard/preview.xml Preview-controls.xml
+            python3 -c 'import xml.etree.ElementTree as E,re,subprocess; n=next(n for n in E.parse("Preview-controls.xml").iter("node") if n.get("content-desc")=="Önizle"); x1,y1,x2,y2=map(int,re.findall(r"[0-9]+",n.get("bounds"))); subprocess.run(["adb","shell","input","tap",str((x1+x2)//2),str((y1+y2)//2)],check=True)'
+            sleep 2
+            adb shell uiautomator dump /sdcard/preview-open.xml
+            adb pull /sdcard/preview-open.xml Preview-open.xml
+            grep -q 'SATIN AL' Preview-open.xml
+            adb exec-out screencap -p > Review-preview-dark-Android.png
+            adb logcat -d -s AndroidRuntime:E > Home-preview-runtime.log
+            ! grep -q 'FATAL EXCEPTION' Home-preview-runtime.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Kelime-Tahti-Ek-Menu-Kontrolleri
+          path: |
+            Home-*
+            Preview-*.xml
+            Review-preview-dark-Android.png
           if-no-files-found: error
           retention-days: 7
