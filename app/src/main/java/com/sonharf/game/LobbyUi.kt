@@ -20,7 +20,7 @@ internal object LobbyPalette {
     val Ground: Color get() = if (SonHarfCosmetics.walnutTheme) Hf.Ground else HomeLobbyStyle.Ground
     val Paper: Color get() = if (SonHarfCosmetics.walnutTheme) Hf.Ivory else HomeLobbyStyle.Paper
     val Ink: Color get() = if (SonHarfCosmetics.walnutTheme) Hf.Text else HomeLobbyStyle.Ink
-    val Muted: Color get() = if (SonHarfCosmetics.walnutTheme) Hf.TextMuted else HomeLobbyStyle.Muted
+    val Muted: Color get() = if (SonHarfCosmetics.walnutTheme) Hf.TextMuted else if (SonHarfTheme.IsDark) HomeLobbyStyle.Muted else Color(0xFF6D6B59)
     val Line: Color get() = if (SonHarfCosmetics.walnutTheme) Hf.Border else HomeLobbyStyle.Line
     val Gold: Color get() = HomeLobbyStyle.Gold
     val Green = HomeLobbyStyle.Green
