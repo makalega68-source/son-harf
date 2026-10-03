@@ -109,27 +109,20 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("KELİME KUŞATMASI PRO", color = ProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                        Text("KELİME TAHTI PRO", color = ProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
                         Text(sh("Adil premium üyelik", "Fair-play premium membership"), color = ProBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                     TextButton(onClick = onDismiss, enabled = !busy) { Text("✕", color = ProText, fontSize = 18.sp) }
                 }
 
-                ProBenefit(Icons.Rounded.Block, sh("REKLAMSIZ", "AD-FREE"), sh("Menü ve mağazada reklamsız deneyim", "Ad-free menus and shop"))
-                ProBenefit(Icons.Rounded.Badge, sh("PRO PROFİL", "PRO PROFILE"), sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
-                ProBenefit(Icons.Rounded.MeetingRoom, sh("ÖZEL ODALAR", "PRIVATE ROOMS"), sh("Arkadaşlarınla özel oyun alanları", "Private play spaces with friends"))
-                ProBenefit(Icons.Rounded.Insights, sh("GELİŞMİŞ İSTATİSTİK", "ADVANCED STATS"), sh("Detaylı maç analizi ve performans", "Detailed match analysis and performance"))
-                ProBenefit(Icons.Rounded.Groups, sh("SOSYAL AYRICALIKLAR", "SOCIAL BENEFITS"), sh("Kaydedilmiş arkadaş listesi ve PRO profil değeri", "Saved friend list and PRO profile value"))
+                // PRO is about comfort, looks and prestige; it never makes a player score more.
+                ProBenefit(Icons.Rounded.Block, sh("REKLAMSIZ", "AD-FREE"), sh("Menü, profil ve mağazada reklamsız deneyim", "Ad-free menus, profile and shop"))
+                ProBenefit(Icons.Rounded.Badge, sh("PRESTİJ PROFİL", "PRESTIGE PROFILE"), sh("Altın PRO çerçevesi, rozet ve öne çıkan profil", "Gold PRO frame, badge and a standout profile"))
+                ProBenefit(Icons.Rounded.MeetingRoom, sh("ÖZEL ODALAR", "PRIVATE ROOMS"), sh("Arkadaşlarınla davet kodlu özel masalar", "Invite-code private tables with friends"))
+                ProBenefit(Icons.Rounded.Groups, sh("SOSYAL", "SOCIAL"), sh("Kayıtlı arkadaş listesi ve çevrim içi durum", "Saved friends and online status"))
+                ProBenefit(Icons.Rounded.Insights, sh("MAÇ ANALİZİ", "MATCH INSIGHTS"), sh("Biten maçların ayrıntılı özeti", "Detailed recap of finished matches"))
+                ProBenefit(Icons.Rounded.Calculate, sh("KONFOR ARAÇLARI", "COMFORT TOOLS"), sh("Hamle Önizleme, Kalan Harfler ve Son Harf kelime geçmişi", "Move Preview, Letters Left and Last Letter word history"))
 
-                Surface(shape = RoundedCornerShape(14.dp), color = ProGreen.copy(alpha = .10f), border = BorderStroke(1.dp, ProGreen.copy(alpha = .35f))) {
-                    Text(
-                        sh(
-                            "ADİL REKABET: PRO, dereceli Premier maçlarda skor, hedef harf veya kelime avantajı vermez.",
-                            "FAIR PLAY: PRO gives no score, target-letter, or word advantage in ranked Premier matches.",
-                        ),
-                        Modifier.fillMaxWidth().padding(11.dp), color = ProGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-                    )
-                }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     ProPlan(

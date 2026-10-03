@@ -2,6 +2,9 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,13 +16,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,7 +37,9 @@ fun EconomyShopScreen(
     onCollection: () -> Unit = {},
     onPro: () -> Unit = {},
 ) {
-    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 3)) }
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 8)) }
+    var kindFilter by remember { mutableStateOf<String?>(null) }
+    var balance by remember { mutableStateOf<Int?>(null) }
     var rewards by remember { mutableStateOf(false) }
     if (rewards) {
         Column {
@@ -40,37 +48,117 @@ fun EconomyShopScreen(
         }
         return
     }
-    Column(Modifier.fillMaxSize().background(SonHarfBg)) {
-        MainScreenHeader(
-            title = sh("MAĞAZA", "SHOP"),
-            subtitle = sh("Kelime Tahtı · Tarzını seç", "Kelime Tahtı · Make it yours"),
-            onBack = onBack,
-        )
-        ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp, containerColor = Color.Transparent, divider = {}) {
-            listOf(sh("Öne Çıkan", "Featured"), sh("Sezon", "Season"), sh("Görünümler", "Styles"), "PRO")
-                .forEachIndexed { index, label ->
-                    Tab(selected = tab == index, onClick = { tab = index }, text = {
-                        Text(label, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = if (tab == index) FontWeight.Bold else FontWeight.Medium)
-                    })
+    LaunchedEffect(Unit) {
+        if (!SupabaseProvider.configured) return@LaunchedEffect
+        val b = OnlineGameBackend()
+        balance = b.currentUserId()?.let { id -> runCatching { b.getProfile(id).diamonds }.getOrNull() }
+    }
+    Column(Modifier.fillMaxSize().background(LobbyPalette.Ground)) {
+        StoreTitleBar(balance = balance, onBack = onBack)
+        HorizontalDivider(color = LobbyPalette.Line.copy(alpha = .6f))
+        // Keep every category visible; related products share one group instead of a hidden strip.
+        val shown = if (tab in setOf(0, 2, 3, 4, 5, 6, 7, 8)) tab else 0
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            TextButton(onClick = onCollection) {
+                Icon(Icons.Rounded.Checkroom, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(sh("Koleksiyonum", "My collection"), color = LobbyPalette.Ink, fontSize = 12.sp)
+            }
+            TextButton(onClick = { tab = 8 }) {
+                Icon(Icons.Rounded.Redeem, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(sh("Ödüller", "Rewards"), color = LobbyPalette.Ink, fontSize = 12.sp)
+            }
+        }
+        val selectedGroup = when (shown) { 4 -> 5; 6 -> 2; else -> shown }
+        val categories = listOf(0 to sh("Vitrin", "Featured"), 2 to sh("Stil", "Style"),
+            5 to "Obi", 7 to sh("Çerçeve", "Frames"), 3 to "PRO")
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            categories.forEach { (index, label) ->
+                Surface(onClick = { tab = index; kindFilter = null }, modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                    shape = RoundedCornerShape(12.dp), color = if (selectedGroup == index) LobbyPalette.Green else LobbyPalette.Paper,
+                    border = BorderStroke(1.dp, if (selectedGroup == index) LobbyPalette.Green else LobbyPalette.Line)) {
+                    Box(Modifier.padding(horizontal = 4.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
+                        Text(label, color = if (selectedGroup == index) Hf.OnAccent else LobbyPalette.Ink, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    }
                 }
+            }
+        }
+        if (shown in setOf(2, 6, 4, 5)) {
+            val choices = if (shown in setOf(2, 6)) listOf(2 to sh("Tahta & Tema", "Board & Theme"), 6 to sh("Klavye & İsim", "Keys & Name"))
+                else listOf(5 to sh("Aksesuar & Zafer", "Hats & Victory"), 4 to sh("Maskotlar", "Mascots"))
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                choices.forEach { (index, label) -> FilterChip(selected = shown == index, onClick = { tab = index },
+                    colors = FilterChipDefaults.filterChipColors(containerColor = LobbyPalette.Paper, labelColor = LobbyPalette.Muted,
+                        selectedContainerColor = SonHarfTheme.PrimarySoft, selectedLabelColor = LobbyPalette.Ink),
+                    label = { Text(label, fontSize = 12.sp) }) }
+            }
         }
         Box(Modifier.weight(1f)) {
-            if (tab == 1) SeasonCenterContent()
-            else EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection, onPro)
+            // Mascot characters, each a permanent Google Play product.
+            // Optional rewarded videos: coins, a day's keyboard or theme, Quick Duels, hints.
+            if (shown == 8) RewardCenterScreen()
+            else if (shown == 4) MascotStoreSection()
+            // Profile frames: ornate crests via Google Play, simple rings for Son Coin.
+            else if (shown == 7) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
+                ProfileFrameStoreSection(onBalance = { balance = it }, onPro = { tab = 3 })
+            }
+            else EconomyCatalogScreen(
+                section = shown,
+                kindFilter = kindFilter,
+                onSection = { tab = it; if (it != 2) kindFilter = null },
+                onRewards = { rewards = true },
+                onMembershipChanged = onMembershipChanged,
+                onCollection = onCollection,
+                onPro = onPro,
+                onBalance = { balance = it },
+            )
         }
     }
 }
+
+@Composable
+private fun StoreTitleBar(balance: Int?, onBack: (() -> Unit)?) {
+    // A row, not an overlay: a large balance can never cover the title.
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (onBack != null) {
+            IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
+                Icon(painterResource(R.drawable.hf_ic_back), sh("Geri", "Back"), tint = Hf.Gold, modifier = Modifier.size(30.dp))
+            }
+        } else {
+            Spacer(Modifier.width(8.dp))
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(sh("Mağaza", "Store"), color = LobbyPalette.Ink, fontSize = 27.sp,
+                fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(sh("Oyununa renk kat", "Make it yours"), color = LobbyPalette.Muted, fontSize = 12.sp)
+        }
+        HfPill(modifier = Modifier.padding(end = 6.dp), color = LobbyPalette.Paper, borderColor = LobbyPalette.Line) {
+            HfCoin(20.dp)
+            Spacer(Modifier.width(8.dp))
+            Text(balance?.let { storeGrouped(it) } ?: "—", color = LobbyPalette.Ink, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        }
+    }
+}
+
+private fun storeGrouped(value: Int): String = String.format(java.util.Locale("tr", "TR"), "%,d", value)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EconomyCatalogScreen(
     section: Int,
+    kindFilter: String?,
     onSection: (Int) -> Unit,
     onRewards: () -> Unit,
     onMembershipChanged: (Boolean) -> Unit,
     onCollection: () -> Unit,
     onPro: () -> Unit,
+    onBalance: (Int?) -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -84,6 +172,7 @@ private fun EconomyCatalogScreen(
     var showCoins by remember { mutableStateOf(false) }
     var selectedBundle by remember { mutableStateOf<StoreBundleDto?>(null) }
     var showVip by remember { mutableStateOf(false) }
+    var keyboardOffers by remember { mutableStateOf<Map<String, com.android.billingclient.api.ProductDetails>>(emptyMap()) }
 
     suspend fun reload() {
         val b = backend
@@ -97,13 +186,22 @@ private fun EconomyCatalogScreen(
             return
         }
         runCatching {
-            profile = b.getProfile(id)
-            items = b.getShopItems().filter { it.isRuntimeReadyStyle() }
-            owned = b.getInventory()
-            equipped = b.getEquippedCosmetics()
+            // The five reads are independent: fetch them together so the store fills at once.
+            kotlinx.coroutines.coroutineScope {
+                val profileTask = async { b.getProfile(id) }
+                val itemsTask = async { b.getShopItems() }
+                val ownedTask = async { b.getInventory() }
+                val equippedTask = async { b.getEquippedCosmetics() }
+                val storefrontTask = async { runCatching { b.getStorefront() }.getOrNull() }
+                profile = profileTask.await()
+                items = itemsTask.await().filter { it.isRuntimeReadyStyle() }
+                owned = ownedTask.await()
+                equipped = equippedTask.await()
+                storefront = storefrontTask.await()
+            }
             SonHarfCosmetics.apply(equipped)
             onMembershipChanged(profile?.isVip == true)
-            storefront = b.getStorefront()
+            onBalance(profile?.diamonds)
         }.onFailure {
             notice = sh("Mağaza verileri yüklenemedi.", "Shop data could not be loaded.")
         }
@@ -115,38 +213,166 @@ private fun EconomyCatalogScreen(
         loading = false
     }
 
+    // Premium keyboards are permanent Google Play products (Premium White stays on Son Coin).
+    val billing = remember {
+        com.sonharf.game.billing.BillingManager(
+            context = context,
+            onPurchase = { purchase ->
+                val productId = purchase.products.firstOrNull()
+                if (productId != null && productId in com.sonharf.game.billing.ProductCatalog.keyboardProducts && productId !in owned) {
+                    scope.launch {
+                        busy = productId
+                        runCatching { com.sonharf.game.billing.PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
+                            .onSuccess {
+                                notice = sh("Klavye koleksiyonuna eklendi.", "Keyboard added to your collection.")
+                                SonHarfSoundFx.bonus()
+                                reload()
+                            }
+                            .onFailure { error ->
+                                notice = when {
+                                    "google_play_not_configured" in error.message.orEmpty() -> sh("Google Play sunucu doğrulaması henüz etkin değil.", "Google Play server verification is not enabled yet.")
+                                    "product_disabled" in error.message.orEmpty() -> sh("Bu klavye henüz satışa açılmadı.", "This keyboard is not on sale yet.")
+                                    else -> sh("Ödeme doğrulaması tamamlanamadı; yeniden deneyebilirsin.", "Purchase verification failed; you can retry.")
+                                }
+                            }
+                        busy = null
+                    }
+                }
+            },
+            onMessage = { message -> notice = message; busy = null },
+        )
+    }
+    DisposableEffect(billing) {
+        billing.connect {
+            billing.queryOneTimeProducts(com.sonharf.game.billing.ProductCatalog.keyboardProducts) { keyboardOffers = it }
+            billing.restorePurchases(com.sonharf.game.billing.ProductCatalog.keyboardProducts.toSet())
+        }
+        onDispose { billing.close() }
+    }
+
     fun isEquipped(item: ShopItemDto): Boolean = equipped.isEquipped(item)
 
+    val featuredFirst = listOfNotNull(
+        items.firstOrNull { it.kind == "game_theme" },
+        items.firstOrNull { it.kind == "board_skin" },
+        items.firstOrNull { it.kind == "keyboard_theme" },
+        items.firstOrNull { it.kind == "name_style" },
+    )
     val filtered = when (section) {
-        2 -> items
+        0 -> (featuredFirst + items).distinctBy { it.id }.take(8)
+        2 -> items.filter { it.kind == "game_theme" || it.kind == "board_skin" }.sortedByDescending { it.id == WALNUT_IVORY_THEME_ID }
+        5 -> items.filter { it.kind == "mascot_hat" || it.kind == "victory_effect" }
+        6 -> items.filter { it.kind == "keyboard_theme" || it.kind == "name_style" }
         else -> emptyList()
     }
     val bundles = storefront?.bundles.orEmpty().filter { b -> b.items.isNotEmpty() && b.items.all { it.isRuntimeReadyStyle() } }
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            StoreCollectionHeader(
-                balance = profile?.diamonds ?: 0,
-                ownedCount = items.count { it.id in owned },
-                total = items.size,
-                onCoins = { showCoins = true },
-            )
-        }
-
-        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfTheme.Primary) }
-
-        item {
-            Row {
-                Spacer(Modifier.weight(1f))
-                TextButton(enabled = busy == null && !loading, onClick = {
-                    scope.launch { loading = true; notice = null; reload(); loading = false }
-                }) { Text(sh("Yenile", "Refresh"), fontSize = 12.sp) }
+        if (section == 0) {
+            item { StoreProBanner(profile?.isVip == true) { onSection(3) } }
+            item {
+                HfSecondaryButton(
+                    sh("Son Coin al", "Get Son Coin"),
+                    onClick = { showCoins = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingChevron = true,
+                )
             }
         }
+
+        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Gold, trackColor = LobbyPalette.Paper) }
+
+        if (filtered.isEmpty() && !loading && section in setOf(2, 5, 6)) {
+            item {
+                LobbyCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        sh("Bu kategoride şu anda satışta ürün yok.", "Nothing in this category is on sale right now."),
+                        modifier = Modifier.fillMaxWidth().padding(18.dp),
+                        color = LobbyPalette.Muted,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
+
+        items(filtered.chunked(2), key = { row -> row.joinToString { it.id } }) { row ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { item ->
+                    val mine = item.id in owned
+                    val active = isEquipped(item)
+                    val playKeyboard = item.id in com.sonharf.game.billing.ProductCatalog.keyboardProducts
+                    VerifiedStoreProductCard(
+                        item = item,
+                        owned = mine,
+                        equipped = active,
+                        busy = busy != null || loading || (playKeyboard && !mine && keyboardOffers[item.id]?.oneTimePurchaseOfferDetails == null),
+                        proActive = profile?.isVip == true,
+                        balance = profile?.diamonds,
+                        wins = profile?.wins,
+                        playPrice = if (playKeyboard) {
+                            keyboardOffers[item.id]?.oneTimePurchaseOfferDetails?.formattedPrice ?: sh("ŞU AN SATIŞTA DEĞİL", "CURRENTLY UNAVAILABLE")
+                        } else null,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        onCollection = onCollection,
+                    ) {
+                        val b = backend
+                        if (b == null || busy != null) return@VerifiedStoreProductCard
+                        if (playKeyboard && !mine) {
+                            val product = keyboardOffers[item.id]
+                            val activity = context as? android.app.Activity
+                            if (activity == null || product?.oneTimePurchaseOfferDetails == null) {
+                                notice = sh("Bu klavye Google Play'de henüz satışta değil.", "This keyboard is not on Google Play yet.")
+                            } else {
+                                busy = item.id
+                                val result = billing.launchProduct(activity, product)
+                                if (result.responseCode != com.android.billingclient.api.BillingClient.BillingResponseCode.OK) {
+                                    busy = null
+                                    notice = sh("Google Play ödeme ekranı açılamadı (${result.responseCode}).", "Google Play billing could not open (${result.responseCode}).")
+                                }
+                            }
+                            return@VerifiedStoreProductCard
+                        }
+                        scope.launch {
+                            busy = item.id
+                            val displayName = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
+                            if (mine) {
+                                // Owned items are managed (worn, changed, removed) only from the profile.
+                                notice = sh("$displayName koleksiyonunda.", "$displayName is in your collection.")
+                            } else {
+                                runCatching { b.purchaseShopItem(item.id) }
+                                    .onSuccess {
+                                        // Buying only adds it to the collection; the player wears it from the profile.
+                                        notice = sh("$displayName koleksiyonuna eklendi.", "$displayName added to your collection.")
+                                        SonHarfSoundFx.bonus()
+                                        reload()
+                                    }
+                                    .onFailure {
+                                        val raw = it.message.orEmpty()
+                                        notice = when {
+                                            "insufficient_diamonds" in raw -> sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                                            "vip_required" in raw -> sh("Bu ürün PRO üyelerine özel.", "This item is exclusive to PRO members.")
+                                            "already_owned" in raw -> sh("Bu ürüne zaten sahipsin.", "You already own this item.")
+                                            "play_only" in raw -> sh("Bu ürün Google Play ile satılır.", "This item is sold through Google Play.")
+                                            "requirement_not_met" in raw -> item.requiredWins?.let { need ->
+                                                sh("Bu ürün $need galibiyetle açılır. Maç kazandıkça yaklaşırsın.", "This item unlocks at $need wins. Every win brings you closer.")
+                                            } ?: sh("Bu ürünün başarı şartı henüz tamamlanmadı.", "This item's achievement requirement is not met yet.")
+                                            else -> sh("Satın alma tamamlanamadı.", "Purchase failed.")
+                                        }
+                                    }
+                            }
+                            busy = null
+                        }
+                    }
+                }
+                repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+
         if (section == 0) {
             item {
                 StoreDailyRewardCard(storefront, busy != null || loading) {
@@ -163,19 +389,10 @@ private fun EconomyCatalogScreen(
                     }
                 }
             }
-            item { ProShopCard(profile?.isVip == true) { onSection(3) } }
-            item { StorePromoCard(sh("Sezon Bileti", "Season Pass"), sh("Sezonu ve ödül yolunu keşfet", "Explore the season and reward track"), sh("İncele", "Explore")) { onSection(1) } }
-            bundles.firstOrNull { it.section == "starter" }?.let { bundle ->
+            bundles.filter { it.section == "starter" || it.section == "limited" }.forEach { bundle ->
                 item { StoreBundleCard(bundle, owned, busy != null || loading) { selectedBundle = bundle } }
             }
-            if (items.isNotEmpty()) {
-                item { VerifiedProductsHero(items, owned) }
-                item { TextButton(onClick = { onSection(2) }) { Text(sh("Tüm görünümler", "All styles")) } }
-            }
-            bundles.filter { it.section == "limited" }.forEach { bundle ->
-                item { StoreBundleCard(bundle, owned, busy != null || loading) { selectedBundle = bundle } }
-            }
-            if (storefront?.rewardedEnabled == true) item { TextButton(onClick = onRewards) { Text(sh("İsteğe bağlı reklam ödülleri", "Optional ad rewards")) } }
+            if (storefront?.rewardedEnabled == true) item { TextButton(onClick = onRewards) { Text(sh("İsteğe bağlı reklam ödülleri", "Optional ad rewards"), color = LobbyPalette.Gold) } }
         }
         if (section == 3) {
             val proActive = profile?.isVip == true
@@ -183,93 +400,21 @@ private fun EconomyCatalogScreen(
             item { StoreProBenefits() }
             if (proActive) item {
                 TextButton(onClick = onPro, modifier = Modifier.fillMaxWidth()) {
-                    Text(sh("PRO ARAÇLARINI AÇ", "OPEN PRO TOOLS"), fontWeight = FontWeight.Black)
-                }
-            }
-        }
-        if (filtered.isEmpty() && !loading && section == 2) {
-            item {
-                Surface(
-                    color = SonHarfSurface,
-                    shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, SonHarfTheme.Border),
-                ) {
-                    Text(
-                        sh("Şu anda satışta görünüm yok.", "No styles are on sale right now."),
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        color = SonHarfMuted,
-                        fontSize = 11.sp,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-        }
-
-        items(filtered, key = { it.id }) { item ->
-            val mine = item.id in owned
-            val active = isEquipped(item)
-            VerifiedStoreProductCard(
-                item = item,
-                owned = mine,
-                equipped = active,
-                busy = busy != null || loading,
-                proActive = profile?.isVip == true,
-            ) {
-                val b = backend
-                if (b == null || busy != null) return@VerifiedStoreProductCard
-                scope.launch {
-                    busy = item.id
-                    val displayName = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
-                    if (mine) {
-                        onCollection()
-                    } else {
-                        runCatching { b.purchaseShopItem(item.id) }
-                            .onSuccess {
-                                notice = sh("$displayName satın alındı. Profil > Koleksiyonum'dan kullanabilirsin.", "$displayName purchased. Equip it from Profile > My Collection.")
-                                reload()
-                            }
-                            .onFailure {
-                                val raw = it.message.orEmpty()
-                                notice = when {
-                                    "insufficient_diamonds" in raw -> sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
-                                    "vip_required" in raw -> sh("Bu ürün PRO üyelerine özel.", "This item is exclusive to PRO members.")
-                                    "already_owned" in raw -> sh("Bu ürüne zaten sahipsin.", "You already own this item.")
-                                    else -> sh("Satın alma tamamlanamadı.", "Purchase failed.")
-                                }
-                            }
-                    }
-                    busy = null
-                }
-            }
-        }
-
-        item {
-            Surface(
-                color = SonHarfTheme.SurfaceSecondary,
-                shape = RoundedCornerShape(18.dp),
-                border = BorderStroke(1.dp, SonHarfTheme.Border),
-            ) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.VerifiedUser, null, tint = SonHarfTheme.Success, modifier = Modifier.size(25.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Column {
-                        Text(sh("ADİL OYUN SÖZÜ", "FAIR PLAY PROMISE"), color = SonHarfText, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz.", "Store products never provide match power, score, or rating advantages."), color = SonHarfMuted, fontSize = 10.sp)
-                    }
+                    Text(sh("PRO ARAÇLARINI AÇ", "OPEN PRO TOOLS"), fontWeight = FontWeight.Black, color = LobbyPalette.Gold)
                 }
             }
         }
 
         if (!notice.isNullOrBlank()) item {
-            Surface(color = SonHarfSurface2, shape = RoundedCornerShape(15.dp)) {
-                Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfText, fontSize = 10.sp, textAlign = TextAlign.Center)
+            LobbyCard(modifier = Modifier.fillMaxWidth(), color = LobbyPalette.Paper) {
+                Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = LobbyPalette.Ink, fontSize = 13.sp, textAlign = TextAlign.Center)
             }
         }
         item { Spacer(Modifier.height(10.dp)) }
     }
 
     if (showVip) VipPurchaseDialog(onVerified = { scope.launch { reload() } }) { showVip = false }
-    if (showCoins) ModalBottomSheet(onDismissRequest = { showCoins = false }, containerColor = SonHarfSurface) {
+    if (showCoins) ModalBottomSheet(onDismissRequest = { showCoins = false }, containerColor = LobbyPalette.Paper) {
         GooglePlayProductsCard { scope.launch { reload() } }
         Spacer(Modifier.navigationBarsPadding().height(12.dp))
     }
@@ -301,159 +446,219 @@ private fun EconomyCatalogScreen(
     }
 }
 
+/** PRO banner from the 03 preview: crown, gold PRO plate, one line, chevron. */
 @Composable
-private fun StoreCollectionHeader(balance: Int, ownedCount: Int, total: Int, onCoins: () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfTheme.Surface),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, SonHarfTheme.Border),
+private fun StoreProBanner(active: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = Hf.CardShape,
+        color = Color.Transparent,
+        border = BorderStroke(1.5.dp, Hf.Gold),
     ) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = RoundedCornerShape(16.dp), color = SonHarfTheme.PrimarySoft) {
-                Icon(Icons.Rounded.Storefront, null, Modifier.padding(11.dp).size(27.dp), tint = SonHarfTheme.Primary)
+        Row(
+            Modifier
+                .background(Brush.horizontalGradient(listOf(Color(0xFF244D35), Color(0xFF296B47), Color(0xFF367C54))))
+                .padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Rounded.WorkspacePremium, null, tint = Hf.Gold, modifier = Modifier.size(36.dp))
+            Spacer(Modifier.width(8.dp))
+            Surface(shape = RoundedCornerShape(8.dp), color = Hf.Gold) {
+                Text("PRO", Modifier.padding(horizontal = 10.dp, vertical = 3.dp), color = Hf.Ink, fontSize = 18.sp, fontWeight = FontWeight.Black)
             }
-            Spacer(Modifier.width(11.dp))
-            Column(Modifier.weight(1f)) {
-                Text(sh("Koleksiyon", "Collection"), color = SonHarfText, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                Text(sh("Görünüm · konfor · prestij", "Appearance · comfort · prestige"), color = SonHarfMuted, fontSize = 10.sp)
-                Text(sh("Koleksiyon $ownedCount/$total", "Collection $ownedCount/$total"), color = SonHarfTheme.Primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            }
-            Surface(onClick = onCoins, shape = RoundedCornerShape(99.dp), color = SonHarfGold.copy(alpha = .14f), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .30f))) {
-                Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Toll, null, Modifier.size(16.dp), tint = SonHarfGold)
-                    Spacer(Modifier.width(4.dp))
-                    Text("$balance SC", color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                }
-            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                if (active) sh("PRO aktif", "PRO active")
+                else sh("Reklamsız · Profil · Analiz", "Ad-free · Profile · Analysis"),
+                modifier = Modifier.weight(1f),
+                color = Hf.OnAccent,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Icon(Icons.Rounded.ChevronRight, null, tint = Hf.Gold, modifier = Modifier.size(28.dp))
         }
     }
 }
 
+/** 158×198 ivory product card: preview, name, champagne rule, price chip or owned pill. */
 @Composable
-private fun VerifiedProductsHero(items: List<ShopItemDto>, owned: Set<String>) {
-    val featured = listOfNotNull(
-        items.firstOrNull { it.kind == "game_theme" },
-        items.firstOrNull { it.kind == "keyboard_theme" },
-        items.firstOrNull { it.kind == "name_style" },
-    ).ifEmpty { items.take(3) }.take(3)
-    if (featured.isEmpty()) return
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfTheme.PrimarySoft.copy(alpha = .62f)),
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, SonHarfTheme.Primary.copy(alpha = .25f)),
-    ) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(sh("Öne çıkan görünümler", "Featured styles"), color = SonHarfTheme.Primary, fontWeight = FontWeight.Black, fontSize = 12.sp)
-            Text(sh("Tahta, klavye ve profil görünümünü kişiselleştir.", "Personalize your board, keyboard, and profile style."), color = SonHarfMuted, fontSize = 9.sp)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                featured.forEach { item ->
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        StoreProductPreview(item, Modifier.fillMaxWidth().height(82.dp))
-                        Spacer(Modifier.height(5.dp))
-                        Text(
-                            if (item.id in owned) sh("SAHİPSİN", "OWNED") else if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr,
-                            color = if (item.id in owned) SonHarfTheme.Success else SonHarfText,
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun VerifiedStoreProductCard(
+internal fun VerifiedStoreProductCard(
     item: ShopItemDto,
     owned: Boolean,
     equipped: Boolean,
     busy: Boolean,
     proActive: Boolean,
+    balance: Int? = null,
+    wins: Int? = null,
+    playPrice: String? = null,
+    modifier: Modifier = Modifier,
+    onCollection: () -> Unit = {},
     onAction: () -> Unit,
 ) {
+    var previewOpen by remember(item.id) { mutableStateOf(false) }
     val name = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
-    val description = if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr
     val lockedByPro = item.vipOnly && !proActive && !owned
+    val tier = StoreTier.from(item.economyTier, item.rarity)
+    val goal = StoreGoalProgress.of(item.diamondPrice, balance, item.requiredWins, wins)
+    val tierColor = when (tier) {
+        StoreTier.STARTER, StoreTier.COMMON -> LobbyPalette.Muted
+        StoreTier.RARE -> Color(0xFF3E9F4D)
+        StoreTier.EPIC -> Color(0xFF8A4FC7)
+        StoreTier.LEGENDARY, StoreTier.PRESTIGE -> Hf.GoldDeep
+    }
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfTheme.Surface),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(if (equipped) 2.dp else 1.dp, if (equipped) SonHarfTheme.Success else SonHarfTheme.Border),
+    Surface(
+        onClick = { if (owned || equipped) onCollection() else onAction() },
+        enabled = !busy && !lockedByPro,
+        modifier = modifier,
+        shape = Hf.CardShape,
+        color = LobbyPalette.Paper,
+        // Legendary and prestige get a slightly stronger rim, nothing louder.
+        border = BorderStroke(if (tier.rank >= StoreTier.LEGENDARY.rank) 2.5.dp else 1.5.dp, if (owned || equipped) Hf.Green else if (tier.rank >= StoreTier.RARE.rank) tierColor else Hf.Gold),
+        shadowElevation = 3.dp,
     ) {
-        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            StoreProductPreview(item, Modifier.size(76.dp))
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(name, Modifier.weight(1f), color = SonHarfText, fontSize = 15.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (equipped) Icon(Icons.Rounded.CheckCircle, null, tint = SonHarfTheme.Success, modifier = Modifier.size(18.dp))
-                }
-                Text(description, color = SonHarfMuted, fontSize = 10.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (item.vipOnly) Text("PRO", color = SonHarfGold, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box {
+            // Same order on every card: picture, name, one short line, then the price at the bottom,
+            // all centred so neighbouring cards line up.
+            Column(Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                StoreProductPreview(item, Modifier.fillMaxWidth().height(102.dp))
+                Spacer(Modifier.height(4.dp))
+                Text(tier.label, color = tierColor, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp, maxLines = 1)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    name,
+                    color = LobbyPalette.Ink,
+                    fontSize = 13.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                storeItemEffect(item)?.let { effect ->
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        when {
-                            equipped -> sh("AKTİF", "ACTIVE")
-                            owned -> sh("SAHİPSİN", "OWNED")
-                            else -> "${item.diamondPrice} SC"
-                        },
-                        color = if (owned) SonHarfTheme.Success else SonHarfGold,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
+                        effect,
+                        color = LobbyPalette.Muted,
+                        fontSize = 10.sp,
+                        lineHeight = 13.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    Spacer(Modifier.weight(1f))
-                    Button(
-                        onClick = onAction,
-                        enabled = !busy && !equipped && !lockedByPro,
-                        contentPadding = PaddingValues(horizontal = 11.dp, vertical = 0.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary),
-                    ) {
-                        Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
+                }
+                Spacer(Modifier.weight(1f).heightIn(min = 6.dp))
+                // A long goal reads as progress, not as a wall: coin share and any win requirement.
+                if (!owned && !equipped && !lockedByPro && playPrice == null && balance != null) {
+                    if (goal.winsNeeded != null) {
                         Text(
-                            when {
-                                equipped -> sh("AKTİF", "ACTIVE")
-                                owned -> sh("PROFİLDE KULLAN", "USE IN PROFILE")
-                                lockedByPro -> "PRO"
-                                else -> sh("SATIN AL", "BUY")
-                            },
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black,
+                            sh("${minOf(goal.winsHave, goal.winsNeeded)}/${goal.winsNeeded} galibiyet", "${minOf(goal.winsHave, goal.winsNeeded)}/${goal.winsNeeded} wins"),
+                            color = if (goal.requirementMet) Hf.Green else LobbyPalette.Muted,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
                         )
+                    }
+                    if (goal.coinsMissing > 0) {
+                        LinearProgressIndicator(
+                            progress = { goal.coinFraction },
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).height(4.dp),
+                            color = tierColor.takeIf { tier.rank >= StoreTier.RARE.rank } ?: Hf.Gold,
+                            trackColor = LobbyPalette.Line,
+                        )
+                        Text("%${goal.percent}", color = LobbyPalette.Muted, fontSize = 9.sp, maxLines = 1)
+                    }
+                }
+                if (owned || equipped) {
+                    Surface(shape = Hf.PillShape, color = Hf.Green) {
+                        Row(Modifier.padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                sh("SATIN ALINDI", "PURCHASED"),
+                                color = Hf.OnAccent,
+                                fontSize = 10.sp,
+                                maxLines = 1,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
+                    }
+                } else {
+                    Surface(shape = Hf.PillShape, color = Hf.Gold.copy(alpha = .14f), border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .7f))) {
+                        Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (lockedByPro) {
+                                Icon(Icons.Rounded.WorkspacePremium, null, tint = Hf.GoldDeep, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("PRO", color = LobbyPalette.Ink, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                            } else if (playPrice != null) {
+                                // A Google Play product: its store price, not Son Coin.
+                                Icon(Icons.Rounded.ShoppingCart, null, tint = Hf.GoldDeep, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(playPrice, color = LobbyPalette.Ink, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                            } else {
+                                HfCoin(18.dp)
+                                Spacer(Modifier.width(6.dp))
+                                Text(storeGrouped(item.diamondPrice), color = LobbyPalette.Ink, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                            }
+                        }
                     }
                 }
             }
+            if (lockedByPro) {
+                Box(Modifier.matchParentSize().background(LobbyPalette.Ground.copy(alpha = .35f)), contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.hf_ic_lock), null, tint = Hf.Gold, modifier = Modifier.size(34.dp))
+                }
+            }
+            IconButton(onClick = { previewOpen = true }, modifier = Modifier.align(Alignment.TopEnd).size(38.dp)) {
+                Icon(Icons.Rounded.ZoomIn, sh("Önizle", "Preview"), tint = LobbyPalette.Muted, modifier = Modifier.size(20.dp))
+            }
         }
     }
+    if (previewOpen) AlertDialog(
+        onDismissRequest = { previewOpen = false },
+        containerColor = LobbyPalette.Paper,
+        title = { Text(name, color = LobbyPalette.Ink, fontWeight = FontWeight.Black) },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            StoreProductPreview(item, Modifier.fillMaxWidth().height(230.dp), expanded = true)
+            storeItemEffect(item)?.let { Text(it, color = LobbyPalette.Muted) }
+            Text(if (owned || equipped) sh("Koleksiyonunda", "In your collection") else if (lockedByPro) sh("PRO'ya özel", "PRO exclusive") else playPrice ?: "${item.diamondPrice} Son Coin", color = LobbyPalette.Gold, fontWeight = FontWeight.Bold)
+        } },
+        confirmButton = { Button(enabled = !busy && !lockedByPro, onClick = {
+            previewOpen = false
+            if (owned || equipped) onCollection() else onAction()
+        }) { Text(if (owned || equipped) sh("KOLEKSİYONUM", "MY COLLECTION") else sh("SATIN AL", "BUY")) } },
+        dismissButton = { TextButton(onClick = { previewOpen = false }) { Text(sh("KAPAT", "CLOSE")) } },
+    )
 }
 
 @Composable
 private fun ProShopCard(active: Boolean, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MainUi.BlueSoft),
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .25f)),
-    ) {
+    LobbyCard(onClick = onClick, modifier = Modifier.fillMaxWidth(), borderColor = Hf.Gold) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Surface(shape = CircleShape, color = Color.White) {
-                        Icon(Icons.Rounded.WorkspacePremium, null, Modifier.padding(10.dp).size(28.dp), tint = SonHarfGold)
-                    }
+                    Icon(Icons.Rounded.WorkspacePremium, null, Modifier.size(40.dp), tint = Hf.Gold)
                     Column {
-                        Text("PRO", color = MainUi.Blue, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Reklamsız + profil + analiz", "Ad-free + profile + analysis"), color = SonHarfMuted, fontSize = 9.sp)
+                        Text("PRO", color = LobbyPalette.Gold, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                        Text(sh("Reklamsız + profil + analiz", "Ad-free + profile + analysis"), color = LobbyPalette.Muted, fontSize = 12.sp)
                     }
                 }
-                Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) SonHarfTheme.Success else MainUi.Blue, fontWeight = FontWeight.Black)
+                Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) Hf.GreenLight else Hf.Gold, fontWeight = FontWeight.Black)
             }
-            Text(sh("Özel oda • PRO profil rozeti • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar", "Private rooms • PRO profile badge • advanced stats • ad-free experience • social benefits"), color = SonHarfText, fontSize = 10.sp)
-            Text(sh("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez.", "PRO provides no score, word-hint, or rating advantage in ranked matches."), color = SonHarfTheme.Success, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text(sh("Reklamsız • PRO profil • özel oda • maç özeti • konfor araçları", "Ad-free • PRO profile • private rooms • match recap • comfort tools"), color = LobbyPalette.Ink, fontSize = 13.sp)
         }
     }
+}
+
+private fun storeKindLabel(kind: String?): String = when (kind) {
+    null -> sh("Tümü", "All")
+    "game_theme" -> sh("Oyun teması", "Game theme")
+    "keyboard_theme" -> sh("Klavye", "Keyboard")
+    "name_style" -> sh("İsim stili", "Name style")
+    "profile_frame" -> sh("Çerçeve", "Frame")
+    "board_skin" -> sh("Tahta", "Board")
+    "victory_effect", "vfx" -> sh("Efekt", "Effect")
+    else -> kind.replace('_', ' ').replaceFirstChar { it.uppercase() }
 }

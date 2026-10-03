@@ -81,7 +81,7 @@ fun PremiumCompetitionScreen(
     ) {
         item {
             Text(
-                sh("REKABET", "COMPETE"),
+                sh("TAHT", "THRONE"),
                 color = SonHarfTheme.TextPrimary,
                 fontSize = 25.sp,
                 fontWeight = FontWeight.Black,

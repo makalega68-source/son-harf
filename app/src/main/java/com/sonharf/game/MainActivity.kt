@@ -5,12 +5,15 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -89,6 +92,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleAuthDeepLink(intent: Intent) {
+        if (PlayerLinks.parse(intent.dataString) != null) {
+            PlayerLinks.accept(this, intent.dataString)
+            intent.data = null
+            return
+        }
         val uri = intent.data
         if (!SupabaseProvider.configured || uri?.scheme != "sonharf" || uri.host != "auth") return
         val recoveryRequested = isPasswordRecoveryDeepLink(intent)
@@ -122,10 +130,17 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         bestEffortStartup("background music") { SonHarfBackgroundMusic.start(this) }
+        bestEffortStartup("mascot icon") { MascotLauncherIcon.onAppOpened(this) }
+        bestEffortStartup("reminders") { ReminderNotifications.onAppOpened(this) }
     }
 
     override fun onStop() {
         runCatching { SonHarfBackgroundMusic.pause() }
+        // Not while rotating or finishing into another screen of ours: only a real trip away.
+        if (!isChangingConfigurations) {
+            runCatching { MascotLauncherIcon.onAppBackground(this) }
+            runCatching { ReminderNotifications.onAppBackground(this) }
+        }
         super.onStop()
     }
 
@@ -142,6 +157,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The TR/EN dictionaries ship inside the app; they are read from here, never downloaded.
+        com.sonharf.game.data.SharedDictionaryService.attach(this)
         passwordRecoveryRequested = savedInstanceState?.getBoolean(PASSWORD_RECOVERY_STATE_KEY) == true
 
         // Nothing optional is allowed to prevent the first frame from being rendered. Audio,
@@ -150,7 +167,7 @@ class MainActivity : ComponentActivity() {
         bestEffortStartup("sound effects") { SonHarfSoundFx.init(this) }
         bestEffortStartup("sound preferences") { SonHarfPreferences.syncSound(this) }
         bestEffortStartup("ui preferences") { SonHarfPreferences.syncUi(this) }
-        bestEffortStartup("cosmetics") { SonHarfCosmetics.restore(this) }
+        bestEffortStartup("cosmetics") { SonHarfCosmetics.restore(this); WordSiegeBoardSkins.restore(this); WordSiegeBonusIcons.init(this); GameChatBadge.init(this) }
         bestEffortStartup("remote experience cache") { RemoteExperience.loadCached(this) }
         bestEffortStartup("ad privacy") { AdPrivacyManager.requestConsent(this) }
 
@@ -252,19 +269,35 @@ private sealed interface StartupState {
 }
 
 @Composable
-private fun StartupLoading() {
-    Surface(Modifier.fillMaxSize(), color = SonHarfBg) {
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            SonHarfBrandLogo(modifier = Modifier.fillMaxWidth(.58f), size = null)
-            Spacer(Modifier.height(24.dp))
-            CircularProgressIndicator(color = SonHarfBlue, strokeWidth = 3.dp)
-            Spacer(Modifier.height(14.dp))
-            Text(sh("Kelime Kuşatması hazırlanıyor…", "Preparing Word Siege…"), color = SonHarfText, fontWeight = FontWeight.Bold)
-            Text(sh("Oturum ve ayarlar güvenli biçimde yükleniyor.", "Loading session and settings safely."), color = SonHarfMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
+private fun StartupLoading() = LaunchSplashFrame()
+
+/**
+ * Shown for the moment the app checks the session between screens: the plain app background,
+ * no mascot and no logo, so nothing flashes by. Only a slow check (over ~0.7 s) gets a small
+ * spinner, so the player can tell the app is working.
+ */
+@Composable
+internal fun LaunchSplashFrame() {
+    var slow by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(700L)
+        slow = true
+    }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(SonHarfTheme.Background)
+            .semantics { contentDescription = sh("Kelime Tahtı hazırlanıyor…", "Preparing Word Throne…") },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.kelime_tahti_brand_logo),
+                "Kelime Tahtı", modifier = Modifier.size(240.dp, 140.dp))
+            if (slow) CircularProgressIndicator(
+                modifier = Modifier.size(28.dp),
+                color = Color(0xFF9AA8B8),
+                strokeWidth = 2.5.dp,
+            )
         }
     }
 }

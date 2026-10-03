@@ -1,0 +1,37 @@
+name: Compress intro video
+
+# One-off helper: when a new source clip lands in media/intro_source.mp4, re-encode it at a
+# near-master quality (H.265, CRF 18, slow preset; audio copied untouched), install it as
+# the app's intro and remove the large source from the branch.
+on:
+  push:
+    paths:
+      - media/intro_source.mp4
+
+permissions:
+  contents: write
+
+jobs:
+  compress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Re-encode
+        run: |
+          ffmpeg -hide_banner -y -i media/intro_source.mp4 \
+            -c:v libx265 -preset slow -crf 18 -pix_fmt yuv420p -tag:v hvc1 \
+            -x265-params log-level=error \
+            -c:a copy -movflags +faststart \
+            app/src/main/res/raw/intro_welcome.mp4
+          ls -la media/intro_source.mp4 app/src/main/res/raw/intro_welcome.mp4
+          ffprobe -hide_banner app/src/main/res/raw/intro_welcome.mp4
+      - name: Commit the compressed intro
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -q media/intro_source.mp4
+          git add app/src/main/res/raw/intro_welcome.mp4
+          git commit -m "Install HD intro video (H.265 CRF 18 from the master, audio unchanged)"
+          git push origin HEAD:${GITHUB_REF_NAME}

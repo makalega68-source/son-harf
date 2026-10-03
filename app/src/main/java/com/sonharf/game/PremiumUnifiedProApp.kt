@@ -2,6 +2,8 @@ package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +14,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,27 +25,44 @@ import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.getWordSiegeGame
+import com.sonharf.game.data.useInviteCode
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
 private enum class PremiumDestination {
     HOME, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
-    LAST_LETTER, SIEGE, LETTER_PATH,
-    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP, PRO, PRIVATE_ROOM
+    LAST_LETTER, SIEGE, WORD_WORKSHOP,
+    ACTIVITY, EVENTS, RIVALS, SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP, PRO, PRIVATE_ROOM, MASCOT_CHAT
 }
 
 @Composable
 fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     var destination by remember { mutableStateOf(PremiumDestination.HOME) }
+    var shopInitialTab by rememberSaveable { mutableIntStateOf(0) }
+    var proReturn by remember { mutableStateOf(PremiumDestination.PROFILE) }
     var isPro by remember { mutableStateOf(false) }
+    var startQuickDuel by remember { mutableStateOf(false) }
+    var gameLaunchRevision by remember { mutableIntStateOf(0) }
     val homeRequest = SonHarfUiState.homeRequest
     val defaultGameLanguage = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
     var siegeLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var lastLetterLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
-    var letterPathLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
+    var workshopLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var uiLanguageBeforeGame by rememberSaveable { mutableStateOf<String?>(null) }
-
-    fun openGame(target: PremiumDestination, language: String) {
+    val scope = rememberCoroutineScope()
+    val shellContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        if (!SupabaseProvider.configured) return@LaunchedEffect
+        // Owned mascots come from verified purchases on the server.
+        WordSiegeMascotOwnership.refresh(shellContext)
+        // Rewarded-video passes: banked hints and a day's keyboard or theme.
+        RewardPassState.refresh()
+    }
+    fun openGame(target: PremiumDestination, language: String, quickDuel: Boolean = false) {
+        gameLaunchRevision++
+        startQuickDuel = quickDuel
         if (uiLanguageBeforeGame == null) uiLanguageBeforeGame = SonHarfUiState.language
         SonHarfUiState.language = SharedDictionaryService.canonicalLanguage(language)
         destination = target
@@ -49,6 +72,46 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
         uiLanguageBeforeGame = null
         destination = target
+    }
+
+    fun openPlayerTarget(kind: String, id: String?) {
+        scope.launch {
+            try {
+                when (kind) {
+                    "invite" -> {
+                        backend.useInviteCode(requireNotNull(id))
+                        destination = PremiumDestination.SOCIAL
+                        android.widget.Toast.makeText(shellContext, sh("Arkadaşlık isteği gönderildi", "Friend request sent"), android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    "social" -> destination = PremiumDestination.SOCIAL
+                    "activity" -> destination = PremiumDestination.ACTIVITY
+                    "siege", "series" -> {
+                        val game = backend.getWordSiegeGame(requireNotNull(id))
+                        val me = backend.currentUserId()
+                        check(me != null && (me == game.playerOneId || me == game.playerTwoId))
+                        com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
+                        openGame(PremiumDestination.SIEGE, game.language)
+                    }
+                    "son_harf" -> {
+                        val room = backend.getRoom(requireNotNull(id))
+                        val me = backend.currentUserId()
+                        check(me != null && (me == room.hostId || me == room.guestId))
+                        SonHarfLaunchConfig.pendingRoomId = room.id
+                        openGame(PremiumDestination.LAST_LETTER, room.language)
+                    }
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                android.widget.Toast.makeText(shellContext, sh("Bağlantı açılamadı. Aktivite ekranından tekrar dene.", "Could not open. Try again from Activity."), android.widget.Toast.LENGTH_LONG).show()
+                destination = PremiumDestination.ACTIVITY
+            }
+        }
+    }
+    LaunchedEffect(PlayerLinks.pending) {
+        PlayerLinks.take(shellContext)?.let { openPlayerTarget(it.kind, it.id) }
+    }
+    LaunchedEffect(Unit) {
+        MatchNotifications.schedule(shellContext)
     }
 
     LaunchedEffect(Unit) {
@@ -68,7 +131,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         if (destination !in setOf(
                 PremiumDestination.LAST_LETTER,
                 PremiumDestination.SIEGE,
-                PremiumDestination.LETTER_PATH,
+                PremiumDestination.WORD_WORKSHOP,
             )
         ) {
             while (true) {
@@ -80,11 +143,13 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
-            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION, PremiumDestination.PRO -> PremiumDestination.PROFILE
+            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION -> PremiumDestination.PROFILE
+            PremiumDestination.PRO -> proReturn
             PremiumDestination.PRIVATE_ROOM -> PremiumDestination.PRO
+            PremiumDestination.RIVALS -> PremiumDestination.PROFILE
             PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.HOME
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
-            PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
+            PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
                 uiLanguageBeforeGame = null
                 PremiumDestination.HOME
@@ -96,20 +161,35 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     // Top-level navigation: Home, Friends/Social, Store, Profile. Club is hidden.
     val topLevel = destination in setOf(
         PremiumDestination.HOME,
-        PremiumDestination.SOCIAL,
         PremiumDestination.SHOP,
+        PremiumDestination.SOCIAL,
+        PremiumDestination.COMPETE,
         PremiumDestination.PROFILE,
     )
-    val scheme = if (SonHarfTheme.IsDark) {
+    var incomingSocialCount by remember { mutableIntStateOf(0) }
+    LaunchedEffect(destination) { if (destination == PremiumDestination.SOCIAL) incomingSocialCount = 0 }
+    val scheme = if (SonHarfTheme.IsDark || SonHarfCosmetics.darkArenaTheme) {
         darkColorScheme(
             primary = SonHarfTheme.Primary,
-            secondary = SonHarfTheme.Turquoise,
+            secondary = SonHarfTheme.PremiumGold,
             tertiary = SonHarfTheme.Success,
             background = SonHarfTheme.Background,
             surface = SonHarfTheme.Surface,
+            surfaceVariant = SonHarfTheme.SurfaceElevated,
+            surfaceContainerLowest = SonHarfTheme.Background,
+            surfaceContainerLow = SonHarfTheme.SurfaceSecondary,
+            surfaceContainer = SonHarfTheme.Surface,
+            surfaceContainerHigh = SonHarfTheme.SurfaceElevated,
+            surfaceContainerHighest = SonHarfTheme.SurfaceElevated,
+            secondaryContainer = SonHarfTheme.PrimarySoft,
+            onSecondaryContainer = SonHarfTheme.TextPrimary,
             onPrimary = SonHarfTheme.OnPrimary,
+            onSecondary = SonHarfTheme.OnGold,
             onBackground = SonHarfTheme.TextPrimary,
             onSurface = SonHarfTheme.TextPrimary,
+            onSurfaceVariant = SonHarfTheme.TextSecondary,
+            outline = SonHarfTheme.Border,
+            outlineVariant = SonHarfTheme.Border,
             error = SonHarfTheme.Error,
         )
     } else {
@@ -126,50 +206,80 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         )
     }
 
+    val inGame = destination in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)
+    val pageScheme = if (inGame) scheme else scheme.copy(
+        primary = LobbyPalette.Accent, onPrimary = if (SonHarfTheme.IsDark) Color(0xFF193523) else Color.White,
+        primaryContainer = LobbyPalette.Soft, onPrimaryContainer = LobbyPalette.Ink,
+        secondary = LobbyPalette.Gold, secondaryContainer = LobbyPalette.Soft,
+        onSecondaryContainer = LobbyPalette.Ink, background = LobbyPalette.Ground,
+        surface = LobbyPalette.Paper, surfaceVariant = LobbyPalette.Soft,
+        surfaceContainer = LobbyPalette.Paper, surfaceContainerHigh = LobbyPalette.Paper,
+        surfaceContainerHighest = LobbyPalette.Soft, surfaceContainerLow = LobbyPalette.Paper,
+        surfaceContainerLowest = LobbyPalette.Ground,
+        onBackground = LobbyPalette.Ink, onSurface = LobbyPalette.Ink,
+        onSurfaceVariant = LobbyPalette.Muted, outline = LobbyPalette.Line, outlineVariant = LobbyPalette.Line,
+    )
     MaterialTheme(
-        colorScheme = scheme,
+        colorScheme = pageScheme,
         typography = SonHarfTypography,
         shapes = SonHarfShapes,
     ) {
         Scaffold(
-            containerColor = SonHarfTheme.Background,
+            containerColor = if (inGame) SonHarfTheme.Background else LobbyPalette.Ground,
             topBar = {
-                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)) SonHarfTopAdBanner(isPremium = isPro)
+                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
             },
             bottomBar = {
                 if (topLevel) {
                     PremiumBottomBar(
                         destination = destination,
                         onHome = { destination = PremiumDestination.HOME },
+                        onShop = { shopInitialTab = 0; destination = PremiumDestination.SHOP },
                         onSocial = { destination = PremiumDestination.SOCIAL },
-                        onShop = { destination = PremiumDestination.SHOP },
+                        onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
+                        socialBadge = incomingSocialCount,
                     )
                 }
             },
         ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding)) {
-                if (!SonHarfTheme.IsDark) SonHarfLeafBackdrop(Modifier.matchParentSize())
+            // consumeWindowInsets: the Scaffold padding already contains the status bar, so screens that
+            // add statusBarsPadding() themselves (the game arenas) no longer get a second, empty band on top.
+            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
+                // Clean paper menus; the game arenas retain their own surfaces.
+                key(destination, gameLaunchRevision) {
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
                         backend = backend,
                         onPrimary = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                         onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
-                        onSocial = { destination = PremiumDestination.SOCIAL },
+                        onShop = { shopInitialTab = 0; destination = PremiumDestination.SHOP },
+                        onPro = { proReturn = PremiumDestination.HOME; destination = PremiumDestination.PRO },
+                        onMascots = { shopInitialTab = 4; destination = PremiumDestination.SHOP },
+                        onSettings = { destination = PremiumDestination.SETTINGS },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
-                        onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
+                        onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
+                        onSocial = { destination = PremiumDestination.SOCIAL },
+                        onActivity = { destination = PremiumDestination.ACTIVITY },
+                        onEvents = { destination = PremiumDestination.EVENTS },
+                        onResume = { game ->
+                            com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
+                            openGame(PremiumDestination.SIEGE, game.language)
+                        },
+                        onLastLetterResume = { room -> openPlayerTarget("son_harf", room.id) },
+                        incomingCount = incomingSocialCount,
                     )
                     PremiumDestination.GAMES -> PremiumGameCenter(
                         siegeLanguage = siegeLanguage,
                         lastLetterLanguage = lastLetterLanguage,
-                        letterPathLanguage = letterPathLanguage,
+                        workshopLanguage = workshopLanguage,
                         onSiegeLanguage = { siegeLanguage = it },
                         onLastLetterLanguage = { lastLetterLanguage = it },
-                        onLetterPathLanguage = { letterPathLanguage = it },
+                        onWorkshopLanguage = { workshopLanguage = it },
                         onSiege = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
-                        onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
+                        onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
                     )
                     PremiumDestination.COMPETE -> CompetitionHubScreen(
                         onBack = { destination = PremiumDestination.HOME },
@@ -180,22 +290,26 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE_DETAILS },
-                        { destination = PremiumDestination.PRO },
+                        { proReturn = PremiumDestination.PROFILE; destination = PremiumDestination.PRO },
                         { destination = PremiumDestination.COLLECTION },
                         { destination = PremiumDestination.SETTINGS },
                         { destination = PremiumDestination.SOCIAL },
+                        onRivals = { destination = PremiumDestination.RIVALS },
                     )
                     PremiumDestination.COLLECTION -> PlayerCollectionScreen(backend) { destination = PremiumDestination.PROFILE }
                     PremiumDestination.SHOP -> EconomyShopScreen(
+                        initialTab = shopInitialTab,
                         onBack = { destination = PremiumDestination.HOME },
                         onMembershipChanged = { isPro = it },
                         onCollection = { destination = PremiumDestination.COLLECTION },
-                        onPro = { destination = PremiumDestination.PRO },
+                        onPro = { proReturn = PremiumDestination.SHOP; destination = PremiumDestination.PRO },
                     )
                     PremiumDestination.PRO -> UnifiedProVipScreen(
                         backend = backend,
-                        onBack = { destination = PremiumDestination.PROFILE },
+                        onBack = { destination = proReturn },
                         onPrivateRoom = { destination = PremiumDestination.PRIVATE_ROOM },
+                        onFriends = { destination = PremiumDestination.SOCIAL },
+                        onQuickDuel = { openGame(PremiumDestination.SIEGE, siegeLanguage, quickDuel = true) },
                     )
                     PremiumDestination.PRIVATE_ROOM -> PrivateRoomCenterScreen(
                         onBack = { destination = PremiumDestination.PRO },
@@ -203,14 +317,32 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     )
                     PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()
                     PremiumDestination.SIEGE -> WordSiegeEntryScreen(
+                        startQuickDuel = startQuickDuel,
                         onExit = { leaveGame() },
-                        onOpenStore = { leaveGame(PremiumDestination.SHOP) },
+                        onOpenStore = { shopInitialTab = 0; leaveGame(PremiumDestination.SHOP) },
                     )
-                    PremiumDestination.LETTER_PATH -> LetterLadderGameScreen {
+                    PremiumDestination.WORD_WORKSHOP -> KelimeAtolyesiScreen {
                         leaveGame()
                     }
-                    PremiumDestination.SOCIAL -> MainSocialScreen(
+                    PremiumDestination.ACTIVITY -> SocialActivityScreen(backend,
+                        onOpenTarget = ::openPlayerTarget,
+                        onBack = { destination = PremiumDestination.HOME },
+                        onFriends = { destination = PremiumDestination.SOCIAL },
+                        onOpenGame = { game ->
+                            com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
+                            openGame(PremiumDestination.SIEGE, game.language)
+                        })
+                    PremiumDestination.EVENTS -> EventsCalendarScreen(
+                        onBack = { destination = PremiumDestination.HOME },
+                        onAtelier = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
+                        onThrone = { destination = PremiumDestination.COMPETE })
+                    PremiumDestination.SOCIAL, PremiumDestination.RIVALS -> MainSocialScreen(
                         backend = backend,
+                        initialTab = if (destination == PremiumDestination.RIVALS) 2 else 0,
+                        onOpenSiege = { game ->
+                            com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
+                            openGame(PremiumDestination.SIEGE, game.language)
+                        },
                         onPlay = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onSiege = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                     )
@@ -226,10 +358,35 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.PROFILE_DETAILS -> CompleteProfileScreen(0) {
                         destination = PremiumDestination.PROFILE
                     }
+                    PremiumDestination.MASCOT_CHAT -> MascotChatScreen(
+                        onBack = { destination = PremiumDestination.HOME },
+                        mascotSkin = chatMascotSkin(shellContext),
+                    )
                 }
+                }
+                // Friend requests and game invitations are announced on every main page,
+                // not only inside the Friends page, so they never wait unseen.
+                IncomingSocialWatcher(
+                    backend = backend,
+                    enabled = topLevel,
+                    onCount = { incomingSocialCount = it },
+                    onOpen = { destination = PremiumDestination.ACTIVITY },
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    onAcceptedSiege = { game ->
+                        com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
+                        openGame(PremiumDestination.SIEGE, game.language)
+                    },
+                )
             }
         }
     }
+}
+
+/** The mascot the player picked, if they own it, otherwise their first owned character. */
+private fun chatMascotSkin(context: android.content.Context): WordSiegeMascotSkin {
+    val owned = WordSiegeMascotOwnership.owned
+    val picked = WordSiegeMascotBond(context).skinChoice
+    return picked?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } ?: WordSiegeMascotSkin.ORB
 }
 
 @Composable
@@ -238,11 +395,21 @@ private fun PremiumHomeScreen(
     onPrimary: () -> Unit,
     onCompete: () -> Unit,
     onProfile: () -> Unit,
-    onSocial: () -> Unit,
+    onShop: () -> Unit,
+    onPro: () -> Unit,
+    onMascots: () -> Unit,
+    onSettings: () -> Unit,
     onLastLetter: () -> Unit,
-    onLetterPath: () -> Unit,
+    onWorkshop: () -> Unit,
+    onSocial: () -> Unit,
+    onActivity: () -> Unit,
+    onEvents: () -> Unit,
+    onResume: (com.sonharf.game.data.WordSiegeGameDto) -> Unit,
+    onLastLetterResume: (com.sonharf.game.data.GameRoomDto) -> Unit,
+    incomingCount: Int,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var showCommunityDetails by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
@@ -250,22 +417,58 @@ private fun PremiumHomeScreen(
             runCatching { backend.getProfile(id) }.getOrNull()
         }
     }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.fillMaxSize().background(HomeLobbyStyle.Ground), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
-            modifier = Modifier.widthIn(max = 600.dp).fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier.widthIn(max = 480.dp).fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item(key = "home_hero") {
-                PremiumHomeCommandDeck(profile, onProfile, onPrimary, onSocial)
+                PremiumHomeCommandDeck(profile, onProfile, onShop, onPro, onSettings)
             }
-            item(key = "home_secondary_modes") {
-                PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)
+            item(key = "home_games") {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HomeSiegeHero(onPrimary)
+                    PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
+                }
             }
-            item(key = "daily_objective") {
-                PremiumDailyObjective(onClick = onCompete)
+            item(key = "home_quick_menu") {
+                HomeQuickMenu(profile?.isVip == true, onPro, onMascots, onActivity, onEvents)
             }
+            item(key = "ongoing_games") { HomeSessions(backend, onResume, onPrimary, onLastLetterResume) }
+            item(key = "home_daily_tasks") {
+                PremiumHomeDailyTasks(onClick = onCompete)
+            }
+            item(key = "community_summary") {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { showCommunityDetails = !showCommunityDetails },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                        Text(sh("Lig ve arkadaşlar", "League and friends"), color = HomeLobbyStyle.Ink, fontSize = 13.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Icon(if (showCommunityDetails) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                            if (showCommunityDetails) sh("Daralt", "Collapse") else sh("Genişlet", "Expand"),
+                            tint = HomeLobbyStyle.Muted)
+                    }
+                    if (incomingCount > 0) TextButton(onClick = onSocial) {
+                        Text(sh("$incomingCount davet", "$incomingCount invites"), color = Hf.Green, fontSize = 12.sp)
+                    }
+                }
+            }
+            if (showCommunityDetails) {
+                item(key = "league_progress") { HomeLeague(backend, onCompete) }
+                item(key = "social_arena") { HomeSocialArena(backend, incomingCount, onSocial, isPro = profile?.isVip == true) }
+            }
+
         }
+        // The original floating companion consumes no row or empty space in the home feed.
+        WordSiegeMascotCompanion(
+            anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
+            mascotSize = 83.dp, positionKey = "home",
+            moveId = null, lastMoveMine = false, playerTurn = false,
+            modifier = Modifier.matchParentSize(),
+            playerName = profile?.displayName, playerGender = profile?.gender,
+            stageY = .5f,
+        )
     }
 }
 
@@ -273,13 +476,13 @@ private fun PremiumHomeScreen(
 private fun PremiumGameCenter(
     siegeLanguage: String,
     lastLetterLanguage: String,
-    letterPathLanguage: String,
+    workshopLanguage: String,
     onSiegeLanguage: (String) -> Unit,
     onLastLetterLanguage: (String) -> Unit,
-    onLetterPathLanguage: (String) -> Unit,
+    onWorkshopLanguage: (String) -> Unit,
     onSiege: () -> Unit,
     onLastLetter: () -> Unit,
-    onLetterPath: () -> Unit,
+    onWorkshop: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -313,7 +516,8 @@ private fun PremiumGameCenter(
         item {
             PremiumGameCard(
                 icon = Icons.Rounded.GridView,
-                title = sh("KELİME KUŞATMASI", "KELİME KUŞATMASI"),
+                title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                artRes = R.drawable.kelime_tahti_game_icon,
                 subtitle = sh("Ana oyun • taktik alan savaşı", "Main game • tactical territory battle"),
                 language = siegeLanguage,
                 onLanguageChange = onSiegeLanguage,
@@ -325,6 +529,7 @@ private fun PremiumGameCenter(
             PremiumGameCard(
                 icon = Icons.Rounded.Bolt,
                 title = sh("SON HARF", "LAST LETTER"),
+                artRes = R.drawable.son_harf_game_icon,
                 subtitle = sh("Hızlı kelime düellosu", "Fast word duel"),
                 language = lastLetterLanguage,
                 onLanguageChange = onLastLetterLanguage,
@@ -334,11 +539,12 @@ private fun PremiumGameCenter(
         item {
             PremiumGameCard(
                 icon = Icons.Rounded.Route,
-                title = sh("HARF YOLU", "LETTER PATH"),
-                subtitle = sh("Kelime rotanı tamamla", "Complete your word path"),
-                language = letterPathLanguage,
-                onLanguageChange = onLetterPathLanguage,
-                onClick = onLetterPath,
+                title = sh("KELİME ATÖLYESİ", "WORD WORKSHOP"),
+                artRes = R.drawable.kelime_atolyesi_game_icon,
+                subtitle = sh("7 harf, 3 görev, 60 saniye", "7 letters, 3 tasks, 60 seconds"),
+                language = workshopLanguage,
+                onLanguageChange = onWorkshopLanguage,
+                onClick = onWorkshop,
             )
         }
     }
@@ -350,6 +556,7 @@ private fun PremiumGameCard(
     title: String,
     subtitle: String,
     language: String,
+    artRes: Int? = null,
     onLanguageChange: (String) -> Unit,
     primary: Boolean = false,
     onClick: () -> Unit,
@@ -370,7 +577,7 @@ private fun PremiumGameCard(
                     Text(
                         sh("ANA ARENA", "MAIN ARENA"),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        color = SonHarfTheme.PremiumGold,
+                        color = SonHarfTheme.TextPrimary,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
                     )
@@ -378,17 +585,7 @@ private fun PremiumGameCard(
                 Spacer(Modifier.height(10.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = if (primary) SonHarfTheme.Primary.copy(alpha = .18f) else SonHarfTheme.Turquoise.copy(alpha = .12f),
-                ) {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        tint = if (primary) SonHarfTheme.Primary else SonHarfTheme.Turquoise,
-                        modifier = Modifier.padding(12.dp).size(26.dp),
-                    )
-                }
+                if (artRes != null) HfGameArt(artRes, 58.dp, 58.dp) else HfGameIconSlot(50.dp)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(title, color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, fontSize = 14.sp)
@@ -450,37 +647,72 @@ private fun PremiumLanguageChoice(
 private fun PremiumBottomBar(
     destination: PremiumDestination,
     onHome: () -> Unit,
-    onSocial: () -> Unit,
     onShop: () -> Unit,
+    onSocial: () -> Unit,
+    onCompete: () -> Unit,
     onProfile: () -> Unit,
+    socialBadge: Int = 0,
 ) {
     val items = listOf(
-        Triple(PremiumDestination.HOME, Icons.Rounded.Home, sh("ANA SAYFA", "HOME")) to onHome,
-        Triple(PremiumDestination.SOCIAL, Icons.Rounded.People, sh("ARKADAŞLAR", "FRIENDS")) to onSocial,
-        Triple(PremiumDestination.SHOP, Icons.Rounded.Storefront, sh("MAĞAZA", "STORE")) to onShop,
-        Triple(PremiumDestination.PROFILE, Icons.Rounded.Person, sh("PROFİL", "PROFILE")) to onProfile,
+        Triple(PremiumDestination.HOME, R.drawable.hf_ic_home, sh("Ana Sayfa", "Home")) to onHome,
+        Triple(PremiumDestination.SHOP, R.drawable.hf_ic_store, sh("Mağaza", "Store")) to onShop,
+        Triple(PremiumDestination.SOCIAL, R.drawable.hf_ic_club, sh("Arkadaşlar", "Friends")) to onSocial,
+        Triple(PremiumDestination.COMPETE, R.drawable.hf_ic_compete, sh("Taht", "Throne")) to onCompete,
+        Triple(PremiumDestination.PROFILE, R.drawable.hf_ic_profile, sh("Profil", "Profile")) to onProfile,
     )
-    NavigationBar(containerColor = SonHarfTheme.NavigationSurface, tonalElevation = 0.dp) {
-        items.forEach { (item, onClick) ->
-            NavigationBarItem(
-                selected = destination == item.first,
-                onClick = onClick,
-                icon = { Icon(item.second, null) },
-                label = {
-                    Text(
-                        item.third,
-                        fontSize = 8.sp,
-                        fontWeight = if (destination == item.first) FontWeight.Bold else FontWeight.Normal,
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = SonHarfTheme.Primary,
-                    selectedTextColor = SonHarfTheme.Primary,
-                    indicatorColor = SonHarfTheme.Primary.copy(alpha = .12f),
-                    unselectedIconColor = SonHarfTheme.TextSecondary,
-                    unselectedTextColor = SonHarfTheme.TextSecondary,
-                ),
-            )
+    Surface(color = LobbyPalette.Paper) {
+        Column(Modifier.navigationBarsPadding()) {
+            HorizontalDivider(thickness = 1.dp, color = LobbyPalette.Line)
+            Row(Modifier.fillMaxWidth().height(72.dp), verticalAlignment = Alignment.CenterVertically) {
+                items.forEachIndexed { index, (item, onClick) ->
+                    val selected = destination == item.first
+                    if (index > 0) Box(Modifier.width(1.dp).height(34.dp).background(LobbyPalette.Line.copy(alpha = .5f)))
+                    Column(
+                        Modifier.weight(1f).fillMaxHeight().clickable(onClick = onClick),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Box {
+                            Icon(
+                                painterResource(item.second),
+                                null,
+                                tint = if (selected) LobbyPalette.Accent else LobbyPalette.Muted,
+                                modifier = Modifier.size(28.dp),
+                            )
+                            if (item.first == PremiumDestination.SOCIAL && socialBadge > 0) {
+                                Surface(
+                                    shape = RoundedCornerShape(99.dp),
+                                    color = Color(0xFFD64541),
+                                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 8.dp, y = (-4).dp),
+                                ) {
+                                    Text(
+                                        if (socialBadge > 9) "9+" else socialBadge.toString(),
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black,
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            item.third,
+                            color = if (selected) LobbyPalette.Accent else LobbyPalette.Muted,
+                            fontSize = 12.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Box(
+                            Modifier.width(44.dp).height(3.dp).background(
+                                if (selected) LobbyPalette.Accent else Color.Transparent,
+                                RoundedCornerShape(99.dp),
+                            ),
+                        )
+                    }
+                }
+            }
         }
     }
 }

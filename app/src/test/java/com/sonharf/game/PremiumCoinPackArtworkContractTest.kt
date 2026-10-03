@@ -10,17 +10,17 @@ class PremiumCoinPackArtworkContractTest {
     @Test
     fun `every Son Coin package has distinct transparent text-free artwork`() {
         val paths = listOf(
-            "app/src/main/res/drawable/premium_coin_500.xml",
-            "app/src/main/res/drawable/premium_coin_1500.xml",
-            "app/src/main/res/drawable/premium_coin_3500.xml",
-            "app/src/main/res/drawable/premium_coin_8000.xml",
+            "app/src/main/res/drawable-nodpi/premium_coin_500.png",
+            "app/src/main/res/drawable-nodpi/premium_coin_1500.png",
+            "app/src/main/res/drawable-nodpi/premium_coin_3500.png",
+            "app/src/main/res/drawable-nodpi/premium_coin_8000.png",
         )
+        assertFalse(File("app/src/main/res/drawable/premium_coin_500.xml").exists() || File("src/main/res/drawable/premium_coin_500.xml").exists())
         val contents = paths.map { path ->
-            val vector = repoFile(path).readText()
-            assertTrue("Missing vector root for $path", vector.contains("<vector"))
-            assertFalse("Artwork must not bake product copy: $path", vector.contains("<text"))
-            assertFalse("Artwork must not bake Son Coin quantities: $path", Regex(">(?:500|1500|3500|8000)<").containsMatchIn(vector))
-            vector
+            val bytes = repoFile(path).readBytes()
+            // Painted, text-free coin art: transparent RGBA PNG.
+            assertTrue("Artwork must be a transparent PNG: $path", bytes[1] == 'P'.code.toByte() && bytes[25].toInt() == 6)
+            bytes.toList()
         }
         assertEquals("Each Son Coin package must have its own artwork", contents.size, contents.toSet().size)
     }

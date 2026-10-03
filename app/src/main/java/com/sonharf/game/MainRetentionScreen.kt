@@ -163,7 +163,7 @@ internal fun MainRetentionScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold, contentColor = Color(0xFF3C2700)),
                             shape = RoundedCornerShape(14.dp),
                         ) {
-                            Text(if (g?.dailyClaimed == true) "✓ ${sh("ALINDI", "CLAIMED")}" else "🎁 +${g?.dailyReward ?: 40} SC", fontWeight = FontWeight.Black, fontSize = 10.sp)
+                            Text(if (g?.dailyClaimed == true) "✓ ${sh("ALINDI", "CLAIMED")}" else "🎁 +${g?.dailyReward ?: 5} SC", fontWeight = FontWeight.Black, fontSize = 10.sp)
                         }
                         OutlinedButton(
                             onClick = onDailyChallenge,
@@ -204,7 +204,7 @@ internal fun MainRetentionScreen(
                             shape = RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp),
                         ) {
-                            Text(if (g?.dailyChallengeClaimed == true) sh("ALINDI", "CLAIMED") else "+30 SC", fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text(if (g?.dailyChallengeClaimed == true) sh("ALINDI", "CLAIMED") else "+15 SC", fontSize = 9.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -379,8 +379,10 @@ internal fun MainRetentionScreen(
             item {
                 MainSectionTitle(sh("KİŞİSEL REKORLAR", "PERSONAL RECORDS"))
                 Spacer(Modifier.height(8.dp))
+                // The longest word gets its own full-width card: a long word never fits a third of a row.
+                MainMetricCard(r.longestWord.ifBlank { "—" }.uppercase(), sh("En uzun kelime", "Longest word"), Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MainMetricCard(r.longestWord.ifBlank { "—" }.uppercase(), sh("En uzun kelime", "Longest word"), Modifier.weight(1f))
                     MainMetricCard(r.bestClassicScore.toString(), sh("En iyi skor", "Best score"), Modifier.weight(1f))
                     MainMetricCard(r.realPvpMatches.toString(), sh("Gerçek PvP", "Real PvP"), Modifier.weight(1f))
                 }

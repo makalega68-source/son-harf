@@ -43,6 +43,7 @@ internal fun MainSettingsScreen(
     var gameInvites by remember { mutableStateOf(SonHarfPreferences.gameInviteNotificationsEnabled(context)) }
     var friendRequests by remember { mutableStateOf(SonHarfPreferences.friendRequestNotificationsEnabled(context)) }
     var systemNotifications by remember { mutableStateOf(SonHarfPreferences.systemNotificationsEnabled(context)) }
+    var reminders by remember { mutableStateOf(ReminderNotifications.enabled(context)) }
     var profileVisible by remember { mutableStateOf(true) }
     var visibilityBusy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -120,9 +121,14 @@ internal fun MainSettingsScreen(
                     SonHarfPreferences.setFriendRequestNotificationsEnabled(context, it)
                 }
                 HorizontalDivider(color = MainUi.Border)
-                MainToggleSetting(Icons.Rounded.Notifications, sh("Sistem duyuruları", "System announcements"), sh("Ödül, bakım ve önemli haberler", "Rewards, maintenance and important news"), systemNotifications) {
+                MainToggleSetting(Icons.Rounded.Notifications, sh("Maç bildirimleri", "Match notifications"), sh("Sıra sende ve maç sonuçları", "Your turn and match results"), systemNotifications) {
                     systemNotifications = it
                     SonHarfPreferences.setSystemNotificationsEnabled(context, it)
+                }
+                HorizontalDivider(color = MainUi.Border)
+                MainToggleSetting(Icons.Rounded.Alarm, sh("Hatırlatmalar", "Reminders"), sh("Günlük yarış, seri uyarısı ve Obi'nin mesajları", "Daily race, streak alerts and notes from Obi"), reminders) {
+                    reminders = it
+                    ReminderNotifications.setEnabled(context, it)
                 }
             }
         }
@@ -151,7 +157,7 @@ internal fun MainSettingsScreen(
                 }
                 Text(
                     sh("Gizli olduğunda fotoğraf yerine adının baş harfi görünür.", "When hidden, your initial appears instead of the photo."),
-                    color = MainUi.Muted,
+                    color = SettingsMutedInk,
                     fontSize = 9.sp,
                 )
             }
@@ -179,7 +185,7 @@ internal fun MainSettingsScreen(
             MainSettingsGroup(sh("HESAP", "ACCOUNT")) {
                 val email = runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.currentUserOrNull()?.email }.getOrNull().orEmpty()
                 if (email.isNotBlank()) {
-                    Text(email, color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(email, color = LobbyPalette.Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(3.dp))
                 }
                 MainSettingsLink(Icons.Rounded.ManageAccounts, sh("Hesap ve gizlilik", "Account & privacy"), sh("Engellenenler ve hesap silme", "Blocked users and account deletion"), onAccount)
@@ -198,7 +204,7 @@ internal fun MainSettingsScreen(
 
         item {
             Text(
-                "Kelime Kuşatması ${BuildConfig.VERSION_NAME} • Android",
+                "Kelime Tahtı ${BuildConfig.VERSION_NAME} • Android",
                 Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 color = MainUi.Muted,
                 fontSize = 9.sp,
@@ -228,7 +234,7 @@ internal fun MainSettingsScreen(
         AlertDialog(
             onDismissRequest = { logoutDialog = false },
             title = { Text(sh("Çıkış yapılsın mı?", "Sign out?"), fontWeight = FontWeight.Black) },
-            text = { Text(sh("Bu cihazdaki Kelime Kuşatması oturumu kapatılacak.", "Your Word Siege session on this device will end.")) },
+            text = { Text(sh("Bu cihazdaki Kelime Tahtı oturumu kapatılacak.", "Your Kelime Tahtı session on this device will end.")) },
             dismissButton = { TextButton(onClick = { logoutDialog = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
             confirmButton = {
                 Button(
@@ -236,6 +242,7 @@ internal fun MainSettingsScreen(
                         scope.launch {
                             runCatching { backend.setPresence("offline") }
                             runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.signOut() }
+                            MatchNotifications.signedOut(context)
                             RememberedCredentialVault.clear(context)
                             SonHarfPreferences.setRememberLogin(context, false)
                             logoutDialog = false
@@ -289,7 +296,7 @@ internal fun MainVipScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                color = MainUi.Blue,
+                color = SonHarfTheme.HeroMiddle,
             ) {
                 Column(
                     Modifier.fillMaxWidth().padding(20.dp),
@@ -337,8 +344,8 @@ internal fun MainVipScreen(
                     Text(sh("PRO OYUN YARDIMLARI", "PRO GAME HELPERS"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh(
-                            "PRO; İpucu, Harf Değiştirici ve 2x Skor dahil sunucu doğrulamalı oyun yardımcıları sunar.",
-                            "PRO includes server-validated gameplay helpers such as Hint, Letter Swap and 2x Score.",
+                            "PRO: Hamle Önizleme, Kalan Harfler ve kelime geçmişi.",
+                            "PRO: Move Preview, Letters Left and word history.",
                         ),
                         color = MainUi.Text,
                         fontSize = 11.sp,
@@ -349,26 +356,12 @@ internal fun MainVipScreen(
         }
 
         item {
-            if (active) {
-                OutlinedButton(
-                    onClick = {
-                        val url = "https://play.google.com/store/account/subscriptions?package=${BuildConfig.APPLICATION_ID}"
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .40f)),
-                ) {
-                    Icon(Icons.Rounded.OpenInNew, null, tint = MainUi.Blue)
-                    Spacer(Modifier.width(7.dp))
-                    Text(sh("GOOGLE PLAY'DE YÖNET", "MANAGE ON GOOGLE PLAY"), color = MainUi.Blue, fontWeight = FontWeight.Black)
-                }
-            } else {
+            if (!active) {
                 Button(
                     onClick = { showPurchase = true },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(17.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue, contentColor = androidx.compose.ui.graphics.Color.White),
                 ) {
                     Text(sh("VIP PLANLARINI GÖR", "VIEW VIP PLANS"), fontWeight = FontWeight.Black)
                     Spacer(Modifier.width(7.dp))
@@ -399,13 +392,17 @@ internal fun MainVipScreen(
 
 @Composable
 private fun MainSettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
-            content()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, color = LobbyPalette.Gold, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp, modifier = Modifier.padding(start = 4.dp))
+        Surface(shape = Hf.CardShape, color = LobbyPalette.Paper, contentColor = LobbyPalette.Ink, border = BorderStroke(1.dp, LobbyPalette.Line)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                content()
+            }
         }
     }
 }
+
+private val SettingsMutedInk: Color get() = LobbyPalette.Muted
 
 @Composable
 private fun MainToggleSetting(
@@ -416,16 +413,26 @@ private fun MainToggleSetting(
     enabled: Boolean = true,
     onChange: (Boolean) -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(12.dp), color = MainUi.BlueSoft) {
-            Icon(icon, null, tint = MainUi.Blue, modifier = Modifier.padding(8.dp).size(19.dp))
-        }
-        Spacer(Modifier.width(10.dp))
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = LobbyPalette.Ink, modifier = Modifier.size(30.dp))
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = MainUi.Muted, fontSize = 8.5.sp)
+            Text(title, color = LobbyPalette.Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = SettingsMutedInk, fontSize = 12.sp)
         }
-        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
+        Switch(
+            checked = checked,
+            onCheckedChange = onChange,
+            enabled = enabled,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = LobbyPalette.Green,
+                checkedBorderColor = LobbyPalette.Green,
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = LobbyPalette.Ground,
+                uncheckedBorderColor = LobbyPalette.Line,
+            ),
+        )
     }
 }
 
@@ -436,16 +443,14 @@ private fun MainSettingsLink(
     subtitle: String,
     onClick: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(12.dp), color = MainUi.BlueSoft) {
-            Icon(icon, null, tint = MainUi.Blue, modifier = Modifier.padding(8.dp).size(19.dp))
-        }
-        Spacer(Modifier.width(10.dp))
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = LobbyPalette.Ink, modifier = Modifier.size(30.dp))
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = MainUi.Muted, fontSize = 8.5.sp)
+            Text(title, color = LobbyPalette.Ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = SettingsMutedInk, fontSize = 12.sp)
         }
-        Icon(Icons.Rounded.ChevronRight, null, tint = MainUi.Muted)
+        Icon(Icons.Rounded.ChevronRight, null, tint = Hf.GoldDeep, modifier = Modifier.size(28.dp))
     }
 }
 

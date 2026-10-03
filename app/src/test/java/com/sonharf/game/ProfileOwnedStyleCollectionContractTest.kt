@@ -38,7 +38,7 @@ class ProfileOwnedStyleCollectionContractTest {
         assertTrue(profile.contains("BlackThemeId in owned -> BlackThemeId"))
         assertTrue(profile.contains("title = \"Black Theme\""))
         assertTrue(profile.contains("onClick = { equipStyle(ownedDarkThemeId ?: BlackThemeId) }"))
-        assertTrue(profile.contains("collection.filter { it.id !in DarkThemeIds && it.isSupportedOwnedStyle() }"))
+        assertTrue(profile.contains("collection.filter { it.id !in DarkThemeIds && it.id != WALNUT_IVORY_THEME_ID && it.isSupportedOwnedStyle() }"))
         assertFalse(profile.contains("title = sh(\"Gece Arenası\", \"Night Arena\")"))
         assertFalse(profile.contains("SonHarfCosmetics.gameThemeId == DarkArenaThemeId"))
     }

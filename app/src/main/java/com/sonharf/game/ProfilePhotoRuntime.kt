@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -104,60 +102,25 @@ internal object ProfilePhotoRuntime {
     }
 }
 
-private data class GenderVisual(val symbol: String, val color: Color)
-
-private fun genderVisual(gender: String?): GenderVisual? = when (gender?.trim()?.lowercase()) {
-    "kadın", "kadin", "female", "woman" -> GenderVisual("♀", Color(0xFFFF4F9A))
-    "erkek", "male", "man" -> GenderVisual("♂", Color(0xFF238BFF))
-    else -> null
+/** The same supplied portraits are used for bots, missing photos and private photos. */
+internal fun defaultProfilePortraitRes(gender: String?): Int = when (gender?.trim()?.lowercase()) {
+    "kadın", "kadin", "female", "woman" -> R.drawable.default_profile_female
+    else -> R.drawable.default_profile_male
 }
 
 @Composable
-private fun FramelessGenderSymbol(gender: String?, size: Dp) {
-    val visual = genderVisual(gender) ?: return
-    Text(
-        text = visual.symbol,
-        color = visual.color,
-        fontWeight = FontWeight.Black,
-        fontSize = (size.value * .31f).coerceAtLeast(13f).sp,
-        style = TextStyle(
-            shadow = Shadow(
-                color = visual.color.copy(alpha = .28f),
-                blurRadius = (size.value * .12f).coerceAtLeast(3f),
-            )
-        ),
+internal fun DefaultProfilePortrait(gender: String?, modifier: Modifier) {
+    Image(
+        painter = androidx.compose.ui.res.painterResource(defaultProfilePortraitRes(gender)),
+        contentDescription = null,
+        modifier = modifier,
+        contentScale = ContentScale.Crop,
     )
 }
 
 @Composable
 private fun SyntheticProfilePortrait(name: String, gender: String?, modifier: Modifier, accent: Color) {
-    val visual = genderVisual(gender)
-    Box(
-        modifier.background(
-            Brush.linearGradient(
-                listOf(
-                    accent.copy(alpha = .18f),
-                    (visual?.color ?: Color(0xFF57C7F3)).copy(alpha = .28f),
-                    Color.White,
-                )
-            )
-        ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.Face,
-            contentDescription = null,
-            tint = accent.copy(alpha = .82f),
-            modifier = Modifier.fillMaxSize().padding(7.dp),
-        )
-        Text(
-            text = name.take(1).uppercase(),
-            color = Color.White,
-            fontWeight = FontWeight.Black,
-            fontSize = 9.sp,
-            modifier = Modifier.align(Alignment.BottomEnd).background(accent, CircleShape).padding(horizontal = 4.dp, vertical = 1.dp),
-        )
-    }
+    DefaultProfilePortrait(gender, modifier)
 }
 
 internal fun botGenderForName(name: String): String = when (name.substringBefore(" BOT").trim()) {
@@ -191,27 +154,25 @@ internal fun ProfilePhotoAvatar(
     size: Dp,
     visible: Boolean = true,
     accent: Color = SonHarfCyan,
+    gender: String? = null,
 ) {
-    var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
-    var gender by remember(avatarPath) { mutableStateOf<String?>(null) }
-    LaunchedEffect(avatarPath, visible) {
+    var bytes by remember(avatarPath, visible) { mutableStateOf<ByteArray?>(null) }
+    var resolvedGender by remember(avatarPath, gender) { mutableStateOf(gender) }
+    LaunchedEffect(avatarPath, visible, gender) {
         bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
-        gender = ProfilePhotoRuntime.genderForAvatar(avatarPath)
+        resolvedGender = gender ?: ProfilePhotoRuntime.genderForAvatar(avatarPath)
     }
-    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+    val bitmap = rememberProfileBitmap(bytes)
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
+            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFF2C14E), accent, Color(0xFFB07F1E), Color(0xFFF2C14E)))).padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (bitmap != null) {
+            if (visible && bitmap != null) {
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
             } else {
-                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
+                SyntheticProfilePortrait(name, resolvedGender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
-        }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, size)
         }
     }
 }
@@ -225,28 +186,33 @@ internal fun ProfilePhotoAvatarWithGender(
     accent: Color = SonHarfCyan,
     visible: Boolean = true,
     showGenderBadge: Boolean = true,
+    frameId: String? = null,
+    userId: String? = null,
 ) {
-    var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(avatarPath, visible) {
-        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+    val resolvedFrame = if (userId != null) rememberPlayerFrame(userId) else frameId
+    val framed = ProfileFrameCollection.find(resolvedFrame) != null
+    var bytes by remember(avatarPath, visible, userId) { mutableStateOf<ByteArray?>(null) }
+    var resolvedGender by remember(avatarPath, gender, userId) { mutableStateOf(gender) }
+    LaunchedEffect(avatarPath, visible, gender, userId) {
+        val identity = userId?.let { runCatching { com.sonharf.game.data.OnlineGameBackend().getProfile(it) }.getOrNull() }
+        resolvedGender = gender ?: identity?.gender ?: ProfilePhotoRuntime.genderForAvatar(avatarPath)
+        val path = if (userId != null) identity?.avatarPath else avatarPath
+        bytes = if (visible && (userId == null || identity?.avatarVisibility != "hidden") && !path.isNullOrBlank()) ProfilePhotoRuntime.load(path) else null
     }
-    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+    val bitmap = rememberProfileBitmap(bytes)
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
+            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFF2C14E), accent, Color(0xFFB07F1E), Color(0xFFF2C14E)))).padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (bitmap != null) {
+            if (visible && bitmap != null) {
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
             } else {
-                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
+                SyntheticProfilePortrait(name, resolvedGender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
-        if (showGenderBadge) {
-            Box(Modifier.align(Alignment.BottomEnd)) {
-                FramelessGenderSymbol(gender, size)
-            }
-        }
+        // The player's frame is drawn around the photo wherever the avatar appears.
+        if (framed) ProfileFrameArt(resolvedFrame, size)
     }
 }
 
@@ -259,12 +225,14 @@ internal fun ProfilePhotoAvatarRectWithGender(
     height: Dp,
     accent: Color = SonHarfCyan,
     showGenderBadge: Boolean = true,
+    frameId: String? = null,
 ) {
+    val framed = ProfileFrameCollection.find(frameId) != null
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(avatarPath) {
         bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
-    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+    val bitmap = rememberProfileBitmap(bytes)
     // Historical callers supplied rectangular slots. The slot may remain rectangular, but the
     // player image itself is always circular so every social/game surface uses one avatar rule.
     val diameter = minOf(width, height)
@@ -278,7 +246,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
                 .clip(CircleShape)
                 .background(
                     Brush.sweepGradient(
-                        listOf(Color.White, accent.copy(alpha = .86f), Color(0xFF57C7F3), Color.White)
+                        listOf(Color(0xFFF2C14E), accent.copy(alpha = .86f), Color(0xFFB07F1E), Color(0xFFF2C14E))
                     )
                 )
                 .padding(3.dp),
@@ -295,10 +263,18 @@ internal fun ProfilePhotoAvatarRectWithGender(
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
-        if (showGenderBadge) {
-            Box(Modifier.align(Alignment.BottomEnd)) {
-                FramelessGenderSymbol(gender, diameter)
-            }
+        if (framed) ProfileFrameArt(frameId, diameter)
+    }
+}
+
+/** Photo decoding must not block gestures or the mascot/UI render thread. */
+@Composable
+internal fun rememberProfileBitmap(bytes: ByteArray?): Bitmap? {
+    var bitmap by remember(bytes) { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(bytes) {
+        bitmap = withContext(Dispatchers.Default) {
+            bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() }
         }
     }
+    return bitmap
 }

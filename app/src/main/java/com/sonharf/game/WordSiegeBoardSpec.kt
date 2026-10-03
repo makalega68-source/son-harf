@@ -7,6 +7,7 @@ internal object WordSiegeBoardSpec {
     // differentiated through a custom territory-battle topology instead of a classic word-board layout.
     const val Size = 15
     const val CellCount = Size * Size
+    const val RackSize = 7
     const val LastIndex = CellCount - 1
     const val CenterRow = Size / 2
     const val CenterColumn = Size / 2
@@ -54,24 +55,25 @@ internal object WordSiegeBoardSpec {
         return bonuses
     }
 
-    /** Player-facing strategic-map label. Never expose persisted multiplier codes in the UI. */
+    /** Player-facing in-cell label: short bonus tags (HB² = letter bonus ×2, KB³ = word bonus ×3). */
     fun displayBonusLabel(bonus: String?, turkish: Boolean = true): String = when (bonus) {
-        "2H" -> if (turkish) "Harf\n×2" else "Letter\n×2"
-        "3H" -> if (turkish) "Harf\n×3" else "Letter\n×3"
-        "2K" -> if (turkish) "Kelime\n×2" else "Word\n×2"
-        "3K" -> if (turkish) "Kelime\n×3" else "Word\n×3"
-        CenterBonus -> if (turkish) "Kelime\n×4" else "Word\n×4"
+        "2H" -> "HB²"
+        "3H" -> "HB³"
+        "2K" -> "KB²"
+        "3K" -> "KB³"
+        // The centre cell shows only its picture.
+        CenterBonus -> ""
         StarBonus -> "+25"
         else -> ""
     }
 
     fun bonusLongName(bonus: String?, turkish: Boolean): String = when (bonus) {
-        "2H" -> if (turkish) "Harf ×2" else "Letter ×2"
-        "3H" -> if (turkish) "Harf ×3" else "Letter ×3"
-        "2K" -> if (turkish) "Kelime ×2" else "Word ×2"
-        "3K" -> if (turkish) "Kelime ×3" else "Word ×3"
-        CenterBonus -> if (turkish) "Başlangıç • Kelime ×4" else "Start • Word ×4"
-        StarBonus -> if (turkish) "Sürpriz Ödül" else "Surprise Reward"
+        "2H" -> if (turkish) "Harf Bonus ×2" else "Letter Bonus ×2"
+        "3H" -> if (turkish) "Harf Bonus ×3" else "Letter Bonus ×3"
+        "2K" -> if (turkish) "Kelime Bonus ×2" else "Word Bonus ×2"
+        "3K" -> if (turkish) "Kelime Bonus ×3" else "Word Bonus ×3"
+        CenterBonus -> if (turkish) "Başlangıç ×4" else "Start ×4"
+        StarBonus -> if (turkish) "Yıldız +25" else "Star +25"
         else -> ""
     }
 
@@ -103,22 +105,22 @@ internal object WordSiegeBoardSpec {
         1 to 7, 7 to 1, 7 to 13, 13 to 7,
     )
 
-    /** Watch points placed on an outer tactical ring. */
+    /** Watch points on a wider outer ring so ×3 letters create contested approach lanes. */
     private val SiegeWatchZones = setOf(
-        2 to 4, 2 to 10, 4 to 2, 4 to 12,
-        10 to 2, 10 to 12, 12 to 4, 12 to 10,
+        2 to 3, 2 to 11, 3 to 2, 3 to 12,
+        11 to 2, 11 to 12, 12 to 3, 12 to 11,
     )
 
-    /** Fort positions surrounding the central crown zone. */
+    /** Fort positions split between the crown ring and four diagonal staging points. */
     private val SiegeFortZones = setOf(
-        3 to 6, 3 to 8, 6 to 3, 6 to 11,
-        8 to 3, 8 to 11, 11 to 6, 11 to 8,
+        4 to 4, 4 to 10, 10 to 4, 10 to 10,
+        6 to 6, 6 to 8, 8 to 6, 8 to 8,
     )
 
-    /** Tactical positions that create multiple attack routes rather than diagonals. */
+    /** Tactical ×2 letters spread across edge approaches and central attack lanes. */
     private val SiegeTacticalZones = setOf(
-        1 to 3, 1 to 11, 3 to 1, 3 to 13,
-        11 to 1, 11 to 13, 13 to 3, 13 to 11,
-        5 to 5, 5 to 9, 9 to 5, 9 to 9,
+        1 to 4, 1 to 10, 4 to 1, 4 to 13,
+        10 to 1, 10 to 13, 13 to 4, 13 to 10,
+        3 to 7, 7 to 3, 7 to 11, 11 to 7,
     )
 }

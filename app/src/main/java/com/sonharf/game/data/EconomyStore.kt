@@ -15,6 +15,7 @@ private val supportedProfileFrameIds = setOf(
     "frame_round_botanic",
     "frame_round_lilac",
     "frame_round_rose",
+    "frame_round_pearl",
     "frame_wing_silver",
     "frame_wing_gold",
     "frame_wing_aurora",
@@ -23,7 +24,7 @@ private val supportedProfileFrameIds = setOf(
     "frame_flower_pink_blossom",
 )
 
-private val supportedGameThemeIds = setOf("theme_black", "theme_dark_arena")
+private val supportedGameThemeIds = setOf("theme_black", "theme_dark_arena", "theme_walnut_ivory")
 
 @Serializable
 data class ShopItemDto(
@@ -39,7 +40,18 @@ data class ShopItemDto(
     @SerialName("sort_order") val sortOrder: Int = 0,
     @SerialName("trial_mode") val trialMode: String? = null,
     @SerialName("trial_value") val trialValue: Int? = null,
-)
+    val rarity: String? = null,
+    val metadata: kotlinx.serialization.json.JsonObject? = null,
+) {
+    /** Collection tier set by the economy migration (starter/common/rare/epic/legendary/prestige). */
+    val economyTier: String? get() = (metadata?.get("economy_tier") as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull()
+
+    /** Wins required before the server lets anyone buy this, whatever their balance. */
+    val requiredWins: Int? get() = ((metadata?.get("requirements") as? kotlinx.serialization.json.JsonObject)
+        ?.get("min_wins") as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull()
+}
+
+private fun kotlinx.serialization.json.JsonPrimitive.contentOrNull(): String? = if (this is kotlinx.serialization.json.JsonNull) null else content
 
 @Serializable
 data class InventoryDto(
@@ -57,6 +69,7 @@ data class EquippedCosmeticsDto(
     @SerialName("victory_effect_id") val victoryEffectId: String? = null,
     @SerialName("emoji_pack_id") val emojiPackId: String? = null,
     @SerialName("mascot_id") val mascotId: String? = null,
+    @SerialName("mascot_hat_id") val mascotHatId: String? = null,
 )
 
 @Serializable
@@ -121,6 +134,11 @@ suspend fun OnlineGameBackend.equipShopItem(itemId: String) {
 /** Restores the built-in blue/white visual system without creating a fake purchasable item. */
 suspend fun OnlineGameBackend.equipDefaultGameTheme() {
     SupabaseProvider.client.postgrest.rpc("equip_default_game_theme")
+}
+
+/** Clears one equipped slot (keyboard, name colour, ...) back to the built-in default look. */
+suspend fun OnlineGameBackend.equipDefaultCosmetic(kind: String) {
+    SupabaseProvider.client.postgrest.rpc("equip_default_cosmetic", buildJsonObject { put("p_kind", kind) })
 }
 
 suspend fun OnlineGameBackend.claimVipMonthlyDiamonds() {

@@ -53,6 +53,7 @@ data class GameRoomDto(
     @SerialName("host_streak") val hostStreak: Int = 0,
     @SerialName("guest_streak") val guestStreak: Int = 0,
     @SerialName("valid_word_count") val validWordCount: Int = 0,
+    @SerialName("action_seq") val actionSeq: Long = 0,
     @SerialName("final_moves_remaining") val finalMovesRemaining: Int = 0,
     @SerialName("last_event") val lastEvent: String? = null,
     @SerialName("last_event_player_id") val lastEventPlayerId: String? = null,
@@ -63,6 +64,11 @@ data class GameRoomDto(
     @SerialName("round_word_count") val roundWordCount: Int = 0,
     @SerialName("host_rounds") val hostRounds: Int = 0,
     @SerialName("guest_rounds") val guestRounds: Int = 0,
+    // Current-round standing: the round is decided by these, not by the match totals.
+    @SerialName("host_round_score") val hostRoundScore: Int = 0,
+    @SerialName("guest_round_score") val guestRoundScore: Int = 0,
+    @SerialName("host_round_words") val hostRoundWords: Int = 0,
+    @SerialName("guest_round_words") val guestRoundWords: Int = 0,
     @SerialName("rematch_of") val rematchOf: String? = null,
     @SerialName("host_rematch") val hostRematch: Boolean = false,
     @SerialName("guest_rematch") val guestRematch: Boolean = false,
@@ -181,6 +187,7 @@ object SupabaseProvider {
     val configured: Boolean = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_KEY.isNotBlank()
     val client: SupabaseClient by lazy {
         createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY) {
+            defaultSerializer = RowTolerantSerializer()
             install(Auth)
             install(Postgrest)
             install(Realtime)
@@ -259,6 +266,16 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     suspend fun resumePremierBotMatch(roomId: String): GameRoomDto =
         supabase.postgrest.rpc(
             "resume_premier_bot_match_v1",
+            buildJsonObject { put("p_room_id", roomId) },
+        ).decodeSingle()
+
+    /**
+     * Starts the untouched opening turn's 15 seconds now (once per match). Matchmaking and the VS
+     * screen used to eat the first turn, so it expired before the arena was even on screen.
+     */
+    suspend fun activatePremierOpeningTurn(roomId: String): GameRoomDto =
+        supabase.postgrest.rpc(
+            "activate_premier_opening_turn_v1",
             buildJsonObject { put("p_room_id", roomId) },
         ).decodeSingle()
 
@@ -408,9 +425,9 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
             val heartbeatDue = now - lastHeartbeatAt >= 4_000_000_000L
             val result = if (heartbeatDue) {
                 lastHeartbeatAt = now
-                runCatching { heartbeatRoom(id) }
+                com.sonharf.game.gameRequestResult { heartbeatRoom(id) }
             } else {
-                runCatching { getRoom(id) }
+                com.sonharf.game.gameRequestResult { getRoom(id) }
             }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
@@ -428,7 +445,7 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     fun observeWords(id: String, intervalMs: Long = 700): Flow<List<GameWordDto>> = flow {
         var previous = emptyList<GameWordDto>()
         while (currentCoroutineContext().isActive) {
-            val result = runCatching { getWords(id) }
+            val result = com.sonharf.game.gameRequestResult { getWords(id) }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {
@@ -445,7 +462,7 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     fun observeChat(id: String, intervalMs: Long = 900): Flow<List<ChatMessageDto>> = flow {
         var previous = emptyList<ChatMessageDto>()
         while (currentCoroutineContext().isActive) {
-            val result = runCatching { getChat(id) }
+            val result = com.sonharf.game.gameRequestResult { getChat(id) }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {

@@ -40,7 +40,7 @@ internal fun WordDuelBotScreen(onExit: () -> Unit) {
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = sh("BOT modu yeniden inşa edilecek", "BOT mode will be rebuilt"),
+                text = sh("AI modu yeniden inşa edilecek", "AI mode will be rebuilt"),
                 color = SonHarfText,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Black,
@@ -48,8 +48,8 @@ internal fun WordDuelBotScreen(onExit: () -> Unit) {
             )
             Text(
                 text = sh(
-                    "Eski Son Harf bot motoru kaldırıldı. Yeni oyun koduyla yeniden bağlanacak.",
-                    "The old Son Harf bot engine was removed. It will be reconnected with the new game code.",
+                    "Eski Son Harf AI motoru kaldırıldı. Yeni oyun koduyla yeniden bağlanacak.",
+                    "The old Son Harf AI engine was removed. It will be reconnected with the new game code.",
                 ),
                 modifier = Modifier.padding(top = 8.dp, bottom = 18.dp),
                 color = SonHarfMuted,

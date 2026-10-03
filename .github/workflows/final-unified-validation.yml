@@ -5,6 +5,7 @@ on:
     branches:
       - integration/final-unified-20260827
       - main
+      - claude/mascot-animations-behavior-31rof9
   pull_request:
     branches:
       - main

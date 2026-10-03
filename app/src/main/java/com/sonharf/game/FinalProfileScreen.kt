@@ -73,6 +73,7 @@ fun FinalProfileScreen() {
                 ) {
                     ProfilePhotoAvatar(
                         avatarPath = profile?.avatarPath,
+                        gender = profile?.gender,
                         name = profile?.displayName ?: "Oyuncu",
                         size = 112.dp,
                         visible = profile?.avatarVisibility != "hidden",
@@ -140,7 +141,7 @@ fun FinalProfileScreen() {
                     blocked.forEach { p ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ProfilePhotoAvatar(p.avatarPath, p.displayName, 34.dp, visible = p.avatarVisibility != "hidden", accent = SonHarfCyan)
+                                ProfilePhotoAvatar(p.avatarPath, p.displayName, 34.dp, visible = p.avatarVisibility != "hidden", accent = SonHarfCyan, gender = p.gender)
                                 Text(p.displayName, fontWeight = FontWeight.SemiBold)
                             }
                             TextButton(onClick = {
@@ -169,6 +170,7 @@ fun FinalProfileScreen() {
                             Text("${index + 1}.", modifier = Modifier.width(24.dp), color = SonHarfMuted)
                             ProfilePhotoAvatar(
                                 avatarPath = row.profile.avatarPath,
+                                gender = row.profile.gender,
                                 name = row.profile.displayName,
                                 size = 34.dp,
                                 visible = row.profile.avatarVisibility != "hidden",

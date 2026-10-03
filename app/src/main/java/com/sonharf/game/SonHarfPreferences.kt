@@ -144,7 +144,7 @@ object SonHarfPreferences {
         if (!vibrationEnabled(context)) return
         runCatching {
             val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) context.getSystemService(VibratorManager::class.java).defaultVibrator else @Suppress("DEPRECATION") (context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) vibrator.vibrate(VibrationEffect.createOneShot(12L, 28)) else @Suppress("DEPRECATION") vibrator.vibrate(12L)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) vibrator.vibrate(VibrationEffect.createOneShot(20L, 90)) else @Suppress("DEPRECATION") vibrator.vibrate(12L)
         }
     }
 

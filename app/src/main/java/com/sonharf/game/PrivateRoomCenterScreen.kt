@@ -1,6 +1,8 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -105,30 +107,24 @@ internal fun PrivateRoomCenterScreen(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = ::leave) { Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back")) }
-            Column(Modifier.weight(1f)) {
-                Text(sh("PRO ÖZEL ODA", "PRO PRIVATE ROOM"), fontSize = 22.sp, fontWeight = FontWeight.Black, color = SonHarfText)
-                Text(sh("Son Harf için davet kodlu özel düello", "Invite-code private duel for Last Letter"), fontSize = 10.sp, color = SonHarfMuted)
-            }
-            Icon(Icons.Rounded.Lock, null, tint = SonHarfGold)
-        }
+        MainScreenHeader(sh("Özel oda", "Private room"),
+            sh("Davet koduyla kendi düellonu kur", "Start your own invite-code duel"), onBack = ::leave)
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            color = SonHarfSurface,
-            border = BorderStroke(1.dp, SonHarfTheme.Border),
+            color = LobbyPalette.Paper,
+            border = BorderStroke(1.dp, LobbyPalette.Line),
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(sh("ODA OLUŞTUR", "CREATE ROOM"), fontWeight = FontWeight.Black, color = SonHarfText)
+                Text(sh("ODA OLUŞTUR", "CREATE ROOM"), fontWeight = FontWeight.Black, color = LobbyPalette.Ink)
                 Text(
                     sh("PRO sahibi oda oluşturur. Rakibin aşağıdaki kodla katılabilir.", "A PRO member creates the room. Your rival can join with its code."),
                     fontSize = 10.sp,
-                    color = SonHarfMuted,
+                    color = LobbyPalette.Muted,
                 )
                 Button(
                     onClick = {
@@ -166,13 +162,13 @@ internal fun PrivateRoomCenterScreen(
                         border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .45f)),
                     ) {
                         Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(sh("ODA KODU", "ROOM CODE"), color = SonHarfMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text(sh("ODA KODU", "ROOM CODE"), color = LobbyPalette.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                             Text(active.code, color = SonHarfGold, fontSize = 28.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
                             Spacer(Modifier.height(6.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 CircularProgressIndicator(modifier = Modifier.width(16.dp).height(16.dp), strokeWidth = 2.dp)
                                 Spacer(Modifier.width(7.dp))
-                                Text(sh("Rakip bekleniyor…", "Waiting for rival…"), color = SonHarfMuted, fontSize = 10.sp)
+                                Text(sh("Rakip bekleniyor…", "Waiting for rival…"), color = LobbyPalette.Muted, fontSize = 10.sp)
                             }
                         }
                     }
@@ -196,15 +192,15 @@ internal fun PrivateRoomCenterScreen(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            color = SonHarfSurface,
-            border = BorderStroke(1.dp, SonHarfTheme.Border),
+            color = LobbyPalette.Paper,
+            border = BorderStroke(1.dp, LobbyPalette.Line),
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(sh("KODLA KATIL", "JOIN WITH CODE"), fontWeight = FontWeight.Black, color = SonHarfText)
+                Text(sh("KODLA KATIL", "JOIN WITH CODE"), fontWeight = FontWeight.Black, color = LobbyPalette.Ink)
                 Text(
                     sh("Oda sahibinin verdiği 6 karakterli kodu gir.", "Enter the 6-character code from the room host."),
                     fontSize = 10.sp,
-                    color = SonHarfMuted,
+                    color = LobbyPalette.Muted,
                 )
                 OutlinedTextField(
                     value = code,
@@ -245,7 +241,7 @@ internal fun PrivateRoomCenterScreen(
 
         notice?.let {
             Surface(shape = RoundedCornerShape(14.dp), color = SonHarfSurface2) {
-                Text(it, modifier = Modifier.fillMaxWidth().padding(12.dp), color = SonHarfText, fontSize = 10.sp)
+                Text(it, modifier = Modifier.fillMaxWidth().padding(12.dp), color = LobbyPalette.Ink, fontSize = 10.sp)
             }
         }
     }
@@ -258,9 +254,9 @@ private fun CenteredMessage(title: String, detail: String, onBack: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Black, color = SonHarfText)
+        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Black, color = LobbyPalette.Ink)
         Spacer(Modifier.height(8.dp))
-        Text(detail, color = SonHarfMuted, fontSize = 11.sp)
+        Text(detail, color = LobbyPalette.Muted, fontSize = 11.sp)
         Spacer(Modifier.height(18.dp))
         OutlinedButton(onClick = onBack) { Text(sh("GERİ", "BACK")) }
     }

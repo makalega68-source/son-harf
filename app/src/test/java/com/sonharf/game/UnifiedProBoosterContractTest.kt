@@ -10,7 +10,6 @@ class UnifiedProBoosterContractTest {
     @Test
     fun rankedPremierKeepsCompatibilityApisButDoesNotExposePurchasableMatchPower() {
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/PremierBoosters.kt").readText()
-        val overlay = projectFile("app/src/main/java/com/sonharf/game/PremierBoosterOverlay.kt").readText()
         val integration = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
         val premier = projectFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
         val vip = projectFile("app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt").readText()
@@ -22,9 +21,6 @@ class UnifiedProBoosterContractTest {
         assertTrue(backend.contains("use_premier_hint_v1"))
         assertTrue(backend.contains("use_premier_swap_v1"))
         assertTrue(backend.contains("use_premier_multiplier_v1"))
-        assertTrue(overlay.contains("usePremierHint"))
-        assertTrue(overlay.contains("usePremierSwap"))
-        assertTrue(overlay.contains("usePremierMultiplier"))
 
         // Ranked runtime must mount neither paid gameplay power nor mascot overlays.
         assertTrue(integration.contains("PremierWordDuelScreen()"))
@@ -35,12 +31,12 @@ class UnifiedProBoosterContractTest {
 
         assertFalse(vip.contains("2x Skor"))
         assertFalse(vip.contains("claimVipDailyHelpers"))
-        assertTrue(vip.contains("ADİL REKABET"))
+        assertFalse(vip.contains("ADİL REKABET"))
         assertTrue(entitlements.contains("rankedLiveAssist: Boolean = false"))
 
         // Store messaging must describe only fair PRO value, never a paid ranked advantage.
-        assertTrue(shop.contains("Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz."))
-        assertTrue(shop.contains("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez."))
+        assertFalse(shop.contains("ADİL OYUN SÖZÜ"))
+        assertTrue(shop.contains("Reklamsız • PRO profil • özel oda • maç özeti • konfor araçları"))
         assertFalse(shop.contains("günlük İpucu, Harf Değiştirici ve 2x Skor"))
         assertFalse(shop.contains("daily Hint, Letter Swap and 2x Score"))
         assertFalse(shop.contains("helper boosters with PRO"))

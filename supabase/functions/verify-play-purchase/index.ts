@@ -4,15 +4,28 @@ import { GoogleAuth } from "npm:google-auth-library@9";
 
 const jsonHeaders = { "Content-Type": "application/json", "Cache-Control": "no-store" };
 const subscriptionProducts = new Set(["vip_monthly", "vip_yearly", "season_pass", "season_pass_monthly"]);
-const premiumProducts = new Set(["series_game", "letter_table", "score_calculator", "pro_lifetime"]);
+const mascotProducts = [
+  "mascot_klasik", "mascot_pembe", "mascot_mavi_seytancik", "mascot_kirmizi_seytancik",
+  "mascot_tekir", "mascot_robot", "mascot_astronot",
+];
+// Premium profile frames: permanent one-time products; the grant puts the frame in the inventory.
+const frameProducts = [
+  "profile_frame_gold_crest", "profile_frame_emerald", "profile_frame_amethyst",
+  "profile_frame_pink_blossom", "profile_frame_blue_royal",
+];
+// Premium keyboards (Premium White stays on Son Coin): permanent one-time products, into the inventory.
+const keyboardProducts = ["keyboard_black_gold", "keyboard_crystal", "keyboard_midnight", "keyboard_obsidian"];
+const premiumProducts = new Set(["series_game", "letter_table", "score_calculator", "pro_lifetime", ...mascotProducts, ...frameProducts, ...keyboardProducts]);
 const oneTimeProducts = new Set([
   "series_game", "letter_table", "score_calculator", "pro_lifetime",
+  ...mascotProducts,
+  ...frameProducts,
+  ...keyboardProducts,
   "coins_500", "coins_1500", "coins_3500", "coins_8000",
   // Historical IDs remain recognizable so the server can return an explicit
   // product_disabled response instead of silently treating an old receipt as unknown.
   "starter_style_pack", "premium_style_pack", "season_pack", "vip_welcome_pack", "theme_neon",
   "profile_frame_ocean", "profile_frame_botanic", "profile_frame_lilac", "profile_frame_rose",
-  "profile_frame_pink_blossom", "profile_frame_blue_royal", "profile_frame_amethyst", "profile_frame_emerald",
 ]);
 const consumableProducts = new Set(["coins_500", "coins_1500", "coins_3500", "coins_8000"]);
 const entitledSubscriptionStates = new Set([
@@ -26,7 +39,7 @@ function response(status: number, body: unknown) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method !== "POST") return response(405, { error: "method_not_allowed" });
+  if (req.method !== "POST" && req.method !== "GET") return response(405, { error: "method_not_allowed" });
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return response(401, { error: "unauthorized" });
 
@@ -37,6 +50,15 @@ Deno.serve(async (req: Request) => {
   const packageName = Deno.env.get("GOOGLE_PLAY_PACKAGE_NAME") || "com.sonharf.game";
   if (!url || !publishableKey || !serviceRole) return response(500, { error: "supabase_not_configured" });
   if (!serviceAccountJson) return response(503, { error: "google_play_not_configured" });
+  // Read-only readiness check before the Android client opens a paid Play flow.
+  // JWT validation remains enabled at the gateway; no credentials are returned.
+  if (req.method === "GET") {
+    try {
+      const account = JSON.parse(serviceAccountJson);
+      if (!account.client_email || !account.private_key) return response(503, { error: "invalid_google_service_account_json" });
+      return response(200, { available: true });
+    } catch { return response(503, { error: "invalid_google_service_account_json" }); }
+  }
 
   let input: { productId?: string; purchaseToken?: string };
   try { input = await req.json(); } catch { return response(400, { error: "invalid_json" }); }

@@ -8,9 +8,9 @@ import org.junit.Test
 class KelimeTahtiDifferentiationContractTest {
     @Test
     fun bonusLabelsExplainTheActualEffectInBothLanguages() {
-        org.junit.Assert.assertEquals("Harf\n×2", WordSiegeBoardSpec.displayBonusLabel("2H"))
-        org.junit.Assert.assertEquals("Kelime\n×3", WordSiegeBoardSpec.displayBonusLabel("3K"))
-        org.junit.Assert.assertEquals("Word\n×4", WordSiegeBoardSpec.displayBonusLabel("4K", false))
+        org.junit.Assert.assertEquals("HB²", WordSiegeBoardSpec.displayBonusLabel("2H"))
+        org.junit.Assert.assertEquals("KB³", WordSiegeBoardSpec.displayBonusLabel("3K"))
+        org.junit.Assert.assertEquals("", WordSiegeBoardSpec.displayBonusLabel("4K", false))
         org.junit.Assert.assertEquals("+25", WordSiegeBoardSpec.displayBonusLabel("3Y"))
     }
 
@@ -26,10 +26,10 @@ class KelimeTahtiDifferentiationContractTest {
         assertTrue(scoreCard.contains("Kelime Puanı"))
         assertTrue(scoreCard.contains("Bölge Puanı"))
         assertTrue(scoreCard.contains("1 küp = 2 puan"))
-        assertTrue(screen.contains("PracticePlayerAccent = Color(0xFF567A64)"))
-        assertTrue(screen.contains("PracticeRivalAccent = Color(0xFF9B4D4A)"))
-        assertTrue(board.contains("PracticeSiegeMine = Color(0xFFA8D5B5)"))
-        assertTrue(board.contains("PracticeSiegeRival = Color(0xFFE4AEAA)"))
+        assertTrue(screen.contains("PracticePlayerAccent = Color(0xFF3E9F4D)"))
+        assertTrue(screen.contains("PracticeRivalAccent = Color(0xFFD0514A)"))
+        assertTrue(board.contains("PracticeSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine"))
+        assertTrue(board.contains("PracticeSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival"))
         assertTrue(board.contains("practiceCellThreatened"))
         assertTrue(board.contains("val regionGap = 1.25.dp"))
         assertTrue(board.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)"))

@@ -3,7 +3,7 @@ name: Android CI
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, claude/mascot-animations-behavior-31rof9 ]
     paths-ignore:
       - 'dist/**'
   pull_request:
@@ -61,7 +61,7 @@ jobs:
           ! grep -q 'MageCat' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.GAME -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.LETTER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'UnifiedDestination.LETTER -> KelimeAtolyesiScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.VIP -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
@@ -93,7 +93,17 @@ jobs:
               done
 
       - name: Build debug APK with tests
-        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+        run: |
+          set -o pipefail
+          if ! ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all 2>&1 | tee build.log; then
+            # Surface compiler errors and failing tests as annotations so they are readable without log access.
+            summary=$( { grep -E '^e: |FAILED$|Test.*> .* FAILED' build.log; \
+              for f in app/build/test-results/testDebugUnitTest/*.xml; do \
+                [ -f "$f" ] && grep -A3 '<failure' "$f" | head -8; \
+              done; } 2>/dev/null | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}' )
+            echo "::error title=Build or test failure::${summary}"
+            exit 1
+          fi
 
       - name: Prepare test APK artifact
         run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Final-Test.apk
@@ -114,6 +124,33 @@ jobs:
           path: |
             SonHarf-Final-Test.apk
             SonHarf-Final-Test.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Name debug APK Kelime-Tahti-Guncel.apk
+        if: success()
+        run: cp SonHarf-Final-Test.apk Kelime-Tahti-Guncel.apk
+
+      - name: Upload Kelime-Tahti-Guncel artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kelime-Tahti-Guncel
+          path: Kelime-Tahti-Guncel.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      # The store build (R8 + resource shrinking) signed with the debug key, so the shrunk app is
+      # built and can be tried on a phone before the real signed upload.
+      - name: Build store-shrunk check APK
+        run: ./gradlew :app:assembleReleaseCheck --stacktrace --warning-mode all
+
+      - name: Upload store-shrunk check APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kelime-Tahti-Yayin-Kontrol
+          path: app/build/outputs/apk/releaseCheck/app-releaseCheck.apk
           if-no-files-found: error
           retention-days: 7
 

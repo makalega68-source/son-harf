@@ -1,7 +1,12 @@
 package com.sonharf.game
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,9 +18,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Surface
@@ -29,6 +35,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +44,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.ComebackGiftDto
+import com.sonharf.game.data.PresenceBackend
 import com.sonharf.game.data.SupabaseProvider
 
 /** Unified Pro startup shell: language -> auth -> premium product. */
@@ -44,42 +54,91 @@ fun StableV1App() {
     val context = LocalContext.current
     remember(context) {
         SonHarfCosmetics.restore(context)
+        WordSiegeBoardSkins.restore(context)
+        WordSiegeBonusIcons.init(context)
+        WordSiegeMascotOwnership.restore(context)
         true
     }
-    var languageChosen by remember { mutableStateOf(FirstRunLanguagePreferences.isComplete(context)) }
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
+    // The welcome clip and language choice come before sign-in. A signed-in player never sees them
+    // again: opening the app goes straight to the home page until they sign out in the profile.
+    var introDone by remember { mutableStateOf(false) }
 
-    if (!languageChosen) {
-        FirstRunLanguageScreen { language ->
-            FirstRunLanguagePreferences.complete(context, language)
-            SonHarfUiState.language = language
-            languageChosen = true
-        }
-        return
-    }
-
-    LaunchedEffect(languageChosen) {
-        if (!languageChosen) return@LaunchedEffect
-        authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
+    LaunchedEffect(Unit) {
+        // The stored session loads asynchronously: wait for it (and silently re-login with the
+        // remembered credentials if needed) so a signed-in player never sees the entry screens again.
+        authenticated = SupabaseProvider.configured && (hasVerifiedMembershipSession() || restoreMembershipSession(context))
         authChecked = true
     }
 
     if (!authChecked) {
-        Box(Modifier.fillMaxSize().background(MainUi.Background), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = MainUi.Blue)
-        }
+        LaunchSplashFrame()
         return
     }
 
     if (!authenticated) {
+        if (!introDone) {
+            IntroWelcomeScreen { language ->
+                FirstRunLanguagePreferences.complete(context, language)
+                SonHarfUiState.language = language
+                introDone = true
+            }
+            return
+        }
         CompactAuthGate { authenticated = true }
         return
     }
 
-    PremiumUnifiedProApp(onSignedOut = { authenticated = false })
+    var comebackGift by remember { mutableStateOf<ComebackGiftDto?>(null) }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        // Every entry counts as a visit; a player back after days away gets Obi's gift.
+        FirstRunLanguagePreferences.markMascotWelcomeSeen(context)
+        comebackGift = runCatching { PresenceBackend.touch() }.getOrNull()?.takeIf { it.gift > 0 }
+    }
+    LaunchedEffect(Unit) {
+        // Ask for reminder notifications once after authentication.
+        if (ReminderNotifications.shouldAskPermission(context)) {
+            ReminderNotifications.markPermissionAsked(context)
+            runCatching { notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) }
+        }
+    }
+    Box(Modifier.fillMaxSize()) {
+        PremiumUnifiedProApp(onSignedOut = {
+            // Signing out brings back the welcome, the language choice and sign-in.
+            introDone = false
+            authenticated = false
+        })
+        val gift = comebackGift
+        if (gift != null) {
+            ComebackGiftDialog(gift) { comebackGift = null }
+        }
+    }
 }
 
+/** Obi welcomes a player who has been away and hands over the Son Coin the server just credited. */
+@Composable
+private fun ComebackGiftDialog(gift: ComebackGiftDto, onDismiss: () -> Unit) {
+    LaunchedEffect(gift) { SonHarfSoundFx.bonus() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(onClick = onDismiss) { Text(sh("Teşekkürler Obi!", "Thanks, Obi!")) }
+        },
+        title = { Text(sh("Obi seni özledi! 🎁", "Obi missed you! 🎁"), fontWeight = FontWeight.Black) },
+        text = {
+            Text(
+                sh(
+                    "${gift.daysAway} gündür yoktun. Obi sana ${gift.gift} Son Coin biriktirdi. Hoş geldin!",
+                    "You were away for ${gift.daysAway} days. Obi saved ${gift.gift} Son Coins for you. Welcome back!",
+                ),
+            )
+        },
+    )
+}
+
+/** A one-time greeting from the classic mascot over the home screen; tap anywhere to continue. */
 /**
  * Keeps the existing authentication flow intact while making the oversized entry controls
  * slightly more compact on phones. The language selector is intentionally unaffected.
@@ -97,94 +156,3 @@ private fun CompactAuthGate(onAuthenticated: () -> Unit) {
     }
 }
 
-@Composable
-private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
-    var selected by remember { mutableStateOf<String?>(null) }
-
-    Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
-        Box(Modifier.fillMaxSize()) {
-            FirstRunLanguageBackdrop(Modifier.fillMaxSize())
-            Column(
-                modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 24.dp, vertical = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = "KELİME TAHTI",
-                    color = MainUi.Text,
-                    fontSize = 29.sp,
-                    fontWeight = FontWeight.Black,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "WORD BOARD",
-                    color = MainUi.Gold,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 3.sp,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(22.dp))
-                Text(
-                    text = "Dilini seç / Choose your language",
-                    color = MainUi.Muted,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(24.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilterChip(
-                        selected = selected == "tr",
-                        onClick = { selected = "tr" },
-                        label = { Text("TÜRKÇE", fontWeight = FontWeight.Black) },
-                        modifier = Modifier.weight(1f).height(52.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MainUi.BlueSoft,
-                            selectedLabelColor = MainUi.Blue,
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = selected == "tr",
-                            borderColor = MainUi.Border,
-                            selectedBorderColor = MainUi.Blue,
-                        ),
-                    )
-                    FilterChip(
-                        selected = selected == "en",
-                        onClick = { selected = "en" },
-                        label = { Text("ENGLISH", fontWeight = FontWeight.Black) },
-                        modifier = Modifier.weight(1f).height(52.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MainUi.BlueSoft,
-                            selectedLabelColor = MainUi.Blue,
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = selected == "en",
-                            borderColor = MainUi.Border,
-                            selectedBorderColor = MainUi.Blue,
-                        ),
-                    )
-                }
-                Spacer(Modifier.height(22.dp))
-                Button(
-                    enabled = selected != null,
-                    onClick = { selected?.let(onContinue) },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = MainUiShape.Control,
-                    contentPadding = PaddingValues(horizontal = 18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MainUi.Blue,
-                        contentColor = MainUi.Surface,
-                        disabledContainerColor = MainUi.Border,
-                        disabledContentColor = MainUi.Muted,
-                    ),
-                ) {
-                    Text(if (selected == "en") "CONTINUE" else "DEVAM ET", fontWeight = FontWeight.Black)
-                }
-            }
-        }
-    }
-}

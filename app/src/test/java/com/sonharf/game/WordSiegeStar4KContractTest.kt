@@ -35,7 +35,7 @@ class WordSiegeStar4KContractTest {
         assertFalse(screen.contains("ANA SÖZLÜK"))
         assertFalse(screen.contains("MAIN DICTIONARY"))
         assertTrue(screen.contains("merkezden"))
-        assertTrue(screen.contains("Crown Zone"))
+        assertTrue(screen.contains("Starting Seal"))
         assertTrue(board.contains("highlightAlpha.animateTo(0.42f"))
         assertTrue(board.contains("PracticeZoneCrown"))
         assertTrue(board.contains("PracticeZoneReward"))

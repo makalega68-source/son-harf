@@ -82,7 +82,8 @@ internal fun MonsterStyleStoreScreen() {
             runCatching {
                 withTimeout(StoreTimeout) {
                     if (item.id !in owned) b.purchaseShopItem(item.id)
-                    b.equipShopItem(item.id)
+                    // Board skins are chosen on the device; everything else is equipped on the server.
+                    if (item.kind == "board_skin") WordSiegeBoardSkins.select(context, item.id) else b.equipShopItem(item.id)
                 }
             }.onSuccess {
                 notice = sh("${item.nameTr} anında uygulandı.", "${item.nameEn} was applied instantly.")
@@ -164,14 +165,13 @@ internal fun MonsterStyleStoreScreen() {
                     ::buyAndEquip,
                 )
             }
-            item { FairPlayCard() }
         }
     }
 }
 
 internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) {
-    "game_theme" -> id in setOf("theme_black", "theme_dark_arena")
-    "profile_frame" -> false
+    "game_theme" -> id in setOf("theme_black", "theme_dark_arena", WALNUT_IVORY_THEME_ID)
+    "profile_frame" -> id in ProfileFrameCollection.coinIds
     "name_style" -> id in setOf("name_cyan", "name_sapphire", "name_amethyst", "name_aurelia")
     "keyboard_theme" -> id in setOf(
         "keyboard_crystal",
@@ -182,6 +182,8 @@ internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) 
     )
     "victory_effect" -> id == "victory_crown"
     "emoji_pack" -> id == "emoji_vip"
+    "mascot_hat" -> id in MascotHats.ids
+    "board_skin" -> id in WordSiegeBoardSkin.productIds
     else -> false
 }
 
@@ -192,6 +194,9 @@ internal fun EquippedCosmeticsDto?.isEquipped(item: ShopItemDto): Boolean = when
     "keyboard_theme" -> this?.keyboardThemeId == item.id
     "victory_effect" -> this?.victoryEffectId == item.id
     "emoji_pack" -> this?.emojiPackId == item.id
+    "mascot_hat" -> this?.mascotHatId == item.id
+    // Board skins are chosen on this device from Profile > Collection.
+    "board_skin" -> WordSiegeBoardSkins.selectedId == item.id
     else -> false
 }
 
@@ -342,16 +347,3 @@ private fun EmptyCatalogCard() {
     }
 }
 
-@Composable
-private fun FairPlayCard() {
-    Surface(shape = RoundedCornerShape(18.dp), color = StoreAlt, border = BorderStroke(1.dp, StoreBorder)) {
-        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.VerifiedUser, null, Modifier.size(24.dp), tint = StoreGreen)
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(sh("ADİL OYUN SÖZÜ", "FAIR PLAY PROMISE"), color = StoreText, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                Text(sh("Mağazadaki tüm ürünler kozmetiktir; maç gücü veya puan avantajı sağlamaz.", "Every store item is cosmetic; it provides no match power or score advantage."), color = StoreMuted, fontSize = 11.sp)
-            }
-        }
-    }
-}

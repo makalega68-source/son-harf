@@ -133,6 +133,9 @@ object SharedDictionaryService {
         return botSnapshots[lang]?.contains(normalized) == true
     }
 
+    /** The loaded dictionary for [language], if any (read-only; used for mascot hints). */
+    fun snapshot(language: String): Set<String>? = snapshots[canonicalLanguage(language)]
+
     fun hasSnapshot(language: String): Boolean =
         snapshots[canonicalLanguage(language)]?.isNotEmpty() == true
 
@@ -166,10 +169,34 @@ object SharedDictionaryService {
         prefs.edit().remove(key).apply()
     }
 
-    /** Restore the last complete v5 master snapshot without network access. */
+    @Volatile private var appContext: Context? = null
+
+    /** Called once at start-up so the bundled dictionary can be read from anywhere. */
+    fun attach(context: Context) {
+        appContext = context.applicationContext
+    }
+
+    /**
+     * The Turkish and English dictionaries ship inside the app (assets/dictionary/tr.txt and
+     * en.txt, one normalized word per line), so they are read from the phone, never downloaded.
+     */
+    private fun restoreBundled(context: Context, lang: String): Boolean {
+        val indexed = runCatching {
+            context.assets.open("dictionary/$lang.txt").bufferedReader(Charsets.UTF_8).useLines { lines ->
+                lines.map { normalize(it, lang) }.filter { validNormalized(it, lang) }.toHashSet()
+            }
+        }.getOrNull().orEmpty()
+        if (indexed.isEmpty()) return false
+        install(lang, indexed)
+        return true
+    }
+
+    /** Restore the dictionary without network access: the bundled copy first, then an old cache. */
     fun restorePersisted(context: Context, language: String): Boolean {
         val lang = canonicalLanguage(language)
         if (snapshots[lang]?.isNotEmpty() == true) return true
+        attach(context)
+        if (restoreBundled(context, lang)) return true
         migrateLegacyPreference(context, lang)
         val file = snapshotFile(context, lang)
         if (!file.isFile || file.length() == 0L) return false
@@ -188,7 +215,10 @@ object SharedDictionaryService {
         writeAtomically(snapshotFile(context, lang), words.sorted().joinToString("\n"))
     }
 
-    private suspend fun fetchCanonical(language: String): Set<String> {
+    // Only used when a build has no bundled dictionary: decoding and indexing tens of thousands
+    // of words happens off the main thread.
+
+    private suspend fun fetchCanonical(language: String): Set<String> = withContext(Dispatchers.Default) {
         val lang = canonicalLanguage(language)
         val payload = SupabaseProvider.client.postgrest.rpc(
             "get_dictionary_snapshot_v5",
@@ -204,30 +234,31 @@ object SharedDictionaryService {
 
         require(indexed.isNotEmpty()) { "canonical_dictionary_empty" }
         install(lang, indexed)
-        return indexed
+        indexed
     }
 
     suspend fun preload(language: String): Set<String> {
         val lang = canonicalLanguage(language)
         snapshots[lang]?.let { return it }
+        appContext?.let { context ->
+            if (withContext(Dispatchers.IO) { restorePersisted(context, lang) }) snapshots[lang]?.let { return it }
+        }
         return fetchCanonical(lang)
     }
 
     /**
-     * Restore locally first for fast startup, then refresh from the single authoritative backend.
-     * Old v4 and earlier caches use a different preference namespace and are therefore never reused.
+     * The dictionary for [language], read from the copy bundled in the app. The network is only
+     * used when a build has no bundled copy and nothing is cached. Online games stay
+     * server-validated, so this local copy never decides a live match.
      */
     suspend fun preloadCanonical(context: Context, language: String): Set<String> {
         val lang = canonicalLanguage(language)
         withContext(Dispatchers.IO) { restorePersisted(context, lang) }
-        val refreshed = runCatching { fetchCanonical(lang) }.getOrNull()
-        val canonical = refreshed
-            ?: snapshots[lang]
+        snapshots[lang]?.takeIf { it.isNotEmpty() }?.let { return it }
+        val fetched = runCatching { fetchCanonical(lang) }.getOrNull()
             ?: throw IllegalStateException("canonical_dictionary_unavailable")
-        if (refreshed != null) {
-            withContext(Dispatchers.IO) { runCatching { persist(context, lang, refreshed) } }
-        }
-        return canonical
+        withContext(Dispatchers.IO) { runCatching { persist(context, lang, fetched) } }
+        return fetched
     }
 
     /** Authoritative membership check for every server-backed word submission. */

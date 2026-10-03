@@ -28,20 +28,22 @@ import com.sonharf.game.data.VipEntitlementsDto
 import com.sonharf.game.data.getVipEntitlements
 import kotlinx.coroutines.launch
 
-private val UProBg = Color(0xFF020617)
-private val UProSurface = Color(0xFF0F172A)
-private val UProBorder = Color(0xFF334155)
-private val UProText = Color(0xFFF8FAFC)
-private val UProMuted = Color(0xFF94A3B8)
-private val UProBlue = Color(0xFF3B82F6)
-private val UProGold = Color(0xFFF59E0B)
-private val UProGreen = Color(0xFF10B981)
+private val UProBg: Color get() = LobbyPalette.Ground
+private val UProSurface: Color get() = LobbyPalette.Paper
+private val UProBorder: Color get() = LobbyPalette.Line
+private val UProText: Color get() = LobbyPalette.Ink
+private val UProMuted: Color get() = LobbyPalette.Muted
+private val UProBlue: Color get() = LobbyPalette.Green
+private val UProGold: Color get() = LobbyPalette.Gold
+private val UProGreen: Color get() = LobbyPalette.Accent
 
 @Composable
 internal fun UnifiedProVipScreen(
     backend: OnlineGameBackend,
     onBack: () -> Unit = {},
     onPrivateRoom: () -> Unit = {},
+    onFriends: () -> Unit = {},
+    onQuickDuel: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -76,14 +78,11 @@ internal fun UnifiedProVipScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, null, tint = UProText) }
-                Column(Modifier.weight(1f)) {
-                    Text("KELİME KUŞATMASI PRO", color = UProText, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Premier üyelik ve fair-play ayrıcalıkları", "Premier membership and fair-play benefits"), color = UProBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-                Icon(Icons.Rounded.WorkspacePremium, null, tint = UProGold, modifier = Modifier.size(30.dp))
-            }
+            MainScreenHeader(
+                title = "KELİME TAHTI PRO",
+                subtitle = sh("Oyun keyfine daha fazlasını ekle", "More ways to enjoy your game"),
+                onBack = onBack,
+            )
         }
 
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = UProBlue, trackColor = UProBorder) }
@@ -96,13 +95,13 @@ internal fun UnifiedProVipScreen(
                 border = BorderStroke(1.dp, if (active) UProGold else UProBorder),
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text(if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("FREE PLAN", "FREE PLAN"), color = if (active) UProGold else UProMuted, fontWeight = FontWeight.Black)
+                    Text(if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("ÜCRETSİZ", "FREE"), color = if (active) UProGold else UProMuted, fontWeight = FontWeight.Black)
                     Text(profile?.displayName ?: sh("Oyuncu", "Player"), color = UProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
                         if (active) sh("Reklamsız deneyim + PRO profil + özel oda + maç-sonu analiz", "Ad-free experience + PRO profile + private rooms + post-match analysis")
-                        else sh("PRO ile sosyal, profil ve analiz özelliklerini aç.", "Unlock social, profile, and analysis features with PRO."),
+                        else sh("PRO ile profil, özel oda ve analiz özelliklerini aç.", "Unlock profile, private room and analysis features with PRO."),
                         color = UProMuted,
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                     )
                 }
             }
@@ -122,10 +121,16 @@ internal fun UnifiedProVipScreen(
                     Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(sh("PRO ARAÇLARI", "PRO TOOLS"), color = UProText, fontWeight = FontWeight.Black)
                         Text(
-                            sh("Satın aldığın özellikleri buradan doğrudan kullanabilirsin.", "Use your purchased benefits directly from here."),
+                            sh("PRO araçların", "Use your purchased benefits directly from here."),
                             color = UProMuted,
-                            fontSize = 10.sp,
+                            fontSize = 13.sp,
                         )
+                        if (e?.savedFriendList == true) OutlinedButton(onClick = onFriends, modifier = Modifier.fillMaxWidth()) {
+                            Text(sh("ARKADAŞLAR", "FRIENDS"), color = UProGreen)
+                        }
+                        if (e?.seriesGameAccess == true) OutlinedButton(onClick = onQuickDuel, modifier = Modifier.fillMaxWidth()) {
+                            Text(sh("HIZLI DÜELLO", "QUICK DUEL"), color = UProGold)
+                        }
                         if (e?.postMatchAnalysis == true) {
                             PremiumAnalysisCenterLauncher(Modifier.fillMaxWidth())
                         }
@@ -134,7 +139,7 @@ internal fun UnifiedProVipScreen(
                                 onClick = onPrivateRoom,
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = UProGold, contentColor = UProBg),
+                                colors = ButtonDefaults.buttonColors(containerColor = UProGold, contentColor = if (SonHarfTheme.IsDark) Color(0xFF343D30) else Color.White),
                             ) {
                                 Icon(Icons.Rounded.MeetingRoom, null)
                                 Spacer(Modifier.width(8.dp))
@@ -161,44 +166,21 @@ internal fun UnifiedProVipScreen(
             Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
                 Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ProLine("🚫", sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
-                    ProLine("🏷️", sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
-                    ProLine("📊", sh("Tamamlanmış maçlar için gelişmiş analiz", "Advanced analysis for completed matches"))
-                    ProLine("♛", sh("Son Harf davet kodlu özel oda", "Last Letter invite-code private room"))
-                    ProLine("👥", sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))
-                    Surface(shape = RoundedCornerShape(12.dp), color = UProGreen.copy(alpha = .10f), border = BorderStroke(1.dp, UProGreen.copy(alpha = .35f))) {
-                        Text(
-                            sh(
-                                "ADİL REKABET: PRO, dereceli maçlarda skor, hedef harf, kelime ipucu, ek süre veya rating avantajı vermez.",
-                                "FAIR PLAY: PRO gives no score, target-letter, word-hint, extra-time, or rating advantage in ranked matches.",
-                            ),
-                            Modifier.fillMaxWidth().padding(10.dp), color = UProGreen, fontSize = 9.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
-                        )
-                    }
+                    ProLine("🏷️", sh("Altın PRO çerçevesi, rozet ve öne çıkan profil", "Gold PRO frame, badge and a standout profile"))
+                    ProLine("♛", sh("Davet kodlu özel masalar", "Invite-code private tables"))
+                    ProLine("📊", sh("Biten maçların ayrıntılı özeti", "Detailed recap of finished matches"))
+                    ProLine("🧭", sh("Konfor araçları: Hamle Önizleme, Kalan Harfler, Son Harf kelime geçmişi", "Comfort tools: Move Preview, Letters Left, Last Letter word history"))
                 }
             }
         }
 
         item {
-            if (active) {
-                OutlinedButton(
-                    onClick = {
-                        val url = "https://play.google.com/store/account/subscriptions?package=${BuildConfig.APPLICATION_ID}"
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, UProBlue),
-                ) {
-                    Icon(Icons.Rounded.OpenInNew, null, tint = UProBlue)
-                    Spacer(Modifier.width(7.dp))
-                    Text(sh("GOOGLE PLAY'DE YÖNET", "MANAGE ON GOOGLE PLAY"), color = UProBlue, fontWeight = FontWeight.Black)
-                }
-            } else {
+            if (!active) {
                 Button(
                     onClick = { showPurchase = true },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = UProBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = UProBlue, contentColor = Color.White),
                 ) { Text(sh("PRO PLANLARINI GÖR", "VIEW PRO PLANS"), fontWeight = FontWeight.Black) }
             }
         }
@@ -206,7 +188,7 @@ internal fun UnifiedProVipScreen(
         notice?.let { message ->
             item {
                 Surface(shape = RoundedCornerShape(14.dp), color = UProBlue.copy(alpha = .12f)) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = UProText, fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = UProText, fontSize = 13.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -229,7 +211,7 @@ private fun ProAccessCard(icon: String, label: String, enabled: Boolean, accent:
         Column(Modifier.padding(11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(icon, color = accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
             Text(if (enabled) "✓" else "—", color = if (enabled) UProGreen else UProMuted, fontSize = 18.sp, fontWeight = FontWeight.Black)
-            Text(label, color = UProMuted, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(label, color = UProMuted, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
 }
@@ -239,6 +221,6 @@ private fun ProLine(icon: String, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(icon, fontSize = 16.sp)
         Spacer(Modifier.width(9.dp))
-        Text(text, color = UProText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(text, color = UProText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }

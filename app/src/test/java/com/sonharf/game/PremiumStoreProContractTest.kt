@@ -18,10 +18,11 @@ class PremiumStoreProContractTest {
     }
 
     @Test
-    fun `premium store has no restore purchases ui and uses text free runtime artwork`() {
+    fun `premium store restores purchases and uses text free runtime artwork`() {
         val store = repoFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
-        assertFalse(store.contains("Satın Almaları Geri Yükle", ignoreCase = true))
-        assertFalse(store.contains("Restore Purchases", ignoreCase = true))
+        assertTrue(store.contains("SATIN ALIMLARI GERİ YÜKLE"))
+        assertTrue(store.contains("Restore Purchases", ignoreCase = true))
+        assertTrue(store.contains("manager.restorePurchases(ProductCatalog.permanentPremiumProducts)"))
         assertTrue(store.contains("R.drawable.premium_series_game"))
         assertTrue(store.contains("R.drawable.premium_letter_table"))
         assertTrue(store.contains("R.drawable.premium_score_calculator"))
@@ -31,12 +32,14 @@ class PremiumStoreProContractTest {
             "premium_series_game.xml",
             "premium_letter_table.xml",
             "premium_score_calculator.xml",
-            "premium_pro.xml",
         ).forEach { name ->
             val vector = repoFile("app/src/main/res/drawable/$name").readText()
             assertTrue(vector.contains("<vector"))
             assertFalse("Decorative premium asset must not bake text", vector.contains("<text"))
         }
+        // The PRO emblem is the text-free painted store image (shield, crown and laurels).
+        assertTrue(repoFile("app/src/main/res/drawable-nodpi/premium_pro.png").isFile)
+        assertFalse(File("src/main/res/drawable/premium_pro.xml").exists() || File("app/src/main/res/drawable/premium_pro.xml").exists())
     }
 
     @Test
@@ -83,7 +86,7 @@ class PremiumStoreProContractTest {
 
         val screen = repoFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
         assertTrue(screen.contains("PRO • Tüm oynanan kelimeler"))
-        assertTrue(screen.contains("val ordered = if (isPro) words.reversed()"))
+        assertTrue(screen.contains("val ordered = words.reversed()"))
     }
 
     @Test

@@ -176,30 +176,14 @@ fun ProfileExperienceV2Screen() {
         item {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(contentAlignment = Alignment.BottomEnd) {
-                    ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 112)
+                    ProfileAvatarV2(avatarBytes.takeIf { p?.avatarVisibility != "hidden" }, p?.displayName ?: "O", 112, p?.gender)
                     Surface(
                         modifier = Modifier.size(42.dp).clickable { photoEditor = true },
                         shape = CircleShape,
                         color = SonHarfPurple,
                         border = BorderStroke(2.dp, SonHarfSurface),
                     ) { Box(contentAlignment = Alignment.Center) { Text("✎", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black) } }
-                    p?.gender?.let { gender ->
-                        val female = gender.trim().lowercase() in setOf("kadın", "kadin", "female", "woman")
-                        val male = gender.trim().lowercase() in setOf("erkek", "male", "man")
-                        if (female || male) {
-                            Surface(
-                                modifier = Modifier.align(Alignment.BottomStart).size(42.dp),
-                                shape = CircleShape,
-                                color = if (female) Color(0xFFFF76A8) else Color(0xFF439EF2),
-                                border = BorderStroke(2.dp, Color.White),
-                                shadowElevation = 3.dp,
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(if (female) "♀" else "♂", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                                }
-                            }
-                        }
-                    }
+
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(p?.displayName ?: sh("Oyuncu", "Player"), fontSize = 29.sp, fontWeight = FontWeight.Black)
@@ -257,15 +241,10 @@ fun ProfileExperienceV2Screen() {
                         Modifier.fillMaxWidth().padding(13.dp),
                         verticalArrangement = Arrangement.spacedBy(9.dp),
                     ) {
+                        // The longest word gets its own full-width band: a long word never fits a third of a row.
+                        LongestWordRecordV2(r.longestWord, r.longestWordLength)
+
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            RecordTileV2(
-                                "🔤",
-                                if (r.longestWord.isBlank()) "—" else r.longestWord.uppercase(),
-                                if (r.longestWordLength > 0)
-                                    sh("${r.longestWordLength} harf", "${r.longestWordLength} letters")
-                                else sh("Uzun kelime", "Longest word"),
-                                Modifier.weight(1f),
-                            )
                             RecordTileV2(
                                 "🔥",
                                 r.bestStreak.toString(),
@@ -278,15 +257,15 @@ fun ProfileExperienceV2Screen() {
                                 sh("En büyük fark", "Biggest margin"),
                                 Modifier.weight(1f),
                             )
-                        }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                             RecordTileV2(
                                 "⚔",
                                 r.bestClassicScore.toString(),
                                 sh("Son Harf skor", "Son Harf score"),
                                 Modifier.weight(1f),
                             )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                             RecordTileV2(
                                 "⚡",
                                 r.bestArenaScore.toString(),
@@ -329,7 +308,7 @@ fun ProfileExperienceV2Screen() {
                 val seasonLeague = ratingLeagueProgress(s.rating)
                 val daysLeft = runCatching {
                     kotlin.math.ceil(
-                        ((java.time.Instant.parse(s.endsAt).toEpochMilli() - System.currentTimeMillis())
+                        (((com.sonharf.game.data.parseServerInstant(s.endsAt)?.toEpochMilli() ?: System.currentTimeMillis()) - System.currentTimeMillis())
                             .coerceAtLeast(0L)) / 86_400_000.0
                     ).toInt()
                 }.getOrDefault(0)
@@ -487,6 +466,7 @@ fun ProfileExperienceV2Screen() {
         PhotoEditorDialogV2(
             avatar = avatarBytes,
             name = p.displayName,
+            gender = p.gender,
             hidden = p.avatarVisibility == "hidden",
             busy = busy,
             onDismiss = { if (!busy) photoEditor = false },
@@ -540,7 +520,7 @@ fun ProfileExperienceV2Screen() {
 
 @Composable
 private fun PhotoEditorDialogV2(
-    avatar: ByteArray?, name: String, hidden: Boolean, busy: Boolean,
+    avatar: ByteArray?, name: String, gender: String?, hidden: Boolean, busy: Boolean,
     onDismiss: () -> Unit, onPhoto: (Uri) -> Unit, onHidden: (Boolean) -> Unit,
 ) {
     var hide by remember(hidden) { mutableStateOf(hidden) }
@@ -551,7 +531,7 @@ private fun PhotoEditorDialogV2(
         text = {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Box(contentAlignment = Alignment.BottomEnd) {
-                    ProfileAvatarV2(avatar, name, 118)
+                    ProfileAvatarV2(avatar.takeIf { !hide }, name, 118, gender)
                     Surface(modifier = Modifier.size(42.dp), shape = CircleShape, color = SonHarfPurple) { Box(contentAlignment = Alignment.Center) { Text("✎", color = Color.White, fontSize = 21.sp) } }
                 }
                 OutlinedButton(onClick = { picker.launch("image/*") }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(50.dp)) {
@@ -595,14 +575,14 @@ private fun LegacyIdentityDialogV2(initialName: String, busy: Boolean, onDismiss
 }
 
 @Composable
-private fun ProfileAvatarV2(bytes: ByteArray?, name: String, size: Int) {
-    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+private fun ProfileAvatarV2(bytes: ByteArray?, name: String, size: Int, gender: String?) {
+    val bitmap = rememberProfileBitmap(bytes)
     Box(
         Modifier.size(size.dp).clip(CircleShape).background(Brush.sweepGradient(listOf(SonHarfPurple, SonHarfCyan, SonHarfPink, SonHarfPurple))).padding(4.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (bitmap != null) Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-        else Box(Modifier.fillMaxSize().clip(CircleShape).background(SonHarfSurface), contentAlignment = Alignment.Center) { Text(name.take(1).uppercase(), fontSize = (size / 3).sp, fontWeight = FontWeight.Black) }
+        else DefaultProfilePortrait(gender, Modifier.fillMaxSize().clip(CircleShape))
     }
 }
 
@@ -612,6 +592,54 @@ private fun ProfileMetricV2(value: String, label: String, modifier: Modifier) {
         Column(Modifier.padding(vertical = 12.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, fontSize = 21.sp, fontWeight = FontWeight.Black)
             Text(label, color = SonHarfMuted, fontSize = 13.sp, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun LongestWordRecordV2(word: String, length: Int) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(15.dp),
+        color = SonHarfSurface2,
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("🔤", fontSize = 22.sp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    sh("EN UZUN KELİME", "LONGEST WORD"),
+                    color = SonHarfMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    if (word.isBlank()) "—" else word.uppercase(),
+                    fontSize = when {
+                        word.length > 14 -> 16.sp
+                        word.length > 10 -> 19.sp
+                        else -> 22.sp
+                    },
+                    fontWeight = FontWeight.Black,
+                    softWrap = true,
+                    maxLines = 2,
+                )
+            }
+            if (length > 0) {
+                Surface(shape = RoundedCornerShape(10.dp), color = SonHarfGold.copy(alpha = .14f)) {
+                    Text(
+                        sh("$length harf", "$length letters"),
+                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        color = SonHarfText,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                    )
+                }
+            }
         }
     }
 }

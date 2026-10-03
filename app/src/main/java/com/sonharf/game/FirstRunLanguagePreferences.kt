@@ -7,6 +7,7 @@ internal object FirstRunLanguagePreferences {
     private const val FILE = "son_harf_first_run"
     private const val LANGUAGE_COMPLETE = "language_complete"
     private const val ONBOARDING_REQUIRED = "onboarding_required"
+    private const val MASCOT_WELCOME_SEEN = "mascot_welcome_seen"
 
     fun isComplete(context: Context): Boolean =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -21,6 +22,19 @@ internal object FirstRunLanguagePreferences {
             .edit()
             .putBoolean(LANGUAGE_COMPLETE, true)
             .putBoolean(ONBOARDING_REQUIRED, false)
+            .putBoolean(MASCOT_WELCOME_SEEN, true)
+            .apply()
+    }
+
+    /** Whether this device has already been welcomed by the classic mascot. */
+    fun mascotWelcomeSeen(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getBoolean(MASCOT_WELCOME_SEEN, false)
+
+    fun markMascotWelcomeSeen(context: Context) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(MASCOT_WELCOME_SEEN, true)
             .apply()
     }
 
