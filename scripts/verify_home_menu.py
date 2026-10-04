@@ -1,4 +1,4 @@
-"""Exercise the Kelimelik-style lobby without starting purchases or matches."""
+"""Exercise the lobby home without starting purchases or matches."""
 import re
 import subprocess
 import time

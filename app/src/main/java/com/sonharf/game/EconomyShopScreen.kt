@@ -523,7 +523,7 @@ internal fun VerifiedStoreProductCard(
             // Same order on every card: picture, name, one short line, then the price at the bottom,
             // all centred so neighbouring cards line up.
             Column(Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                // Kelimelik-style card: name on top, the picture, then the price button; "?" explains it.
+                // Product card: name on top, the picture, then the price button; "?" explains it.
                 Text(
                     name,
                     color = LobbyPalette.Ink,
@@ -572,7 +572,7 @@ internal fun VerifiedStoreProductCard(
                         }
                     }
                 } else {
-                    Surface(shape = Hf.PillShape, color = if (lockedByPro) Hf.Gold.copy(alpha = .14f) else Color(0xFF3FAE49),
+                    Surface(shape = Hf.PillShape, color = if (lockedByPro) Hf.Gold.copy(alpha = .14f) else LobbyBrand.Chip,
                         border = if (lockedByPro) BorderStroke(1.dp, Hf.Gold.copy(alpha = .7f)) else null) {
                         Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                             if (lockedByPro) {

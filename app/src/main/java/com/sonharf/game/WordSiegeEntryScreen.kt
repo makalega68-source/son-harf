@@ -279,7 +279,7 @@ internal fun WordSiegeEntryScreen(
             }
 
             if (onFriends != null) item(key = "friend_mode") {
-                // Kelimelik-style: play a friend straight from New Game.
+                // Play a friend straight from New Game.
                 OutlinedButton(
                     onClick = onFriends,
                     enabled = !starting,

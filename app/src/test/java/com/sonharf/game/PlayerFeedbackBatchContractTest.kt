@@ -189,7 +189,7 @@ class PlayerFeedbackBatchContractTest {
 
     @Test fun victoryCrownSaysWhatItDoesAndCrownsEveryWin() {
         assertTrue(source("StoreProductPreview.kt").contains("item.id == \"victory_crown\" -> sh("))
-        // The explanation sits behind the card's "?" corner (Kelimelik-style), not on the card face.
+        // The explanation sits behind the card's "?" corner, not on the card face.
         val shop = source("EconomyShopScreen.kt")
         assertTrue(shop.contains("Text(storeItemEffect(item) ?: storeKindLabel(item.kind)"))
         assertTrue(shop.contains("Icons.Rounded.QuestionMark"))

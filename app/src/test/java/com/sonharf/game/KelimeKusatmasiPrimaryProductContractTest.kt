@@ -45,7 +45,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(home.contains("ThroneBackend.week().rows"))
         assertTrue(home.contains("GameWeeklyPodium(players)"))
         assertTrue(File("src/main/java/com/sonharf/game/ThroneExperience.kt").readText().contains("sh(\"Kelime Atölyesi\",\"Word Workshop\")"))
-        // Kelimelik-style lobby with a five-tab bar: Mağaza · Taht · Oyna · Oyunlar · Profil.
+        // Lobby with a five-tab bar: Mağaza · Taht · Oyna · Oyunlar · Profil.
         assertFalse(shell.contains("PremiumBottomBar("))
         assertTrue(shell.contains("if (tab >= 0) LobbyBottomBar(selected = tab)"))
         assertTrue(shell.contains("PremiumDestination.HOME -> HomeLobbyScreen("))

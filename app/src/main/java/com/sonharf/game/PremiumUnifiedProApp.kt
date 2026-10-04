@@ -151,7 +151,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         }
     }
 
-    // Kelimelik-style: one home page and no bottom bar. Every other page opens from the home and
+    // Lobby home with a five-tab bar; other pages open from the lobby and
     // the back button always returns there. topLevel only decides where invitation toasts show.
     val lobbyTabs = listOf(
         PremiumDestination.SHOP, PremiumDestination.COMPETE, PremiumDestination.HOME,
@@ -224,7 +224,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             topBar = {
                 if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
             },
-            // Kelimelik-style bar on the five main pages: Mağaza · Taht · Oyna · Oyunlar · Profil.
+            // Five-tab bar on the main pages: Mağaza · Taht · Oyna · Oyunlar · Profil.
             bottomBar = {
                 val tab = lobbyTabs.indexOf(destination)
                 if (tab >= 0) LobbyBottomBar(selected = tab) { index ->
