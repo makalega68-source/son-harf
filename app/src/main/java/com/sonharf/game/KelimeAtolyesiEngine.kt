@@ -52,6 +52,8 @@ internal data class AtelierState(
     /** Tasks finished in earlier sets. */
     val earlierTasksDone: Int = 0,
     val roundSeconds: Int = 60,
+    /** Tournament stage difficulty: 0 warm-up, 1 semi-final (harder tasks), 2 final (hardest). */
+    val difficulty: Int = 0,
 ) {
     /** The word currently laid in the slot, in the order the tiles were picked. */
     val word: String get() = picked.mapNotNull { id -> pool.firstOrNull { it.id == id }?.letter }.joinToString("")
@@ -114,15 +116,15 @@ internal class KelimeAtolyesiEngine(
     fun isWord(word: String): Boolean = word in words
 
     /** A fresh round of [seconds] (60, 120, 180 or 300): pool and first task set built from real words. */
-    fun newRound(seconds: Int = ROUND_SECONDS): AtelierState =
-        freshRound().copy(taskSets = setsFor(seconds), roundSeconds = seconds)
+    fun newRound(seconds: Int = ROUND_SECONDS, difficulty: Int = 0): AtelierState =
+        freshRound(difficulty).copy(taskSets = setsFor(seconds), roundSeconds = seconds, difficulty = difficulty.coerceIn(0, 2))
 
-    private fun freshRound(): AtelierState {
+    private fun freshRound(difficulty: Int = 0): AtelierState {
         repeat(ROUND_TRIES) {
             val letters = seedLetters() ?: return@repeat
             val formable = formable(letters, emptySet())
             if (formable.size < MIN_FORMABLE) return@repeat
-            val tasks = pickTasks(letters, formable) ?: return@repeat
+            val tasks = pickTasks(letters, formable, challenging = difficulty >= 1, hard = difficulty >= 2) ?: return@repeat
             val pool = letters.mapIndexed { i, c -> AtelierTile(i.toLong() + 1, c) }
             return AtelierState(pool = pool, tasks = tasks, nextTileId = pool.size.toLong() + 1)
         }
@@ -175,25 +177,28 @@ internal class KelimeAtolyesiEngine(
         if (state.over) state else state.copy(over = true, picked = emptyList())
 
     /**
-     * The next set of three tasks, solvable from the current letters; when they cannot carry a new
-     * set, a whole new pool is laid (its tiles are added to [fresh] for the refill animation).
+     * The next set of three tasks on a brand-new pool of letters, so every set feels fresh. The
+     * pool comes from the round's seeded random, so in a tournament everyone gets the same
+     * sequence. If no new pool can carry a set, the current letters are tried before giving up.
      */
     private fun nextTaskSet(state: AtelierState, fresh: MutableSet<Long>): AtelierState {
         val used = state.words.toSet()
-        val letters = state.pool.map { it.letter }
-        val tasks = pickTasks(letters, formable(letters, used), challenging = state.roundSeconds >= STRATEGY_ROUND_SECONDS && state.taskSet >= 2)
+        val challenging = state.difficulty >= 1 || (state.roundSeconds >= STRATEGY_ROUND_SECONDS && state.taskSet >= 2)
+        val hard = state.difficulty >= 2
         val base = state.copy(taskSet = state.taskSet + 1, earlierTasksDone = state.earlierTasksDone + state.tasks.size)
-        if (tasks != null) return base.copy(tasks = tasks)
         var nextId = state.nextTileId
         repeat(ROUND_TRIES) {
             val seed = seedLetters() ?: return@repeat
             val options = formable(seed, used)
             if (options.size < MIN_FORMABLE) return@repeat
-            val seedTasks = pickTasks(seed, options, challenging = state.roundSeconds >= STRATEGY_ROUND_SECONDS && state.taskSet >= 2) ?: return@repeat
+            val seedTasks = pickTasks(seed, options, challenging, hard) ?: return@repeat
             fresh.clear()
             val pool = seed.map { AtelierTile(nextId++, it).also { tile -> fresh += tile.id } }
             return base.copy(pool = pool, tasks = seedTasks, nextTileId = nextId)
         }
+        val letters = state.pool.map { it.letter }
+        val tasks = pickTasks(letters, formable(letters, used), challenging, hard)
+        if (tasks != null) return base.copy(tasks = tasks)
         // No new set could be built: the round goes on with words only.
         return state.copy(taskSets = state.taskSet)
     }
@@ -211,12 +216,15 @@ internal class KelimeAtolyesiEngine(
         return tasks.filter { !it.done }.all { task -> formable.any { task.matches(it) } }
     }
 
-    private fun pickTasks(letters: List<Char>, formable: List<String>, challenging: Boolean = false): List<AtelierTask>? {
+    private fun pickTasks(letters: List<Char>, formable: List<String>, challenging: Boolean = false, hard: Boolean = false): List<AtelierTask>? {
         val byLength = formable.groupBy { it.length }
-        val shortLengths = (MIN_WORD..4).filter { (byLength[it]?.size ?: 0) >= 2 }
-        val shortLength = (if (challenging) shortLengths.filter { it >= 4 }.ifEmpty { shortLengths } else shortLengths).randomOrNull(random) ?: return null
-        val longLengths = (5..POOL_SIZE).filter { (byLength[it]?.size ?: 0) >= 1 }
-        val longLength = (if (challenging) longLengths.filter { it >= 6 }.ifEmpty { longLengths } else longLengths).randomOrNull(random) ?: return null
+        // The final stage asks for a 5-letter "short" word and the longest word the pool allows.
+        val shortLengths = (MIN_WORD..(if (hard) 5 else 4)).filter { (byLength[it]?.size ?: 0) >= 2 }
+        val shortLength = (if (hard) shortLengths.filter { it >= 5 }.ifEmpty { shortLengths.filter { it >= 4 } }.ifEmpty { shortLengths }
+            else if (challenging) shortLengths.filter { it >= 4 }.ifEmpty { shortLengths } else shortLengths).randomOrNull(random) ?: return null
+        val longLengths = (5..POOL_SIZE).filter { (byLength[it]?.size ?: 0) >= 1 && it != shortLength }.ifEmpty { (5..POOL_SIZE).filter { (byLength[it]?.size ?: 0) >= 1 } }
+        if (longLengths.isEmpty()) return null
+        val longLength = (if (hard) listOf(longLengths.max()) else if (challenging) longLengths.filter { it >= 6 }.ifEmpty { longLengths } else longLengths).randomOrNull(random) ?: return null
         val letter = letters.distinct().filter { c -> formable.count { c in it } >= 2 }.randomOrNull(random) ?: return null
         return listOf(
             AtelierTask(AtelierTaskKind.LENGTH, length = shortLength),

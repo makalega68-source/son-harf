@@ -41,6 +41,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -71,6 +75,7 @@ import com.sonharf.game.data.AtelierCompetitionBackend
 import com.sonharf.game.data.AtelierWeeklyRewardDto
 import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.SupabaseProvider
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -183,12 +188,17 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var tournament by remember { mutableStateOf<com.sonharf.game.data.AtelierTournament?>(null) }
     var tournamentEntry by remember { mutableStateOf<com.sonharf.game.data.TournamentEntry?>(null) }
     var savingTournament by remember { mutableStateOf(false) }
+    // One tap runs the whole tournament: "ready" joins at the start, every next stage starts by itself.
+    var autoTournament by remember { mutableStateOf(false) }
+    var readyForTournament by remember { mutableStateOf(false) }
+    val myId = remember { runCatching { SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull() }
     var tournamentSaveFailed by remember { mutableStateOf(false) }
     LaunchedEffect(mode) {
-        if (!online || mode != AtelierMode.LOBBY) return@LaunchedEffect
+        if (!online || (mode != AtelierMode.LOBBY && mode != AtelierMode.TOURNAMENT)) return@LaunchedEffect
         while (true) {
             gameRequestResult { com.sonharf.game.data.ThroneBackend.tournament() }.onSuccess { tournament = it }
-            delay(10_000)
+            // Faster during the tournament: the live ranking and the next stage's opening matter.
+            delay(if (mode == AtelierMode.TOURNAMENT) 5_000 else 10_000)
         }
     }
     fun saveTournament(finished: AtelierState) {
@@ -261,7 +271,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         }
     }
 
-    fun startRound(seed: Long? = null) {
+    fun startRound(seed: Long? = null, difficulty: Int = 0) {
         val e = engine ?: return
         if (startingRound || busy) return
         startingRound = true
@@ -271,7 +281,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             try {
                 val fresh = withContext(Dispatchers.Default) {
                     e.reseed(seed ?: System.nanoTime())
-                    runCatching { e.newRound(duration) }.getOrNull()
+                    runCatching { e.newRound(duration, difficulty) }.getOrNull()
                 }
                 if (generation != roundGeneration || mode == AtelierMode.LOBBY) return@launch
                 if (fresh == null) { loadFailed = true; return@launch }
@@ -319,10 +329,30 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                         tournamentEntry = entry
                         roundSeconds = entry.seconds
                         mode = AtelierMode.TOURNAMENT
+                        autoTournament = true
+                        readyForTournament = false
                         dailyLine = null
-                        startRound(KelimeAtolyesiEngine.dailySeed(language, entry.seedKey))
+                        // Same letters for everyone in this stage of this tournament; harder each stage.
+                        startRound(KelimeAtolyesiEngine.dailySeed(language, entry.seedKey), difficulty = entry.stage - 1)
                     }.onFailure { lobbyNotice = sh("Bu aşamaya girilemedi. Önceki aşamayı ve kalan süreyi kontrol et.", "Unable to enter. Check the previous stage and remaining time.") }
             } finally { startingDaily = false }
+        }
+    }
+
+    // "Hazırım": join stage 1 as soon as the tournament opens.
+    LaunchedEffect(tournament, readyForTournament, mode) {
+        val t = tournament ?: return@LaunchedEffect
+        if (readyForTournament && mode == AtelierMode.LOBBY && t.active && t.stage == 1 && t.myStages.none { it.stage == 1 }) startTournament()
+    }
+    // Next stage starts by itself once this one is saved and the server opens the next.
+    LaunchedEffect(tournament, state?.over, mode, savingTournament) {
+        val t = tournament ?: return@LaunchedEffect
+        val entry = tournamentEntry ?: return@LaunchedEffect
+        if (mode != AtelierMode.TOURNAMENT || !autoTournament || state?.over != true || savingTournament) return@LaunchedEffect
+        val saved = t.myStages.any { it.stage == entry.stage && it.finished }
+        if (saved && entry.stage < 3 && t.active && t.stage == entry.stage + 1 && t.myStages.none { it.stage == entry.stage + 1 }) {
+            SonHarfSoundFx.bonus()
+            startTournament()
         }
     }
 
@@ -508,16 +538,26 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             .fillMaxSize()
             .background(Brush.verticalGradient(if (mode == AtelierMode.LOBBY) listOf(LobbyPalette.Ground, LobbyPalette.Ground) else listOf(AtelierUi.WoodTop, AtelierUi.WoodBottom))),
     ) {
+        // The clock and score stay pinned on top while playing; only the content below scrolls.
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            val current = state
+            if (mode != AtelierMode.LOBBY) Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                AtelierTopBar(
+                    seconds = secondsLeft,
+                    score = current?.score ?: 0,
+                    onBack = { if (mode == AtelierMode.LOBBY) onExit() else toLobby() },
+                )
+                if (mode == AtelierMode.TOURNAMENT && current != null && !current.over)
+                    AtelierTournamentLive(tournament, tournamentEntry, myId, current.score)
+            }
         Column(
             Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
+                .fillMaxWidth()
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            val current = state
             if (mode == AtelierMode.LOBBY) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                     IconButton(onClick=onExit){Icon(Icons.Rounded.ArrowBack,null,tint=AtelierUi.Ink)}
@@ -528,11 +568,6 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     }
                 }
             } else {
-            AtelierTopBar(
-                seconds = secondsLeft,
-                score = current?.score ?: 0,
-                onBack = { if (mode == AtelierMode.LOBBY) onExit() else toLobby() },
-            )
             AtelierMascotRow(
                 skin = mascotSkin,
                 mood = when {
@@ -563,7 +598,10 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             when {
                 loadFailed -> AtelierLoadError { loadNonce += 1 }
                 mode == AtelierMode.LOBBY -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AtelierTournamentPanel(tournament, startingDaily || startingRound, onJoin = { startTournament() })
+                    AtelierTournamentPanel(tournament, startingDaily || startingRound, onJoin = { startTournament() },
+                        ready = readyForTournament, onReady = { readyForTournament = true })
+                    Text(sh("ANTRENMAN VE GÜNLÜK YARIŞ", "PRACTICE AND DAILY RACE"), color = AtelierUi.Ink, fontSize = 13.sp,
+                        fontWeight = FontWeight.Black, letterSpacing = 1.sp, modifier = Modifier.padding(top = 6.dp))
                     lobbyNotice?.let { Text(it, color = AtelierUi.Ink, fontSize = 12.sp) }
                     AtelierLobby(
                     online = online,
@@ -588,10 +626,15 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     }
                 }
                 current.over -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (mode == AtelierMode.TOURNAMENT && autoTournament) AtelierTournamentIntermission(
+                        event = tournament, entry = tournamentEntry, myId = myId, stageScore = current.score,
+                        saving = savingTournament, onLeave = { autoTournament = false; toLobby() },
+                    )
                     if (mode == AtelierMode.TOURNAMENT && tournamentSaveFailed) {
                         Button(onClick = { saveTournament(current) }, enabled = !savingTournament) { Text(sh("Sonucu tekrar kaydet", "Retry saving result")) }
                     }
-                    AtelierResult(
+                    // Between stages the intermission is the whole screen; the full result shows after the final.
+                    if (!(mode == AtelierMode.TOURNAMENT && autoTournament && (tournamentEntry?.stage ?: 3) < 3)) AtelierResult(
                     state = current,
                     language = language,
                     best = best,
@@ -608,7 +651,6 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     // Tasks and the word slot on top; the letter pool sits at the bottom right above
                     // Temizle / Gönder, where the thumbs are.
                     if (mode == AtelierMode.DAILY) AtelierRivalStrip(raceBoard, current.score)
-                    if (mode == AtelierMode.TOURNAMENT) Text(sh("Turnuva · ${tournamentEntry?.stage}/3 · ×${tournamentEntry?.multiplier} XP", "Tournament · ${tournamentEntry?.stage}/3 · ×${tournamentEntry?.multiplier} XP"), color = AtelierUi.Ink, fontWeight = FontWeight.Bold)
                     AtelierMatchProgressCard(roundSeconds, secondsLeft, current, combo, best)
                     AtelierTasks(current, language)
                     AtelierSlot(current, language, gain = gain, gainNonce = gainNonce, shakeNonce = shakeNonce) { index ->
@@ -633,6 +675,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(8.dp))
+        }
         }
         ArenaMoveImpact(eventKey = if (gainNonce > 0 && state?.words?.isNotEmpty() == true && mode != AtelierMode.LOBBY) "$roundKey:$gainNonce" else null,
             label = if (combo >= 3) sh("KOMBO ×$combo · +$gain", "COMBO ×$combo · +$gain") else sh("KELİME TAMAM · +$gain", "WORD COMPLETE · +$gain"),
@@ -1182,5 +1225,102 @@ private fun AtelierMatchProgressCard(seconds: Int, remaining: Int, state: Atelie
             trackColor = AtelierUi.TileUsed,
         )
         Text(objective, color = AtelierUi.Ink, fontSize = 12.sp, maxLines = 2)
+    }
+}
+
+private fun atelierStageName(stage: Int): String = when (stage) {
+    1 -> sh("Hazırlık", "Warm-up")
+    2 -> sh("Yarı Final", "Semi-final")
+    else -> sh("Final", "Final")
+}
+
+/** Your live place in the tournament while you play: rank, players, and the gap to the leader. */
+@Composable
+private fun AtelierTournamentLive(
+    event: com.sonharf.game.data.AtelierTournament?,
+    entry: com.sonharf.game.data.TournamentEntry?,
+    myId: String?,
+    liveScore: Int,
+) {
+    val rows = event?.rows.orEmpty()
+    val earlier = rows.firstOrNull { it.userId == myId }?.score ?: 0
+    val mine = earlier + liveScore
+    val rivals = rows.filter { it.userId != myId }
+    val rank = 1 + rivals.count { it.score > mine }
+    val players = maxOf(rows.size + if (rows.none { it.userId == myId }) 1 else 0, 1)
+    val leader = rivals.maxByOrNull { it.score }
+    val pulse by rememberInfiniteTransition(label = "live").animateFloat(.35f, 1f,
+        infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "dot")
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+        .background(Brush.horizontalGradient(listOf(Color(0xFF0D3C48), Color(0xFF14596A))))
+        .padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.size(10.dp).clip(CircleShape).background(Color(0xFFE5484D).copy(alpha = pulse)))
+        Column(Modifier.weight(1f)) {
+            Text(sh("CANLI · ${atelierStageName(entry?.stage ?: 1).uppercase()} · ×${entry?.multiplier ?: 1.5}",
+                "LIVE · ${atelierStageName(entry?.stage ?: 1).uppercase()} · ×${entry?.multiplier ?: 1.5}"),
+                color = Color(0xFFF2C14E), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            Text(when {
+                leader == null -> sh("Lider sensin! Farkı aç.", "You lead! Pull away.")
+                mine > leader.score -> sh("Lider sensin! ${leader.name} ${mine - leader.score} puan geride.", "You lead! ${leader.name} is ${mine - leader.score} behind.")
+                else -> sh("Lider ${leader.name} · ${leader.score - mine + 1} puanla geçersin", "Leader ${leader.name} · ${leader.score - mine + 1} to pass")
+            }, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text("#$rank", color = Color(0xFFF2C14E), fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Text(sh("$players oyuncu", "$players players"), color = Color.White.copy(alpha = .8f), fontSize = 10.sp)
+        }
+    }
+}
+
+/** Between stages: your stage score, the clock to the next stage (which starts by itself) and the live board. */
+@Composable
+private fun AtelierTournamentIntermission(
+    event: com.sonharf.game.data.AtelierTournament?,
+    entry: com.sonharf.game.data.TournamentEntry?,
+    myId: String?,
+    stageScore: Int,
+    saving: Boolean,
+    onLeave: () -> Unit,
+) {
+    val stage = entry?.stage ?: 1
+    val now = serverNow(event?.serverTime.orEmpty(), entry?.eventStart)
+    val nextOpens = entry?.let { tournamentTimeMillis(it.eventStart) + stage * 600_000L } ?: 0L
+    val rows = event?.rows.orEmpty()
+    val myRank = rows.firstOrNull { it.userId == myId }?.rank
+    GameEventStage {
+        EventTag(sh("${stage}. AŞAMA TAMAM", "STAGE $stage DONE"))
+        Text(sh("$stageScore puan", "$stageScore points"), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
+        if (myRank != null) Text(sh("Turnuvada şu an ${myRank}. sıradasın", "You are #$myRank in the tournament"), color = EventGold, fontWeight = FontWeight.Bold)
+        if (stage < 3) {
+            Text(sh("Sıradaki: ${atelierStageName(stage + 1)} · ${stage + 1} dk · daha zor görevler, yeni harfler",
+                "Next: ${atelierStageName(stage + 1)} · ${stage + 1} min · harder tasks, new letters"),
+                color = Color.White.copy(alpha = .9f), fontSize = 12.sp)
+            EventCountdown(when {
+                saving -> "—:—:—"
+                now == 0L || nextOpens == 0L -> "—:—:—"
+                else -> tournamentClockText(nextOpens, now)
+            })
+            Text(sh("Aşama açılınca oyun kendiliğinden başlar. Bu ekranda kal!", "The game starts by itself when the stage opens. Stay here!"),
+                color = EventGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        } else {
+            Text(sh("Turnuva bitti! Kürsü son sıralamayla belirlenir.", "Tournament over! The final ranking sets the podium."),
+                color = Color.White, fontSize = 13.sp)
+        }
+        if (rows.isNotEmpty()) {
+            Text(sh("CANLI SIRALAMA", "LIVE RANKING"), color = EventGold, fontSize = 11.sp, fontWeight = FontWeight.Black)
+            rows.take(5).forEach { row ->
+                val me = row.userId == myId
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                    .background(if (me) EventGold.copy(alpha = .22f) else Color.Transparent).padding(horizontal = 6.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text("${row.rank}.", Modifier.width(28.dp), color = EventGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    Text(if (me) sh("${row.name} (sen)", "${row.name} (you)") else row.name, Modifier.weight(1f), color = Color.White,
+                        fontSize = 13.sp, fontWeight = if (me) FontWeight.Black else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("${row.stages}/3 · ${row.score}", color = Color.White, fontSize = 12.sp)
+                }
+            }
+        }
+        if (stage < 3) TextButton(onClick = onLeave) { Text(sh("Turnuvadan ayrıl", "Leave the tournament"), color = Color.White.copy(alpha = .75f)) }
     }
 }

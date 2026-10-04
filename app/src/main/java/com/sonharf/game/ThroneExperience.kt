@@ -157,7 +157,7 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
  }
 }
 
-@Composable internal fun AtelierTournamentPanel(event:AtelierTournament?,busy:Boolean,onJoin:()->Unit) {
+@Composable internal fun AtelierTournamentPanel(event:AtelierTournament?,busy:Boolean,onJoin:()->Unit,ready:Boolean=false,onReady:(()->Unit)?=null) {
  val now=serverNow(event?.serverTime.orEmpty(),event?.eventStart)
  val already=event?.myStages?.any{it.stage==event.stage}==true
  val previous=event==null||event.stage==1||event.myStages.any{it.stage==event.stage-1&&it.finished}
@@ -185,14 +185,18 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
    }
   }
   Text(sh("30 dakikalık yarış · Her aşama 10 dakika açık. Önceki aşamayı tamamla, finale ilerle. En çok aşama ve puan kürsüyü belirler.","30-minute race · Each stage opens for 10 minutes. Complete each stage to advance. Completed stages and score decide the podium."),color=Color.White.copy(alpha=.85f),fontSize=11.sp,lineHeight=16.sp)
+  // One tap is enough: before the start "Hazırım" joins automatically when the tournament opens,
+  // and once in, every next stage starts by itself.
+  val waiting=event?.active!=true
   EventAction(when {
    busy->sh("HAZIRLANIYOR…","PREPARING…")
-   event?.active!=true->sh("TURNUVA BAŞLANGICI BEKLENİYOR","WAITING FOR TOURNAMENT")
-   already->sh("AŞAMA TAMAM · SONRAKİNİ BEKLE","STAGE PLAYED · WAIT FOR NEXT")
-   !previous->sh("ÖNCEKİ AŞAMAYI TAMAMLA","COMPLETE THE PREVIOUS STAGE")
+   waiting&&ready->sh("HAZIRSIN · BAŞLAYINCA OTOMATİK GİRİLECEK","READY · YOU JOIN AUTOMATICALLY")
+   waiting->sh("HAZIRIM · BAŞLAYINCA BENİ AL","I'M READY · JOIN ME AT THE START")
+   already->sh("AŞAMA TAMAM · SONRAKİ OTOMATİK GELECEK","STAGE DONE · NEXT ONE STARTS BY ITSELF")
+   !previous->sh("BU TURNUVA BAŞLADI · SIRADAKİNE HAZIRLAN","THIS ONE STARTED · GET READY FOR THE NEXT")
    !canJoin->sh("BU AŞAMANIN GİRİŞİ KAPANDI","STAGE ENTRY CLOSED")
-   else->sh("TURNUVAYA KATIL","JOIN TOURNAMENT")
-  },onJoin,canJoin&&!busy)
+   else->sh("YARIŞA BAŞLA","START THE RACE")
+  },{ if(waiting) onReady?.invoke() else onJoin() },(canJoin||(waiting&&onReady!=null&&!ready))&&!busy)
   event?.myStages?.filter{it.finished}?.forEach{Text(sh("${it.stage}. aşama: +${it.xp} XP","Stage ${it.stage}: +${it.xp} XP"),color=EventGold,fontSize=11.sp)}
   if(event?.rows?.isNotEmpty()==true) {
    Text(sh("CANLI SIRALAMA · İLK 10","LIVE RANKING · TOP 10"),color=EventGold,fontSize=11.sp,fontWeight=FontWeight.Black)
