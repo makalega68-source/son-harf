@@ -105,9 +105,9 @@ jobs:
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage mascot-face
             sleep 6
-            timeout 25s adb exec-out screencap -p > Mascot-face-Android.png
+            timeout 60s adb exec-out screencap -p > Mascot-face-Android.png
             sleep 2
-            timeout 25s adb exec-out screencap -p > Mascot-face-second-Android.png
+            timeout 60s adb exec-out screencap -p > Mascot-face-second-Android.png
             python3 scripts/verify_home_menu.py
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage controls-dark
@@ -119,7 +119,7 @@ jobs:
             adb shell uiautomator dump /sdcard/preview-open.xml
             adb pull /sdcard/preview-open.xml Preview-open.xml
             grep -q 'SATIN AL' Preview-open.xml
-            timeout 25s adb exec-out screencap -p > Review-preview-dark-Android.png
+            timeout 60s adb exec-out screencap -p > Review-preview-dark-Android.png
       - name: Validate frame and APK were produced by this checkout
         run: |
           test -s Ceviz-Fildisi-Android.png

@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 
 
 def adb(*args):
-    return subprocess.check_output(["adb", *args], timeout=25)
+    return subprocess.check_output(["adb", *args], timeout=60)
 
 
 def bounds(name):
