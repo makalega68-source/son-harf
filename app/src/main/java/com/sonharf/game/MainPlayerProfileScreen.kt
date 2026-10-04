@@ -189,15 +189,15 @@ private fun ProfileHero(
             Box(Modifier.size(photo).offset(x = maxWidth / 2 - photo / 2, y = maxHeight * .389f - photo / 2)
                 .clip(CircleShape).clickable(onClickLabel = sh("Profili düzenle", "Edit profile"), onClick = onEdit),
                 contentAlignment = Alignment.Center) {
-                FramedProfilePhotoAvatar(
+                // The artwork's gold ring is the frame here; the bought frame shows everywhere else.
+                ProfilePhotoAvatarWithGender(
                     avatarPath = p?.avatarPath,
                     gender = p?.gender,
                     name = p?.displayName ?: sh("Oyuncu", "Player"),
                     size = photo,
-                    frameId = rememberPlayerFrame(p?.id),
                     accent = Hf.Gold,
                     visible = p?.avatarVisibility != "hidden",
-                    isPro = p?.isVip == true,
+                    showGenderBadge = false,
                 )
             }
         }

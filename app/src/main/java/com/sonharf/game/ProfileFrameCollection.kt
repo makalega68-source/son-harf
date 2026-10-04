@@ -204,9 +204,11 @@ internal fun rememberPlayerFrame(userId: String?): String? {
             // Keep a valid reward visible during refresh; revoke on expiry or transport failure.
             if (frame == ProfileFrameCollection.throneFrame.id &&
                 (PublicFrames.rewardDeadline(userId) ?: 0L) <= System.currentTimeMillis()) frame = localFrame
+            // Your own frame always follows your local selection, so a new choice shows at once and a
+            // stale server read can never hide it; the server only adds the weekly throne reward.
             runCatching { PublicFrames.get(userId) }
-                .onSuccess { frame = it }
-                .onFailure { if (frame == ProfileFrameCollection.throneFrame.id) frame = localFrame }
+                .onSuccess { frame = if (userId == me && it != ProfileFrameCollection.throneFrame.id) SonHarfCosmetics.profileFrameId else it }
+                .onFailure { if (userId == me || frame == ProfileFrameCollection.throneFrame.id) frame = SonHarfCosmetics.profileFrameId }
             val zone = java.time.ZoneId.of("Europe/Istanbul")
             val boundary = java.time.LocalDate.now(zone)
                 .with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.MONDAY))
