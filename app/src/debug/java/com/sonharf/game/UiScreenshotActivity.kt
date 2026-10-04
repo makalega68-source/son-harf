@@ -110,7 +110,7 @@ private fun WalnutIvoryScreenshotFixture() {
   else->Column(Modifier.fillMaxSize().background(SonHarfTheme.Background).statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
    when(stage) {
     "throne"->{ThroneOwnerStage(players.first(),now+60*60*60*1000L,now);GameWeeklyPodium(players)}
-    "atelier"->{AtelierTournamentPanel(event,false){};AtelierLobby(true,null,false,false,null,null,false,180,{}, {}, {}, {}, {})}
+    "atelier"->{AtelierTournamentPanel(event,false,onJoin={});AtelierLobby(true,null,false,false,null,null,false,180,{}, {}, {}, {}, {})}
     else->{PremiumOtherGames({},{});TournamentHomeStage(event,now,onOpen={});GameWeeklyPodium(players)}
    }
   }
