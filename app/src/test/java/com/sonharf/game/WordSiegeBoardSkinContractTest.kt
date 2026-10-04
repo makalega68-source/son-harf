@@ -39,9 +39,10 @@ class WordSiegeBoardSkinContractTest {
         val collection = read("src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt")
         assertTrue(collection.contains("WordSiegeBoardSkins.select(context, itemId)"))
         assertTrue(collection.contains("WordSiegeBoardSkins.select(context, null)"))
-        // Profile only links to Koleksiyonum; that screen lists every owned kind, board skins included.
+        // Profile only links to Koleksiyonum; that screen has one shelf per kind, board skins included.
         val screen = read("src/main/java/com/sonharf/game/PlayerCollectionScreen.kt")
-        assertTrue(screen.contains("ProfileOwnedThemesSection(backend)"))
+        assertTrue(screen.contains("ProfileOwnedThemesSection(backend, category = shelves[shelf].kind)"))
+        assertTrue(screen.contains("CollectionShelf(\"board_skin\""))
         assertTrue(collection.contains("private val ResettableKinds = listOf(\"board_skin\""))
         assertTrue(collection.contains("val shown = if (category == null) styles else"))
     }

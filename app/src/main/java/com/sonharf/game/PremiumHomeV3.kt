@@ -51,13 +51,13 @@ private val HomeHairline = Color(0xFFD2DBE5)
 
 /** Home-only materials: the player's purchased theme still governs all game screens. */
 internal object HomeLobbyStyle {
-    val Ground: Color get() = if (SonHarfTheme.IsDark) Color(0xFF181D18) else Color(0xFFF6F0E3)
-    val Paper: Color get() = if (SonHarfTheme.IsDark) Color(0xFF252C24) else Color(0xFFFFFAEF)
-    val Ink: Color get() = if (SonHarfTheme.IsDark) Color(0xFFF4EDD9) else Color(0xFF343D30)
-    val Muted: Color get() = if (SonHarfTheme.IsDark) Color(0xFFBEBEAA) else Color(0xFF777664)
-    val Line: Color get() = if (SonHarfTheme.IsDark) Color(0xFF4B5141) else Color(0xFFDCD0B5)
-    val Gold: Color get() = if (SonHarfTheme.IsDark) Color(0xFFE5C47B) else Color(0xFF8D692C)
-    val Green = Color(0xFF296B47)
+    val Ground: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF0E3E4A) else if (SonHarfTheme.IsDark) Color(0xFF181D18) else Color(0xFFF6F0E3)
+    val Paper: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF135463) else if (SonHarfTheme.IsDark) Color(0xFF252C24) else Color(0xFFFFFAEF)
+    val Ink: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFFF2F8F9) else if (SonHarfTheme.IsDark) Color(0xFFF4EDD9) else Color(0xFF343D30)
+    val Muted: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFFA8C8CF) else if (SonHarfTheme.IsDark) Color(0xFFBEBEAA) else Color(0xFF777664)
+    val Line: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF2A7486) else if (SonHarfTheme.IsDark) Color(0xFF4B5141) else Color(0xFFDCD0B5)
+    val Gold: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFFF2C14E) else if (SonHarfTheme.IsDark) Color(0xFFE5C47B) else Color(0xFF8D692C)
+    val Green: Color get() = if (SonHarfCosmetics.petrolMenus) LobbyBrand.Chip else Color(0xFF296B47)
 }
 
 @Composable
@@ -134,7 +134,7 @@ internal fun HomeSiegeHero(onSiege: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally) {
         // The original 3D brand is the stage artwork; every action remains a native control.
         Box(Modifier.fillMaxWidth().height(138.dp), contentAlignment = Alignment.Center) {
-            val glow = if (SonHarfTheme.IsDark) Color(0xFF576849) else Color(0xFFE3C98F)
+            val glow = if (SonHarfCosmetics.petrolMenus) Color(0xFF2A7486) else if (SonHarfTheme.IsDark) Color(0xFF576849) else Color(0xFFE3C98F)
             Canvas(Modifier.matchParentSize()) {
                 drawOval(Brush.radialGradient(listOf(glow.copy(alpha = .34f), Color.Transparent),
                     center = center, radius = size.width * .48f))

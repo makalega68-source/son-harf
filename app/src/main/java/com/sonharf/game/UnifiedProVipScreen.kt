@@ -91,8 +91,8 @@ internal fun UnifiedProVipScreen(
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = UProBlue, trackColor = UProBorder) }
 
         item {
-            Surface(shape=RoundedCornerShape(28.dp),color=Color(0xFF173C30),border=BorderStroke(1.dp,Color(0xFFD8BA76))) {
-                Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color(0xFF173C30),Color(0xFF0C251E))))
+            Surface(shape=RoundedCornerShape(28.dp),color=LobbyBrand.Band,border=BorderStroke(1.dp,Color(0xFFD8BA76))) {
+                Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(LobbyBrand.Sky,LobbyBrand.Band)))
                     .padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Icon(Icons.Rounded.WorkspacePremium,null,tint=Color(0xFFE7C984),modifier=Modifier.size(52.dp))
                     Text("KELİME TAHTI",color=Color.White,fontSize=15.sp,letterSpacing=2.sp,fontWeight=FontWeight.Medium)

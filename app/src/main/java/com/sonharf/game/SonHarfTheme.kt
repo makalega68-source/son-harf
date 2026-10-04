@@ -8,17 +8,17 @@ import androidx.compose.ui.graphics.Color
  * Older semantic names stay as aliases so every screen resolves from this one source.
  */
 internal object KelimeKusatmasiPalette {
-    val MonsterBlack: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEFE3CC) else Color(0xFFE6ECF2)
-    val MonsterSurface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
-    val MonsterSurface2: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF232A33) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF3E8D2) else Color(0xFFF3F6F9)
-    val MonsterSurface3: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF28303A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEADCC0) else Color(0xFFEAF0F5)
+    val MonsterBlack: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF101419) else if (SonHarfCosmetics.petrolMenus) Color(0xFF0E3E4A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEFE3CC) else Color(0xFFE6ECF2)
+    val MonsterSurface: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1C222A) else if (SonHarfCosmetics.petrolMenus) Color(0xFF135463) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
+    val MonsterSurface2: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF232A33) else if (SonHarfCosmetics.petrolMenus) Color(0xFF175B6B) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF3E8D2) else Color(0xFFF3F6F9)
+    val MonsterSurface3: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF28303A) else if (SonHarfCosmetics.petrolMenus) Color(0xFF1B6273) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEADCC0) else Color(0xFFEAF0F5)
     val MonsterLime = Color(0xFF3E9F4D)
     val MonsterRed = Color(0xFFD0514A)
     val MonsterPink = Color(0xFFE0A82E)
     val MonsterOrange = Color(0xFFE0A82E)
-    val MonsterText: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else if (SonHarfCosmetics.walnutTheme) Color(0xFF3A2417) else Color(0xFF243142)
-    val MonsterMuted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else if (SonHarfCosmetics.walnutTheme) Color(0xFF7A6650) else Color(0xFF6B7A8C)
-    val MonsterBorder: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else if (SonHarfCosmetics.walnutTheme) Color(0xFFCDB58E) else Color(0xFFD2DBE5)
+    val MonsterText: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFEEF2F6) else if (SonHarfCosmetics.petrolMenus) Color(0xFFF2F8F9) else if (SonHarfCosmetics.walnutTheme) Color(0xFF3A2417) else Color(0xFF243142)
+    val MonsterMuted: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFA3AFBD) else if (SonHarfCosmetics.petrolMenus) Color(0xFFA8C8CF) else if (SonHarfCosmetics.walnutTheme) Color(0xFF7A6650) else Color(0xFF6B7A8C)
+    val MonsterBorder: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF313A46) else if (SonHarfCosmetics.petrolMenus) Color(0xFF2A7486) else if (SonHarfCosmetics.walnutTheme) Color(0xFFCDB58E) else Color(0xFFD2DBE5)
 
     val Ivory = Color(0xFFFFFFFF)
     val Champagne = Color(0xFFE0A82E)
@@ -55,7 +55,7 @@ internal object KelimeKusatmasiPalette {
  * Black Theme deepens the ground to near-black.
  */
 internal object SonHarfTheme {
-    private val alternateDark: Boolean get() = SonHarfCosmetics.darkArenaTheme
+    private val alternateDark: Boolean get() = SonHarfCosmetics.darkArenaTheme || SonHarfCosmetics.petrolMenus
 
     // Light board-game UI (theme D): light ground, dark text, green actions.
     val IsDark: Boolean get() = alternateDark
@@ -65,17 +65,17 @@ internal object SonHarfTheme {
     val Surface: Color get() = KelimeKusatmasiPalette.MonsterSurface
     val SurfaceSecondary: Color get() = KelimeKusatmasiPalette.MonsterSurface2
     val SurfaceElevated: Color get() = KelimeKusatmasiPalette.MonsterSurface3
-    val NavigationSurface: Color get() = if (alternateDark) Color(0xFF1C222A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
-    val ModalSurface: Color get() = if (alternateDark) Color(0xFF1C222A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
+    val NavigationSurface: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF135463) else if (alternateDark) Color(0xFF1C222A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
+    val ModalSurface: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF135463) else if (alternateDark) Color(0xFF1C222A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
 
     // Gameplay layers: graphite field, ivory letter tiles.
-    val GameSurface: Color get() = if (alternateDark) Color(0xFF101419) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEFE3CC) else Color(0xFFE6ECF2)
+    val GameSurface: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF0E3E4A) else if (alternateDark) Color(0xFF101419) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEFE3CC) else Color(0xFFE6ECF2)
     val GameTile: Color get() = Color(0xFFF7E3A6)
     val GameTileBorder: Color get() = Color(0xFFC9A560)
 
     // Accent family: player green for actions, champagne gold for detail and prestige.
     val Primary: Color get() = KelimeKusatmasiPalette.MonsterLime
-    val PrimarySoft: Color get() = if (alternateDark) Color(0xFF213D2C) else Color(0xFFE1F2E3)
+    val PrimarySoft: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF1D5345) else if (alternateDark) Color(0xFF213D2C) else Color(0xFFE1F2E3)
     val SoftBlue: Color get() = KelimeKusatmasiPalette.Champagne
     val Turquoise: Color get() = KelimeKusatmasiPalette.PlayerGreenLight
     val ActionOrange: Color get() = KelimeKusatmasiPalette.MonsterOrange
@@ -92,8 +92,8 @@ internal object SonHarfTheme {
     val SuccessSoft: Color get() = PrimarySoft
     val Error: Color get() = KelimeKusatmasiPalette.RivalRed
     val Warning: Color get() = KelimeKusatmasiPalette.Champagne
-    val DisabledBackground: Color get() = if (alternateDark) Color(0xFF28303A) else Color(0xFFE3E9EF)
-    val DisabledContent: Color get() = if (alternateDark) Color(0xFF87939F) else Color(0xFF657483)
+    val DisabledBackground: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF1B6273) else if (alternateDark) Color(0xFF28303A) else Color(0xFFE3E9EF)
+    val DisabledContent: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF8DB0B8) else if (alternateDark) Color(0xFF87939F) else Color(0xFF657483)
 
     val OnPrimary: Color get() = KelimeKusatmasiPalette.Ivory
     val OnSecondary: Color get() = KelimeKusatmasiPalette.Ivory
@@ -101,9 +101,9 @@ internal object SonHarfTheme {
     val OnGold: Color get() = KelimeKusatmasiPalette.InkOnIvory
 
     // Graphite hero with a faint emerald cast; ivory text sits on it.
-    val HeroStart: Color get() = if (alternateDark) Color(0xFF222932) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
-    val HeroMiddle: Color get() = if (alternateDark) Color(0xFF1C222A) else Color(0xFFF5F8FB)
-    val HeroEnd: Color get() = if (alternateDark) Color(0xFF161B21) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEADCC0) else Color(0xFFEAF0F5)
+    val HeroStart: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF175B6B) else if (alternateDark) Color(0xFF222932) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFFFFFFF)
+    val HeroMiddle: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF135463) else if (alternateDark) Color(0xFF1C222A) else Color(0xFFF5F8FB)
+    val HeroEnd: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF10434F) else if (alternateDark) Color(0xFF161B21) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEADCC0) else Color(0xFFEAF0F5)
 
     // Compatibility naming used by existing hero/game cards.
     val Forest: Color get() = KelimeKusatmasiPalette.PlayerGreen

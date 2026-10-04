@@ -163,6 +163,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     )
     var incomingSocialCount by remember { mutableIntStateOf(0) }
     LaunchedEffect(destination) { if (destination == PremiumDestination.SOCIAL) incomingSocialCount = 0 }
+    // Menu pages take the lobby's petrol colours; the game arenas keep their own palettes.
+    SonHarfCosmetics.menuPetrol = destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)
     val scheme = if (SonHarfTheme.IsDark || SonHarfCosmetics.darkArenaTheme) {
         darkColorScheme(
             primary = SonHarfTheme.Primary,
@@ -251,6 +253,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onFriends = { destination = PremiumDestination.SOCIAL },
                         onEvents = { destination = PremiumDestination.EVENTS },
                         onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
+                        onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                     )
                     PremiumDestination.MY_GAMES -> MyGamesScreen(backend, onOpen = { kind, id -> openPlayerTarget(kind, id) }, initialTab = gamesTab)
                     PremiumDestination.GAMES -> PremiumGameCenter(

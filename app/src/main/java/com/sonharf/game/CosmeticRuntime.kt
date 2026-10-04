@@ -151,6 +151,10 @@ object SonHarfCosmetics {
         )
     }
 
+    /** Set by the app shell: true on menu pages, false inside the game arenas. */
+    var menuPetrol by mutableStateOf(false)
+    /** Menu pages wear the lobby's petrol colours unless a bought theme (Black, Walnut) is equipped. */
+    val petrolMenus: Boolean get() = menuPetrol && !darkArenaTheme && !walnutTheme
     /** Black Theme is the live catalog id; dark_arena remains an ownership/cache compatibility alias. */
     val darkArenaTheme: Boolean get() = activeThemeId in setOf("theme_black", "theme_dark_arena")
     /** Ceviz & Fildişi is a full theme: warm ivory surfaces and walnut ink across the app and

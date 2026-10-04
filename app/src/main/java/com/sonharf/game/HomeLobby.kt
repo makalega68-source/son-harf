@@ -51,7 +51,7 @@ internal object LobbyBrand {
 
 /**
  * Lobby: brand stage on a word-board backdrop, a player card, two big letter-tile buttons
- * (Yeni Oyun / Oyunlarım) and one event card. Game lists live in Oyunlarım, not here;
+ * (Yeni Oyun / Oyunlarım) and twin cards for Kelime Atölyesi and Son Harf. Game lists live in Oyunlarım, not here;
  * the bottom bar (Mağaza, Taht, Oyna, Oyunlar, Profil) is drawn by the shell.
  */
 @Composable
@@ -67,12 +67,14 @@ internal fun HomeLobbyScreen(
     onFriends: () -> Unit,
     onEvents: () -> Unit,
     onWorkshop: () -> Unit,
+    onLastLetter: () -> Unit,
 ) {
     val me = backend.currentUserId()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var waitingForMe by remember { mutableIntStateOf(0) }
     var menuOpen by remember { mutableStateOf(false) }
     var leagueInfo by remember { mutableStateOf(false) }
+    var guide by remember { mutableStateOf<LobbyGuideTopic?>(null) }
     val foreground = rememberAppForeground()
 
     LaunchedEffect(Unit) {
@@ -104,7 +106,7 @@ internal fun HomeLobbyScreen(
     Box(Modifier.fillMaxSize().background(LobbyBrand.Sky)) {
         LobbyBoardPattern(Modifier.matchParentSize())
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            // Top band: menu on the left, coins and settings on the right.
+            // Top band: menu on the left (settings live there), coins on the right.
             Row(Modifier.fillMaxWidth().background(LobbyBrand.Band).padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Box {
@@ -116,6 +118,12 @@ internal fun HomeLobbyScreen(
                         LobbyMenuItem(Icons.Rounded.Event, sh("Etkinlikler", "Events")) { menuOpen = false; onEvents() }
                         LobbyMenuItem(Icons.Rounded.WorkspacePremium, "PRO") { menuOpen = false; onPro() }
                         LobbyMenuItem(Icons.Rounded.Settings, sh("Ayarlar", "Settings")) { menuOpen = false; onSettings() }
+                        HorizontalDivider()
+                        Text(sh("REHBER", "GUIDE"), Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                            fontSize = 12.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        lobbyGuideTopics().forEach { topic ->
+                            LobbyMenuItem(topic.icon, topic.title) { menuOpen = false; guide = topic }
+                        }
                     }
                 }
                 Spacer(Modifier.weight(1f))
@@ -128,13 +136,10 @@ internal fun HomeLobbyScreen(
                         Icon(Icons.Rounded.AddCircle, sh("Jeton al", "Get coins"), tint = LobbyBrand.Gold, modifier = Modifier.size(20.dp))
                     }
                 }
-                IconButton(onClick = onSettings) {
-                    Icon(Icons.Rounded.Settings, sh("Ayarlar", "Settings"), tint = Color.White, modifier = Modifier.size(28.dp))
-                }
             }
 
             // Brand stage.
-            Box(Modifier.fillMaxWidth().height(170.dp).padding(horizontal = 32.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxWidth().height(150.dp).padding(horizontal = 32.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
                 Image(painterResource(R.drawable.kelime_tahti_brand_logo), sh("Kelime Tahtı", "Word Throne"),
                     contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
             }
@@ -170,16 +175,21 @@ internal fun HomeLobbyScreen(
                 }
             }
 
-            // Two big 3D tiles in the logo's green and red.
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Two 3D tiles in the logo's green and red.
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 LobbyBigButton(Icons.Rounded.AddCircle, sh("Yeni Oyun", "New Game"), LobbyBrand.Play, LobbyBrand.PlayEdge,
                     Modifier.weight(1f), onClick = onNewGame)
                 LobbyBigButton(Icons.Rounded.GridView, sh("Oyunlarım", "My Games"), LobbyBrand.Games, LobbyBrand.GamesEdge,
                     Modifier.weight(1f), badge = waitingForMe, onClick = onMyGames)
             }
 
-            // One event card.
-            Box(Modifier.padding(horizontal = 16.dp)) { HomeTournamentCard(onOpen = onWorkshop) }
+            // The other two games as twin cards of equal size: Kelime Atölyesi, then Son Harf.
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LobbyGameCard(R.drawable.kelime_atolyesi_game_icon, sh("Kelime Atölyesi", "Word Workshop"),
+                    rememberWorkshopStatus(), onWorkshop)
+                LobbyGameCard(R.drawable.son_harf_game_icon, sh("Son Harf", "Last Letter"),
+                    sh("Son harfle başla · 15 saniye", "Start with the last letter · 15 seconds"), onLastLetter)
+            }
             Spacer(Modifier.height(96.dp))
         }
         // Owned mascots keep floating over the lobby; they take no row.
@@ -205,6 +215,27 @@ internal fun HomeLobbyScreen(
         },
         confirmButton = { TextButton(onClick = { leagueInfo = false }) { Text(sh("TAMAM", "OK")) } },
     )
+    guide?.let { LobbyGuideDialog(it) { guide = null } }
+}
+
+/** A game row: icon on the left, name and one live line in the middle, an arrow on the right. */
+@Composable
+private fun LobbyGameCard(icon: Int, title: String, detail: String, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth().height(76.dp), shape = RoundedCornerShape(18.dp),
+        color = LobbyBrand.Band, border = BorderStroke(1.dp, LobbyBrand.Grid)) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+                Image(painterResource(icon), null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text(detail, color = LobbyBrand.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = .8f), modifier = Modifier.size(26.dp))
+        }
+    }
 }
 
 /** A faint word-board grid: our own backdrop, the board the game is played on. */
@@ -243,13 +274,13 @@ private fun LobbyBigButton(icon: ImageVector, label: String, color: Color, edge:
     badge: Int = 0, onClick: () -> Unit) {
     Box(modifier) {
         // A letter-tile: darker base underneath gives the 3D edge, a soft highlight on top.
-        Box(Modifier.fillMaxWidth().height(118.dp).clip(RoundedCornerShape(22.dp)).background(edge)
-            .padding(bottom = 7.dp).clip(RoundedCornerShape(22.dp))
+        Box(Modifier.fillMaxWidth().height(84.dp).clip(RoundedCornerShape(18.dp)).background(edge)
+            .padding(bottom = 5.dp).clip(RoundedCornerShape(18.dp))
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(color.copy(alpha = .85f).compositeOver(Color.White), color, color)))
             .clickable(onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(icon, null, tint = Color.White, modifier = Modifier.size(40.dp))
-                Text(label, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                Text(label, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
             }
         }
         if (badge > 0) Surface(shape = CircleShape, color = LobbyBrand.Gold, border = BorderStroke(2.dp, Color.White),

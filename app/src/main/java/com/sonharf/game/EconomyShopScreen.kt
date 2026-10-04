@@ -458,7 +458,7 @@ private fun StoreProBanner(active: Boolean, onClick: () -> Unit) {
     ) {
         Row(
             Modifier
-                .background(Brush.horizontalGradient(listOf(Color(0xFF244D35), Color(0xFF296B47), Color(0xFF367C54))))
+                .background(Brush.horizontalGradient(listOf(LobbyBrand.Band, LobbyBrand.Sky, LobbyBrand.Chip)))
                 .padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

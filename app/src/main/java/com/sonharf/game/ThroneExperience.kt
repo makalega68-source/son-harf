@@ -40,8 +40,8 @@ import kotlinx.coroutines.delay
  return now
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable internal fun HomeTournamentCard(onOpen:()->Unit, compact:Boolean=false) {
+/** Live tournament state for the lobby's Kelime Atölyesi card: one short line, polled every 15 s. */
+@Composable internal fun rememberWorkshopStatus():String {
  var event by remember { mutableStateOf<AtelierTournament?>(null) }
  var failed by remember { mutableStateOf(false) }
  LaunchedEffect(Unit){
@@ -49,14 +49,12 @@ import kotlinx.coroutines.delay
   while(true){gameRequestResult{ThroneBackend.tournament()}.onSuccess{event=it;failed=false}.onFailure{failed=true};delay(15_000)}
  }
  val now=serverNow(event?.serverTime.orEmpty(),Unit)
- if(compact) HomeGameRow(sh("Kelime Atölyesi","Word Workshop"),
-  when {
-   failed -> sh("Turnuva · Bağlantı yenileniyor", "Tournament · Reconnecting")
-   event?.active==true -> sh("Turnuva açık · ×${event?.multiplier} XP", "Tournament live · ×${event?.multiplier} XP")
-   now>0 -> sh("Turnuva: ", "Tournament: ")+tournamentClockText(tournamentNextRegular(now),now)
-   else -> sh("Kelime bul · Turnuvaya katıl", "Find words · Join tournaments")
-  }, R.drawable.kelime_atolyesi_game_icon, onOpen)
- else TournamentHomeStage(event,now,failed,onOpen)
+ return when {
+  failed -> sh("Turnuva · Bağlantı yenileniyor", "Tournament · Reconnecting")
+  event?.active==true -> sh("Turnuva açık · ×${event?.multiplier} XP", "Tournament live · ×${event?.multiplier} XP")
+  now>0 -> sh("Turnuva: ", "Tournament: ")+tournamentClockText(tournamentNextRegular(now),now)
+  else -> sh("Kelime bul · Turnuvaya katıl", "Find words · Join tournaments")
+ }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

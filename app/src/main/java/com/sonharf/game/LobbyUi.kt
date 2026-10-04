@@ -23,9 +23,9 @@ internal object LobbyPalette {
     val Muted: Color get() = if (SonHarfCosmetics.walnutTheme) Hf.TextMuted else if (SonHarfTheme.IsDark) HomeLobbyStyle.Muted else Color(0xFF6D6B59)
     val Line: Color get() = if (SonHarfCosmetics.walnutTheme) Hf.Border else HomeLobbyStyle.Line
     val Gold: Color get() = HomeLobbyStyle.Gold
-    val Green = HomeLobbyStyle.Green
-    val Accent: Color get() = if (SonHarfTheme.IsDark) Color(0xFF9ED4AF) else Green
-    val Soft: Color get() = if (SonHarfTheme.IsDark) Color(0xFF304332) else Color(0xFFE5ECD9)
+    val Green: Color get() = HomeLobbyStyle.Green
+    val Accent: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF9FDDE8) else if (SonHarfTheme.IsDark) Color(0xFF9ED4AF) else Green
+    val Soft: Color get() = if (SonHarfCosmetics.petrolMenus) Color(0xFF1B6273) else if (SonHarfTheme.IsDark) Color(0xFF304332) else Color(0xFFE5ECD9)
 }
 
 @Composable
