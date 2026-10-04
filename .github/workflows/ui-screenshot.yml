@@ -62,7 +62,7 @@ jobs:
           api-level: 35
           arch: x86_64
           profile: pixel_6
-          cores: 2
+          cores: 3
           ram-size: 3072M
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
@@ -181,7 +181,7 @@ jobs:
           api-level: 35
           arch: x86_64
           profile: pixel_6
-          cores: 2
+          cores: 3
           ram-size: 3072M
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot

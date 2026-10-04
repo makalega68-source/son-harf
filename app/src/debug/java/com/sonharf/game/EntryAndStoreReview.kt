@@ -36,11 +36,10 @@ internal fun EntryAndStoreReview(stage: String) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.SURPRISED, WordSiegeMascotEmotion.TEARY,
                     WordSiegeMascotEmotion.LAUGH, WordSiegeMascotEmotion.STRESSED).forEach { mood ->
+                    // One live rig per mood: fifteen animating rigs starved the 2-core software-GPU emulator.
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        listOf(-1f,0f,1f).forEach { gaze ->
-                            WordSiegeMascot(moveId=null,lastMoveMine=false,pendingCells=emptyList(),playerTurn=false,
-                                requestedEmotion=mood,idleGazeX=gaze, watching=true, modifier=Modifier.size(104.dp))
-                        }
+                        WordSiegeMascot(moveId=null,lastMoveMine=false,pendingCells=emptyList(),playerTurn=false,
+                            requestedEmotion=mood,idleGazeX=0f, watching=true, modifier=Modifier.size(104.dp))
                     }
                     Text(mood.name,color=Hf.Text,fontSize=10.sp)
                 }
