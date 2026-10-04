@@ -6,9 +6,9 @@ class ThroneIntegrationTest {
  private fun source(n:String)=File("src/main/java/com/sonharf/game/$n").readText()
  @Test fun liveShellRoutesTheThroneAndCountdown(){
   val shell=source("PremiumUnifiedProApp.kt")
-  assertTrue(shell.contains("onThrone = { destination = PremiumDestination.COMPETE },"))
-  // Throne and Events are two equal home shortcuts; Events also links to the Throne.
-  assertTrue(source("HomeLobby.kt").contains("sh(\"Taht\", \"Throne\"), Modifier.weight(1f), onClick = onThrone"))
+  // Taht is a tab of the lobby's bottom bar.
+  assertTrue(source("HomeLobby.kt").contains("Icons.Rounded.EmojiEvents to sh(\"Taht\", \"Throne\")"))
+  assertTrue(shell.contains("PremiumDestination.SHOP, PremiumDestination.COMPETE, PremiumDestination.HOME,"))
   assertTrue(shell.contains("onThrone = { destination = PremiumDestination.COMPETE }"))
   assertTrue(source("CompetitionHubScreen.kt").contains("ThroneScreen(onBack = onBack"))
   val home=source("PremiumHomeV3.kt")

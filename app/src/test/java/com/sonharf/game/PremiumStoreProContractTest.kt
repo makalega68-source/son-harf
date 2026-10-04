@@ -132,7 +132,7 @@ class PremiumStoreProContractTest {
         assertTrue(social.contains("0 -> if (!isPro) {"))
         assertTrue(social.contains("Arkadaş listesi PRO özelliğidir"))
         val lobby = repoFile("app/src/main/java/com/sonharf/game/HomeLobby.kt").readText()
-        assertTrue(lobby.contains("locked = !isPro, onClick = onFriends"))
+        assertTrue(lobby.contains("sh(\"Arkadaşlar\", \"Friends\") + if (isPro) \"\" else \" · PRO\""))
         val shell = repoFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         assertTrue(shell.contains("isPro = isPro,\n                        onPro = { proReturn = PremiumDestination.SOCIAL; destination = PremiumDestination.PRO },"))
     }

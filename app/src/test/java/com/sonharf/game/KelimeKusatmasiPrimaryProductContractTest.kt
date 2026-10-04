@@ -45,9 +45,9 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(home.contains("ThroneBackend.week().rows"))
         assertTrue(home.contains("GameWeeklyPodium(players)"))
         assertTrue(File("src/main/java/com/sonharf/game/ThroneExperience.kt").readText().contains("sh(\"Kelime Atölyesi\",\"Word Workshop\")"))
-        // Kelimelik-style: one home page, no bottom bar; everything opens from the home.
+        // Kelimelik-style lobby with a five-tab bar: Mağaza · Taht · Oyna · Oyunlar · Profil.
         assertFalse(shell.contains("PremiumBottomBar("))
-        assertFalse(shell.contains("bottomBar ="))
+        assertTrue(shell.contains("if (tab >= 0) LobbyBottomBar(selected = tab)"))
         assertTrue(shell.contains("PremiumDestination.HOME -> HomeLobbyScreen("))
         assertTrue(shell.contains("onNewGame = { openGame(PremiumDestination.SIEGE, siegeLanguage) },"))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
@@ -74,9 +74,11 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(topLevel.contains("PremiumDestination.EVENTS"))
         assertFalse("Club never surfaces", shell.contains("sh(\"KULÜP\", \"CLUB\")"))
         val lobby = File("src/main/java/com/sonharf/game/HomeLobby.kt").readText()
-        listOf("sh(\"YENİ OYUN\", \"NEW GAME\")", "sh(\"SIRA SENDE\", \"YOUR TURN\")", "sh(\"SIRA RAKİPTE\", \"THEIR TURN\")",
-            "sh(\"BİTEN OYUNLAR\", \"FINISHED GAMES\")", "sh(\"DAVETLER\", \"INVITATIONS\")", "sh(\"Arkadaşlar\", \"Friends\")",
-            "sh(\"Taht\", \"Throne\")", "sh(\"Etkinlik\", \"Events\")").forEach { assertTrue(it, lobby.contains(it)) }
+        listOf("sh(\"Yeni Oyun\", \"New Game\")", "sh(\"Oyunlarım\", \"My Games\")", "R.drawable.kelime_tahti_brand_logo",
+            "sh(\"Mağaza\", \"Store\")", "sh(\"Taht\", \"Throne\")", "sh(\"Oyna\", \"Play\")", "sh(\"Oyunlar\", \"Games\")",
+            "sh(\"Profil\", \"Profile\")", "HomeTournamentCard(onOpen = onWorkshop)").forEach { assertTrue(it, lobby.contains(it)) }
+        // Game lists live in Oyunlarım, not on the lobby.
+        assertFalse(lobby.contains("SIRA SENDE"))
         assertFalse(shell.contains("PremiumDestination.TASKS"))
     }
 

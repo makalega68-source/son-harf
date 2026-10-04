@@ -41,7 +41,12 @@ internal fun matchListRows(games: List<WordSiegeGameDto>, rooms: List<GameRoomDt
             if (g.gameMode == "series") "${g.turnDurationMinutes ?: 5} ${sh("dk", "min")}" else "${g.turnDurationHours} ${sh("saat", "hours")}",
             if (g.status == "finished") g.finishedAt ?: g.updatedAt else g.turnDeadline ?: g.updatedAt)
     }
-    val last = rooms.distinctBy { it.id }.filter { me in listOf(it.hostId,it.guestId) && it.status in setOf("waiting","playing","quiz","final","sudden_death","paused","finished") }.map { g ->
+    // A Son Harf search that never found a rival is not a game: hide it after 15 minutes.
+    val staleBefore = System.currentTimeMillis() - 15 * 60_000L
+    val last = rooms.distinctBy { it.id }.filter { me in listOf(it.hostId,it.guestId) && it.status in setOf("waiting","playing","quiz","final","sudden_death","paused","finished") }
+        .filterNot { it.status == "waiting" && it.guestId == null && !it.isBot &&
+            (runCatching { java.time.Instant.parse(it.createdAt).toEpochMilli() }.getOrNull() ?: 0L) < staleBefore }
+        .map { g ->
         val host = g.hostId == me
         MatchListRow(g.id, "son_harf", if (host) g.guestId else g.hostId,
             if (g.isBot) g.botName ?: "AI" else sh("Rakip bekleniyor", "Waiting for rival"),
@@ -112,6 +117,16 @@ internal fun MyGamesScreen(backend: OnlineGameBackend, onOpen: (String, String) 
     }
 }
 
+/** "Kazandın" with a lower score means the rival ran out of time or resigned; say so. */
+internal fun matchResultLabel(match: MatchListRow): String = when {
+    match.won == true && match.mine <= match.theirs -> sh("Kazandın\n(hükmen)", "Won\n(forfeit)")
+    match.won == true -> sh("Kazandın", "Won")
+    match.won == false && match.mine >= match.theirs -> sh("Kaybettin\n(süre)", "Lost\n(time)")
+    match.won == false -> sh("Kaybettin", "Lost")
+    match.mine == match.theirs -> sh("Berabere", "Draw")
+    else -> sh("Bitti", "Finished")
+}
+
 @Composable
 internal fun CompactMatchRow(match: MatchListRow, rival: ProfileDto?, onClick: () -> Unit) {
     val accent=if(match.finished && match.won==false) Hf.Red else LobbyPalette.Accent
@@ -129,7 +144,7 @@ internal fun CompactMatchRow(match: MatchListRow, rival: ProfileDto?, onClick: (
         Column(horizontalAlignment=Alignment.CenterHorizontally) {
             Icon(if(!match.finished)Icons.Rounded.ChevronRight else if(match.won==true)Icons.Rounded.CheckCircle else if(match.won==false)Icons.Rounded.Cancel else Icons.Rounded.RemoveCircle,
                 null,tint=accent,modifier=Modifier.size(28.dp))
-            if(match.finished) Text(if(match.won==true)sh("Kazandın","Won")else if(match.won==false)sh("Kaybettin","Lost")else if(match.mine==match.theirs) sh("Berabere","Draw") else sh("Bitti","Finished"),color=accent,fontSize=11.sp)
+            if(match.finished) Text(matchResultLabel(match),color=accent,fontSize=11.sp,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         }
     }
 }

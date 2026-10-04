@@ -153,6 +153,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 
     // Kelimelik-style: one home page and no bottom bar. Every other page opens from the home and
     // the back button always returns there. topLevel only decides where invitation toasts show.
+    val lobbyTabs = listOf(
+        PremiumDestination.SHOP, PremiumDestination.COMPETE, PremiumDestination.HOME,
+        PremiumDestination.GAMES, PremiumDestination.PROFILE,
+    )
     val topLevel = destination in setOf(
         PremiumDestination.HOME, PremiumDestination.MY_GAMES, PremiumDestination.EVENTS,
         PremiumDestination.SHOP, PremiumDestination.PROFILE,
@@ -220,6 +224,14 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             topBar = {
                 if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
             },
+            // Kelimelik-style bar on the five main pages: Mağaza · Taht · Oyna · Oyunlar · Profil.
+            bottomBar = {
+                val tab = lobbyTabs.indexOf(destination)
+                if (tab >= 0) LobbyBottomBar(selected = tab) { index ->
+                    if (index == 0) shopInitialTab = 0
+                    destination = lobbyTabs[index]
+                }
+            },
         ) { padding ->
             // consumeWindowInsets: the Scaffold padding already contains the status bar, so screens that
             // add statusBarsPadding() themselves (the game arenas) no longer get a second, empty band on top.
@@ -235,13 +247,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onPro = { proReturn = PremiumDestination.HOME; destination = PremiumDestination.PRO },
                         onSettings = { settingsReturn = PremiumDestination.HOME; destination = PremiumDestination.SETTINGS },
                         onNewGame = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
+                        onMyGames = { gamesTab = 0; destination = PremiumDestination.MY_GAMES },
                         onFriends = { destination = PremiumDestination.SOCIAL },
-                        onThrone = { destination = PremiumDestination.COMPETE },
                         onEvents = { destination = PremiumDestination.EVENTS },
-                        onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
-                        onOpen = { kind, id -> openPlayerTarget(kind, id) },
-                        onAllGames = { gamesTab = 1; destination = PremiumDestination.MY_GAMES },
                     )
                     PremiumDestination.MY_GAMES -> MyGamesScreen(backend, onOpen = { kind, id -> openPlayerTarget(kind, id) }, initialTab = gamesTab)
                     PremiumDestination.GAMES -> PremiumGameCenter(

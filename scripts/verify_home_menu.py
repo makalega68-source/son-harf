@@ -1,8 +1,4 @@
-"""Exercise the Kelimelik-style home without starting purchases or matches.
-
-One page, no bottom bar: a top bar (profile, coins, settings), one NEW GAME button, four equal
-shortcuts on one row, the game lists and the two other games side by side.
-"""
+"""Exercise the Kelimelik-style lobby without starting purchases or matches."""
 import re
 import subprocess
 import time
@@ -54,43 +50,47 @@ def capture(name):
             time.sleep(3)
 
 
+def desc(root, text):
+    found = next((n for n in root.iter("node") if n.get("content-desc") == text), None)
+    assert found is not None, f"missing control: {text}"
+    return found
+
+
 adb("shell", "am", "force-stop", "com.sonharf.game")
 adb("logcat", "-c")
 adb("shell", "am", "start", "-W", "-n", "com.sonharf.game/.UiScreenshotActivity", "--es", "review_stage", "home-dark")
 time.sleep(5)
 home = tree("Home-menu.xml")
-new_game = center(node(home, "YENİ OYUN"))
-shortcuts = [center(node(home, label)) for label in ("Arkadaşlar", "Taht", "Etkinlik", "PRO")]
-# One row, left to right, below the NEW GAME button.
-assert all(abs(y - shortcuts[0][1]) < 15 for _, y in shortcuts), shortcuts
-assert [x for x, _ in shortcuts] == sorted(x for x, _ in shortcuts), shortcuts
-assert shortcuts[0][1] > new_game[1], (new_game, shortcuts)
-for title in ("SIRA SENDE", "SIRA RAKİPTE"):
-    assert any((n.get("text") or "").startswith(title) for n in home.iter("node")), title
-# No bottom navigation bar any more.
-assert find(home, "Ana Sayfa") is None and find(home, "Oyunlarım") is None
+new_game = center(node(home, "Yeni Oyun"))
+my_games = center(node(home, "Oyunlarım"))
+# The two big buttons sit side by side.
+assert abs(new_game[1] - my_games[1]) < 15 and new_game[0] < my_games[0], (new_game, my_games)
+# Bottom bar: Mağaza · Taht · Oyna · Oyunlar · Profil, left to right, below the buttons.
+tabs = [center(desc(home, label)) for label in ("Mağaza", "Taht", "Oyna", "Oyunlar", "Profil")]
+assert [x for x, _ in tabs] == sorted(x for x, _ in tabs), tabs
+assert all(y > new_game[1] for _, y in tabs), (new_game, tabs)
+# Game lists are not on the lobby any more.
+assert find(home, "SIRA SENDE") is None
 capture("Home-menu-Android.png")
 
-adb("shell", "input", "tap", str(shortcuts[3][0]), str(shortcuts[3][1]))
+adb("shell", "input", "tap", str(my_games[0]), str(my_games[1]))
 time.sleep(3)
-node(tree("Home-pro.xml"), "Arkadaş listesi")
-capture("Home-pro-Android.png")
+node(tree("Home-games.xml"), "Aktif")
+capture("Home-games-Android.png")
 adb("shell", "input", "keyevent", "4")
 time.sleep(2)
-node(tree("Home-return.xml"), "YENİ OYUN")
+node(tree("Home-return.xml"), "Yeni Oyun")
 
-coins = center(node(home, "Son Coin"))
-adb("shell", "input", "tap", str(coins[0]), str(coins[1]))
+adb("shell", "input", "tap", str(tabs[0][0]), str(tabs[0][1]))
 time.sleep(4)
-store = tree("Home-store.xml")
-node(store, "Mağaza")
+node(tree("Home-store.xml"), "Mağaza")
 capture("Home-store-Android.png")
 adb("shell", "input", "keyevent", "4")
 time.sleep(2)
-node(tree("Home-store-return.xml"), "YENİ OYUN")
+node(tree("Home-store-return.xml"), "Yeni Oyun")
 
 runtime = adb("logcat", "-d", "-s", "AndroidRuntime:E")
 assert b"FATAL EXCEPTION" not in runtime, runtime
 with open("Home-menu-runtime.log", "wb") as f:
     f.write(runtime)
-print("PASS: single home page, NEW GAME, four shortcuts on one row, PRO and store open and return home")
+print("PASS: lobby with Yeni Oyun / Oyunlarım, five-tab bar, My Games and store open and return home")

@@ -28,10 +28,10 @@ class GameModeBrandingAndVisibleActionContractTest {
         assertTrue(games.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(games.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(games.contains("title = sh(\"KELİME ATÖLYESİ\", \"WORD WORKSHOP\")"))
-        // The Kelimelik-style home lists Son Harf and Kelime Atölyesi as two tiles under OTHER GAMES.
+        // The lobby's "Oyunlar" tab opens the game centre with all three games.
         val lobby = File("src/main/java/com/sonharf/game/HomeLobby.kt").readText()
-        assertTrue(lobby.contains("HomeGameTile(R.drawable.son_harf_game_icon, sh(\"Son Harf\", \"Last Letter\"), Modifier.weight(1f), onLastLetter)"))
-        assertTrue(lobby.contains("HomeGameTile(R.drawable.kelime_atolyesi_game_icon, sh(\"Kelime Atölyesi\", \"Word Workshop\"), Modifier.weight(1f), onWorkshop)"))
+        assertTrue(lobby.contains("Icons.Rounded.SportsEsports to sh(\"Oyunlar\", \"Games\")"))
+        assertTrue(games.contains("PremiumDestination.GAMES, PremiumDestination.PROFILE,"))
         assertTrue(games.contains("onClick = onSiege"))
         assertTrue(games.contains("onClick = onLastLetter"))
         assertTrue(games.contains("onClick = onWorkshop"))

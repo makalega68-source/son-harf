@@ -1,52 +1,58 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
-/** A pending game invitation shown on the home list. */
-internal data class HomeInvite(val id: String, val kind: String, val senderId: String)
-
-/** Home sections, Kelimelik-style: what needs you first, then what waits for the rival, then results. */
-internal data class HomeLobbySections(
-    val yourTurn: List<MatchListRow>,
-    val theirTurn: List<MatchListRow>,
-    val finished: List<MatchListRow>,
-)
-
-internal fun homeLobbySections(rows: List<MatchListRow>, finishedShown: Int = 5): HomeLobbySections =
-    HomeLobbySections(
-        yourTurn = rows.filter { !it.finished && it.turn == HomeTurn.YOURS },
-        theirTurn = rows.filter { !it.finished && it.turn != HomeTurn.YOURS },
-        finished = rows.filter { it.finished }.sortedByDescending { it.date }.take(finishedShown),
-    )
+/** Lobby colours: deep petrol behind the green/red logo, two bold action buttons, gold accents. */
+internal object LobbyBrand {
+    val Sky = Color(0xFF14596A)
+    val SkyStripe = Color(0xFF1A6A7D)
+    val Band = Color(0xFF0D3C48)
+    val NavBar = Color(0xFF0B323C)
+    val Chip = Color(0xFF1F7489)
+    val Play = Color(0xFF3FAE49)
+    val PlayEdge = Color(0xFF2B7F33)
+    val Games = Color(0xFFE07B1C)
+    val GamesEdge = Color(0xFFA35711)
+    val Gold = Color(0xFFF2C14E)
+}
 
 /**
- * The whole home in one calm page: top bar, one big NEW GAME button, four equal shortcuts and the
- * game lists. No bottom bar, no nested menus; every other page is one tap away and returns here.
+ * Kelimelik-style lobby: brand stage, a profile strip with the avatar in the middle, two big
+ * buttons (Yeni Oyun / Oyunlarım) and one event card. Game lists live in Oyunlarım, not here;
+ * the bottom bar (Mağaza, Taht, Oyna, Oyunlar, Profil) is drawn by the shell.
  */
 @Composable
 internal fun HomeLobbyScreen(
@@ -57,243 +63,246 @@ internal fun HomeLobbyScreen(
     onPro: () -> Unit,
     onSettings: () -> Unit,
     onNewGame: () -> Unit,
+    onMyGames: () -> Unit,
     onFriends: () -> Unit,
-    onThrone: () -> Unit,
     onEvents: () -> Unit,
-    onLastLetter: () -> Unit,
     onWorkshop: () -> Unit,
-    onOpen: (kind: String, id: String) -> Unit,
-    onAllGames: () -> Unit,
 ) {
     val me = backend.currentUserId()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
-    var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
-    var rooms by remember { mutableStateOf<List<GameRoomDto>>(emptyList()) }
-    var invites by remember { mutableStateOf<List<HomeInvite>>(emptyList()) }
-    var profiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
-    var loading by remember { mutableStateOf(true) }
-    var failed by remember { mutableStateOf(false) }
-    var busy by remember { mutableStateOf<String?>(null) }
-    var notice by remember { mutableStateOf<String?>(null) }
-    var retry by remember { mutableIntStateOf(0) }
-    val scope = rememberCoroutineScope()
+    var waitingForMe by remember { mutableIntStateOf(0) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var leagueInfo by remember { mutableStateOf(false) }
     val foreground = rememberAppForeground()
 
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
         profile = me?.let { id -> gameRequestResult { backend.getProfile(id) }.getOrNull() }
     }
-    LaunchedEffect(me, foreground, retry) {
-        if (me == null) { loading = false; return@LaunchedEffect }
-        if (!foreground) return@LaunchedEffect
+    // Only a badge count: open games where it is your turn plus pending invitations.
+    LaunchedEffect(me, foreground) {
+        if (me == null || !foreground) return@LaunchedEffect
         while (true) {
             coroutineScope {
-                // Light list rows only: boards, bags and racks load when a game is opened.
-                val classic = async { gameRequestResult { backend.getWordSiegeGameSummaries("classic", finishedLimit = 10) } }
-                val series = async { gameRequestResult { backend.getWordSiegeGameSummaries("series", finishedLimit = 10) } }
-                val last = async { gameRequestResult { backend.getLastLetterRooms() } }
-                val siegeInvites = async { gameRequestResult { backend.getIncomingWordSiegeInvites() } }
-                val seriesInvites = async { gameRequestResult { backend.getIncomingWordSiegeSeriesInvites() } }
-                val lastInvites = async { gameRequestResult { backend.getIncomingGameInvites() } }
-                val a = classic.await(); val b = series.await(); val c = last.await()
-                games = a.getOrElse { games.filter { it.gameMode != "series" } } + b.getOrElse { games.filter { it.gameMode == "series" } }
-                c.onSuccess { rooms = it }
-                val i1 = siegeInvites.await(); val i2 = seriesInvites.await(); val i3 = lastInvites.await()
-                if (i1.isSuccess && i2.isSuccess && i3.isSuccess) {
-                    invites = i1.getOrThrow().map { HomeInvite(it.id, "siege", it.senderId) } +
-                        i2.getOrThrow().map { HomeInvite(it.id, "series", it.senderId) } +
-                        i3.getOrThrow().map { HomeInvite(it.id, "son_harf", it.senderId) }
-                }
-                failed = a.isFailure || b.isFailure || c.isFailure
-                loading = false
-                val ids = (matchListRows(games, rooms, me).mapNotNull { it.rivalId } + invites.map { it.senderId })
-                    .distinct().filterNot(profiles::containsKey)
-                if (ids.isNotEmpty()) profiles = profiles + backend.getProfilesParallel(ids).associateBy { it.id }
+                val classic = async { gameRequestResult { backend.getWordSiegeGameSummaries("classic", finishedLimit = 0) }.getOrNull() }
+                val series = async { gameRequestResult { backend.getWordSiegeGameSummaries("series", finishedLimit = 0) }.getOrNull() }
+                val rooms = async { gameRequestResult { backend.getLastLetterRooms() }.getOrNull() }
+                val inv1 = async { gameRequestResult { backend.getIncomingWordSiegeInvites().size }.getOrDefault(0) }
+                val inv2 = async { gameRequestResult { backend.getIncomingGameInvites().size }.getOrDefault(0) }
+                val rows = matchListRows(classic.await().orEmpty() + series.await().orEmpty(), rooms.await().orEmpty(), me)
+                waitingForMe = rows.count { !it.finished && it.turn == HomeTurn.YOURS } + inv1.await() + inv2.await()
             }
-            delay(15_000)
+            delay(20_000)
         }
     }
 
-    fun respond(invite: HomeInvite, accept: Boolean) {
-        if (busy != null) return
-        busy = invite.id
-        scope.launch {
-            gameRequestResult {
-                when (invite.kind) {
-                    "siege" -> backend.respondWordSiegeInvite(invite.id, accept)?.id
-                    "series" -> backend.respondWordSiegeSeriesInvite(invite.id, accept)?.id
-                    else -> backend.respondGameInvite(invite.id, accept)?.id
-                }
-            }.onSuccess { openedId ->
-                invites = invites.filterNot { it.id == invite.id && it.kind == invite.kind }
-                if (accept && openedId != null) onOpen(invite.kind, openedId)
-            }.onFailure { notice = sh("Davet yanıtlanamadı. Tekrar dene.", "Could not answer the invitation. Try again.") }
-            busy = null
-        }
-    }
+    val p = profile
+    val matches = (p?.wins ?: 0) + (p?.losses ?: 0)
+    val winRate = if (matches == 0) 0 else (p?.wins ?: 0) * 100 / matches
+    val league = ratingLeagueProgress(p?.rating ?: 1000)
 
-    val sections = homeLobbySections(matchListRows(games, rooms, me))
-    Box(Modifier.fillMaxSize().background(LobbyPalette.Ground), contentAlignment = Alignment.TopCenter) {
-        LazyColumn(
-            modifier = Modifier.widthIn(max = 520.dp).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            item(key = "top") { PremiumHomeCommandDeck(profile, onProfile, onShop, onPro, onSettings) }
-            item(key = "new_game") { HomeNewGameButton(onNewGame) }
-            item(key = "shortcuts") {
-                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    HomeShortcut(Icons.Rounded.Groups, sh("Arkadaşlar", "Friends"), Modifier.weight(1f), locked = !isPro, onClick = onFriends)
-                    HomeShortcut(Icons.Rounded.EmojiEvents, sh("Taht", "Throne"), Modifier.weight(1f), onClick = onThrone)
-                    HomeShortcut(Icons.Rounded.Event, sh("Etkinlik", "Events"), Modifier.weight(1f), onClick = onEvents)
-                    HomeShortcut(Icons.Rounded.WorkspacePremium, "PRO", Modifier.weight(1f), gold = true, onClick = onPro)
-                }
-            }
-            if (loading) item(key = "loading") { LinearProgressIndicator(Modifier.fillMaxWidth(), color = LobbyPalette.Accent, trackColor = LobbyPalette.Line) }
-            if (failed) item(key = "failed") {
-                TextButton(onClick = { retry++ }, modifier = Modifier.fillMaxWidth()) {
-                    Text(sh("Oyunlar yenilenemedi · Tekrar dene", "Games unavailable · Retry"), color = Hf.Red)
-                }
-            }
-            notice?.let { item(key = "notice") { Text(it, color = Hf.Red, fontSize = 13.sp) } }
-
-            if (invites.isNotEmpty()) {
-                homeSection("invites", sh("DAVETLER", "INVITATIONS"), invites.size)
-                items(invites, key = { "invite:${it.kind}:${it.id}" }) { invite ->
-                    HomeInviteRow(invite, profiles[invite.senderId], busy == null, { respond(invite, true) }, { respond(invite, false) })
-                }
-            }
-            homeSection("yours", sh("SIRA SENDE", "YOUR TURN"), sections.yourTurn.size)
-            if (sections.yourTurn.isEmpty() && !loading) item(key = "yours_empty") { HomeEmptyLine(sh("Şu an sıra sende olan oyun yok.", "No game is waiting for you.")) }
-            items(sections.yourTurn, key = { "y:${it.kind}:${it.id}" }) { row -> HomeMatchCard(row, profiles[row.rivalId]) { onOpen(row.kind, row.id) } }
-
-            homeSection("theirs", sh("SIRA RAKİPTE", "THEIR TURN"), sections.theirTurn.size)
-            if (sections.theirTurn.isEmpty() && !loading) item(key = "theirs_empty") { HomeEmptyLine(sh("Rakip bekleyen oyun yok.", "No game is waiting for a rival.")) }
-            items(sections.theirTurn, key = { "t:${it.kind}:${it.id}" }) { row -> HomeMatchCard(row, profiles[row.rivalId]) { onOpen(row.kind, row.id) } }
-
-            if (sections.finished.isNotEmpty()) {
-                item(key = "finished_header") {
-                    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(sh("BİTEN OYUNLAR", "FINISHED GAMES"), color = LobbyPalette.Muted, fontSize = 13.sp,
-                            fontWeight = FontWeight.Black, letterSpacing = .6.sp, modifier = Modifier.weight(1f))
-                        TextButton(onClick = onAllGames) { Text(sh("Tümü", "All"), color = LobbyPalette.Accent, fontWeight = FontWeight.Bold) }
+    Box(Modifier.fillMaxSize().background(LobbyBrand.Sky)) {
+        LobbyStripes(Modifier.matchParentSize())
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            // Top band: menu on the left, coins and settings on the right.
+            Row(Modifier.fillMaxWidth().background(LobbyBrand.Band).padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Rounded.Menu, sh("Menü", "Menu"), tint = Color.White, modifier = Modifier.size(30.dp))
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        LobbyMenuItem(Icons.Rounded.Groups, sh("Arkadaşlar", "Friends") + if (isPro) "" else " · PRO") { menuOpen = false; onFriends() }
+                        LobbyMenuItem(Icons.Rounded.Event, sh("Etkinlikler", "Events")) { menuOpen = false; onEvents() }
+                        LobbyMenuItem(Icons.Rounded.WorkspacePremium, "PRO") { menuOpen = false; onPro() }
+                        LobbyMenuItem(Icons.Rounded.Settings, sh("Ayarlar", "Settings")) { menuOpen = false; onSettings() }
                     }
                 }
-                items(sections.finished, key = { "f:${it.kind}:${it.id}" }) { row -> HomeMatchCard(row, profiles[row.rivalId]) { onOpen(row.kind, row.id) } }
-            }
-
-            homeSection("other_games", sh("DİĞER OYUNLAR", "OTHER GAMES"), null)
-            item(key = "other_games_row") {
-                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    HomeGameTile(R.drawable.son_harf_game_icon, sh("Son Harf", "Last Letter"), Modifier.weight(1f), onLastLetter)
-                    HomeGameTile(R.drawable.kelime_atolyesi_game_icon, sh("Kelime Atölyesi", "Word Workshop"), Modifier.weight(1f), onWorkshop)
+                Spacer(Modifier.weight(1f))
+                Surface(onClick = onShop, shape = RoundedCornerShape(50), color = LobbyBrand.Chip) {
+                    Row(Modifier.padding(start = 6.dp, end = 12.dp, top = 5.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        HfCoin(24.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Text(p?.diamonds?.let { lobbyGrouped(it) } ?: "—", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Rounded.AddCircle, sh("Jeton al", "Get coins"), tint = LobbyBrand.Gold, modifier = Modifier.size(20.dp))
+                    }
+                }
+                IconButton(onClick = onSettings) {
+                    Icon(Icons.Rounded.Settings, sh("Ayarlar", "Settings"), tint = Color.White, modifier = Modifier.size(28.dp))
                 }
             }
-            // Room at the end so the floating mascot never covers the last row.
-            item(key = "mascot_room") { Spacer(Modifier.height(72.dp)) }
+
+            // Brand stage.
+            Box(Modifier.fillMaxWidth().height(170.dp).padding(horizontal = 32.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
+                Image(painterResource(R.drawable.kelime_tahti_brand_logo), sh("Kelime Tahtı", "Word Throne"),
+                    contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+            }
+
+            // Profile strip: name and success on the left, avatar in the middle, league on the right.
+            Box(Modifier.fillMaxWidth().height(116.dp)) {
+                Row(Modifier.fillMaxWidth().align(Alignment.Center).height(84.dp).background(LobbyBrand.Band)
+                    .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(p?.displayName?.ifBlank { null } ?: sh("Oyuncu", "Player"), color = Color.White,
+                            fontSize = 17.sp, style = premiumNameStyle(SonHarfCosmetics.nameStyleId),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        LobbyPill(sh("Başarı ", "Win rate ") + "%$winRate")
+                    }
+                    Spacer(Modifier.width(112.dp))
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("${p?.rating ?: 1000} RP", color = LobbyBrand.Gold, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        LobbyPill(lobbyLeagueName(league.leagueName) + sh(" Lig", " League"), info = true) { leagueInfo = true }
+                    }
+                }
+                Box(Modifier.align(Alignment.Center).size(112.dp).clip(CircleShape).background(LobbyBrand.Band)
+                    .clickable(onClickLabel = sh("Profili aç", "Open profile"), onClick = onProfile), contentAlignment = Alignment.Center) {
+                    FramedProfilePhotoAvatar(avatarPath = p?.avatarPath, gender = p?.gender,
+                        name = p?.displayName ?: sh("Oyuncu", "Player"), size = 100.dp,
+                        frameId = rememberPlayerFrame(p?.id), accent = LobbyBrand.Gold,
+                        visible = p?.avatarVisibility != "hidden", isPro = p?.isVip == true)
+                }
+            }
+
+            // The two big buttons.
+            Surface(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), shape = RoundedCornerShape(18.dp),
+                color = Color.White, shadowElevation = 4.dp) {
+                Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LobbyBigButton(Icons.Rounded.PlayArrow, sh("Yeni Oyun", "New Game"), LobbyBrand.Play, LobbyBrand.PlayEdge,
+                        Modifier.weight(1f), onClick = onNewGame)
+                    LobbyBigButton(Icons.Rounded.FormatListBulleted, sh("Oyunlarım", "My Games"), LobbyBrand.Games, LobbyBrand.GamesEdge,
+                        Modifier.weight(1f), badge = waitingForMe, onClick = onMyGames)
+                }
+            }
+
+            // One event card, like the monthly reward banner.
+            Box(Modifier.padding(horizontal = 20.dp)) { HomeTournamentCard(onOpen = onWorkshop) }
+            Spacer(Modifier.height(96.dp))
         }
-        // Owned mascots keep floating over the home, exactly as before; they take no row.
+        // Owned mascots keep floating over the lobby; they take no row.
         WordSiegeMascotCompanion(
-            anchors = listOf(androidx.compose.ui.geometry.Offset(.88f, .92f), androidx.compose.ui.geometry.Offset(.12f, .92f)),
+            anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
             mascotSize = 83.dp, positionKey = "home",
             moveId = null, lastMoveMine = false, playerTurn = false,
             modifier = Modifier.matchParentSize(),
-            playerName = profile?.displayName, playerGender = profile?.gender,
+            playerName = p?.displayName, playerGender = p?.gender,
             stageY = .5f,
         )
     }
-}
 
-private fun LazyListScope.homeSection(key: String, title: String, count: Int?) {
-    item(key = "section:$key") {
-        Text(
-            if (count != null && count > 0) "$title ($count)" else title,
-            color = LobbyPalette.Muted, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp,
-            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-        )
-    }
-}
-
-@Composable
-private fun HomeNewGameButton(onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(64.dp).sonHarfPressScale(pressedScale = .985f),
-        shape = RoundedCornerShape(18.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E8B45), contentColor = Color.White),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
-    ) {
-        Icon(Icons.Rounded.Add, null, modifier = Modifier.size(28.dp))
-        Spacer(Modifier.width(10.dp))
-        Text(sh("YENİ OYUN", "NEW GAME"), fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-    }
+    if (leagueInfo) AlertDialog(
+        onDismissRequest = { leagueInfo = false },
+        title = { Text(lobbyLeagueName(league.leagueName) + sh(" Lig", " League"), fontWeight = FontWeight.Black) },
+        text = {
+            Text(
+                if (league.nextAt != null) sh("Puanın ${p?.rating ?: 1000}. ${lobbyLeagueName(league.nextLeagueName)} Lig için ${league.pointsToNext} puan daha kazan. Kazandıkça puan artar, kaybedince azalır.",
+                    "Your rating is ${p?.rating ?: 1000}. Earn ${league.pointsToNext} more to reach ${lobbyLeagueName(league.nextLeagueName)} League. Wins raise it, losses lower it.")
+                else sh("En üst ligdesin. Puanını korumak için oynamaya devam et.", "You are in the top league. Keep playing to hold your rating."),
+            )
+        },
+        confirmButton = { TextButton(onClick = { leagueInfo = false }) { Text(sh("TAMAM", "OK")) } },
+    )
 }
 
 @Composable
-private fun HomeShortcut(icon: ImageVector, label: String, modifier: Modifier, locked: Boolean = false,
-    gold: Boolean = false, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(16.dp),
-        color = LobbyPalette.Paper, border = BorderStroke(1.dp, if (gold) LobbyPalette.Gold.copy(alpha = .6f) else LobbyPalette.Line)) {
-        Box {
-            Column(Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(icon, null, tint = if (gold) LobbyPalette.Gold else LobbyPalette.Accent, modifier = Modifier.size(28.dp))
-                Text(label, color = LobbyPalette.Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+private fun LobbyStripes(modifier: Modifier) {
+    Canvas(modifier) {
+        val step = 120.dp.toPx()
+        var x = -size.height
+        while (x < size.width + size.height) {
+            val path = Path().apply {
+                moveTo(x, size.height); lineTo(x + step / 2, size.height)
+                lineTo(x + step / 2 + size.height, 0f); lineTo(x + size.height, 0f); close()
             }
-            // Friends is a PRO feature: a small lock, never a hidden button.
-            if (locked) Icon(Icons.Rounded.Lock, sh("PRO", "PRO"), tint = LobbyPalette.Gold,
-                modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(14.dp))
+            drawPath(path, LobbyBrand.SkyStripe.copy(alpha = .45f))
+            x += step
         }
     }
 }
 
 @Composable
-private fun HomeMatchCard(row: MatchListRow, rival: ProfileDto?, onClick: () -> Unit) {
-    Surface(shape = RoundedCornerShape(16.dp), color = LobbyPalette.Paper, border = BorderStroke(1.dp, LobbyPalette.Line)) {
-        CompactMatchRow(row, rival, onClick)
-    }
+private fun LobbyMenuItem(icon: ImageVector, label: String, onClick: () -> Unit) {
+    DropdownMenuItem(text = { Text(label, fontSize = 16.sp) }, onClick = onClick, leadingIcon = { Icon(icon, null) })
 }
 
 @Composable
-private fun HomeInviteRow(invite: HomeInvite, sender: ProfileDto?, enabled: Boolean, onAccept: () -> Unit, onDecline: () -> Unit) {
-    Surface(shape = RoundedCornerShape(16.dp), color = LobbyPalette.Soft, border = BorderStroke(1.dp, LobbyPalette.Accent.copy(alpha = .35f))) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FramedProfilePhotoAvatar(avatarPath = sender?.avatarPath, gender = sender?.gender,
-                name = sender?.displayName ?: sh("Oyuncu", "Player"), size = 48.dp, frameId = rememberPlayerFrame(sender?.id),
-                visible = sender?.avatarVisibility != "hidden", isPro = sender?.isVip == true)
-            Column(Modifier.weight(1f)) {
-                Text(sender?.displayName ?: sh("Oyuncu", "Player"), color = LobbyPalette.Ink, fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(when (invite.kind) { "son_harf" -> "Son Harf"; "series" -> sh("Hızlı Düello", "Quick Duel"); else -> sh("Kelime Tahtı", "Word Throne") },
-                    color = LobbyPalette.Muted, fontSize = 12.sp)
-            }
-            IconButton(onClick = onDecline, enabled = enabled, modifier = Modifier.size(44.dp)) {
-                Icon(Icons.Rounded.Close, sh("Reddet", "Decline"), tint = Hf.Red)
-            }
-            FilledIconButton(onClick = onAccept, enabled = enabled, modifier = Modifier.size(44.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color(0xFF2E8B45), contentColor = Color.White)) {
-                Icon(Icons.Rounded.Check, sh("Kabul et", "Accept"))
+private fun LobbyPill(text: String, info: Boolean = false, onClick: (() -> Unit)? = null) {
+    Surface(onClick = onClick ?: {}, enabled = onClick != null, shape = RoundedCornerShape(10.dp), color = LobbyBrand.Chip) {
+        Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            if (info) {
+                Spacer(Modifier.width(6.dp))
+                Icon(Icons.Rounded.HelpOutline, sh("Bu ne?", "What is this?"), tint = Color.White, modifier = Modifier.size(18.dp))
             }
         }
     }
 }
 
 @Composable
-private fun HomeEmptyLine(text: String) {
-    Text(text, color = LobbyPalette.Muted, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
-}
-
-@Composable
-private fun HomeGameTile(art: Int, title: String, modifier: Modifier, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = modifier.fillMaxHeight(), shape = RoundedCornerShape(16.dp),
-        color = LobbyPalette.Paper, border = BorderStroke(1.dp, LobbyPalette.Line)) {
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HfGameArt(art, 44.dp, 44.dp, description = null)
-            Text(title, color = LobbyPalette.Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 2,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+private fun LobbyBigButton(icon: ImageVector, label: String, color: Color, edge: Color, modifier: Modifier,
+    badge: Int = 0, onClick: () -> Unit) {
+    Box(modifier) {
+        Box(Modifier.fillMaxWidth().height(66.dp).clip(RoundedCornerShape(14.dp)).background(edge)
+            .padding(bottom = 5.dp).clip(RoundedCornerShape(14.dp)).background(color)
+            .clickable(onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(label, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            }
+        }
+        if (badge > 0) Surface(shape = CircleShape, color = Color(0xFFD83B35), border = BorderStroke(2.dp, Color.White),
+            modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-8).dp)) {
+            Text(if (badge > 9) "9+" else "$badge", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp))
         }
     }
+}
+
+/** Bottom bar with a raised centre "Oyna" button (Mağaza · Taht · Oyna · Oyunlar · Profil). */
+@Composable
+internal fun LobbyBottomBar(selected: Int, onSelect: (Int) -> Unit) {
+    val items = listOf(
+        Icons.Rounded.ShoppingCart to sh("Mağaza", "Store"),
+        Icons.Rounded.EmojiEvents to sh("Taht", "Throne"),
+        Icons.Rounded.PlayArrow to sh("Oyna", "Play"),
+        Icons.Rounded.SportsEsports to sh("Oyunlar", "Games"),
+        Icons.Rounded.Person to sh("Profil", "Profile"),
+    )
+    Box(Modifier.fillMaxWidth().navigationBarsPadding()) {
+        Row(Modifier.fillMaxWidth().padding(top = 14.dp).height(66.dp).background(LobbyBrand.NavBar),
+            verticalAlignment = Alignment.CenterVertically) {
+            items.forEachIndexed { index, (icon, label) ->
+                Column(Modifier.weight(1f).fillMaxHeight().clickable(onClickLabel = label) { onSelect(index) },
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    if (index == 2) {
+                        Spacer(Modifier.height(30.dp))
+                        Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    } else {
+                        Icon(icon, label, tint = if (selected == index) LobbyBrand.Gold else Color.White, modifier = Modifier.size(30.dp))
+                        if (selected == index) Text(label, color = LobbyBrand.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+        // Raised centre button.
+        Box(Modifier.align(Alignment.TopCenter).size(62.dp).clip(CircleShape)
+            .background(if (selected == 2) LobbyBrand.Gold else LobbyBrand.Play)
+            .border(4.dp, LobbyBrand.NavBar, CircleShape)
+            .clickable(onClickLabel = items[2].second) { onSelect(2) }, contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.PlayArrow, items[2].second, tint = Color.White, modifier = Modifier.size(36.dp))
+        }
+    }
+}
+
+private fun lobbyGrouped(value: Int): String = String.format(java.util.Locale("tr", "TR"), "%,d", value)
+
+private fun lobbyLeagueName(value: String): String = when (value) {
+    "BRONZ" -> sh("Bronz", "Bronze")
+    "GÜMÜŞ" -> sh("Gümüş", "Silver")
+    "ALTIN" -> sh("Altın", "Gold")
+    "PLATİN" -> sh("Platin", "Platinum")
+    "ELMAS" -> sh("Elmas", "Diamond")
+    "EFSANE" -> sh("Efsane", "Legend")
+    else -> value
 }

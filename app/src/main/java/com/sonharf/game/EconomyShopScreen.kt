@@ -523,20 +523,20 @@ internal fun VerifiedStoreProductCard(
             // Same order on every card: picture, name, one short line, then the price at the bottom,
             // all centred so neighbouring cards line up.
             Column(Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                StoreProductPreview(item, Modifier.fillMaxWidth().height(102.dp))
-                Spacer(Modifier.height(6.dp))
-                // Kelimelik-style card: picture, name and price only; the "?" corner explains the item.
+                // Kelimelik-style card: name on top, the picture, then the price button; "?" explains it.
                 Text(
                     name,
                     color = LobbyPalette.Ink,
-                    fontSize = 13.sp,
-                    lineHeight = 16.sp,
+                    fontSize = 15.sp,
+                    lineHeight = 18.sp,
                     fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 26.dp),
                 )
+                Spacer(Modifier.height(6.dp))
+                StoreProductPreview(item, Modifier.fillMaxWidth().height(102.dp))
                 Spacer(Modifier.weight(1f).heightIn(min = 6.dp))
                 // A long goal reads as progress, not as a wall: coin share and any win requirement.
                 if (!owned && !equipped && !lockedByPro && playPrice == null && balance != null) {
@@ -572,21 +572,22 @@ internal fun VerifiedStoreProductCard(
                         }
                     }
                 } else {
-                    Surface(shape = Hf.PillShape, color = Hf.Gold.copy(alpha = .14f), border = BorderStroke(1.dp, Hf.Gold.copy(alpha = .7f))) {
-                        Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(shape = Hf.PillShape, color = if (lockedByPro) Hf.Gold.copy(alpha = .14f) else Color(0xFF3FAE49),
+                        border = if (lockedByPro) BorderStroke(1.dp, Hf.Gold.copy(alpha = .7f)) else null) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                             if (lockedByPro) {
                                 Icon(Icons.Rounded.WorkspacePremium, null, tint = Hf.GoldDeep, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text("PRO", color = LobbyPalette.Ink, fontSize = 15.sp, fontWeight = FontWeight.Black)
                             } else if (playPrice != null) {
                                 // A Google Play product: its store price, not Son Coin.
-                                Icon(Icons.Rounded.ShoppingCart, null, tint = Hf.GoldDeep, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Rounded.ShoppingCart, null, tint = Color.White, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(playPrice, color = LobbyPalette.Ink, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                                Text(playPrice, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
                             } else {
                                 HfCoin(18.dp)
                                 Spacer(Modifier.width(6.dp))
-                                Text(storeGrouped(item.diamondPrice), color = LobbyPalette.Ink, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                                Text(storeGrouped(item.diamondPrice), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
                             }
                         }
                     }
