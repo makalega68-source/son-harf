@@ -707,7 +707,7 @@ internal fun practiceLetterValue(letter: String): String =
  * the Turkish table, and the English one for English games.
  */
 internal fun wordSiegeLetterValue(letter: String, language: String): Int =
-    if (SharedDictionaryService.canonicalLanguage(language) == "en") when (letter.uppercase(java.util.Locale.ROOT)) {
+    if (com.sonharf.game.data.SharedDictionaryService.canonicalLanguage(language) == "en") when (letter.uppercase(java.util.Locale.ROOT)) {
         "A", "E", "I", "L", "N", "O", "R", "S", "T", "U" -> 1
         "D", "G" -> 2
         "B", "C", "M", "P" -> 3
