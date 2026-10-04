@@ -63,7 +63,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           cores: 2
-          ram-size: 2048M
+          ram-size: 3072M
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           # Its animation-settings step was the first adb call to break; the app does not need it.
@@ -73,6 +73,9 @@ jobs:
             for i in 1 2 3 4 5; do adb shell getprop sys.boot_completed | grep -q 1 && adb shell pm list packages >/dev/null 2>&1 && break; echo "package service not ready ($i)"; sleep 15; done
             for i in 1 2 3; do adb install -r -t Kelime-Tahti-Guncel.apk && break; echo "install retry $i"; sleep 20; adb wait-for-device; done
             adb shell pm list packages | grep -q com.sonharf.game
+            # A slow emulator can raise "isn't responding" dialogs for system apps (Quickstep); they
+            # cover the app and break UI dumps. Hide system error dialogs so the checks see the app.
+            adb shell settings put global hide_error_dialogs 1 || true
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --ez walnut_ivory_board true
             sleep 8
             adb exec-out screencap -p > Ceviz-Fildisi-Android.png
@@ -179,13 +182,14 @@ jobs:
           arch: x86_64
           profile: pixel_6
           cores: 2
-          ram-size: 2048M
+          ram-size: 3072M
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: false
           script: |
             adb wait-for-device
             adb install -r -t verified-apk/Kelime-Tahti-Guncel.apk
+            adb shell settings put global hide_error_dialogs 1 || true
             python3 scripts/verify_home_menu.py
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage controls-dark
