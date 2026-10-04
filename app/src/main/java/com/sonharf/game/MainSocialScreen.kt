@@ -33,6 +33,9 @@ internal fun MainSocialScreen(
     onSiege: () -> Unit = onPlay,
     initialTab: Int = 0,
     onOpenSiege: (WordSiegeGameDto) -> Unit = { game -> WordSiegeLaunchConfig.open(game); onSiege() },
+    // The friend list is a PRO feature; requests and rivals stay open to everyone.
+    isPro: Boolean = true,
+    onPro: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
@@ -102,52 +105,11 @@ internal fun MainSocialScreen(
         item {
             MainScreenHeader(
                 title = sh("Arkadaşlar", "Friends"),
-                subtitle = sh("Birlikte oyna, rekabeti paylaş", "Play together, share the rivalry"),
+                subtitle = "",
+                actionIcon = Icons.Rounded.Refresh,
+                actionDescription = sh("Yenile", "Refresh"),
+                onAction = { if (!loading && busyKey == null) scope.launch { reload() } },
             )
-        }
-
-        item(key = "social_refresh") {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(sh("Bir davet, yeni bir rekabet", "One invitation, a new rivalry"), color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                TextButton(onClick = { scope.launch { reload() } }, enabled = !loading && busyKey == null) {
-                    Icon(Icons.Rounded.Refresh, null, Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(sh("Yenile", "Refresh"), fontSize = 11.sp)
-                }
-            }
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MainMetricCard(friends.size.toString(), sh("Arkadaş", "Friends"), Modifier.weight(1f))
-                MainMetricCard(onlineCount.toString(), sh("Çevrimiçi", "Online"), Modifier.weight(1f))
-                MainMetricCard(incomingCount.toString(), sh("Yeni istek", "New requests"), Modifier.weight(1f))
-            }
-        }
-
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                Button(
-                    onClick = onSiege,
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(15.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue, contentColor = Color.White),
-                ) {
-                    Icon(Icons.Rounded.Shield, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 12.sp)
-                }
-                OutlinedButton(
-                    // Search, "EKLE" and incoming requests all live on the Requests tab.
-                    onClick = { tab = 1 },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(15.dp),
-                    border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f)),
-                ) {
-                    Icon(Icons.Rounded.GroupAdd, null, tint = MainUi.Gold, modifier = Modifier.size(17.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(sh("ARKADAŞ DAVETİ", "FRIEND INVITE"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 11.sp)
-                }
-            }
         }
 
         item {
@@ -160,7 +122,23 @@ internal fun MainSocialScreen(
         }
 
         when (tab) {
-            0 -> {
+            0 -> if (!isPro) {
+                item(key = "friends_pro") {
+                    LobbyCard(Modifier.fillMaxWidth(), borderColor = MainUi.Gold) {
+                        Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Icon(Icons.Rounded.WorkspacePremium, null, tint = MainUi.Gold, modifier = Modifier.size(40.dp))
+                            Text(sh("Arkadaş listesi PRO özelliğidir", "The friend list is a PRO feature"), color = MainUi.Text,
+                                fontWeight = FontWeight.Black, fontSize = 17.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Text(sh("İstekleri yine de kabul edebilir, rakiplerine rövanş atabilirsin.", "You can still accept requests and rematch your rivals."),
+                                color = MainUi.Muted, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Button(onClick = onPro, colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold, contentColor = Color.White)) {
+                                Text(sh("PRO'YU GÖR", "SEE PRO"), fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                }
+            } else {
                 run {
                 if (friends.isEmpty() && !loading) {
                     item {

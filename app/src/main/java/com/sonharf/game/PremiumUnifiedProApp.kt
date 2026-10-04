@@ -44,6 +44,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var gamesTab by remember { mutableIntStateOf(0) }
     var shopInitialTab by rememberSaveable { mutableIntStateOf(0) }
     var proReturn by remember { mutableStateOf(PremiumDestination.PROFILE) }
+    var settingsReturn by remember { mutableStateOf(PremiumDestination.HOME) }
     var isPro by remember { mutableStateOf(false) }
     var startQuickDuel by remember { mutableStateOf(false) }
     var gameLaunchRevision by remember { mutableIntStateOf(0) }
@@ -134,7 +135,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
-            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION -> PremiumDestination.PROFILE
+            PremiumDestination.SETTINGS -> settingsReturn
+            PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION -> PremiumDestination.PROFILE
             PremiumDestination.PRO -> proReturn
             PremiumDestination.PRIVATE_ROOM -> PremiumDestination.PRO
             PremiumDestination.RIVALS -> PremiumDestination.PROFILE
@@ -149,7 +151,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         }
     }
 
-    // Top-level navigation: Home, Friends/Social, Store, Profile. Club is hidden.
+    // Kelimelik-style: one home page and no bottom bar. Every other page opens from the home and
+    // the back button always returns there. topLevel only decides where invitation toasts show.
     val topLevel = destination in setOf(
         PremiumDestination.HOME, PremiumDestination.MY_GAMES, PremiumDestination.EVENTS,
         PremiumDestination.SHOP, PremiumDestination.PROFILE,
@@ -217,19 +220,6 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             topBar = {
                 if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
             },
-            bottomBar = {
-                if (topLevel) {
-                    PremiumBottomBar(
-                        destination = destination,
-                        onHome = { destination = PremiumDestination.HOME },
-                        onShop = { shopInitialTab = 0; destination = PremiumDestination.SHOP },
-                        onSocial = { gamesTab = 0; destination = PremiumDestination.MY_GAMES },
-                        onCompete = { destination = PremiumDestination.EVENTS },
-                        onProfile = { destination = PremiumDestination.PROFILE },
-                        socialBadge = 0,
-                    )
-                }
-            },
         ) { padding ->
             // consumeWindowInsets: the Scaffold padding already contains the status bar, so screens that
             // add statusBarsPadding() themselves (the game arenas) no longer get a second, empty band on top.
@@ -237,26 +227,21 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 // Clean paper menus; the game arenas retain their own surfaces.
                 key(destination, gameLaunchRevision) {
                 when (destination) {
-                    PremiumDestination.HOME -> PremiumHomeScreen(
+                    PremiumDestination.HOME -> HomeLobbyScreen(
                         backend = backend,
-                        onPrimary = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
-                        onCompete = { destination = PremiumDestination.COMPETE },
+                        isPro = isPro,
                         onProfile = { destination = PremiumDestination.PROFILE },
                         onShop = { shopInitialTab = 0; destination = PremiumDestination.SHOP },
                         onPro = { proReturn = PremiumDestination.HOME; destination = PremiumDestination.PRO },
-                        onMascots = { shopInitialTab = 4; destination = PremiumDestination.SHOP },
-                        onSettings = { destination = PremiumDestination.SETTINGS },
+                        onSettings = { settingsReturn = PremiumDestination.HOME; destination = PremiumDestination.SETTINGS },
+                        onNewGame = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
+                        onFriends = { destination = PremiumDestination.SOCIAL },
+                        onThrone = { destination = PremiumDestination.COMPETE },
+                        onEvents = { destination = PremiumDestination.EVENTS },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
-                        onSocial = { destination = PremiumDestination.MY_GAMES },
-                        onActivity = { destination = PremiumDestination.ACTIVITY },
-                        onEvents = { destination = PremiumDestination.EVENTS },
-                        onResume = { game ->
-                            com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
-                            openGame(PremiumDestination.SIEGE, game.language)
-                        },
-                        onLastLetterResume = { room -> openPlayerTarget("son_harf", room.id) },
-                        incomingCount = incomingSocialCount,
+                        onOpen = { kind, id -> openPlayerTarget(kind, id) },
+                        onAllGames = { gamesTab = 1; destination = PremiumDestination.MY_GAMES },
                     )
                     PremiumDestination.MY_GAMES -> MyGamesScreen(backend, onOpen = { kind, id -> openPlayerTarget(kind, id) }, initialTab = gamesTab)
                     PremiumDestination.GAMES -> PremiumGameCenter(
@@ -281,7 +266,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         { destination = PremiumDestination.PROFILE_DETAILS },
                         { proReturn = PremiumDestination.PROFILE; destination = PremiumDestination.PRO },
                         { destination = PremiumDestination.COLLECTION },
-                        { destination = PremiumDestination.SETTINGS },
+                        { settingsReturn = PremiumDestination.PROFILE; destination = PremiumDestination.SETTINGS },
                         { destination = PremiumDestination.SOCIAL },
                         onRivals = { destination = PremiumDestination.RIVALS },
                         onCompete = { destination = PremiumDestination.COMPETE },
@@ -328,6 +313,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onThrone = { destination = PremiumDestination.COMPETE })
                     PremiumDestination.SOCIAL, PremiumDestination.RIVALS -> MainSocialScreen(
                         backend = backend,
+                        isPro = isPro,
+                        onPro = { proReturn = PremiumDestination.SOCIAL; destination = PremiumDestination.PRO },
                         initialTab = if (destination == PremiumDestination.RIVALS) 2 else 0,
                         onOpenSiege = { game ->
                             com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
@@ -338,7 +325,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     )
                     PremiumDestination.SETTINGS -> MainSettingsScreen(
                         backend,
-                        { destination = PremiumDestination.PROFILE },
+                        { destination = settingsReturn },
                         { destination = PremiumDestination.ACCOUNT },
                         onSignedOut,
                     )
@@ -377,64 +364,6 @@ private fun chatMascotSkin(context: android.content.Context): WordSiegeMascotSki
     val owned = WordSiegeMascotOwnership.owned
     val picked = WordSiegeMascotBond(context).skinChoice
     return picked?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } ?: WordSiegeMascotSkin.ORB
-}
-
-@Composable
-private fun PremiumHomeScreen(
-    backend: OnlineGameBackend,
-    onPrimary: () -> Unit,
-    onCompete: () -> Unit,
-    onProfile: () -> Unit,
-    onShop: () -> Unit,
-    onPro: () -> Unit,
-    onMascots: () -> Unit,
-    onSettings: () -> Unit,
-    onLastLetter: () -> Unit,
-    onWorkshop: () -> Unit,
-    onSocial: () -> Unit,
-    onActivity: () -> Unit,
-    onEvents: () -> Unit,
-    onResume: (com.sonharf.game.data.WordSiegeGameDto) -> Unit,
-    onLastLetterResume: (com.sonharf.game.data.GameRoomDto) -> Unit,
-    incomingCount: Int,
-) {
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
-    var showCommunityDetails by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        if (!SupabaseProvider.configured) return@LaunchedEffect
-        profile = backend.currentUserId()?.let { id ->
-            runCatching { backend.getProfile(id) }.getOrNull()
-        }
-    }
-    Box(Modifier.fillMaxSize().background(HomeLobbyStyle.Ground), contentAlignment = Alignment.TopCenter) {
-        LazyColumn(
-            modifier = Modifier.widthIn(max = 480.dp).fillMaxSize(),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            item(key = "home_hero") {
-                PremiumHomeCommandDeck(profile, onProfile, onShop, onPro, onSettings)
-            }
-            item(key = "home_sessions") { HomeSessions(backend, onResume, onSocial, onLastLetterResume) }
-            item(key = "home_games") {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    HomeSiegeHero(onPrimary)
-                    PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
-                }
-            }
-
-        }
-        // The original floating companion consumes no row or empty space in the home feed.
-        WordSiegeMascotCompanion(
-            anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
-            mascotSize = 83.dp, positionKey = "home",
-            moveId = null, lastMoveMine = false, playerTurn = false,
-            modifier = Modifier.matchParentSize(),
-            playerName = profile?.displayName, playerGender = profile?.gender,
-            stageY = .5f,
-        )
-    }
 }
 
 @Composable
@@ -605,79 +534,5 @@ private fun PremiumLanguageChoice(
                 { Icon(Icons.Rounded.Check, null, Modifier.size(15.dp)) }
             } else null,
         )
-    }
-}
-
-@Composable
-private fun PremiumBottomBar(
-    destination: PremiumDestination,
-    onHome: () -> Unit,
-    onShop: () -> Unit,
-    onSocial: () -> Unit,
-    onCompete: () -> Unit,
-    onProfile: () -> Unit,
-    socialBadge: Int = 0,
-) {
-    val items = listOf(
-        Triple(PremiumDestination.HOME, R.drawable.hf_ic_home, sh("Ana Sayfa", "Home")) to onHome,
-        Triple(PremiumDestination.SHOP, R.drawable.hf_ic_store, sh("Mağaza", "Store")) to onShop,
-        Triple(PremiumDestination.MY_GAMES, R.drawable.ic_my_games, sh("Oyunlarım", "My games")) to onSocial,
-        Triple(PremiumDestination.EVENTS, R.drawable.hf_ic_compete, sh("Etkinlikler", "Events")) to onCompete,
-        Triple(PremiumDestination.PROFILE, R.drawable.hf_ic_profile, sh("Profil", "Profile")) to onProfile,
-    )
-    Surface(color = LobbyPalette.Paper) {
-        Column(Modifier.navigationBarsPadding()) {
-            HorizontalDivider(thickness = 1.dp, color = LobbyPalette.Line)
-            Row(Modifier.fillMaxWidth().height(72.dp), verticalAlignment = Alignment.CenterVertically) {
-                items.forEachIndexed { index, (item, onClick) ->
-                    val selected = destination == item.first
-                    if (index > 0) Box(Modifier.width(1.dp).height(34.dp).background(LobbyPalette.Line.copy(alpha = .5f)))
-                    Column(
-                        Modifier.weight(1f).fillMaxHeight().clickable(onClick = onClick),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Box {
-                            Icon(
-                                painterResource(item.second),
-                                null,
-                                tint = if (selected) LobbyPalette.Accent else LobbyPalette.Muted,
-                                modifier = Modifier.size(28.dp),
-                            )
-                            if (item.first == PremiumDestination.MY_GAMES && socialBadge > 0) {
-                                Surface(
-                                    shape = RoundedCornerShape(99.dp),
-                                    color = Color(0xFFD64541),
-                                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 8.dp, y = (-4).dp),
-                                ) {
-                                    Text(
-                                        if (socialBadge > 9) "9+" else socialBadge.toString(),
-                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
-                                        color = Color.White,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Black,
-                                    )
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            item.third,
-                            color = if (selected) LobbyPalette.Accent else LobbyPalette.Muted,
-                            fontSize = 12.sp,
-                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            maxLines = 1,
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Box(
-                            Modifier.width(44.dp).height(3.dp).background(
-                                if (selected) LobbyPalette.Accent else Color.Transparent,
-                                RoundedCornerShape(99.dp),
-                            ),
-                        )
-                    }
-                }
-            }
-        }
     }
 }

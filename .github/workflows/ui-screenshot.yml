@@ -112,7 +112,7 @@ jobs:
             sleep 3
             adb shell uiautomator dump /sdcard/preview.xml
             adb pull /sdcard/preview.xml Preview-controls.xml
-            python3 -c 'import xml.etree.ElementTree as E,re,subprocess; n=next(n for n in E.parse("Preview-controls.xml").iter("node") if n.get("content-desc")=="Önizle"); x1,y1,x2,y2=map(int,re.findall(r"[0-9]+",n.get("bounds"))); subprocess.run(["adb","shell","input","tap",str((x1+x2)//2),str((y1+y2)//2)],check=True)'
+            python3 -c 'import xml.etree.ElementTree as E,re,subprocess; n=next(n for n in E.parse("Preview-controls.xml").iter("node") if n.get("content-desc")=="Bu ürün ne işe yarar?"); x1,y1,x2,y2=map(int,re.findall(r"[0-9]+",n.get("bounds"))); subprocess.run(["adb","shell","input","tap",str((x1+x2)//2),str((y1+y2)//2)],check=True)'
             sleep 2
             adb shell uiautomator dump /sdcard/preview-open.xml
             adb pull /sdcard/preview-open.xml Preview-open.xml
@@ -190,7 +190,7 @@ jobs:
             sleep 4
             adb shell uiautomator dump /sdcard/preview.xml
             adb pull /sdcard/preview.xml Preview-controls.xml
-            python3 -c 'import xml.etree.ElementTree as E,re,subprocess; n=next(n for n in E.parse("Preview-controls.xml").iter("node") if n.get("content-desc")=="Önizle"); x1,y1,x2,y2=map(int,re.findall(r"[0-9]+",n.get("bounds"))); subprocess.run(["adb","shell","input","tap",str((x1+x2)//2),str((y1+y2)//2)],check=True)'
+            python3 -c 'import xml.etree.ElementTree as E,re,subprocess; n=next(n for n in E.parse("Preview-controls.xml").iter("node") if n.get("content-desc")=="Bu ürün ne işe yarar?"); x1,y1,x2,y2=map(int,re.findall(r"[0-9]+",n.get("bounds"))); subprocess.run(["adb","shell","input","tap",str((x1+x2)//2),str((y1+y2)//2)],check=True)'
             sleep 2
             adb shell uiautomator dump /sdcard/preview-open.xml
             adb pull /sdcard/preview-open.xml Preview-open.xml

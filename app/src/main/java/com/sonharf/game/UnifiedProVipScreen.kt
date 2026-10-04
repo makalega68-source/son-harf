@@ -116,6 +116,10 @@ internal fun UnifiedProVipScreen(
                     ProFeature(Icons.Rounded.MeetingRoom,sh("Özel odalar","Private rooms"),sh("Davet koduyla kendi masanı kur.","Create your own table with an invite code."),Modifier.weight(1f))
                     ProFeature(Icons.Rounded.Insights,sh("Maç analizi","Match analysis"),sh("Biten karşılaşmalarını ayrıntılı incele.","Review completed matches in detail."),Modifier.weight(1f))
                 }
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    ProFeature(Icons.Rounded.Groups,sh("Arkadaş listesi","Friend list"),sh("Arkadaşlarını gör, çevrimiçi olanı davet et.","See your friends and invite whoever is online."),Modifier.weight(1f))
+                    ProFeature(Icons.Rounded.Bolt,sh("Hızlı Düello","Quick Duel"),sh("3, 5 veya 10 dakikalık hızlı maçlar.","Fast matches with 3, 5 or 10 minute turns."),Modifier.weight(1f))
+                }
             }
         }
 

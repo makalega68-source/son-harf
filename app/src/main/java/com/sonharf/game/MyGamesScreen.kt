@@ -113,7 +113,7 @@ internal fun MyGamesScreen(backend: OnlineGameBackend, onOpen: (String, String) 
 }
 
 @Composable
-private fun CompactMatchRow(match: MatchListRow, rival: ProfileDto?, onClick: () -> Unit) {
+internal fun CompactMatchRow(match: MatchListRow, rival: ProfileDto?, onClick: () -> Unit) {
     val accent=if(match.finished && match.won==false) Hf.Red else LobbyPalette.Accent
     Row(Modifier.fillMaxWidth().background(if(match.turn==HomeTurn.YOURS)LobbyPalette.Soft else LobbyPalette.Paper)
         .clickable(onClick=onClick).padding(horizontal=16.dp,vertical=16.dp),verticalAlignment=Alignment.CenterVertically,

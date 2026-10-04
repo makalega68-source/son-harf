@@ -524,9 +524,8 @@ internal fun VerifiedStoreProductCard(
             // all centred so neighbouring cards line up.
             Column(Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 StoreProductPreview(item, Modifier.fillMaxWidth().height(102.dp))
-                Spacer(Modifier.height(4.dp))
-                Text(tier.label, color = tierColor, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp, maxLines = 1)
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(6.dp))
+                // Kelimelik-style card: picture, name and price only; the "?" corner explains the item.
                 Text(
                     name,
                     color = LobbyPalette.Ink,
@@ -538,19 +537,6 @@ internal fun VerifiedStoreProductCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                storeItemEffect(item)?.let { effect ->
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        effect,
-                        color = LobbyPalette.Muted,
-                        fontSize = 10.sp,
-                        lineHeight = 13.sp,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
                 Spacer(Modifier.weight(1f).heightIn(min = 6.dp))
                 // A long goal reads as progress, not as a wall: coin share and any win requirement.
                 if (!owned && !equipped && !lockedByPro && playPrice == null && balance != null) {
@@ -611,8 +597,11 @@ internal fun VerifiedStoreProductCard(
                     Icon(painterResource(R.drawable.hf_ic_lock), null, tint = Hf.Gold, modifier = Modifier.size(34.dp))
                 }
             }
-            IconButton(onClick = { previewOpen = true }, modifier = Modifier.align(Alignment.TopEnd).size(38.dp)) {
-                Icon(Icons.Rounded.ZoomIn, sh("Önizle", "Preview"), tint = LobbyPalette.Muted, modifier = Modifier.size(20.dp))
+            IconButton(onClick = { previewOpen = true }, modifier = Modifier.align(Alignment.TopEnd).size(40.dp)) {
+                Surface(shape = CircleShape, color = LobbyPalette.Paper, border = BorderStroke(1.dp, LobbyPalette.Line)) {
+                    Icon(Icons.Rounded.QuestionMark, sh("Bu ürün ne işe yarar?", "What does this item do?"),
+                        tint = LobbyPalette.Ink, modifier = Modifier.padding(4.dp).size(16.dp))
+                }
             }
         }
     }
@@ -622,7 +611,8 @@ internal fun VerifiedStoreProductCard(
         title = { Text(name, color = LobbyPalette.Ink, fontWeight = FontWeight.Black) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             StoreProductPreview(item, Modifier.fillMaxWidth().height(230.dp), expanded = true)
-            storeItemEffect(item)?.let { Text(it, color = LobbyPalette.Muted) }
+            Text(tier.label, color = tierColor, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp)
+            Text(storeItemEffect(item) ?: storeKindLabel(item.kind), color = LobbyPalette.Ink, fontSize = 15.sp, lineHeight = 21.sp)
             Text(if (owned || equipped) sh("Koleksiyonunda", "In your collection") else if (lockedByPro) sh("PRO'ya özel", "PRO exclusive") else playPrice ?: "${item.diamondPrice} Son Coin", color = LobbyPalette.Gold, fontWeight = FontWeight.Bold)
         } },
         confirmButton = { Button(enabled = !busy && !lockedByPro, onClick = {

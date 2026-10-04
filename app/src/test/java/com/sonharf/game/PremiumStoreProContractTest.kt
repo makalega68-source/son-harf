@@ -103,7 +103,7 @@ class PremiumStoreProContractTest {
     }
 
     @Test
-    fun `friend list is free while Series keeps entitlement scoped invite candidates`() {
+    fun `friend list is a PRO feature while requests stay open and Series keeps entitlement scoped invites`() {
         val friends = repoFile("supabase/migrations/20260919120000_pro_friend_list_rls_v1.sql").readText()
         assertTrue(friends.contains("can_use_pro_friend_list_v1"))
         assertTrue(friends.contains("friendships pro accepted read v1"))
@@ -124,12 +124,17 @@ class PremiumStoreProContractTest {
         assertTrue(free.contains("drop policy if exists \"friendships pro accepted read v1\""))
         assertTrue(free.contains("friendships participant read v3"))
 
-        val profile = repoFile("app/src/main/java/com/sonharf/game/MainPlayerProfileScreen.kt").readText()
-        assertTrue(profile.contains("runCatching { backend.getFriends() }"))
-        assertFalse(profile.contains("if (loadedProfile?.isVip == true)"))
-        assertFalse(profile.contains("PRO ile arkadaş listesi"))
+        // The app presents the friend list as PRO: listed on the PRO page, locked on the home
+        // shortcut, and replaced by a PRO card for non-members; requests still work for everyone.
         val pro = repoFile("app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt").readText()
-        assertFalse(pro.contains("Arkadaş listesi"))
+        assertTrue(pro.contains("sh(\"Arkadaş listesi\",\"Friend list\")"))
+        val social = repoFile("app/src/main/java/com/sonharf/game/MainSocialScreen.kt").readText()
+        assertTrue(social.contains("0 -> if (!isPro) {"))
+        assertTrue(social.contains("Arkadaş listesi PRO özelliğidir"))
+        val lobby = repoFile("app/src/main/java/com/sonharf/game/HomeLobby.kt").readText()
+        assertTrue(lobby.contains("locked = !isPro, onClick = onFriends"))
+        val shell = repoFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        assertTrue(shell.contains("isPro = isPro,\n                        onPro = { proReturn = PremiumDestination.SOCIAL; destination = PremiumDestination.PRO },"))
     }
 
     @Test

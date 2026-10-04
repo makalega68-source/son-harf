@@ -45,8 +45,11 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(home.contains("ThroneBackend.week().rows"))
         assertTrue(home.contains("GameWeeklyPodium(players)"))
         assertTrue(File("src/main/java/com/sonharf/game/ThroneExperience.kt").readText().contains("sh(\"Kelime Atölyesi\",\"Word Workshop\")"))
-        assertTrue(shell.contains("PremiumBottomBar("))
-        assertTrue(shell.contains("PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)"))
+        // Kelimelik-style: one home page, no bottom bar; everything opens from the home.
+        assertFalse(shell.contains("PremiumBottomBar("))
+        assertFalse(shell.contains("bottomBar ="))
+        assertTrue(shell.contains("PremiumDestination.HOME -> HomeLobbyScreen("))
+        assertTrue(shell.contains("onNewGame = { openGame(PremiumDestination.SIEGE, siegeLanguage) },"))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
         assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
@@ -69,11 +72,11 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(topLevel.contains("PremiumDestination.PROFILE"))
         assertFalse(topLevel.contains("PremiumDestination.GAMES"))
         assertTrue(topLevel.contains("PremiumDestination.EVENTS"))
-        assertTrue(shell.contains("sh(\"Ana Sayfa\", \"Home\")"))
-        assertFalse("Bottom navigation no longer surfaces the club entry", shell.contains("sh(\"KULÜP\", \"CLUB\")"))
-        assertTrue(shell.contains("sh(\"Oyunlarım\", \"My games\")"))
-        assertTrue(shell.contains("sh(\"Mağaza\", \"Store\")"))
-        assertTrue(shell.contains("sh(\"Profil\", \"Profile\")"))
+        assertFalse("Club never surfaces", shell.contains("sh(\"KULÜP\", \"CLUB\")"))
+        val lobby = File("src/main/java/com/sonharf/game/HomeLobby.kt").readText()
+        listOf("sh(\"YENİ OYUN\", \"NEW GAME\")", "sh(\"SIRA SENDE\", \"YOUR TURN\")", "sh(\"SIRA RAKİPTE\", \"THEIR TURN\")",
+            "sh(\"BİTEN OYUNLAR\", \"FINISHED GAMES\")", "sh(\"DAVETLER\", \"INVITATIONS\")", "sh(\"Arkadaşlar\", \"Friends\")",
+            "sh(\"Taht\", \"Throne\")", "sh(\"Etkinlik\", \"Events\")").forEach { assertTrue(it, lobby.contains(it)) }
         assertFalse(shell.contains("PremiumDestination.TASKS"))
     }
 
