@@ -167,9 +167,12 @@ internal fun HomeLobbyScreen(
                             visible = p?.avatarVisibility != "hidden", isPro = p?.isVip == true)
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(p?.displayName?.ifBlank { null } ?: sh("Oyuncu", "Player"), color = Color.White,
-                            fontSize = 18.sp, style = premiumNameStyle(SonHarfCosmetics.nameStyleId),
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text(p?.displayName?.ifBlank { null } ?: sh("Oyuncu", "Player"), Modifier.weight(1f, fill = false), color = Color.White,
+                                fontSize = 18.sp, style = premiumNameStyle(SonHarfCosmetics.nameStyleId),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            AdminBadge(p?.id, 17.dp)
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             LobbyPill(sh("Başarı ", "Win ") + "%$winRate")
                             LobbyPill("${p?.rating ?: 1000} RP", gold = true)

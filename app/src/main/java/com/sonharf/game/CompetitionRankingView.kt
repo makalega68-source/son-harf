@@ -214,6 +214,7 @@ private fun RankingListRow(rank: Int?, name: String, score: Int?, avatarPath: St
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        AdminBadge(userId, 16.dp, Modifier.padding(end = 6.dp))
         Text(score?.let { rankingGrouped(it) } ?: "—", color = Hf.Gold, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
 }

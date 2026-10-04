@@ -1198,7 +1198,7 @@ internal fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profil
         Text(pt(language, "RAKİP BULUNDU!", "RIVAL FOUND!"), color = PremierUi.Ocean, fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
         Text(pt(language, "Maç 3 saniye içinde başlıyor", "Match starts in 3 seconds"), color = PremierUi.Muted, fontSize = 12.sp)
         Spacer(Modifier.weight(1f))
-        PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Green, nameColor = SonHarfCosmetics.playerNameColor, nameEmblem = true, frameId = rememberPlayerFrame(me?.id))
+        PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Green, nameColor = SonHarfCosmetics.playerNameColor, nameEmblem = true, frameId = rememberPlayerFrame(me?.id), userId = me?.id)
         Spacer(Modifier.height(16.dp))
         Surface(shape = RoundedCornerShape(99.dp), color = Color.Transparent) {
             Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.OceanDeep, Color(0xFF2C3E55)))).padding(horizontal = 27.dp, vertical = 10.dp)) {
@@ -1209,7 +1209,7 @@ internal fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profil
         if (room.isBot) {
             PremierVsPlayerCard(language, room.botName?.replace("KelimeBot", "KelimeAI")?.replace("WordBot", "WordAI") ?: pt(language, "KelimeAI", "WordAI"), null, null, true, (me?.rating ?: 1000), 50, PremierUi.Red, bot = true)
         } else {
-            PremierVsPlayerCard(language, opponent?.displayName ?: pt(language, "Rakip", "Rival"), opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", opponent?.rating ?: 1000, profileWinRate(opponent), PremierUi.Red, frameId = rememberPlayerFrame(opponent?.id))
+            PremierVsPlayerCard(language, opponent?.displayName ?: pt(language, "Rakip", "Rival"), opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", opponent?.rating ?: 1000, profileWinRate(opponent), PremierUi.Red, frameId = rememberPlayerFrame(opponent?.id), userId = opponent?.id)
         }
         Spacer(Modifier.weight(1f))
         Text(pt(language, "Zincir başlıyor. İlk hamlene hazırlan.", "The chain begins. Get ready for your first move."), color = PremierUi.Muted, fontSize = 10.sp)
@@ -1217,7 +1217,7 @@ internal fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profil
 }
 
 @Composable
-private fun PremierVsPlayerCard(language: String, name: String, avatar: String?, gender: String?, visible: Boolean, rating: Int, winRate: Int, accent: Color, bot: Boolean = false, nameColor: Color = PremierUi.Ink, nameEmblem: Boolean = false, frameId: String? = null) {
+private fun PremierVsPlayerCard(language: String, name: String, avatar: String?, gender: String?, visible: Boolean, rating: Int, winRate: Int, accent: Color, bot: Boolean = false, nameColor: Color = PremierUi.Ink, nameEmblem: Boolean = false, frameId: String? = null, userId: String? = null) {
     val entrance=remember{Animatable(0f)}
     LaunchedEffect(Unit){entrance.animateTo(1f,spring(dampingRatio=.82f,stiffness=260f))}
     GameEventStage(modifier=Modifier.graphicsLayer{alpha=entrance.value;translationX=(1f-entrance.value)*if(bot)-60f else 60f},gold=true) {
@@ -1228,6 +1228,7 @@ private fun PremierVsPlayerCard(language: String, name: String, avatar: String?,
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Text(name,Modifier.weight(1f,fill=false),color=if(nameColor==PremierUi.Ink)EventInk else nameColor,fontSize=21.sp,style=premiumNameStyle(if(nameEmblem) SonHarfCosmetics.nameStyleId else null),maxLines=1,overflow=TextOverflow.Ellipsis)
                     if(nameEmblem&&!bot){Spacer(Modifier.width(4.dp));NameStyleEmblem(20.dp)}
+                    if(!bot){Spacer(Modifier.width(4.dp));AdminBadge(userId,18.dp)}
                 }
                 Text(if(bot)pt(language,"AI RAKİP","AI RIVAL")else pt(language,"DÜELLO OYUNCUSU","DUEL PLAYER"),color=accent,fontSize=10.sp,fontWeight=FontWeight.Black)
                 Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {

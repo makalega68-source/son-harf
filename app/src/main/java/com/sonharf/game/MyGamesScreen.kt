@@ -136,7 +136,10 @@ internal fun CompactMatchRow(match: MatchListRow, rival: ProfileDto?, onClick: (
         FramedProfilePhotoAvatar(avatarPath=rival?.avatarPath,gender=rival?.gender,name=rival?.displayName ?: match.rivalFallback,
             size=58.dp,frameId=rememberPlayerFrame(rival?.id),visible=rival?.avatarVisibility!="hidden",isPro=rival?.isVip==true)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-            Text(rival?.displayName ?: match.rivalFallback,color=LobbyPalette.Ink,fontSize=17.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                Text(rival?.displayName ?: match.rivalFallback,Modifier.weight(1f,fill=false),color=LobbyPalette.Ink,fontSize=17.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                AdminBadge(rival?.id,16.dp)
+            }
             Text(sh("Sen ${match.mine} · Rakip ${match.theirs}","You ${match.mine} · Rival ${match.theirs}"),color=LobbyPalette.Ink,fontSize=14.sp)
             Text((when(match.kind){"son_harf"->"Son Harf";"series"->sh("Hızlı Düello","Quick Duel");else->sh("Kuşatma","Siege")})+" · "+match.timer,color=LobbyPalette.Muted,fontSize=12.sp)
             Text(if(match.finished) socialDate(match.date) else when(match.turn){HomeTurn.YOURS->sh("Sıra sende","Your turn");HomeTurn.RIVAL->sh("Rakibin sırası","Their turn");else->sh("Rakip bekleniyor","Waiting for rival")},color=accent,fontSize=12.sp)

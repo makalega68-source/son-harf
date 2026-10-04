@@ -79,7 +79,13 @@ internal object ProfileFrameCollection {
     val allIds = all.map { it.id }.toSet()
     val premiumProductIds = premiumFrames.mapNotNull { it.playProductId }
 
-    fun find(id: String?): Frame? = all.firstOrNull { it.id == id }
+    /** The admins' own crest: never sold or listed; the server puts it on admins (drawn in code). */
+    val adminFrame = Frame("frame_admin", R.drawable.profile_frame_premium_sapphire, "Yönetici Arması", "Admin Crest")
+
+    /** Frames only the server can put on a player; they win over the local selection. */
+    val serverFrameIds = setOf(throneFrame.id, adminFrame.id)
+
+    fun find(id: String?): Frame? = all.firstOrNull { it.id == id } ?: adminFrame.takeIf { it.id == id }
 }
 
 /**
@@ -90,6 +96,7 @@ internal object ProfileFrameCollection {
 @Composable
 internal fun ProfileFrameArt(frameId: String?, size: Dp, modifier: Modifier = Modifier) {
     val frame = ProfileFrameCollection.find(frameId) ?: return
+    if (frame == ProfileFrameCollection.adminFrame) { AdminFrameArt(size, modifier); return }
     val resources = LocalContext.current.resources
     var bitmap by remember(frame.drawable) { mutableStateOf<android.graphics.Bitmap?>(FrameBitmaps.cached(frame.drawable)) }
     LaunchedEffect(frame.drawable) { bitmap = FrameBitmaps.load(resources, frame.drawable) }
@@ -207,7 +214,7 @@ internal fun rememberPlayerFrame(userId: String?): String? {
             // Your own frame always follows your local selection, so a new choice shows at once and a
             // stale server read can never hide it; the server only adds the weekly throne reward.
             runCatching { PublicFrames.get(userId) }
-                .onSuccess { frame = if (userId == me && it != ProfileFrameCollection.throneFrame.id) SonHarfCosmetics.profileFrameId else it }
+                .onSuccess { frame = if (userId == me && it !in ProfileFrameCollection.serverFrameIds) SonHarfCosmetics.profileFrameId else it }
                 .onFailure { if (userId == me || frame == ProfileFrameCollection.throneFrame.id) frame = SonHarfCosmetics.profileFrameId }
             val zone = java.time.ZoneId.of("Europe/Istanbul")
             val boundary = java.time.LocalDate.now(zone)

@@ -1194,6 +1194,7 @@ private fun PanSiegePlayerCard(
         rating = profile?.rating,
         isPro = profile?.isVip == true,
         nameStyleId = nameStyleId,
+        userId = profile?.id,
     )
     if (mascot != null) {
         WordSiegeMascot(

@@ -77,7 +77,10 @@ internal fun LatestRivalsScreen(backend: OnlineGameBackend, onBack: (() -> Unit)
                     FramedProfilePhotoAvatar(profile?.avatarPath,profile?.gender,profile?.displayName ?: row.name,52.dp,
                         rememberPlayerFrame(row.opponentId),visible=profile?.avatarVisibility!="hidden",isPro=profile?.isVip==true)
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                        Text(profile?.displayName ?: row.name.ifBlank { sh("Rakip","Rival") },fontWeight=FontWeight.Bold,maxLines=1)
+                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                            Text(profile?.displayName ?: row.name.ifBlank { sh("Rakip","Rival") },Modifier.weight(1f,fill=false),fontWeight=FontWeight.Bold,maxLines=1)
+                            AdminBadge(row.opponentId,16.dp)
+                        }
                         Text("${row.mine} : ${row.theirs}",fontSize=18.sp,fontWeight=FontWeight.Bold,color=LobbyPalette.Accent)
                         Text((when(row.mode){"siege"->sh("Kuşatma","Siege");"series"->sh("Hızlı Düello","Quick Duel");"arena"->sh("Kelime Arenası","Word Arena");else->"Son Harf"})+" · "+socialDate(row.date),fontSize=11.sp,color=LobbyPalette.Muted)
                     }

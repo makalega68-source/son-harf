@@ -14,14 +14,15 @@ def bounds(name):
     # Never reuse a stale dump, and keep evidence if all bounded retries fail.
     node = None
     for attempt in range(5):
-        adb("shell", "rm", "-f", "/sdcard/mascot.xml")
         try:
+            adb("shell", "rm", "-f", "/sdcard/mascot.xml")
             # The dump itself fails (exit 255, "null root node") while the window is still settling.
             adb("shell", "uiautomator", "dump", "--compressed", "/sdcard/mascot.xml")
             adb("pull", "/sdcard/mascot.xml", name)
             node = next((n for n in ET.parse(name).iter("node") if n.get("content-desc") == "Maskot"), None)
-        except (subprocess.CalledProcessError, ET.ParseError):
-            pass
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ET.ParseError):
+            # A stalled software-GPU emulator can hang one adb call; wait for it to answer again.
+            subprocess.run(["adb", "wait-for-device"], timeout=120)
         if node is not None:
             break
         time.sleep(2)

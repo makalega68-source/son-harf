@@ -97,9 +97,12 @@ private fun HomeStatusRow(
             )
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(profile?.displayName?.ifBlank { null } ?: sh("Oyuncu", "Player"),
-                    color = if (SonHarfCosmetics.nameStyleId == null) HomeLobbyStyle.Ink else SonHarfCosmetics.playerNameColor, fontSize = 14.sp, style = premiumNameStyle(SonHarfCosmetics.nameStyleId),
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(profile?.displayName?.ifBlank { null } ?: sh("Oyuncu", "Player"), Modifier.weight(1f, fill = false),
+                        color = if (SonHarfCosmetics.nameStyleId == null) HomeLobbyStyle.Ink else SonHarfCosmetics.playerNameColor, fontSize = 14.sp, style = premiumNameStyle(SonHarfCosmetics.nameStyleId),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    AdminBadge(profile?.id, 14.dp)
+                }
                 Text(profile?.let { homeLeagueName(ratingLeagueProgress(it.rating).leagueName) + sh(" Lig", " League") }
                     ?: sh("Profilim", "My profile"), color = HomeLobbyStyle.Muted, fontSize = 10.sp,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)

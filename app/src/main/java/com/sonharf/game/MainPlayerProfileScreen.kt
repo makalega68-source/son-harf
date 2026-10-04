@@ -212,6 +212,8 @@ private fun ProfileHero(
                 Spacer(Modifier.width(6.dp))
                 NameStyleEmblem(30.dp)
             }
+            Spacer(Modifier.width(6.dp))
+            AdminBadge(p?.id, 24.dp)
         }
         PremiumRule(width = 160.dp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

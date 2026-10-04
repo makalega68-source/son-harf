@@ -102,6 +102,7 @@ internal fun WordSiegeScoreCard(
     rating: Int? = null,
     isPro: Boolean = false,
     nameStyleId: String? = null,
+    userId: String? = null,
 ) {
     val scoreScale = remember { Animatable(1f) }
     val scoreGlow = remember { Animatable(0f) }
@@ -170,6 +171,7 @@ internal fun WordSiegeScoreCard(
                         fontWeight = if (nameStyleId == null) FontWeight.Black else null,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        AdminBadge(userId, 11.dp)
                         if (isPro) Text("PRO", color = WordSiegeGameUi.Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
                         Text(if (rating != null) "${ratingLeagueProgress(rating).leagueName} · $rating" else if (isBot) sh("Kuşatma • AI", "Siege • AI") else sh("Kuşatma", "Siege"),
                             modifier = Modifier.weight(1f), color = WordSiegeGameUi.Muted, fontSize = 8.sp,

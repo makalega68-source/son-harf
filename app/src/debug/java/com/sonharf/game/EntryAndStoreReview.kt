@@ -52,6 +52,9 @@ internal fun EntryAndStoreReview(stage: String) {
                         requestedEmotion=WordSiegeMascotEmotion.HAPPY, skin=WordSiegeMascotSkin.GOLD_KING,
                         hat=WordSiegeMascotHat.NONE, modifier=Modifier.size(200.dp))
                 }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    Box(Modifier.size(130.dp), contentAlignment = Alignment.Center) { AdminFrameArt(88.dp) }
+                }
             }
             stage.startsWith("welcome") -> IntroWelcomeScreen {}
             stage.startsWith("store") -> EconomyShopScreen(onCollection = {}, onPro = {})
