@@ -9,12 +9,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Storefront
@@ -54,8 +52,6 @@ internal fun MainPlayerProfileScreen(
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
-    var friendCount by remember { mutableIntStateOf(0) }
-    var onlineFriendCount by remember { mutableIntStateOf(0) }
     var loading by remember { mutableStateOf(true) }
     var renaming by remember { mutableStateOf(false) }
 
@@ -69,10 +65,6 @@ internal fun MainPlayerProfileScreen(
         val loadedProfile = profileTask.await()
         profile = loadedProfile
         growth = growthTask.await()
-        runCatching { backend.getFriends() }.getOrDefault(emptyList()).let { friends ->
-            friendCount = friends.size
-            onlineFriendCount = friends.count { (_, friend) -> friend.isRecentlyOnline() }
-        }
         SonHarfCosmetics.apply(cosmeticsTask.await())
         loading = false
     }
@@ -207,44 +199,13 @@ internal fun MainPlayerProfileScreen(
 
         ProfileRecordsSection(backend, onRivals = onRivals)
 
-        LobbyCard(
-            onClick = onSocial,
-            modifier = Modifier.fillMaxWidth(),
-            borderColor = Hf.Gold.copy(alpha = .75f),
-        ) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Friends are free for everyone; no PRO badge or gating on this entry.
-                Icon(
-                    Icons.Rounded.Groups,
-                    contentDescription = null,
-                    tint = Hf.Gold,
-                    modifier = Modifier.size(28.dp),
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(sh("Arkadaşlar", "Friends"), color = LobbyPalette.Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(
-                        if (friendCount > 0) "$friendCount ${sh("arkadaş", "friends")} • $onlineFriendCount ${sh("çevrimiçi", "online")}"
-                        else sh("Arkadaş listesini aç", "Open your friend list"),
-                        color = LobbyPalette.Muted, fontSize = 12.sp,
-                    )
-                }
-                Icon(Icons.Rounded.ChevronRight, null, tint = Hf.Gold)
-            }
-        }
-
+        // Friends, Throne and events live on the home; the profile keeps only who you are.
         HfSecondaryButton(
             sh("Koleksiyonum", "My collection"),
             onClick = onCollection,
             modifier = Modifier.fillMaxWidth(),
             trailingChevron = true,
         )
-        OutlinedButton(onClick = onCompete, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text(sh("Taht ve sıralama", "Throne and rankings"), color = LobbyPalette.Ink)
-        }
         Spacer(Modifier.height(8.dp))
     }
 }

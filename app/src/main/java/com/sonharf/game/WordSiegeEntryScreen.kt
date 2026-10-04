@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Refresh
@@ -78,6 +79,7 @@ internal fun WordSiegeEntryScreen(
     onExit: () -> Unit,
     onOpenStore: () -> Unit,
     startQuickDuel: Boolean = false,
+    onFriends: (() -> Unit)? = null,
 ) {
     var quickLaunchConsumed by remember { mutableStateOf(false) }
     var mode by remember { mutableStateOf<WordSiegeEntryMode?>(
@@ -200,30 +202,13 @@ internal fun WordSiegeEntryScreen(
             item(key = "header") {
                 MainScreenHeader(
                     title = sh("Yeni Kuşatma", "New Siege"),
-                    subtitle = sh("Bir kez seç, doğrudan maça gir", "Choose once and go straight to your match"),
+                    subtitle = "",
                     onBack = onExit,
                 )
             }
 
             if (starting) item { androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth()) }
             launchError?.let { item { Text(it, color = SonHarfTheme.Error) } }
-
-            item(key = "new_game_title") {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(
-                        sh("YENİ OYUN", "NEW GAME"),
-                        color = LobbyPalette.Ink,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = .5.sp,
-                    )
-                    Text(
-                        sh("Hamle süresini veya oyun tipini seç.", "Choose a turn timer or game type."),
-                        color = LobbyPalette.Muted,
-                        fontSize = 10.sp,
-                    )
-                }
-            }
 
             item(key = "classic_modes") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -293,26 +278,18 @@ internal fun WordSiegeEntryScreen(
                 }
             }
 
-            item(key = "pro_note") {
-                Surface(
+            if (onFriends != null) item(key = "friend_mode") {
+                // Kelimelik-style: play a friend straight from New Game.
+                OutlinedButton(
+                    onClick = onFriends,
+                    enabled = !starting,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = SiegeEntryControlShape,
-                    color = LobbyPalette.Soft,
-                    border = BorderStroke(1.dp, LobbyPalette.Accent.copy(alpha = .25f)),
+                    border = BorderStroke(1.dp, LobbyPalette.Accent.copy(alpha = .5f)),
                 ) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Lock, null, tint = LobbyPalette.Accent, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            sh(
-                                "PRO: Hamle Önizleme ve Kalan Harfler maç içinde konfor aracı olarak açılır.",
-                                "PRO: Move Preview and Letters Left open in the match as comfort tools.",
-                            ),
-                            color = LobbyPalette.Muted,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 12.sp,
-                        )
-                    }
+                    Icon(Icons.Rounded.Groups, null, tint = LobbyPalette.Accent)
+                    Spacer(Modifier.width(8.dp))
+                    Text(sh("ARKADAŞINLA OYNA", "PLAY A FRIEND"), color = LobbyPalette.Ink, fontWeight = FontWeight.Black)
                 }
             }
         }

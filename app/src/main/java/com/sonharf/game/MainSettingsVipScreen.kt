@@ -64,7 +64,7 @@ internal fun MainSettingsScreen(
         item {
             MainScreenHeader(
                 title = sh("Ayarlar", "Settings"),
-                subtitle = sh("Ses, dil, bildirim, gizlilik ve hesap", "Audio, language, notifications, privacy and account"),
+                subtitle = "",
                 onBack = onBack,
             )
         }

@@ -295,6 +295,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         startQuickDuel = startQuickDuel,
                         onExit = { leaveGame() },
                         onOpenStore = { shopInitialTab = 0; leaveGame(PremiumDestination.SHOP) },
+                        onFriends = { leaveGame(PremiumDestination.SOCIAL) },
                     )
                     PremiumDestination.WORD_WORKSHOP -> KelimeAtolyesiScreen {
                         leaveGame()
