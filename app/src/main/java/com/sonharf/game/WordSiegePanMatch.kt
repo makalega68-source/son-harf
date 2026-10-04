@@ -358,6 +358,7 @@ internal fun WordSiegePanMatch(
                 scoreArrivalTick = myScoreArrivalTick,
                 scoreLossTick = myScoreLossTick,
                 onScoreCenterChanged = { myScoreTargetInWindow = it },
+                nameStyleId = SonHarfCosmetics.nameStyleId,
             )
             PanSiegePlayerCard(
                 profile = opponent,
@@ -1175,6 +1176,7 @@ private fun PanSiegePlayerCard(
     scoreLossTick: Int = 0,
     onScoreCenterChanged: (Offset) -> Unit = {},
     mascot: WordSiegeMascotSkin? = null,
+    nameStyleId: String? = null,
 ) {
     // The rival's mascot perches on their card; no mascot of your own is needed to see it.
     Box(modifier) {
@@ -1191,6 +1193,7 @@ private fun PanSiegePlayerCard(
         frameId = rememberPlayerFrame(profile?.id),
         rating = profile?.rating,
         isPro = profile?.isVip == true,
+        nameStyleId = nameStyleId,
     )
     if (mascot != null) {
         WordSiegeMascot(

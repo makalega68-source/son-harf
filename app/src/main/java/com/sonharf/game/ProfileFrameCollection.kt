@@ -164,9 +164,17 @@ internal object PublicFrames {
 
     fun rewardDeadline(userId: String): Long? = cache[userId]?.expiresAt
 
+    private val requests = SharedRequests<String?>()
+
     suspend fun get(userId: String): String? {
         val now = System.currentTimeMillis()
         cache[userId]?.takeIf { it.week == weekKey() && now - it.savedAt < 30_000L && (it.expiresAt == null || now < it.expiresAt) }?.let { return it.frame }
+        // Every avatar of one player shares a single in-flight lookup.
+        return requests.get(userId) { fetch(userId) }
+    }
+
+    private suspend fun fetch(userId: String): String? {
+        val now = System.currentTimeMillis()
         val result = com.sonharf.game.data.SupabaseProvider.client.postgrest.rpc(
             "get_public_profile_frame_v2",
             kotlinx.serialization.json.buildJsonObject { put("p_user_id", userId) },

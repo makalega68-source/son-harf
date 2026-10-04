@@ -1011,7 +1011,7 @@ internal fun PremierLobby(
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     ProfilePhotoAvatarWithGender(profile?.avatarPath,profile?.gender,profile?.displayName?:pt(language,"Oyuncu","Player"),56.dp,visible=profile?.avatarVisibility!="hidden",frameId=SonHarfCosmetics.profileFrameId)
                     Column(Modifier.weight(1f)) {
-                        Text(profile?.displayName?:pt(language,"Oyuncu","Player"),color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
+                        Text(profile?.displayName?:pt(language,"Oyuncu","Player"),color=Color.White,fontSize=18.sp,style=premiumNameStyle(SonHarfCosmetics.nameStyleId),fontWeight=if(SonHarfCosmetics.nameStyleId==null)FontWeight.Black else null,maxLines=1,overflow=TextOverflow.Ellipsis)
                         Text("${profile?.rating?:1000} RP",color=EventGold,fontSize=12.sp,fontWeight=FontWeight.Bold)
                     }
                     EventTag("1v1")
@@ -1159,7 +1159,7 @@ internal fun PremierSearching(language: String, me: ProfileDto?, onCancel: () ->
             Row(Modifier.fillMaxWidth().padding(vertical=16.dp),verticalAlignment=Alignment.CenterVertically) {
                 Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     ProfilePhotoAvatarWithGender(me?.avatarPath,me?.gender,me?.displayName?:pt(language,"Oyuncu","Player"),88.dp,accent=Hf.Green,visible=me?.avatarVisibility!="hidden",showGenderBadge=false,frameId=SonHarfCosmetics.profileFrameId)
-                    Text(me?.displayName?:pt(language,"Sen","You"),color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Text(me?.displayName?:pt(language,"Sen","You"),color=Color.White,fontSize=14.sp,style=premiumNameStyle(SonHarfCosmetics.nameStyleId),fontWeight=if(SonHarfCosmetics.nameStyleId==null)FontWeight.Black else null,maxLines=1,overflow=TextOverflow.Ellipsis)
                     Text("${me?.rating?:1000} RP",color=EventGold,fontSize=11.sp,fontWeight=FontWeight.Bold)
                 }
                 Text("VS",Modifier.padding(horizontal=4.dp),color=EventGold,fontSize=26.sp,fontWeight=FontWeight.Black)
@@ -2177,6 +2177,7 @@ private fun PremierArenaHeader(
             mirrored = false,
             modifier = Modifier.weight(1f).height(cardHeight),
             nameColor = SonHarfCosmetics.playerNameColor,
+            nameStyleId = SonHarfCosmetics.nameStyleId,
             frameId = rememberPlayerFrame(me?.id),
         )
         PremierSymmetricPlayerCard(
@@ -2218,6 +2219,7 @@ private fun PremierSymmetricPlayerCard(
     modifier: Modifier,
     bot: Boolean = false,
     nameColor: Color = PremierArenaSky.Ink,
+    nameStyleId: String? = null,
     frameId: String? = null,
     mascot: WordSiegeMascotSkin? = null,
 ) {
@@ -2269,7 +2271,8 @@ private fun PremierSymmetricPlayerCard(
                 name,
                 color = if (nameColor == PremierUi.Ink || nameColor == PremierArenaSky.Ink) PremierBoard.Ink else nameColor,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Black,
+                style = premiumNameStyle(nameStyleId),
+                fontWeight = if (nameStyleId == null) FontWeight.Black else null,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

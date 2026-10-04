@@ -101,6 +101,7 @@ internal fun WordSiegeScoreCard(
     frameId: String? = null,
     rating: Int? = null,
     isPro: Boolean = false,
+    nameStyleId: String? = null,
 ) {
     val scoreScale = remember { Animatable(1f) }
     val scoreGlow = remember { Animatable(0f) }
@@ -163,8 +164,11 @@ internal fun WordSiegeScoreCard(
                 }
                 Spacer(Modifier.width(7.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    // An equipped signature changes the typeface; the board's text colour keeps contrast.
                     Text(name, color = WordSiegeGameUi.Text, fontSize = 13.sp, lineHeight = 15.sp,
-                        fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        style = premiumNameStyle(nameStyleId),
+                        fontWeight = if (nameStyleId == null) FontWeight.Black else null,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         if (isPro) Text("PRO", color = WordSiegeGameUi.Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
                         Text(if (rating != null) "${ratingLeagueProgress(rating).leagueName} · $rating" else if (isBot) sh("Kuşatma • AI", "Siege • AI") else sh("Kuşatma", "Siege"),

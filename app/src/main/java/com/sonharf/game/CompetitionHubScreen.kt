@@ -37,9 +37,8 @@ fun CompetitionHubScreen(onBack: () -> Unit, clubEntry: Boolean = false) {
         ThroneScreen(onBack = onBack, onLegacy = { tab = it; showThrone = false })
         return
     }
+    // Leagues, Cup and Rivals open from the Throne's top buttons, so back always returns there.
     androidx.activity.compose.BackHandler { showThrone = true }
-    // Existing leagues, cup and rivals remain accessible from the throne.
-    androidx.activity.compose.BackHandler(enabled = tab != 0) { tab = 0 }
     Column(Modifier.fillMaxSize().background(SonHarfBg)) {
         if (tab == 0) {
             CompetitionRankingView(onCup = { tab = 1 }, onRivals = { tab = 2 })
@@ -48,7 +47,7 @@ fun CompetitionHubScreen(onBack: () -> Unit, clubEntry: Boolean = false) {
                 MainScreenHeader(
                     title = if (tab == 1) sh("Haftalık Kupa", "Weekly Cup") else sh("Rakipler", "Rivals"),
                     subtitle = "",
-                    onBack = { tab = 0 },
+                    onBack = { showThrone = true },
                 )
             }
             Box(Modifier.weight(1f)) {

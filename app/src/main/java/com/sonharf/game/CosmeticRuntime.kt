@@ -214,16 +214,25 @@ internal fun NameStyleEmblem(size: androidx.compose.ui.unit.Dp, styleId: String?
 
 /** Readable, distinct typefaces; no font download or decorative glyph substitution. */
 internal fun premiumNameStyle(id: String?): androidx.compose.ui.text.TextStyle {
+    // Each signature has its own system typeface (not just a colour); Typeface.create falls back
+    // to the default family on devices that lack one, so names always stay readable.
+    fun system(name: String, style: Int = android.graphics.Typeface.BOLD) =
+        androidx.compose.ui.text.font.FontFamily(android.graphics.Typeface.create(name, style))
     val family = when (id) {
-        "name_aurelia" -> androidx.compose.ui.text.font.FontFamily.Serif
-        "name_amethyst" -> androidx.compose.ui.text.font.FontFamily.Serif
-        "name_sapphire" -> androidx.compose.ui.text.font.FontFamily(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD))
+        "name_aurelia" -> system("serif")                                   // classic engraved serif
+        "name_amethyst" -> system("cursive")                                // flowing script
+        "name_sapphire" -> system("sans-serif-condensed")                   // tight athletic sans
+        "name_cyan" -> system("sans-serif-smallcaps", android.graphics.Typeface.NORMAL) // small caps
         else -> androidx.compose.ui.text.font.FontFamily.SansSerif
     }
     return androidx.compose.ui.text.TextStyle(
         fontFamily = family,
         fontWeight = if (id == "name_cyan") androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Bold,
-        fontStyle = if (id == "name_amethyst") androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
-        letterSpacing = .3.sp,
+        letterSpacing = when (id) {
+            "name_amethyst" -> 0.sp
+            "name_cyan" -> 1.sp
+            "name_aurelia" -> .6.sp
+            else -> .3.sp
+        },
     )
 }

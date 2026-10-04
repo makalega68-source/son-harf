@@ -194,7 +194,7 @@ internal fun ProfilePhotoAvatarWithGender(
     var bytes by remember(avatarPath, visible, userId) { mutableStateOf<ByteArray?>(null) }
     var resolvedGender by remember(avatarPath, gender, userId) { mutableStateOf(gender) }
     LaunchedEffect(avatarPath, visible, gender, userId) {
-        val identity = userId?.let { runCatching { com.sonharf.game.data.OnlineGameBackend().getProfile(it) }.getOrNull() }
+        val identity = userId?.let { runCatching { PlayerIdentityCache.get(it) }.getOrNull() }
         resolvedGender = gender ?: identity?.gender ?: ProfilePhotoRuntime.genderForAvatar(avatarPath)
         val path = if (userId != null) identity?.avatarPath else avatarPath
         bytes = if (visible && (userId == null || identity?.avatarVisibility != "hidden") && !path.isNullOrBlank()) ProfilePhotoRuntime.load(path) else null

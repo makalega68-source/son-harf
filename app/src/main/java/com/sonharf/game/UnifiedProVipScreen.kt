@@ -108,11 +108,11 @@ internal fun UnifiedProVipScreen(
         }
         item {
             Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     ProFeature(Icons.Rounded.Block,sh("Reklamsız","Ad-free"),sh("Menü, profil ve mağazada kesintisiz gezin.","Browse menus, profile and store without ads."),Modifier.weight(1f))
                     ProFeature(Icons.Rounded.WorkspacePremium,sh("Özel profil","Signature profile"),sh("Altın PRO çerçevesi ve üyelik rozeti.","Gold PRO frame and membership badge."),Modifier.weight(1f))
                 }
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     ProFeature(Icons.Rounded.MeetingRoom,sh("Özel odalar","Private rooms"),sh("Davet koduyla kendi masanı kur.","Create your own table with an invite code."),Modifier.weight(1f))
                     ProFeature(Icons.Rounded.Insights,sh("Maç analizi","Match analysis"),sh("Biten karşılaşmalarını ayrıntılı incele.","Review completed matches in detail."),Modifier.weight(1f))
                 }
@@ -201,7 +201,8 @@ internal fun UnifiedProVipScreen(
 
 @Composable
 private fun ProFeature(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, detail: String, modifier: Modifier) {
-    LobbyCard(modifier.heightIn(min=166.dp)) {
+    // Both cards of a row share the taller one's height, keeping the 2×2 grid symmetric.
+    LobbyCard(modifier.fillMaxHeight().heightIn(min=166.dp)) {
         Column(Modifier.fillMaxWidth().padding(16.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(9.dp)) {
             Icon(icon,null,tint=UProGold,modifier=Modifier.size(28.dp))
             Text(title,color=UProText,fontWeight=FontWeight.Bold,fontSize=15.sp,textAlign=TextAlign.Center)

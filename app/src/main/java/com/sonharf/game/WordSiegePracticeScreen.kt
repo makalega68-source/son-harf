@@ -1190,6 +1190,7 @@ private fun WordSiegePracticeScoreCard(
         onScoreCenterChanged = onScoreCenterChanged,
         // Practice is you against a bot: your own frame on your card.
         frameId = if (isBot) null else SonHarfCosmetics.profileFrameId,
+        nameStyleId = if (isBot) null else SonHarfCosmetics.nameStyleId,
     )
 }
 
