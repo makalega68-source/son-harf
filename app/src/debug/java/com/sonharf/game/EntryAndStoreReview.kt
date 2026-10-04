@@ -44,6 +44,15 @@ internal fun EntryAndStoreReview(stage: String) {
                     Text(mood.name,color=Hf.Text,fontSize=10.sp)
                 }
             }
+            stage == "gold-king" -> Column(Modifier.fillMaxSize().background(LobbyBrand.NavBar).statusBarsPadding().navigationBarsPadding().padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                ThroneHero(onBack = {}, resetAt = 0L, now = 0L)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    WordSiegeMascot(moveId=null,lastMoveMine=false,pendingCells=emptyList(),playerTurn=false,
+                        requestedEmotion=WordSiegeMascotEmotion.HAPPY, skin=WordSiegeMascotSkin.GOLD_KING,
+                        hat=WordSiegeMascotHat.NONE, modifier=Modifier.size(200.dp))
+                }
+            }
             stage.startsWith("welcome") -> IntroWelcomeScreen {}
             stage.startsWith("store") -> EconomyShopScreen(onCollection = {}, onPro = {})
             stage == "inbox-dark" -> Column(Modifier.fillMaxSize().background(Hf.Ground).statusBarsPadding().padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)) {

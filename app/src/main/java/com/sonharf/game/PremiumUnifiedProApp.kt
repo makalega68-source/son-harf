@@ -227,6 +227,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             // windowInsetsPadding consumes the status bar here, so the ad slot below adds none.
             topBar = {
                 Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
+                    ThroneChampionWatcher()
                     TopNewsTicker()
                     if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
                 }
@@ -391,6 +392,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 private fun chatMascotSkin(context: android.content.Context): WordSiegeMascotSkin {
     val owned = WordSiegeMascotOwnership.owned
     val picked = WordSiegeMascotBond(context).skinChoice
+    if (SonHarfCosmetics.throneChampion) return WordSiegeMascotSkin.GOLD_KING
     return picked?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } ?: WordSiegeMascotSkin.ORB
 }
 

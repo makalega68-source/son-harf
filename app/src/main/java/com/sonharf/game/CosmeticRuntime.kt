@@ -12,7 +12,20 @@ import com.sonharf.game.data.EquippedCosmeticsDto
 object SonHarfCosmetics {
     private const val PREFS = "son_harf_equipped_style_cache"
     var profileFrameId by mutableStateOf<String?>(null)
-    var nameStyleId by mutableStateOf<String?>(null)
+    private var equippedNameStyleId by mutableStateOf<String?>(null)
+    /** The signature in use: the throne owner's gold signature for the week, else the equipped one. */
+    var nameStyleId: String?
+        get() = if (throneChampion) THRONE_NAME_STYLE else equippedNameStyleId
+        set(value) { equippedNameStyleId = value }
+
+    /**
+     * End of the throne owner's reward week (epoch ms). Until then the owner wears the gold
+     * package: Altın Kral mascot, gold signature with the crown badge, gold keys and gold victory.
+     */
+    var throneUntil by mutableStateOf(0L)
+    val throneChampion: Boolean get() = System.currentTimeMillis() < throneUntil
+    const val THRONE_NAME_STYLE = "name_throne_gold"
+    const val THRONE_KEYBOARD = "keyboard_black_gold"
     var gameThemeId by mutableStateOf<String?>(null)
     var keyboardThemeId by mutableStateOf<String?>(null)
     var victoryEffectId by mutableStateOf<String?>(null)
@@ -27,7 +40,8 @@ object SonHarfCosmetics {
 
     /** The keyboard in use: a live rewarded one first, otherwise the equipped one. */
     val activeKeyboardId: String?
-        get() = rewardKeyboardId?.takeIf { System.currentTimeMillis() < rewardKeyboardUntil } ?: keyboardThemeId
+        get() = if (throneChampion) THRONE_KEYBOARD
+            else rewardKeyboardId?.takeIf { System.currentTimeMillis() < rewardKeyboardUntil } ?: keyboardThemeId
 
     /** The theme in use: a live rewarded one first, otherwise the equipped one. */
     val activeThemeId: String?
@@ -58,7 +72,7 @@ object SonHarfCosmetics {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString("profile_frame_id", profileFrameId)
             .putString("game_theme_id", gameThemeId)
-            .putString("name_style_id", nameStyleId)
+            .putString("name_style_id", equippedNameStyleId)
             .putString("keyboard_theme_id", keyboardThemeId)
             .putString("victory_effect_id", victoryEffectId)
             .putString("mascot_hat_id", mascotHatId)
@@ -81,6 +95,7 @@ object SonHarfCosmetics {
             "name_sapphire" -> Color(0xFF2E6FB7)
             "name_amethyst" -> Color(0xFF7D5CA8)
             "name_aurelia" -> Color(0xFF9C742D)
+            THRONE_NAME_STYLE -> Color(0xFFD9A431)
             else -> SonHarfText
         }
 
@@ -164,7 +179,7 @@ object SonHarfCosmetics {
     val monsterBlueTheme: Boolean get() = activeThemeId == "theme_monster_blue"
     // Retained only so older arena code compiles; Aurora is retired from sale.
     val auroraTheme: Boolean get() = activeThemeId == "theme_aurora"
-    val crownVictory: Boolean get() = victoryEffectId == "victory_crown"
+    val crownVictory: Boolean get() = victoryEffectId == "victory_crown" || throneChampion
     /** The hat Obi wears everywhere, bought with Son Coin. */
     internal val mascotHat: WordSiegeMascotHat get() = MascotHats.hatFor(mascotHatId)
 }
@@ -207,6 +222,12 @@ internal fun NameStyleEmblem(size: androidx.compose.ui.unit.Dp, styleId: String?
         "name_sapphire" -> R.drawable.store_art_name_sapphire
         "name_amethyst" -> R.drawable.store_art_name_amethyst
         "name_aurelia" -> R.drawable.store_art_name_aurelia
+        // The throne owner's crown badge beside the name, all week.
+        SonHarfCosmetics.THRONE_NAME_STYLE -> {
+            androidx.compose.material3.Text("👑", fontSize = (size.value * .72f).sp,
+                modifier = androidx.compose.ui.Modifier.size(size))
+            return
+        }
         else -> return
     }
     androidx.compose.foundation.Image(
@@ -223,7 +244,7 @@ internal fun premiumNameStyle(id: String?): androidx.compose.ui.text.TextStyle {
     fun system(name: String, style: Int = android.graphics.Typeface.BOLD) =
         androidx.compose.ui.text.font.FontFamily(android.graphics.Typeface.create(name, style))
     val family = when (id) {
-        "name_aurelia" -> system("serif")                                   // classic engraved serif
+        "name_aurelia", SonHarfCosmetics.THRONE_NAME_STYLE -> system("serif") // classic engraved serif
         "name_amethyst" -> system("cursive")                                // flowing script
         "name_sapphire" -> system("sans-serif-condensed")                   // tight athletic sans
         "name_cyan" -> system("sans-serif-smallcaps", android.graphics.Typeface.NORMAL) // small caps
@@ -235,8 +256,11 @@ internal fun premiumNameStyle(id: String?): androidx.compose.ui.text.TextStyle {
         letterSpacing = when (id) {
             "name_amethyst" -> 0.sp
             "name_cyan" -> 1.sp
-            "name_aurelia" -> .6.sp
+            "name_aurelia", SonHarfCosmetics.THRONE_NAME_STYLE -> .6.sp
             else -> .3.sp
         },
+        // Altın İmza: the throne owner's name glows gold.
+        shadow = if (id == SonHarfCosmetics.THRONE_NAME_STYLE)
+            androidx.compose.ui.graphics.Shadow(Color(0xCCFFC83C), blurRadius = 10f) else null,
     )
 }

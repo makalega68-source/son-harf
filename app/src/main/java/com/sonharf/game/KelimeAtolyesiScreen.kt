@@ -124,6 +124,7 @@ private object AtelierRecords {
 private fun atelierMascotSkin(context: android.content.Context): WordSiegeMascotSkin {
     val owned = WordSiegeMascotOwnership.owned
     val picked = WordSiegeMascotBond(context).skinChoice
+    if (SonHarfCosmetics.throneChampion) return WordSiegeMascotSkin.GOLD_KING
     return picked?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } ?: WordSiegeMascotSkin.ORB
 }
 

@@ -144,6 +144,7 @@ private fun WordSiegeMascotSkin.pitch(): String = when (this) {
     WordSiegeMascotSkin.CAT -> sh("Tembel, cilveli ve biraz kibirli. Uçan harfleri kovalar, kazanınca mırlar.", "Lazy, sassy and a bit proud. Chases flying letters, purrs when you win.")
     WordSiegeMascotSkin.ROBOT -> sh("Her şeyi hesaplar, istatistikle konuşur. Mutluluk modülü sende aşırı yüklenir.", "Calculates everything, speaks in stats. Its joy module overloads for you.")
     WordSiegeMascotSkin.ASTRONAUT -> sh("Hayalperest bir kâşif. Sıfır yerçekiminde takla atar, seni yıldızlara taşır.", "A dreamy explorer. Flips in zero gravity and takes you to the stars.")
+    WordSiegeMascotSkin.GOLD_KING -> sh("Maskotların kralı. Yalnızca taht sahibine bir hafta hizmet eder.", "King of mascots. Serves only the throne owner, for one week.")
 }
 
 /** One calm palette for the whole mascot catalogue, the same on every app theme. */
@@ -246,7 +247,7 @@ internal fun MascotStoreSection() {
             Text(notice, color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             }
         }
-        items(WordSiegeMascotSkin.entries, key = { it.id }) { skin ->
+        items(WordSiegeMascotSkin.entries.filter { it.listed }, key = { it.id }) { skin ->
             val owned = skin in WordSiegeMascotOwnership.owned
             MascotStoreCard(
                 skin = skin,

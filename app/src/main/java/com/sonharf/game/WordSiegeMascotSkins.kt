@@ -30,10 +30,15 @@ internal enum class WordSiegeMascotSkin(
     CAT("tekir", "Mino", "Mino", "Tekir kedi", "Tabby cat"),
     ROBOT("robot", "Bibo", "Bibo", "Robot", "Robot"),
     ASTRONAUT("astronot", "Novi", "Novi", "Astronot", "Astronaut"),
+    /** The throne owner's weekly reward; never sold and never listed in the store. */
+    GOLD_KING("altin_kral", "Altın Kral", "Golden King", "Maskotların kralı", "King of mascots"),
     ;
 
     /** Only Obi is sold for now; the others come later ("Yakında"). */
     val onSale: Boolean get() = this == ORB
+
+    /** Store and collection characters; the Golden King only comes with the throne. */
+    val listed: Boolean get() = this != GOLD_KING
 
     /** Google Play product and server entitlement key of this character. */
     val productId: String get() = "mascot_$id"
@@ -95,6 +100,7 @@ internal class WordSiegeMascotPalette(private val stops: FloatArray, private val
             WordSiegeMascotSkin.DEVIL_RED -> of(.1f, 0f to 0xFF12020A, .3f to 0xFF5C0718, .55f to 0xFFE0283A, .78f to 0xFFFF8D5E, 1f to 0xFFFFF0DE)
             WordSiegeMascotSkin.CAT -> of(.1f, 0f to 0xFF150802, .3f to 0xFF652806, .55f to 0xFFEA7A1C, .78f to 0xFFFFC46A, 1f to 0xFFFFFAF0)
             WordSiegeMascotSkin.ROBOT -> of(.35f, 0f to 0xFF05070C, .3f to 0xFF263140, .55f to 0xFF7A8CA4, .78f to 0xFFCFDBE8, 1f to 0xFFFFFFFF)
+            WordSiegeMascotSkin.GOLD_KING -> of(.12f, 0f to 0xFF1A0F02, .3f to 0xFF6B4A0A, .55f to 0xFFE0A82E, .78f to 0xFFFFD86A, 1f to 0xFFFFF8E0)
         }
     }
 }
@@ -128,6 +134,7 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
         WordSiegeMascotSkin.CAT -> intArrayOf(0xFFFFF6E8.toInt(), 0xFFE0B27A.toInt())
         WordSiegeMascotSkin.ROBOT -> intArrayOf(0xFFF4F7FB.toInt(), 0xFF6D7A8C.toInt())
         WordSiegeMascotSkin.ASTRONAUT -> intArrayOf(0xFFFFFFFF.toInt(), 0xFFB8C6D8.toInt())
+        WordSiegeMascotSkin.GOLD_KING -> intArrayOf(0xFFFFF3C4.toInt(), 0xFFC8962F.toInt())
     }
     val pawPads = skin == WordSiegeMascotSkin.CAT
 
@@ -186,6 +193,12 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
                 wingColors = intArrayOf(0xE6A8F4FF.toInt(), 0xB39A7CFF.toInt())
                 target = tuft; magicTuft(0xFF56B8F7, 0xFFFFFFFF, 0xF2A0E6FF, 0xFF16305A)
                 target = front; helmet()
+            }
+            WordSiegeMascotSkin.GOLD_KING -> {
+                ringColors = intArrayOf(0xFFFFF3C4.toInt(), 0xFFFFD86A.toInt(), 0xFFC8962F.toInt(), 0xFFFFE7A3.toInt(), 0xFFFFF3C4.toInt())
+                wingColors = intArrayOf(0xF2FFE7A3.toInt(), 0xCCE0A82E.toInt())
+                target = behind; cape()
+                target = front; kingCrown()
             }
         }
     }
@@ -508,6 +521,91 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
         arc(500f, 1.40, 1.48, 12f, 0xB3FFFFFF)
         arc(510f, .10, .30, 10f, 0x59FFFFFF)
         glint(980f, 300f, 24f, .85f)
+    }
+
+    private fun gold(y0: Float, y1: Float) =
+        lin(0f, y0, 0f, y1, 0f to 0xFFFFF6C8, .35f to 0xFFFFD86A, .7f to 0xFFE0A82E, 1f to 0xFF9C6A12)
+
+    private fun gem(cx: Float, cy: Float, rx: Float, ry: Float, light: Long, mid: Long, dark: Long, glow: Long) {
+        add(Path().apply { addOval(RectF(cx - rx, cy - ry, cx + rx, cy + ry), Path.Direction.CW) },
+            fill(rad(cx - rx * .3f, cy - ry * .35f, maxOf(rx, ry) * 1.2f, 0f to light, .4f to mid, 1f to dark), glow = glow),
+            line(0xFF5A3A04, 5f))
+        glint(cx - rx * .3f, cy - ry * .35f, minOf(rx, ry) * .42f, .95f)
+    }
+
+    /** Petrol royal cape that falls behind the orb, trimmed with a gold hem. */
+    private fun cape() {
+        resetMatrix()
+        val body = Path().apply {
+            moveTo(360f, 760f)
+            cubicTo(280f, 900f, 210f, 1040f, 180f, 1180f)
+            quadTo(270f, 1150f, 350f, 1196f)
+            quadTo(440f, 1160f, 520f, 1204f)
+            quadTo(610f, 1166f, 660f, 1208f)
+            quadTo(710f, 1166f, 800f, 1204f)
+            quadTo(880f, 1160f, 970f, 1196f)
+            quadTo(1050f, 1150f, 1140f, 1180f)
+            cubicTo(1110f, 1040f, 1040f, 900f, 960f, 760f)
+            close()
+        }
+        add(body, fill(lin(0f, 760f, 0f, 1200f, 0f to 0xFF1E7F86, .55f to 0xFF175D6E, 1f to 0xFF0C3540), shadow = true), line(0xFF0A2730, 8f))
+        val hem = Path().apply {
+            moveTo(180f, 1180f)
+            quadTo(270f, 1150f, 350f, 1196f)
+            quadTo(440f, 1160f, 520f, 1204f)
+            quadTo(610f, 1166f, 660f, 1208f)
+            quadTo(710f, 1166f, 800f, 1204f)
+            quadTo(880f, 1160f, 970f, 1196f)
+            quadTo(1050f, 1150f, 1140f, 1180f)
+        }
+        add(hem, null, line(0xFFFFD86A, 18f))
+        add(cubic(360f, 760f, 280f, 900f, 210f, 1040f, 180f, 1180f), null, line(0xFFE0A82E, 12f))
+        add(cubic(960f, 760f, 1040f, 900f, 1110f, 1040f, 1140f, 1180f), null, line(0xFFE0A82E, 12f))
+        streak(floatArrayOf(300f, 960f, 270f, 1030f, 250f, 1090f, 240f, 1140f), 10f, .35f)
+    }
+
+    /** The king's jewelled gold crown: five spires, a ruby at the heart and teal stones, tilted a little. */
+    private fun kingCrown() {
+        resetMatrix()
+        m.preTranslate(660f, 228f)
+        m.preRotate(-8f)
+        val spires = Path().apply {
+            moveTo(-178f, 30f)
+            lineTo(-205f, -118f)
+            lineTo(-140f, -48f)
+            lineTo(-100f, -168f)
+            lineTo(-46f, -62f)
+            lineTo(0f, -214f)
+            lineTo(46f, -62f)
+            lineTo(100f, -168f)
+            lineTo(140f, -48f)
+            lineTo(205f, -118f)
+            lineTo(178f, 30f)
+            close()
+        }
+        add(spires, fill(gold(-214f, 40f), glow = 0xB3FFC83C), line(0xFF5A3A04, 9f))
+        streak(floatArrayOf(-150f, -10f, -120f, -60f, -100f, -110f, -96f, -150f), 9f, .7f)
+        streak(floatArrayOf(-14f, -40f, -12f, -110f, -6f, -160f, -2f, -196f), 9f, .7f)
+        val band = Path().apply { addRoundRect(RectF(-196f, -14f, 196f, 62f), 22f, 22f, Path.Direction.CW) }
+        add(band, fill(lin(0f, -14f, 0f, 62f, 0f to 0xFFFFE7A3, .45f to 0xFFE0A82E, 1f to 0xFF8C5E0E), shadow = true), line(0xFF5A3A04, 9f))
+        add(Path().apply { moveTo(-180f, 4f); lineTo(180f, 4f) }, null, line(0xCCFFF8E0, 6f))
+        for ((x, y) in listOf(-205f to -118f, -100f to -168f, 0f to -214f, 100f to -168f, 205f to -118f)) {
+            add(Path().apply { addCircle(x, y, 17f, Path.Direction.CW) },
+                fill(rad(x - 6f, y - 6f, 22f, 0f to 0xFFFFFFFF, .5f to 0xFFFFE7A3, 1f to 0xFFC8962F)), line(0xFF5A3A04, 5f))
+        }
+        val ruby = longArrayOf(0xFFFFD6D6, 0xFFE0283A, 0xFF6E0410, 0xCCFF3046)
+        val teal = longArrayOf(0xFFE0FFFB, 0xFF2FD3C8, 0xFF0B5E66, 0xCC40F0E0)
+        gem(0f, 24f, 32f, 27f, ruby[0], ruby[1], ruby[2], ruby[3])
+        for (s in floatArrayOf(-1f, 1f)) {
+            gem(s * 98f, 24f, 22f, 20f, teal[0], teal[1], teal[2], teal[3])
+            gem(s * 160f, 24f, 13f, 13f, ruby[0], ruby[1], ruby[2], ruby[3])
+        }
+        gem(0f, -110f, 20f, 26f, teal[0], teal[1], teal[2], teal[3])
+        for (s in floatArrayOf(-1f, 1f)) gem(s * 100f, -96f, 12f, 15f, ruby[0], ruby[1], ruby[2], ruby[3])
+        glint(-60f, -150f, 22f, .95f, 0xE6FFE07A)
+        glint(150f, -200f, 16f, .9f, 0xE6FFE07A)
+        glint(230f, -40f, 12f, .85f, 0xE6FFE07A)
+        glint(-240f, -10f, 10f, .8f, 0xE6FFE07A)
     }
 
     private fun bow() {

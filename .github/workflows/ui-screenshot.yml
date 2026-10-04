@@ -111,6 +111,10 @@ jobs:
             timeout 60s adb exec-out screencap -p > Mascot-face-Android.png
             sleep 2
             timeout 60s adb exec-out screencap -p > Mascot-face-second-Android.png
+            adb shell am force-stop com.sonharf.game
+            adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage gold-king
+            sleep 6
+            timeout 60s adb exec-out screencap -p > Mascot-gold-king-Android.png
             python3 scripts/verify_home_menu.py
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage controls-dark

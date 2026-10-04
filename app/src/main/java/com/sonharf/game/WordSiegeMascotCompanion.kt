@@ -637,7 +637,9 @@ internal fun WordSiegeMascotCompanion(
 ) {
     if (anchors.isEmpty()) return
     val ownedSkins = WordSiegeMascotOwnership.owned
-    if (requireOwnership && ownedSkins.isEmpty()) return
+    // The throne owner is served by the Altın Kral for the week, mascot bought or not.
+    val throneKing = SonHarfCosmetics.throneChampion
+    if (requireOwnership && ownedSkins.isEmpty() && !throneKing) return
     val context = LocalContext.current
     val bond = remember { WordSiegeMascotBond(context) }
     val mind = remember { WordSiegeMascotMind() }
@@ -710,6 +712,8 @@ internal fun WordSiegeMascotCompanion(
     // A win earns a party hat (or the purchased victory crown) for the rest of the screen;
     // otherwise Obi wears the hat bought for it in the store (if any).
     val hat = when {
+        // The king's own jewelled crown never shares the head with a hat.
+        throneKing && forcedSkin == null -> WordSiegeMascotHat.NONE
         outcome != WordSiegeMascotOutcome.WIN -> SonHarfCosmetics.mascotHat
         SonHarfCosmetics.crownVictory -> WordSiegeMascotHat.CROWN
         else -> WordSiegeMascotHat.PARTY
@@ -726,6 +730,7 @@ internal fun WordSiegeMascotCompanion(
     }
     // Only characters the player owns can appear.
     val skin = forcedSkin ?: when {
+        throneKing -> WordSiegeMascotSkin.GOLD_KING
         !requireOwnership || preferred in ownedSkins -> preferred
         else -> ownedSkins.minBy { it.ordinal }
     }
@@ -1634,7 +1639,7 @@ internal fun WordSiegeMascotPicker(
                         repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
-                if (owned.size < WordSiegeMascotSkin.entries.size) {
+                if (owned.size < WordSiegeMascotSkin.entries.count { it.listed }) {
                     Text(
                         sh("Yeni arkadaşlar Mağaza › Maskotlar bölümünde ✨", "Find new friends in Shop › Mascots ✨"),
                         fontSize = 11.sp,

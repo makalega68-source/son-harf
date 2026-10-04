@@ -31,7 +31,37 @@ internal class WordSiegeMascotPersonality(
             WordSiegeMascotSkin.CAT -> MIRNAV
             WordSiegeMascotSkin.ROBOT -> BIPBOP
             WordSiegeMascotSkin.ASTRONAUT -> NOVA
+            WordSiegeMascotSkin.GOLD_KING -> KING
         }
+
+        /** Altın Kral: the throne owner's regal, generous companion for one week. */
+        private val KING = WordSiegeMascotPersonality(
+            chattiness = 1.05f,
+            playfulness = 1f,
+            idleBias = mapOf(
+                WordSiegeMascotIdle.SPARKLE to 2.4f,
+                WordSiegeMascotIdle.WAVE to 1.6f,
+                WordSiegeMascotIdle.NOD to 1.4f,
+                WordSiegeMascotIdle.SWAY to 1.3f,
+            ),
+            lines = mapOf(
+                WordSiegeMascotTopic.GREET_FIRST to listOf(
+                    "Selam hükümdarım! Ben Altın Kral, bu hafta senin hizmetindeyim. 👑" to "Greetings, my ruler! I'm the Golden King, at your service this week. 👑",
+                    "Taht senin %s! Altın Kral yanında. ✨" to "The throne is yours, %s! The Golden King is beside you. ✨",
+                ),
+                WordSiegeMascotTopic.HELLO to listOf(
+                    "Tacım parlıyor, hükümdarım! 👑" to "My crown is shining, my ruler! 👑",
+                    "Krallığına hoş geldin! ✨" to "Welcome to your kingdom! ✨",
+                ),
+                WordSiegeMascotTopic.PRAISE to listOf(
+                    "Hükümdara yakışır bir kelime! 👑" to "A word fit for a ruler! 👑",
+                    "Altın gibi hamle! ✨" to "A golden move! ✨",
+                ),
+                WordSiegeMascotTopic.WIN to listOf(
+                    "Taht senin, zafer de! 👑✨" to "The throne is yours, and so is victory! 👑✨",
+                ),
+            ),
+        )
 
         /** Obi: the warm, loyal coach. The shared lines are written in his voice. */
         private val OBI = WordSiegeMascotPersonality(
