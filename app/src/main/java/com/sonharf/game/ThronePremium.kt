@@ -142,10 +142,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.sparkleStar(c: Offs
     val w = arm * .22f
     val path = androidx.compose.ui.graphics.Path().apply {
         moveTo(c.x, c.y - arm)
-        quadTo(c.x + w, c.y - w, c.x + arm, c.y)
-        quadTo(c.x + w, c.y + w, c.x, c.y + arm)
-        quadTo(c.x - w, c.y + w, c.x - arm, c.y)
-        quadTo(c.x - w, c.y - w, c.x, c.y - arm)
+        quadraticTo(c.x + w, c.y - w, c.x + arm, c.y)
+        quadraticTo(c.x + w, c.y + w, c.x, c.y + arm)
+        quadraticTo(c.x - w, c.y + w, c.x - arm, c.y)
+        quadraticTo(c.x - w, c.y - w, c.x, c.y - arm)
         close()
     }
     drawCircle(color.copy(alpha = color.alpha * .35f), arm * .9f, c)
