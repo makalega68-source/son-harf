@@ -698,17 +698,35 @@ private fun practiceCellThreatened(board: List<WordSiegeCellDto>, index: Int, ow
     }
 }
 
-internal fun practiceLetterValue(letter: String): String = when (letter) {
-    "A", "E", "İ", "K", "L", "N", "R", "T" -> "1"
-    "I", "M", "O", "S", "U" -> "2"
-    "B", "D", "Ü", "Y" -> "3"
-    "C", "Ç", "Ş", "Z" -> "4"
-    "G", "H", "P" -> "5"
-    "F", "Ö", "V" -> "7"
-    "Ğ" -> "8"
-    "J" -> "10"
-    else -> "1"
-}
+/** The value shown on a tile, in the language of the game being played. */
+internal fun practiceLetterValue(letter: String): String =
+    wordSiegeLetterValue(letter, SonHarfUiState.language).toString()
+
+/**
+ * Siege letter values, identical to the server's private.word_siege_letter_value_v1:
+ * the Turkish table, and the English one for English games.
+ */
+internal fun wordSiegeLetterValue(letter: String, language: String): Int =
+    if (SharedDictionaryService.canonicalLanguage(language) == "en") when (letter.uppercase(java.util.Locale.ROOT)) {
+        "A", "E", "I", "L", "N", "O", "R", "S", "T", "U" -> 1
+        "D", "G" -> 2
+        "B", "C", "M", "P" -> 3
+        "F", "H", "V", "W", "Y" -> 4
+        "K" -> 5
+        "J", "X" -> 8
+        "Q", "Z" -> 10
+        else -> 1
+    } else when (letter.uppercase(java.util.Locale.forLanguageTag("tr-TR"))) {
+        "A", "E", "İ", "K", "L", "N", "R", "T" -> 1
+        "I", "M", "O", "S", "U" -> 2
+        "B", "D", "Ü", "Y" -> 3
+        "C", "Ç", "Ş", "Z" -> 4
+        "G", "H", "P" -> 5
+        "F", "Ö", "V" -> 7
+        "Ğ" -> 8
+        "J" -> 10
+        else -> 1
+    }
 
 /** The most valuable empty bonus square that touches an existing letter, if any. */
 private fun practiceBonusHint(board: List<WordSiegeCellDto>): Int? {

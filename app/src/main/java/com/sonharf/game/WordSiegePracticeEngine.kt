@@ -129,7 +129,7 @@ internal object WordSiegePracticeEngine {
             }
             words += word
             if (primary == null) primary = word
-            score += scoreWord(state.board, placements, rack, cells)
+            score += scoreWord(state.board, placements, rack, cells, state.language)
             cells.forEach { index ->
                 val cell = board[index]
                 if (cell.letter != null && cell.owner !in setOf(0, owner) && captured.add(index)) {
@@ -427,7 +427,11 @@ internal object WordSiegePracticeEngine {
      * star bonus), computed with the same rules as a real move but without a dictionary check or
      * any change to the game. Null when the tiles do not yet form a straight, gap-free word.
      */
-    fun previewScore(board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>): Int? {
+    fun previewScore(board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>): Int? =
+        previewScore(board, rack, placements, SonHarfUiState.language)
+
+    /** [previewScore] with the letter values of [language] (the game's, not the menu's). */
+    fun previewScore(board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>, language: String): Int? {
         if (placements.isEmpty()) return null
         if (placements.keys.any { !WordSiegeBoardSpec.isValidIndex(it) || board.getOrNull(it)?.letter != null }) return null
         if (placements.values.any { it !in rack.indices }) return null
@@ -444,13 +448,13 @@ internal object WordSiegePracticeEngine {
         var score = 0
         var words = 0
         if (mainCells.size > 1) {
-            score += scoreWord(board, placements, rack, mainCells)
+            score += scoreWord(board, placements, rack, mainCells, language)
             words++
         }
         indices.forEach { index ->
             val cross = collectCells(index, if (horizontal) WordSiegeBoardSpec.VerticalDelta else WordSiegeBoardSpec.HorizontalDelta, ::letterAt)
             if (cross.size > 1) {
-                score += scoreWord(board, placements, rack, cross)
+                score += scoreWord(board, placements, rack, cross, language)
                 words++
             }
         }
@@ -487,13 +491,14 @@ internal object WordSiegePracticeEngine {
         placements: Map<Int, Int>,
         rack: String,
         cells: List<Int>,
+        language: String,
     ): Int {
         var total = 0
         var multiplier = 1
         cells.forEach { index ->
             val cell = board[index]
             val letter = placements[index]?.let(rack::getOrNull)?.toString() ?: cell.letter.orEmpty()
-            var value = letterValue(letter)
+            var value = wordSiegeLetterValue(letter, language)
             val bonus = if (cell.letter == null && !cell.bonusUsed) cell.bonus else null
             if (bonus == "2H") value *= 2
             if (bonus == "3H") value *= 3
@@ -563,18 +568,6 @@ internal object WordSiegePracticeEngine {
     private fun requireActiveTurn(state: WordSiegePracticeState, owner: Int) {
         if (state.status != "playing") fail("word_siege_not_playing")
         if (state.currentOwner != owner) fail("word_siege_not_your_turn")
-    }
-
-    private fun letterValue(letter: String): Int = when (letter.uppercase(Locale.forLanguageTag("tr-TR"))) {
-        "A", "E", "İ", "K", "L", "N", "R", "T" -> 1
-        "I", "M", "O", "S", "U" -> 2
-        "B", "D", "Ü", "Y" -> 3
-        "C", "Ç", "Ş", "Z" -> 4
-        "G", "H", "P" -> 5
-        "F", "Ö", "V" -> 7
-        "Ğ" -> 8
-        "J" -> 10
-        else -> 1
     }
 
     private fun other(owner: Int): Int = if (owner == 1) 2 else 1

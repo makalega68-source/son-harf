@@ -1353,6 +1353,13 @@ private fun PremierArena(
     // ones, then banked (rewarded video) hints, then Son Coin. Against a real opponent a hint is
     // only a strategy tip (fair play), so it is free and never spends banked or bought hints.
     val hintContext = androidx.compose.ui.platform.LocalContext.current
+    // The hint words come from the bundled dictionary: load it off the main thread before the
+    // first hint so asking for one never stalls a turn.
+    LaunchedEffect(room.language) {
+        if (room.isBot) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { com.sonharf.game.data.SharedDictionaryService.restorePersisted(hintContext, room.language) }
+        }
+    }
     // Used, not left: ownership that loads after the match started still grants its free hints.
     var freeHintsUsed by remember(room.id) { mutableIntStateOf(0) }
     val hintsLeft = MascotHints.freeHintsLeft(realOpponent = !room.isBot, used = freeHintsUsed)

@@ -73,6 +73,9 @@ internal object MascotHints {
     /** A hint for the next word starting with [prefix] (Son Harf against a bot). */
     fun startWord(context: Context, language: String, prefix: String, exclude: Set<String>): String {
         val lang = SharedDictionaryService.canonicalLanguage(language)
+        // English has no everyday list: its hints come from the bundled dictionary, which a game
+        // screen may not have loaded yet (Son Harf validates on the server), so load it here.
+        if (!SharedDictionaryService.hasSnapshot(lang)) SharedDictionaryService.restorePersisted(context, lang)
         val word = pickWord(prefix, common(context, lang), SharedDictionaryService.snapshot(lang).orEmpty(), exclude)
             ?: return sh("Bu harfle zor bir kelime… kısa ve bildik bir şey dene!", "A tricky letter… try something short and familiar!")
         // A hint is a clear answer: the whole word, ready to type.

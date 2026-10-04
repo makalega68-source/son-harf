@@ -78,7 +78,9 @@ private fun WordSiegePracticeContent(
     val me = remember(backend) { backend?.currentUserId() }
     var playerProfile by remember { mutableStateOf<ProfileDto?>(null) }
     var botProfile by remember { mutableStateOf(WordSiegePracticeBots.random()) }
-    var state by remember { mutableStateOf(WordSiegePracticeEngine.newGame()) }
+    // The practice plays in the language the game was opened in (the shell sets it on launch):
+    // an English game gets the English bag, dictionary and AI, not the Turkish defaults.
+    var state by remember { mutableStateOf(WordSiegePracticeEngine.newGame(SonHarfUiState.language)) }
     val context = LocalContext.current.applicationContext
     var dictionaryReady by remember { mutableStateOf(SharedDictionaryService.hasSnapshot(state.language)) }
     var dictionaryLoading by remember { mutableStateOf(false) }
