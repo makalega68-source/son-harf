@@ -36,7 +36,7 @@ class WordSiegeStar4KContractTest {
         assertFalse(screen.contains("MAIN DICTIONARY"))
         assertTrue(screen.contains("merkezden"))
         assertTrue(screen.contains("Starting Seal"))
-        assertTrue(board.contains("highlightAlpha.animateTo(0.42f"))
+        assertTrue(board.contains("highlightAlpha.animateTo(WORD_SIEGE_LAST_MOVE_REST_ALPHA"))
         assertTrue(board.contains("PracticeZoneCrown"))
         assertTrue(board.contains("PracticeZoneReward"))
         assertTrue(board.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)"))

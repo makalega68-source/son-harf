@@ -1203,6 +1203,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         // The tuft is attached at the crown. Only its own small pivot sway may lag;
         // its root must share the body's exact transform on every frame.
         decor.drawFront(canvas)
+        decor.drawAura(canvas, now)
         // A worn hat covers the head top: no tuft and no antenna under it.
         if (hat != WordSiegeMascotHat.NONE) {
             drawHat(canvas, now)
@@ -2096,6 +2097,9 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         // Sits a little into the rim so the whole hat stays inside the view.
         canvas.translate(0f, 28f)
         canvas.rotate(-14f + sin(now / 700f) * 2f, 560f, 250f)
+        // Hats are worn a size larger: grown around a point high on the head, so the brim settles
+        // a little lower on the head while the tip stays inside the view.
+        canvas.scale(HAT_SCALE, HAT_SCALE, 560f, 120f)
         if (boughtHats.draws(hat)) {
             // Store hats and the victory crown: the very image the shop sells.
             boughtHats.draw(canvas, hat, now)
@@ -2227,6 +2231,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         const val LEFT_EYE_X = 510f
         const val RIGHT_EYE_X = 890f
         const val EYE_Y = 650f
+        const val HAT_SCALE = 1.2f
         const val LEFT_IRIS_X = 544f
         const val RIGHT_IRIS_X = 859f
         const val IRIS_Y = 662f

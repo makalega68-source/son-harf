@@ -35,6 +35,8 @@ internal const val WORD_SIEGE_PRACTICE_MAX_SCALE = 1.24f
 internal const val WORD_SIEGE_LAST_MOVE_ENTER_MS = 180
 internal const val WORD_SIEGE_LAST_MOVE_HOLD_MS = 1_200
 internal const val WORD_SIEGE_LAST_MOVE_EXIT_MS = 200
+/** The last word stays clearly marked after its flash, until the next move. */
+internal const val WORD_SIEGE_LAST_MOVE_REST_ALPHA = .8f
 
 internal fun WordSiegeBoardViewportMode.toggle(): WordSiegeBoardViewportMode =
     if (this == WordSiegeBoardViewportMode.CLOSE) WordSiegeBoardViewportMode.FIT

@@ -100,7 +100,8 @@ internal class WordSiegeMascotPalette(private val stops: FloatArray, private val
             WordSiegeMascotSkin.DEVIL_RED -> of(.1f, 0f to 0xFF12020A, .3f to 0xFF5C0718, .55f to 0xFFE0283A, .78f to 0xFFFF8D5E, 1f to 0xFFFFF0DE)
             WordSiegeMascotSkin.CAT -> of(.1f, 0f to 0xFF150802, .3f to 0xFF652806, .55f to 0xFFEA7A1C, .78f to 0xFFFFC46A, 1f to 0xFFFFFAF0)
             WordSiegeMascotSkin.ROBOT -> of(.35f, 0f to 0xFF05070C, .3f to 0xFF263140, .55f to 0xFF7A8CA4, .78f to 0xFFCFDBE8, 1f to 0xFFFFFFFF)
-            WordSiegeMascotSkin.GOLD_KING -> of(.12f, 0f to 0xFF1A0F02, .3f to 0xFF6B4A0A, .55f to 0xFFE0A82E, .78f to 0xFFFFD86A, 1f to 0xFFFFF8E0)
+            // Bright liquid gold even in the orb's dark glass: the darkest tones map to warm amber, not brown-black.
+            WordSiegeMascotSkin.GOLD_KING -> of(.06f, 0f to 0xFF8A5A0C, .22f to 0xFFC98A1E, .45f to 0xFFF2BE3E, .7f to 0xFFFFE07A, 1f to 0xFFFFFCEB)
         }
     }
 }
@@ -197,7 +198,7 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
             WordSiegeMascotSkin.GOLD_KING -> {
                 ringColors = intArrayOf(0xFFFFF3C4.toInt(), 0xFFFFD86A.toInt(), 0xFFC8962F.toInt(), 0xFFFFE7A3.toInt(), 0xFFFFF3C4.toInt())
                 wingColors = intArrayOf(0xF2FFE7A3.toInt(), 0xCCE0A82E.toInt())
-                target = behind; cape()
+                target = behind; kingHalo(); cape()
                 target = front; kingCrown()
             }
         }
@@ -531,6 +532,55 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
             fill(rad(cx - rx * .3f, cy - ry * .35f, maxOf(rx, ry) * 1.2f, 0f to light, .4f to mid, 1f to dark), glow = glow),
             line(0xFF5A3A04, 5f))
         glint(cx - rx * .3f, cy - ry * .35f, minOf(rx, ry) * .42f, .95f)
+    }
+
+    /** A warm gold glow and sun rays behind the king. */
+    private fun kingHalo() {
+        resetMatrix()
+        add(Path().apply { addCircle(660f, 641f, 585f, Path.Direction.CW) },
+            fill(rad(660f, 641f, 585f, 0f to 0x00FFD86AL, .62f to 0x55FFD86AL, .8f to 0x40FFC83CL, 1f to 0x00FFC83CL)), null)
+        for (k in 0 until 16) {
+            val a = k * PI / 8.0
+            val w = if (k % 2 == 0) .055 else .03
+            val r0 = 470f
+            val r1 = if (k % 2 == 0) 590f else 540f
+            val ray = Path().apply {
+                moveTo(660f + (cos(a - w) * r0).toFloat(), 641f + (sin(a - w) * r0).toFloat())
+                lineTo(660f + (cos(a) * r1).toFloat(), 641f + (sin(a) * r1).toFloat())
+                lineTo(660f + (cos(a + w) * r0).toFloat(), 641f + (sin(a + w) * r0).toFloat())
+                close()
+            }
+            add(ray, fill(rad(660f, 641f, r1, 0f to 0x00FFF3C4L, .75f to 0xAAFFE07AL, 1f to 0x00FFE07AL)), null)
+        }
+    }
+
+    /** Twinkling stars around the king, redrawn every frame (Golden King only). */
+    private val auraPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { setShadowLayer(18f, 0f, 0f, 0xE6FFD86A.toInt()) }
+    private val auraPath = Path()
+
+    fun drawAura(canvas: Canvas, now: Long) {
+        if (skin != WordSiegeMascotSkin.GOLD_KING) return
+        for (k in 0 until 9) {
+            val seed = k * .618034f
+            val phase = ((now / 1600f) + seed) % 1f
+            val twinkle = sin(phase * PI).toFloat().let { it * it }
+            val a = seed * 2f * PI.toFloat() * 3f + now / 9000f * (if (k % 2 == 0) 1f else -1f)
+            val r = 470f + (k % 3) * 45f
+            val cx = 660f + cos(a) * r
+            val cy = 641f + sin(a) * r * .92f
+            val arm = (22f + (k % 3) * 12f) * (.35f + .65f * twinkle)
+            val w = arm * .2f
+            auraPath.rewind()
+            auraPath.moveTo(cx, cy - arm)
+            auraPath.quadTo(cx + w, cy - w, cx + arm, cy)
+            auraPath.quadTo(cx + w, cy + w, cx, cy + arm)
+            auraPath.quadTo(cx - w, cy + w, cx - arm, cy)
+            auraPath.quadTo(cx - w, cy - w, cx, cy - arm)
+            auraPath.close()
+            auraPaint.color = if (k % 3 == 0) 0xFFFFFFFF.toInt() else 0xFFFFE07A.toInt()
+            auraPaint.alpha = (90 + 165 * twinkle).toInt()
+            canvas.drawPath(auraPath, auraPaint)
+        }
     }
 
     /** Petrol royal cape that falls behind the orb, trimmed with a gold hem. */

@@ -19,7 +19,7 @@ class AtelierCompetitionContractTest {
         assertTrue(screen.contains("AtelierCompetitionBackend.startDaily(language, roundSeconds)"))
         assertTrue(screen.contains("AtelierCompetitionBackend.finishDaily(language, finishedDuration, finished.score, finished.words.size, finished.completedTasks)"))
         assertTrue(screen.contains("if (mode == AtelierMode.DAILY) AtelierRivalStrip(raceBoard, current.score)"))
-        assertTrue(comp.contains("sh(\"Yarışa Başla\", \"Start the Race\")"))
+        assertTrue(comp.contains("sh(\"Günlük Yarışa Başla\", \"Start the Daily Race\")"))
         assertTrue(comp.contains("sh(\"Serbest Antrenman\", \"Free Practice\")"))
         listOf("start_atelier_daily_v2", "finish_atelier_daily_v2", "get_atelier_board_v2").forEach {
             assertTrue(backend.contains("\"$it\""))

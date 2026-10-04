@@ -11,7 +11,7 @@ class WordSiegeOnlineBoardVisualContractTest {
         assertTrue(source.contains("PanSiegeBonus4K"))
         assertTrue(source.contains("PanSiegeBonusStar"))
         assertTrue(source.contains("WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)"))
-        assertTrue(source.contains("highlightAlpha.animateTo(0.42f"))
+        assertTrue(source.contains("highlightAlpha.animateTo(WORD_SIEGE_LAST_MOVE_REST_ALPHA"))
         assertTrue(source.contains("padding(horizontal = 6.dp, vertical = 4.dp)"))
     }
 

@@ -167,36 +167,42 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
    HfGameArt(R.drawable.kelime_atolyesi_game_icon,68.dp,68.dp,description=null)
    Column(Modifier.weight(1f)){EventTag(if(event?.active==true)sh("CANLI TURNUVA","LIVE TOURNAMENT")else sh("KELİME ARENASI","WORD ARENA"));Text(sh("Üç aşama. Tek kürsü.","Three stages. One podium."),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Black)}
   }
-  if(event?.active==true) {
-   Text(sh("${event.stage}. aşama · ×${event.multiplier} XP","Stage ${event.stage} · ×${event.multiplier} XP"),color=EventGold,fontWeight=FontWeight.Black)
+  val waiting=event?.active!=true
+  // The clock and the one button that matters sit together at the top of the card.
+  if(!waiting) {
+   Text(sh("${event!!.stage}. aşama · ×${event.multiplier} XP · bitişe","Stage ${event!!.stage} · ×${event.multiplier} XP · ends in"),color=EventGold,fontWeight=FontWeight.Black)
    EventCountdown(if(now==0L)"—:—:—"else tournamentClockText(tournamentTimeMillis(event.stageEnds),now))
   } else {
    Text(sh("SIRADAKİ TURNUVAYA","NEXT TOURNAMENT IN"),color=Color.White.copy(alpha=.85f),fontSize=10.sp,fontWeight=FontWeight.Bold)
    EventCountdown(if(now==0L)"—:—:—"else tournamentClockText(tournamentTimeMillis(event?.nextStart.orEmpty()),now))
   }
+  // One tap is enough: "Hazırım" joins automatically when the next tournament opens, and once in,
+  // every next stage starts by itself. A missed tournament offers the next one instead of a dead button.
+  val missed=!waiting&&!already&&!previous
+  EventAction(when {
+   busy->sh("HAZIRLANIYOR…","PREPARING…")
+   (waiting||missed)&&ready->sh("HAZIRSIN ✓ · BAŞLAYINCA OTOMATİK GİRİLECEK","READY ✓ · YOU JOIN AUTOMATICALLY")
+   waiting->sh("HAZIRIM · BAŞLAYINCA BENİ AL","I'M READY · JOIN ME AT THE START")
+   missed->sh("SIRADAKİ TURNUVAYA HAZIRIM","READY FOR THE NEXT TOURNAMENT")
+   already->sh("AŞAMA TAMAM · SONRAKİ OTOMATİK GELECEK","STAGE DONE · NEXT ONE STARTS BY ITSELF")
+   !canJoin->sh("BU AŞAMANIN GİRİŞİ KAPANDI","STAGE ENTRY CLOSED")
+   else->sh("TURNUVAYA BAŞLA","START THE TOURNAMENT")
+  },{ if(waiting||missed) onReady?.invoke() else onJoin() },(canJoin||((waiting||missed)&&onReady!=null&&!ready))&&!busy)
+  if(missed) Text(sh("Bu turnuva 1. aşamadan başladı. Sıradaki turnuvada otomatik olarak yarışa alınırsın.","This one began at stage 1. You'll be entered automatically in the next one."),
+   color=Color.White.copy(alpha=.8f),fontSize=11.sp,lineHeight=15.sp)
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
    listOf(sh("HAZIRLIK","WARM-UP"),sh("YARI FİNAL","SEMIFINAL"),sh("FİNAL","FINAL")).forEachIndexed{i,label->
     val done=event?.myStages?.any{it.stage==i+1&&it.finished}==true
-    Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(if(done)EventGold else Color.White.copy(alpha=.1f)).padding(vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-     Icon(if(done)Icons.Rounded.CheckCircle else if(i==2)Icons.Rounded.EmojiEvents else Icons.Rounded.Flag,null,tint=if(done)EventInk else EventGold,modifier=Modifier.size(24.dp))
+    val current=event?.active==true&&event.stage==i+1
+    Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(if(done)EventGold else if(current)Color.White.copy(alpha=.22f) else Color.White.copy(alpha=.1f)).padding(vertical=7.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+     Icon(if(done)Icons.Rounded.CheckCircle else if(i==2)Icons.Rounded.EmojiEvents else Icons.Rounded.Flag,null,tint=if(done)EventInk else EventGold,modifier=Modifier.size(20.dp))
      Text(label,color=if(done)EventInk else Color.White,fontWeight=FontWeight.Black,fontSize=8.sp,maxLines=1)
      Text(sh("${i+1} DK","${i+1} MIN"),color=if(done)EventInk else EventGold,fontSize=11.sp,fontWeight=FontWeight.Bold)
     }
    }
   }
-  Text(sh("30 dakikalık yarış · Her aşama 10 dakika açık. Önceki aşamayı tamamla, finale ilerle. En çok aşama ve puan kürsüyü belirler.","30-minute race · Each stage opens for 10 minutes. Complete each stage to advance. Completed stages and score decide the podium."),color=Color.White.copy(alpha=.85f),fontSize=11.sp,lineHeight=16.sp)
-  // One tap is enough: before the start "Hazırım" joins automatically when the tournament opens,
-  // and once in, every next stage starts by itself.
-  val waiting=event?.active!=true
-  EventAction(when {
-   busy->sh("HAZIRLANIYOR…","PREPARING…")
-   waiting&&ready->sh("HAZIRSIN · BAŞLAYINCA OTOMATİK GİRİLECEK","READY · YOU JOIN AUTOMATICALLY")
-   waiting->sh("HAZIRIM · BAŞLAYINCA BENİ AL","I'M READY · JOIN ME AT THE START")
-   already->sh("AŞAMA TAMAM · SONRAKİ OTOMATİK GELECEK","STAGE DONE · NEXT ONE STARTS BY ITSELF")
-   !previous->sh("BU TURNUVA BAŞLADI · SIRADAKİNE HAZIRLAN","THIS ONE STARTED · GET READY FOR THE NEXT")
-   !canJoin->sh("BU AŞAMANIN GİRİŞİ KAPANDI","STAGE ENTRY CLOSED")
-   else->sh("YARIŞA BAŞLA","START THE RACE")
-  },{ if(waiting) onReady?.invoke() else onJoin() },(canJoin||(waiting&&onReady!=null&&!ready))&&!busy)
+  Text(sh("Her aşama 10 dk açık · aşamalar sırayla oynanır · en çok aşama ve puan kürsüye çıkar","Each stage opens for 10 min · played in order · most stages and points take the podium"),
+   color=Color.White.copy(alpha=.75f),fontSize=10.sp,lineHeight=14.sp)
   event?.myStages?.filter{it.finished}?.forEach{Text(sh("${it.stage}. aşama: +${it.xp} XP","Stage ${it.stage}: +${it.xp} XP"),color=EventGold,fontSize=11.sp)}
   if(event?.rows?.isNotEmpty()==true) {
    Text(sh("CANLI SIRALAMA · İLK 10","LIVE RANKING · TOP 10"),color=EventGold,fontSize=11.sp,fontWeight=FontWeight.Black)

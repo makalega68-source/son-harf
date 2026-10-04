@@ -704,6 +704,11 @@ private fun PanSiegeBoard(
             closePan = centerCloseOn(WordSiegeBoardSpec.CenterIndex)
             initialized = true
             observedMoveId = lastMove?.id
+            // Opening a game marks the last word too, so it never has to be searched for.
+            lastMove?.let { move ->
+                highlightedIndices = move.placedTiles.map { it.index }.filter(WordSiegeBoardSpec::isValidIndex).toSet()
+                highlightAlpha.snapTo(WORD_SIEGE_LAST_MOVE_REST_ALPHA)
+            }
         } else if (initialized) {
             closePan = clampClosePan(closePan)
         }
@@ -719,7 +724,7 @@ private fun PanSiegeBoard(
             launch {
                 highlightAlpha.animateTo(1f, tween(WORD_SIEGE_LAST_MOVE_ENTER_MS))
                 delay(WORD_SIEGE_LAST_MOVE_HOLD_MS.toLong())
-                highlightAlpha.animateTo(0.42f, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
+                highlightAlpha.animateTo(WORD_SIEGE_LAST_MOVE_REST_ALPHA, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
             }
             if (!dragging && viewportMode == WordSiegeBoardViewportMode.CLOSE) {
                 val indices = lastMove.placedTiles.map { it.index }.filter(WordSiegeBoardSpec::isValidIndex)
@@ -1049,8 +1054,8 @@ private fun PanSiegeBoardCell(
                     .then(if (letter != null && !pending && !WordSiegeWalnutIvory.enabled) Modifier.wordSiegeCellBevel(dark = false) else Modifier),
             )
             .border(
-                width = if (dropTarget) 3.dp else if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
-                color = if (dropTarget) Color(0xFF2FB36A) else PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),
+                width = if (dropTarget) 3.dp else if (lastMoveHighlight > 0f) 2.5.dp + 1.dp * lastMoveHighlight else 0.dp,
+                color = if (dropTarget) Color(0xFF2FB36A) else PanSiegeLastMove.copy(alpha = .6f + .4f * lastMoveHighlight),
                 shape = RoundedCornerShape(7.dp),
             ),
         contentAlignment = Alignment.Center,
@@ -1069,7 +1074,7 @@ private fun PanSiegeBoardCell(
                 modifier = if (WordSiegeWalnutIvory.enabled && letter != null) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier,
                 contentAlignment = Alignment.Center,
             ) {
-                if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(PanSiegeLastMove.copy(alpha = .045f * lastMoveHighlight)))
+                if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(PanSiegeLastMove.copy(alpha = .2f * lastMoveHighlight)))
                 if (WordSiegeWalnutIvory.enabled && owner != 0 && !pending) {
                     Box(
                         Modifier.align(if (owner == myOwner) Alignment.TopStart else Alignment.TopEnd)

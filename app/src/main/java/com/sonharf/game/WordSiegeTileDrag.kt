@@ -76,6 +76,8 @@ internal class WordSiegeTileDrag {
     var cellAt: (Offset) -> Int? = { null }
     /** Board cell centre in window coordinates. Set by the board. */
     var cellCenter: (Int) -> Offset? = { null }
+    /** On-screen size of one board cell (after zoom), so the lifted tile matches the cells. */
+    var cellStepPx by mutableStateOf(0f)
 
     val active: Boolean get() = rackIndex != null
 
@@ -172,13 +174,19 @@ internal fun WordSiegeTileDragOverlay(drag: WordSiegeTileDrag, modifier: Modifie
         val letter = drag.letter
         val center = drag.tileCenter
         if (drag.active && letter != null && center.isSpecified) {
-            val half = with(density) { 31.dp.toPx() }
+            // The lifted tile is a cell's size (a touch bigger, so it reads as "in hand"), whatever
+            // the zoom: it drops exactly where it is drawn.
+            val tile = with(density) {
+                if (drag.cellStepPx > 0f) (drag.cellStepPx * 1.12f).toDp().coerceIn(30.dp, 62.dp) else 52.dp
+            }
+            val half = with(density) { tile.toPx() / 2f }
             WordSiegeFloatingTile(
                 letter = letter,
                 lifted = true,
+                tileSize = tile,
                 modifier = Modifier
                     .offset { IntOffset((center.x - origin.x - half).roundToInt(), (center.y - origin.y - half).roundToInt()) }
-                    .size(62.dp),
+                    .size(tile),
             )
         }
         drag.flights.forEach { flight ->
@@ -197,6 +205,7 @@ internal fun WordSiegeTileDragOverlay(drag: WordSiegeTileDrag, modifier: Modifie
                     WordSiegeFloatingTile(
                         letter = flight.letter,
                         lifted = true,
+                        tileSize = 48.dp,
                         modifier = Modifier
                             .offset { IntOffset((x - origin.x - half).roundToInt(), (y - origin.y - half).roundToInt()) }
                             .size(48.dp),
@@ -208,9 +217,9 @@ internal fun WordSiegeTileDragOverlay(drag: WordSiegeTileDrag, modifier: Modifie
 }
 
 @Composable
-internal fun WordSiegeFloatingTile(letter: Char, lifted: Boolean, modifier: Modifier = Modifier) {
+internal fun WordSiegeFloatingTile(letter: Char, lifted: Boolean, modifier: Modifier = Modifier, tileSize: androidx.compose.ui.unit.Dp = 62.dp) {
     val walnut = WordSiegeWalnutIvory.enabled
-    val shape = RoundedCornerShape(10.dp)
+    val shape = RoundedCornerShape(tileSize * .16f)
     Box(
         modifier
             .shadow(if (lifted) 12.dp else 3.dp, shape)
@@ -225,15 +234,15 @@ internal fun WordSiegeFloatingTile(letter: Char, lifted: Boolean, modifier: Modi
         Text(
             letter.toString(),
             color = if (walnut) WordSiegeWalnutIvory.ink else Color(0xFF5A3A0A),
-            fontSize = 28.sp,
+            fontSize = (tileSize.value * .45f).sp,
             fontWeight = FontWeight.Black,
         )
         Text(
             practiceLetterValue(letter.toString()),
             color = if (walnut) WordSiegeWalnutIvory.secondaryInk else Color(0xFF5A3A0A).copy(alpha = .8f),
-            fontSize = 10.sp,
+            fontSize = (tileSize.value * .17f).coerceAtLeast(7f).sp,
             fontWeight = FontWeight.Black,
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 5.dp),
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = tileSize * .05f, end = tileSize * .08f),
         )
     }
 }
@@ -273,6 +282,7 @@ internal fun WordSiegeRegisterBoardHitTest(
 ) {
     if (drag == null) return
     androidx.compose.runtime.SideEffect {
+        drag.cellStepPx = cellSizePx * transform.scale
         drag.cellAt = { window ->
             val origin = viewportOriginInWindow
             val step = cellSizePx * transform.scale

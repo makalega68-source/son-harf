@@ -29,7 +29,7 @@ class WordSiegePracticeVisualContractTest {
         assertTrue(text.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)"))
         assertTrue(text.contains("practiceCellThreatened"))
         assertTrue(text.contains("val regionGap = 1.25.dp"))
-        assertTrue(text.contains("highlightAlpha.animateTo(0.42f"))
+        assertTrue(text.contains("highlightAlpha.animateTo(WORD_SIEGE_LAST_MOVE_REST_ALPHA"))
     }
 
     @Test fun visualChangePreservesViewportVfxAndInteractionContracts() {

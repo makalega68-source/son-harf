@@ -146,7 +146,7 @@ internal fun WordSiegePracticeBoard(
             highlightAlpha.snapTo(0f)
             highlightAlpha.animateTo(1f, tween(WORD_SIEGE_LAST_MOVE_ENTER_MS))
             delay(WORD_SIEGE_LAST_MOVE_HOLD_MS.toLong())
-            highlightAlpha.animateTo(0.42f, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
+            highlightAlpha.animateTo(WORD_SIEGE_LAST_MOVE_REST_ALPHA, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
         }
     }
 
@@ -501,13 +501,13 @@ private fun WordSiegePracticeBoardCell(
                     .then(if (letter != null && !pending && !WordSiegeWalnutIvory.enabled) Modifier.wordSiegeCellBevel(dark = false) else Modifier),
             )
             .border(
-                width = if (dropTarget) 3.dp else if (hintGlow != null) 2.2.dp else if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
+                width = if (dropTarget) 3.dp else if (hintGlow != null) 2.2.dp else if (lastMoveHighlight > 0f) 2.5.dp + 1.dp * lastMoveHighlight else .45.dp,
                 color = if (dropTarget) {
                     Color(0xFF2FB36A)
                 } else if (hintGlow != null) {
                     Color(0xFFFFE082)
                 } else if (lastMoveHighlight > 0f) {
-                    PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
+                    PracticeLastMove.copy(alpha = .6f + .4f * lastMoveHighlight)
                 } else if (letter == null) {
                     // Empty cells have no outline: the recess shading separates them without a grid of lines.
                     Color.Transparent

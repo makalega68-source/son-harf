@@ -167,7 +167,7 @@ internal fun AtelierLobby(
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC94A), contentColor = CompUi.Ink),
                     ) {
                         if (starting) CircularProgressIndicator(Modifier.size(20.dp), color = CompUi.Ink, strokeWidth = 2.dp)
-                        else Text(sh("Yarışa Başla", "Start the Race"), fontSize = 17.sp, fontWeight = FontWeight.Black)
+                        else Text(sh("Günlük Yarışa Başla", "Start the Daily Race"), fontSize = 17.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }

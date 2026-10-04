@@ -748,15 +748,22 @@ fun PremierWordDuelScreen() {
                     busy = true
                     scope.launch {
                         notice = ""
-                        gameRequestResult {
+                        // The search outlives the default 12 s request guard: the server opens the AI duel
+                        // at 15 s, so the guard used to end the first search just before a rival was ready.
+                        gameRequestResult(timeoutMillis = 120_000L) {
                             // A stalled connection must never leave the play button locked.
                             kotlinx.coroutines.withTimeout(15_000) {
                                 ensureMe()
                                 backend.startRandomMatchmaking(language)
                             }
                             stage = PremierStage.Searching
+                            var misses = 0
                             while (stage == PremierStage.Searching) {
-                                val found = backend.pollRandomMatchmakingRoom()
+                                // One slow or failed poll is retried; only a lasting outage ends the search.
+                                val found = runCatching { kotlinx.coroutines.withTimeout(8_000) { backend.pollRandomMatchmakingRoom() } }
+                                    .onFailure { if (it is kotlinx.coroutines.CancellationException && it !is kotlinx.coroutines.TimeoutCancellationException) throw it }
+                                    .onSuccess { misses = 0 }
+                                    .getOrElse { if (++misses >= 4) throw it; null }
                                 if (found != null) {
                                     adoptRoom(found, cinematic = true)
                                     SonHarfSoundFx.softNotify()
@@ -1664,20 +1671,17 @@ private fun PremierArena(
                         PremierTurnBadge(language, myTurn && !preparing, room.status, botThinking && !preparing, rivalName)
                     }
                     Spacer(Modifier.weight(1f))
-                    // Last word as tiles, its linking letters in gold.
-                    val feedback = moveFeedback
+                    // Last word as tiles, its linking letters in gold. The right/wrong verdict is not
+                    // repeated here (it held the new word back); the input, sound and mascot give it.
                     val slip = rivalSlip
                     Box(Modifier.fillMaxWidth().height(if (veryCompact) 44.dp else 52.dp), contentAlignment = Alignment.Center) {
-                        when {
-                            feedback != null -> PremierBoardMessage(feedback.message, if (feedback.accepted) PremierBoard.Gold else PremierBoard.Danger)
-                            else -> PremierLastWordCard(
-                                language = language,
-                                word = latestPlayedWord,
-                                mine = latestMoveMine,
-                                linkLetters = if (latestPlayedWord.isBlank()) 0 else required.length,
-                                veryCompact = veryCompact,
-                            )
-                        }
+                        PremierLastWordCard(
+                            language = language,
+                            word = latestPlayedWord,
+                            mine = latestMoveMine,
+                            linkLetters = if (latestPlayedWord.isBlank()) 0 else required.length,
+                            veryCompact = veryCompact,
+                        )
                     }
                     // A rival's slip is a small readable label here; the last word's tiles stay visible.
                     Box(Modifier.fillMaxWidth().height(16.dp), contentAlignment = Alignment.Center) {
@@ -2043,23 +2047,6 @@ private fun PremierWordCountChip(label: String, words: Int, color: Color, active
     }
 }
 
-@Composable
-private fun PremierBoardMessage(text: String, color: Color) {
-    val pop = remember(text) { Animatable(.7f) }
-    LaunchedEffect(text) { pop.animateTo(1f, spring(dampingRatio = .45f, stiffness = 500f)) }
-    Text(
-        text,
-        color = color,
-        fontSize = if (text.length > 26) 13.sp else 16.sp,
-        lineHeight = 18.sp,
-        fontWeight = FontWeight.Black,
-        textAlign = TextAlign.Center,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value },
-    )
-}
-
 /** The break between rounds: last round's result, the score, a countdown and quick chat. */
 @Composable
 private fun PremierRoundPrep(
@@ -2157,7 +2144,7 @@ private fun PremierArenaHeader(
     myGain: Pair<Int, Int>?,
     rivalGain: Pair<Int, Int>?,
 ) {
-    val cardHeight = 66.dp
+    val cardHeight = 74.dp
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -2236,14 +2223,14 @@ private fun PremierSymmetricPlayerCard(
     }
     val avatarView: @Composable () -> Unit = {
         if (bot) {
-            PremierBotAvatar(size = 40.dp, accent = accent, name = name)
+            PremierBotAvatar(size = 54.dp, accent = accent, name = name)
         } else {
             ProfilePhotoAvatarRectWithGender(
                 avatarPath = if (visible) avatar else null,
                 gender = gender,
                 name = name,
-                width = 40.dp,
-                height = 40.dp,
+                width = 54.dp,
+                height = 54.dp,
                 accent = accent,
                 frameId = frameId,
             )
