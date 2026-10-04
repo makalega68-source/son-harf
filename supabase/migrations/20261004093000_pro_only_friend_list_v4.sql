@@ -1,4 +1,3 @@
--- NOT APPLIED YET. Apply via Supabase (approve the prompt) or the SQL editor, then move to migrations/.
 -- Friend list is a PRO-member feature; only the list, nothing else.
 -- * Accepted friendships are readable by participants who have PRO (is_vip or pro_lifetime).
 -- * Pending rows stay readable by both participants, so anyone can still accept requests.
