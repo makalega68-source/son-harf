@@ -265,8 +265,12 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onEvents = { destination = PremiumDestination.EVENTS },
                         onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
-                        gameLanguage = siegeLanguage,
-                        onGameLanguage = { siegeLanguage = it; lastLetterLanguage = it; workshopLanguage = it },
+                        gameLanguage = SonHarfUiState.language,
+                        // One switch for the whole app: menus and the word language of every game.
+                        onGameLanguage = {
+                            SonHarfPreferences.setLanguage(shellContext, it)
+                            siegeLanguage = it; lastLetterLanguage = it; workshopLanguage = it
+                        },
                     )
                     PremiumDestination.MY_GAMES -> MyGamesScreen(backend, onOpen = { kind, id -> openPlayerTarget(kind, id) }, initialTab = gamesTab)
                     PremiumDestination.GAMES -> PremiumGameCenter(

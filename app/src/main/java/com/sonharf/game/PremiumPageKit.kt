@@ -97,3 +97,20 @@ internal fun PremiumLetterTiles(word: String, tile: Dp = 30.dp, modifier: Modifi
         }
     }
 }
+
+/**
+ * The Canva podium artwork with a portrait placed inside its empty crowned gold ring
+ * (ring centre at 50 % / 38.9 % of the image, inner diameter 330 of 1680 px).
+ */
+@Composable
+internal fun PodiumPortrait(modifier: Modifier = Modifier, portrait: @Composable (Dp) -> Unit) {
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth().aspectRatio(1680f / 944f)) {
+        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.profile_hero_art), null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.matchParentSize())
+        val photo = maxWidth * (330f / 1680f)
+        Box(Modifier.size(photo).offset(x = maxWidth / 2 - photo / 2, y = maxHeight * .389f - photo / 2)
+            .clip(androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
+            portrait(photo)
+        }
+    }
+}

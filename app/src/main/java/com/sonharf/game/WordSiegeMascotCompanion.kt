@@ -443,7 +443,11 @@ internal object WordSiegeMascotLines {
     )
 }
 
-internal enum class WordSiegeMascotIdle { WATCH, LOOK_AROUND, NOD, HOP, SPARKLE, DANCE, STRETCH, CHAT, WANDER, PEEK, CHASE, THINK, WAVE }
+internal enum class WordSiegeMascotIdle {
+    WATCH, LOOK_AROUND, NOD, HOP, SPARKLE, DANCE, STRETCH, CHAT, WANDER, PEEK, CHASE, THINK, WAVE,
+    /** Cute idles of their own: rocks side to side, winks, balances, claps, peekaboo, blows a kiss, sneezes, nuzzles. */
+    SWAY, WINK, BALANCE, CLAP, PEEKABOO, KISS, SNEEZE, NUZZLE,
+}
 
 /**
  * The mascot's decision making: weighted choices with cooldowns and a short memory of what it did
@@ -493,6 +497,14 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
                 WordSiegeMascotIdle.CHASE to .22f * playfulness,
                 WordSiegeMascotIdle.THINK to .6f,
                 WordSiegeMascotIdle.WAVE to .35f * playfulness,
+                WordSiegeMascotIdle.SWAY to .6f,
+                WordSiegeMascotIdle.WINK to .55f * playfulness,
+                WordSiegeMascotIdle.BALANCE to .35f * playfulness,
+                WordSiegeMascotIdle.CLAP to .4f * playfulness,
+                WordSiegeMascotIdle.PEEKABOO to .4f * playfulness,
+                WordSiegeMascotIdle.KISS to .3f * playfulness,
+                WordSiegeMascotIdle.SNEEZE to .2f,
+                WordSiegeMascotIdle.NUZZLE to .45f,
             )
         }
         val weighted = options.map { (idle, baseWeight) ->
@@ -535,6 +547,14 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
         WordSiegeMascotIdle.CHASE -> 420_000L
         WordSiegeMascotIdle.THINK -> 70_000L
         WordSiegeMascotIdle.WAVE -> 180_000L
+        WordSiegeMascotIdle.SWAY -> 90_000L
+        WordSiegeMascotIdle.WINK -> 80_000L
+        WordSiegeMascotIdle.BALANCE -> 240_000L
+        WordSiegeMascotIdle.CLAP -> 150_000L
+        WordSiegeMascotIdle.PEEKABOO -> 200_000L
+        WordSiegeMascotIdle.KISS -> 300_000L
+        WordSiegeMascotIdle.SNEEZE -> 400_000L
+        WordSiegeMascotIdle.NUZZLE -> 120_000L
     }
 
     /** Picks a line it has not said recently. */
@@ -1120,6 +1140,17 @@ internal fun WordSiegeMascotCompanion(
                         watching = false
                         perform(WordSiegeMascotAction.PEEK)
                     }
+                    WordSiegeMascotIdle.SWAY -> perform(WordSiegeMascotAction.SWAY)
+                    WordSiegeMascotIdle.WINK -> perform(WordSiegeMascotAction.WINK)
+                    WordSiegeMascotIdle.BALANCE -> {
+                        watching = false
+                        perform(WordSiegeMascotAction.BALANCE)
+                    }
+                    WordSiegeMascotIdle.CLAP -> perform(WordSiegeMascotAction.CLAP)
+                    WordSiegeMascotIdle.PEEKABOO -> perform(WordSiegeMascotAction.HIDE_FACE)
+                    WordSiegeMascotIdle.KISS -> perform(WordSiegeMascotAction.KISS)
+                    WordSiegeMascotIdle.SNEEZE -> perform(WordSiegeMascotAction.SNEEZE)
+                    WordSiegeMascotIdle.NUZZLE -> perform(WordSiegeMascotAction.NUZZLE)
                     WordSiegeMascotIdle.CHASE -> {
                         // A glowing letter drifts by; it follows it with its eyes, then catches it.
                         watching = false

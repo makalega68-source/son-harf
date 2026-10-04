@@ -239,9 +239,10 @@ GameEventStage(gold=true) {
     Icon(Icons.Rounded.EmojiEvents,null,tint=EventInk,modifier=Modifier.size(24.dp))
    }
    Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
-    ThroneSeat {
-     if(owner!=null)ProfilePhotoAvatarWithGender(owner.avatarPath,owner.gender,owner.name,78.dp,visible=owner.avatarVisibility!="hidden",userId=owner.userId)
-     else DefaultProfilePortrait(null,Modifier.size(78.dp).clip(CircleShape))
+    // The ruler's photo inside the crowned gold ring of the podium artwork.
+    PodiumPortrait(Modifier.clip(RoundedCornerShape(18.dp))) { photo ->
+     if(owner!=null)ProfilePhotoAvatarWithGender(owner.avatarPath,owner.gender,owner.name,photo,visible=owner.avatarVisibility!="hidden",showGenderBadge=false)
+     else DefaultProfilePortrait(null,Modifier.size(photo).clip(CircleShape))
     }
     Text(sh("TAHT SAHİBİ","THRONE OWNER"),color=EventInk,fontSize=12.sp,fontWeight=FontWeight.Black,letterSpacing=2.sp)
     Text(owner?.name?:sh("İlk şampiyon bekleniyor","Awaiting the first champion"),color=EventInk,fontSize=28.sp,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)

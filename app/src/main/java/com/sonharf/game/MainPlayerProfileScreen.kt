@@ -181,15 +181,10 @@ private fun ProfileHero(
     val displayNameColor = if (hasNameStyle) nameColor else Color.White
     Column(Modifier.fillMaxWidth().premiumPanel(RoundedCornerShape(26.dp), glow = true).padding(bottom = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Canva podium artwork; the player's photo sits inside its empty crowned gold ring
-        // (ring centre at 50 % / 38.9 % of the 1680x944 image, inner diameter about 330 px).
-        BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(1680f / 944f)) {
-            Image(painterResource(R.drawable.profile_hero_art), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
-            val photo = maxWidth * (330f / 1680f)
-            Box(Modifier.size(photo).offset(x = maxWidth / 2 - photo / 2, y = maxHeight * .389f - photo / 2)
-                .clip(CircleShape).clickable(onClickLabel = sh("Profili düzenle", "Edit profile"), onClick = onEdit),
-                contentAlignment = Alignment.Center) {
-                // The artwork's gold ring is the frame here; the bought frame shows everywhere else.
+        // Canva podium artwork; the player's photo sits inside its empty crowned gold ring. The ring
+        // is the frame here; the bought frame shows on every other avatar.
+        PodiumPortrait { photo ->
+            Box(Modifier.fillMaxSize().clickable(onClickLabel = sh("Profili düzenle", "Edit profile"), onClick = onEdit)) {
                 ProfilePhotoAvatarWithGender(
                     avatarPath = p?.avatarPath,
                     gender = p?.gender,

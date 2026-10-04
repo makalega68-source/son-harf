@@ -129,11 +129,11 @@ internal fun HomeLobbyScreen(
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                // Word language of the games (the Kulüp tab replaced the old game centre that held it).
+                // App language (menus and game words); the Kulüp tab replaced the old game centre that held it.
                 Surface(onClick = { onGameLanguage(if (gameLanguage == "en") "tr" else "en") }, shape = RoundedCornerShape(50),
                     color = LobbyBrand.Chip, modifier = Modifier.padding(end = 8.dp)) {
                     Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Translate, sh("Oyun dili", "Game language"), tint = LobbyBrand.Gold, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Rounded.Translate, sh("Dil", "Language"), tint = LobbyBrand.Gold, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(5.dp))
                         Text(if (gameLanguage == "en") "EN" else "TR", color = Color.White, fontWeight = FontWeight.Black, fontSize = 14.sp)
                     }
