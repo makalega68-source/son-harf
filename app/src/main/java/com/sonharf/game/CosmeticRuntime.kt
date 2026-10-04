@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import android.content.Context
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -208,5 +209,21 @@ internal fun NameStyleEmblem(size: androidx.compose.ui.unit.Dp, styleId: String?
         painter = androidx.compose.ui.res.painterResource(res),
         contentDescription = null,
         modifier = androidx.compose.ui.Modifier.size(size),
+    )
+}
+
+/** Readable, distinct typefaces; no font download or decorative glyph substitution. */
+internal fun premiumNameStyle(id: String?): androidx.compose.ui.text.TextStyle {
+    val family = when (id) {
+        "name_aurelia" -> androidx.compose.ui.text.font.FontFamily.Serif
+        "name_amethyst" -> androidx.compose.ui.text.font.FontFamily.Serif
+        "name_sapphire" -> androidx.compose.ui.text.font.FontFamily(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD))
+        else -> androidx.compose.ui.text.font.FontFamily.SansSerif
+    }
+    return androidx.compose.ui.text.TextStyle(
+        fontFamily = family,
+        fontWeight = if (id == "name_cyan") androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Bold,
+        fontStyle = if (id == "name_amethyst") androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
+        letterSpacing = .3.sp,
     )
 }

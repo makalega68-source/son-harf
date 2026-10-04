@@ -379,7 +379,7 @@ suspend fun OnlineGameBackend.getWordSiegeMoves(gameId: String): List<WordSiegeM
 
 suspend fun OnlineGameBackend.getWordSiegeMessages(gameId: String): List<WordSiegeMessageDto> =
     SupabaseProvider.client.from("word_siege_messages")
-        .select { filter { eq("game_id", gameId) } }
+        .select { filter { eq("game_id", gameId); gte("created_at", java.time.Instant.now().minusSeconds(15L * 86400).toString()) } }
         .decodeList<WordSiegeMessageDto>()
         .sortedBy { it.id }
 

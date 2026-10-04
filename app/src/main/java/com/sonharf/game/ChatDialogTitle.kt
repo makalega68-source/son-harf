@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 /** Chat dialog header: a close X in the top-left corner, then the title. */
 @Composable
 internal fun ChatDialogTitle(title: String, onClose: () -> Unit) {
+    SecureChatContent()
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onClose, modifier = Modifier.size(36.dp)) {
             Icon(Icons.Rounded.Close, sh("Kapat", "Close"))

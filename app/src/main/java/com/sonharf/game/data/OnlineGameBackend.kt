@@ -11,6 +11,9 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.realtime.Realtime
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -209,6 +212,7 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
 
     suspend fun setPresence(status: String) {
+        if (status != "offline" && !com.sonharf.game.AppPresenceState.foreground) return
         supabase.postgrest.rpc("set_presence", buildJsonObject { put("p_status", status) })
     }
 
@@ -332,20 +336,25 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     suspend fun getProfile(id: String): ProfileDto =
         supabase.from("profiles").select { filter { eq("id", id) } }.decodeSingle()
 
+    suspend fun getProfilesParallel(ids: List<String>): List<ProfileDto> = coroutineScope {
+        // Bounded batches avoid both serial latency and unbounded request fan-out.
+        ids.distinct().chunked(6).flatMap { batch ->
+            batch.map { id -> async { com.sonharf.game.gameRequestResult { getProfile(id) }.getOrNull() } }.awaitAll().filterNotNull()
+        }
+    }
+
     suspend fun getFriends(): List<Pair<FriendshipDto, ProfileDto>> {
         val me = currentUserId() ?: return emptyList()
-        return getFriendships().filter { it.status == "accepted" }.mapNotNull { friendship ->
-            runCatching {
-                friendship to getProfile(if (friendship.userId == me) friendship.friendId else friendship.userId)
-            }.getOrNull()
-        }
+        val links = getFriendships().filter { it.status == "accepted" }
+        val profiles = getProfilesParallel(links.map { if (it.userId == me) it.friendId else it.userId }).associateBy { it.id }
+        return links.mapNotNull { link -> profiles[if (link.userId == me) link.friendId else link.userId]?.let { link to it } }
     }
 
     suspend fun getIncomingFriendRequests(): List<Pair<FriendshipDto, ProfileDto>> {
         val me = currentUserId() ?: return emptyList()
-        return getFriendships().filter { it.status == "pending" && it.requestedBy != me }.mapNotNull { friendship ->
-            runCatching { friendship to getProfile(friendship.requestedBy) }.getOrNull()
-        }
+        val links = getFriendships().filter { it.status == "pending" && it.requestedBy != me }
+        val profiles = getProfilesParallel(links.map { it.requestedBy }).associateBy { it.id }
+        return links.mapNotNull { link -> profiles[link.requestedBy]?.let { link to it } }
     }
 
     suspend fun inviteFriend(friendId: String, language: String): GameInviteDto =
@@ -385,7 +394,7 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
 
     suspend fun getChat(id: String): List<ChatMessageDto> =
         supabase.from("chat_messages")
-            .select { filter { eq("room_id", id) } }
+            .select { filter { eq("room_id", id); gte("created_at", java.time.Instant.now().minusSeconds(15L * 86400).toString()) } }
             .decodeList<ChatMessageDto>()
             .sortedBy { it.id }
 

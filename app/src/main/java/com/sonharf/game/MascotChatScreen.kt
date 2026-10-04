@@ -67,6 +67,7 @@ private val ChatScreenHorizontal = 16.dp
 
 @Composable
 internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSkin = WordSiegeMascotSkin.ORB) {
+    SecureChatContent()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val nanoEngine = remember { MascotNanoEngine() }

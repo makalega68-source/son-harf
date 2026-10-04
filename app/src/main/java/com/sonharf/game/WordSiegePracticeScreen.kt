@@ -951,6 +951,7 @@ private fun WordSiegePracticeContent(
     if (showChat) {
         AlertDialog(
             onDismissRequest = { showChat = false },
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
             title = { ChatDialogTitle(sh("SOHBET • ${botProfile.name}", "CHAT • ${botProfile.name}")) { showChat = false } },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

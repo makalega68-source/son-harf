@@ -200,9 +200,9 @@ internal fun ProfilePhotoAvatarWithGender(
         bytes = if (visible && (userId == null || identity?.avatarVisibility != "hidden") && !path.isNullOrBlank()) ProfilePhotoRuntime.load(path) else null
     }
     val bitmap = rememberProfileBitmap(bytes)
-    Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFF2C14E), accent, Color(0xFFB07F1E), Color(0xFFF2C14E)))).padding(3.dp),
+            Modifier.size(if (framed) size * .72f else size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFF2C14E), accent, Color(0xFFB07F1E), Color(0xFFF2C14E)))).padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (visible && bitmap != null) {
@@ -212,7 +212,7 @@ internal fun ProfilePhotoAvatarWithGender(
             }
         }
         // The player's frame is drawn around the photo wherever the avatar appears.
-        if (framed) ProfileFrameArt(resolvedFrame, size)
+        if (framed) ProfileFrameArt(resolvedFrame, size * .72f)
     }
 }
 
@@ -242,7 +242,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
     ) {
         Box(
             Modifier
-                .size(diameter)
+                .size(if (framed) diameter * .72f else diameter)
                 .clip(CircleShape)
                 .background(
                     Brush.sweepGradient(
@@ -263,7 +263,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
-        if (framed) ProfileFrameArt(frameId, diameter)
+        if (framed) ProfileFrameArt(frameId, diameter * .72f)
     }
 }
 

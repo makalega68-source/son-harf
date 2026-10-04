@@ -2,6 +2,10 @@ package com.sonharf.game
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.Text
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -41,6 +45,10 @@ internal fun StoreProductPreview(
         contentAlignment = Alignment.Center,
     ) {
         when {
+            item.kind == "name_style" -> Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                NameStyleEmblem(if(expanded) 48.dp else 32.dp, item.id)
+                Text(sh("İmzan","Signature"),style=premiumNameStyle(item.id),fontSize=if(expanded) 26.sp else 19.sp,color=LobbyPalette.Ink,maxLines=1)
+            }
             item.kind == "profile_frame" -> RealFramePreview(item.id, expanded)
             // Painted keyboards: the working keyboard itself, not a picture of it.
             item.kind == "keyboard_theme" && SonHarfCosmetics.keyboardPaletteFor(item.id).keyImage != null ->
@@ -131,7 +139,7 @@ internal fun storeItemEffect(item: ShopItemDto): String? = when {
     )
     item.kind == "mascot_hat" -> sh("Obi bu şapkayı her yerde takar.", "Obi wears this hat everywhere.")
     item.kind == "keyboard_theme" -> sh("Oyunlarda yazdığın klavye bu görünümü alır.", "The in-game keyboard takes this look.")
-    item.kind == "name_style" -> sh("İsmin bu renkte yazılır, yanında amblemi görünür.", "Your name shows in this colour with its emblem.")
+    item.kind == "name_style" -> sh("İsmine özel yazı karakteri, renk ve amblem ekler.", "Adds a distinct typeface, colour and emblem to your name.")
     item.id == WALNUT_IVORY_THEME_ID -> sh("Uygulama, Kuşatma tahtası ve Son Harf ceviz-fildişi olur.", "The app, the siege board and Last Letter turn walnut and ivory.")
     item.kind == "game_theme" -> sh("Uygulama ve oyun alanları bu temaya bürünür.", "The app and game areas take this theme.")
     item.kind == "profile_frame" -> sh("Profil fotoğrafının çevresinde her yerde görünür.", "Shown around your photo everywhere.")

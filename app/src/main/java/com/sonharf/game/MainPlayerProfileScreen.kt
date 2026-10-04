@@ -52,6 +52,7 @@ internal fun MainPlayerProfileScreen(
     onSettings: () -> Unit,
     onSocial: () -> Unit,
     onRivals: () -> Unit = onSocial,
+    onCompete: () -> Unit = {},
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
@@ -70,14 +71,9 @@ internal fun MainPlayerProfileScreen(
         val loadedProfile = profileTask.await()
         profile = loadedProfile
         growth = growthTask.await()
-        if (loadedProfile?.isVip == true) {
-            runCatching { backend.getFriends() }.getOrDefault(emptyList()).let { friends ->
-                friendCount = friends.size
-                onlineFriendCount = friends.count { (_, friend) -> friend.presenceStatus == "online" }
-            }
-        } else {
-            friendCount = 0
-            onlineFriendCount = 0
+        runCatching { backend.getFriends() }.getOrDefault(emptyList()).let { friends ->
+            friendCount = friends.size
+            onlineFriendCount = friends.count { (_, friend) -> friend.isRecentlyOnline() }
         }
         SonHarfCosmetics.apply(cosmeticsTask.await())
         loading = false
@@ -168,7 +164,7 @@ internal fun MainPlayerProfileScreen(
                             modifier = Modifier.weight(1f, fill = false),
                             color = displayNameColor,
                             fontSize = 24.sp,
-                            fontWeight = FontWeight.Black,
+                            style = premiumNameStyle(SonHarfCosmetics.nameStyleId),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -223,13 +219,6 @@ internal fun MainPlayerProfileScreen(
 
         ProfileRecordsSection(backend, onRivals = onRivals)
 
-        LobbyTabs(
-            labels = collectionTabs.map { it.second },
-            selected = collectionTab,
-            onSelect = { collectionTab = it },
-        )
-        ProfileOwnedThemesSection(backend, category = collectionTabs[collectionTab].first)
-
         LobbyCard(
             onClick = onSocial,
             modifier = Modifier.fillMaxWidth(),
@@ -248,21 +237,7 @@ internal fun MainPlayerProfileScreen(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(sh("Arkadaşlar", "Friends"), color = LobbyPalette.Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(
-                        if (p?.isVip == true) {
-                            "$friendCount ${sh("arkadaş", "friends")} • $onlineFriendCount ${sh("çevrimiçi", "online")}"
-                        } else {
-                            sh("PRO ile arkadaş listesi ve yönetimi", "Friends list and management with PRO")
-                        },
-                        color = LobbyPalette.Muted,
-                        fontSize = 12.sp,
-                    )
-                }
-                if (p?.isVip != true) {
-                    Surface(shape = Hf.PillShape, color = Hf.Gold) {
-                        Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 3.dp), color = Hf.Ink, fontWeight = FontWeight.Black, fontSize = 11.sp)
-                    }
-                    Spacer(Modifier.width(6.dp))
+                    Text(sh("Arkadaş listesini aç", "Open your friend list"), color = LobbyPalette.Muted, fontSize = 12.sp)
                 }
                 Icon(Icons.Rounded.ChevronRight, null, tint = Hf.Gold)
             }
@@ -274,6 +249,9 @@ internal fun MainPlayerProfileScreen(
             modifier = Modifier.fillMaxWidth(),
             trailingChevron = true,
         )
+        OutlinedButton(onClick = onCompete, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            Text(sh("Taht ve sıralama", "Throne and rankings"), color = LobbyPalette.Ink)
+        }
         Spacer(Modifier.height(8.dp))
     }
 }

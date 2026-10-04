@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
 private enum class PremiumDestination {
-    HOME, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
+    HOME, MY_GAMES, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
     LAST_LETTER, SIEGE, WORD_WORKSHOP,
     ACTIVITY, EVENTS, RIVALS, SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP, PRO, PRIVATE_ROOM, MASCOT_CHAT
 }
@@ -40,6 +40,8 @@ private enum class PremiumDestination {
 fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     var destination by remember { mutableStateOf(PremiumDestination.HOME) }
+    var gameReturn by remember { mutableStateOf(PremiumDestination.HOME) }
+    var gamesTab by remember { mutableIntStateOf(0) }
     var shopInitialTab by rememberSaveable { mutableIntStateOf(0) }
     var proReturn by remember { mutableStateOf(PremiumDestination.PROFILE) }
     var isPro by remember { mutableStateOf(false) }
@@ -61,6 +63,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         RewardPassState.refresh()
     }
     fun openGame(target: PremiumDestination, language: String, quickDuel: Boolean = false) {
+        gameReturn = if (destination == PremiumDestination.MY_GAMES) PremiumDestination.MY_GAMES else PremiumDestination.HOME
         gameLaunchRevision++
         startQuickDuel = quickDuel
         if (uiLanguageBeforeGame == null) uiLanguageBeforeGame = SonHarfUiState.language
@@ -68,7 +71,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         destination = target
     }
 
-    fun leaveGame(target: PremiumDestination = PremiumDestination.HOME) {
+    fun leaveGame(target: PremiumDestination = gameReturn) {
         uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
         uiLanguageBeforeGame = null
         destination = target
@@ -124,22 +127,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         if (homeRequest > 0) {
             uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
             uiLanguageBeforeGame = null
-            destination = PremiumDestination.HOME
+            destination = gameReturn
         }
     }
-    LaunchedEffect(destination) {
-        if (destination !in setOf(
-                PremiumDestination.LAST_LETTER,
-                PremiumDestination.SIEGE,
-                PremiumDestination.WORD_WORKSHOP,
-            )
-        ) {
-            while (true) {
-                runCatching { backend.setPresence("online") }
-                delay(55_000)
-            }
-        }
-    }
+    AppPresence(backend, destination in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP))
 
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
@@ -152,7 +143,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
                 uiLanguageBeforeGame = null
-                PremiumDestination.HOME
+                gameReturn
             }
             else -> PremiumDestination.HOME
         }
@@ -160,11 +151,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 
     // Top-level navigation: Home, Friends/Social, Store, Profile. Club is hidden.
     val topLevel = destination in setOf(
-        PremiumDestination.HOME,
-        PremiumDestination.SHOP,
-        PremiumDestination.SOCIAL,
-        PremiumDestination.COMPETE,
-        PremiumDestination.PROFILE,
+        PremiumDestination.HOME, PremiumDestination.MY_GAMES, PremiumDestination.EVENTS,
+        PremiumDestination.SHOP, PremiumDestination.PROFILE,
     )
     var incomingSocialCount by remember { mutableIntStateOf(0) }
     LaunchedEffect(destination) { if (destination == PremiumDestination.SOCIAL) incomingSocialCount = 0 }
@@ -235,10 +223,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         destination = destination,
                         onHome = { destination = PremiumDestination.HOME },
                         onShop = { shopInitialTab = 0; destination = PremiumDestination.SHOP },
-                        onSocial = { destination = PremiumDestination.SOCIAL },
-                        onCompete = { destination = PremiumDestination.COMPETE },
+                        onSocial = { gamesTab = 0; destination = PremiumDestination.MY_GAMES },
+                        onCompete = { destination = PremiumDestination.EVENTS },
                         onProfile = { destination = PremiumDestination.PROFILE },
-                        socialBadge = incomingSocialCount,
+                        socialBadge = 0,
                     )
                 }
             },
@@ -260,7 +248,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onSettings = { destination = PremiumDestination.SETTINGS },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
-                        onSocial = { destination = PremiumDestination.SOCIAL },
+                        onSocial = { destination = PremiumDestination.MY_GAMES },
                         onActivity = { destination = PremiumDestination.ACTIVITY },
                         onEvents = { destination = PremiumDestination.EVENTS },
                         onResume = { game ->
@@ -270,6 +258,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onLastLetterResume = { room -> openPlayerTarget("son_harf", room.id) },
                         incomingCount = incomingSocialCount,
                     )
+                    PremiumDestination.MY_GAMES -> MyGamesScreen(backend, onOpen = { kind, id -> openPlayerTarget(kind, id) }, initialTab = gamesTab)
                     PremiumDestination.GAMES -> PremiumGameCenter(
                         siegeLanguage = siegeLanguage,
                         lastLetterLanguage = lastLetterLanguage,
@@ -295,6 +284,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         { destination = PremiumDestination.SETTINGS },
                         { destination = PremiumDestination.SOCIAL },
                         onRivals = { destination = PremiumDestination.RIVALS },
+                        onCompete = { destination = PremiumDestination.COMPETE },
                     )
                     PremiumDestination.COLLECTION -> PlayerCollectionScreen(backend) { destination = PremiumDestination.PROFILE }
                     PremiumDestination.SHOP -> EconomyShopScreen(
@@ -426,37 +416,12 @@ private fun PremiumHomeScreen(
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onShop, onPro, onSettings)
             }
+            item(key = "home_sessions") { HomeSessions(backend, onResume, onSocial, onLastLetterResume) }
             item(key = "home_games") {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     HomeSiegeHero(onPrimary)
                     PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)
                 }
-            }
-            item(key = "home_quick_menu") {
-                HomeQuickMenu(profile?.isVip == true, onPro, onMascots, onActivity, onEvents)
-            }
-            item(key = "ongoing_games") { HomeSessions(backend, onResume, onPrimary, onLastLetterResume) }
-            item(key = "home_daily_tasks") {
-                PremiumHomeDailyTasks(onClick = onCompete)
-            }
-            item(key = "community_summary") {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { showCommunityDetails = !showCommunityDetails },
-                        modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                        Text(sh("Lig ve arkadaşlar", "League and friends"), color = HomeLobbyStyle.Ink, fontSize = 13.sp)
-                        Spacer(Modifier.width(6.dp))
-                        Icon(if (showCommunityDetails) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                            if (showCommunityDetails) sh("Daralt", "Collapse") else sh("Genişlet", "Expand"),
-                            tint = HomeLobbyStyle.Muted)
-                    }
-                    if (incomingCount > 0) TextButton(onClick = onSocial) {
-                        Text(sh("$incomingCount davet", "$incomingCount invites"), color = Hf.Green, fontSize = 12.sp)
-                    }
-                }
-            }
-            if (showCommunityDetails) {
-                item(key = "league_progress") { HomeLeague(backend, onCompete) }
-                item(key = "social_arena") { HomeSocialArena(backend, incomingCount, onSocial, isPro = profile?.isVip == true) }
             }
 
         }
@@ -656,8 +621,8 @@ private fun PremiumBottomBar(
     val items = listOf(
         Triple(PremiumDestination.HOME, R.drawable.hf_ic_home, sh("Ana Sayfa", "Home")) to onHome,
         Triple(PremiumDestination.SHOP, R.drawable.hf_ic_store, sh("Mağaza", "Store")) to onShop,
-        Triple(PremiumDestination.SOCIAL, R.drawable.hf_ic_club, sh("Arkadaşlar", "Friends")) to onSocial,
-        Triple(PremiumDestination.COMPETE, R.drawable.hf_ic_compete, sh("Taht", "Throne")) to onCompete,
+        Triple(PremiumDestination.MY_GAMES, R.drawable.ic_my_games, sh("Oyunlarım", "My games")) to onSocial,
+        Triple(PremiumDestination.EVENTS, R.drawable.hf_ic_compete, sh("Etkinlikler", "Events")) to onCompete,
         Triple(PremiumDestination.PROFILE, R.drawable.hf_ic_profile, sh("Profil", "Profile")) to onProfile,
     )
     Surface(color = LobbyPalette.Paper) {
@@ -679,7 +644,7 @@ private fun PremiumBottomBar(
                                 tint = if (selected) LobbyPalette.Accent else LobbyPalette.Muted,
                                 modifier = Modifier.size(28.dp),
                             )
-                            if (item.first == PremiumDestination.SOCIAL && socialBadge > 0) {
+                            if (item.first == PremiumDestination.MY_GAMES && socialBadge > 0) {
                                 Surface(
                                     shape = RoundedCornerShape(99.dp),
                                     color = Color(0xFFD64541),

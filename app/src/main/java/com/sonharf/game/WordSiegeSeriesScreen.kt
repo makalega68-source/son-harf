@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 private const val SERIES_DEFAULT_TURN_MINUTES = 5
 
 @Composable
-internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -> Unit) {
+internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, directEntry: Boolean = false, onExit: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     val scope = rememberCoroutineScope()
     val me = backend.currentUserId()
@@ -223,6 +223,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
     }
 
     BackHandler {
+        if (directEntry) { onExit(); return@BackHandler }
         if (selectedGameId != null) {
             selectedGameId = null
             currentGame = null
@@ -303,7 +304,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                 } else if (game.status == "waiting") {
                     SeriesWaiting(
                         game = game,
-                        onBack = { selectedGameId = null; currentGame = null },
+                        onBack = { if (directEntry) onExit() else { selectedGameId = null; currentGame = null } },
                         onCancel = {
                             runGameAction { backend.cancelWordSiegeWaiting(game.id) }
                             selectedGameId = null
@@ -324,7 +325,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                             selectedRackIndex = selectedRackIndex,
                             busy = busy,
                             notice = notice,
-                            onBack = { selectedGameId = null; currentGame = null },
+                            onBack = { if (directEntry) onExit() else { selectedGameId = null; currentGame = null } },
                             onBoardCell = { boardIndex ->
                                 if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegePanMatch
                                 if (placements.containsKey(boardIndex) && selectedRackIndex != null) {
@@ -479,6 +480,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
     if (showChat && dialogGame != null) {
         AlertDialog(
             onDismissRequest = { showChat = false },
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
             title = { ChatDialogTitle(sh("Oyun sohbeti", "Game chat")) { showChat = false } },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -608,68 +610,6 @@ private fun SeriesLobby(
             }
         }
 
-        if (invites.isNotEmpty()) {
-            item { Text(sh("HIZLI DÜELLO DAVETLERİ", "QUICK DUEL INVITES"), color = SonHarfTheme.PremiumGold, fontSize = 10.sp, fontWeight = FontWeight.Black) }
-            items(invites, key = { it.id }) { invite ->
-                val sender = profiles[invite.senderId]
-                Surface(shape = RoundedCornerShape(16.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
-                    Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Bolt, null, tint = SonHarfTheme.PremiumGold)
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(sender?.displayName ?: sh("Oyuncu", "Player"), color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, maxLines = 1)
-                            Text(sh("${invite.turnDurationMinutes} dk tur", "${invite.turnDurationMinutes} min turn"), color = SonHarfTheme.TextSecondary, fontSize = 9.sp)
-                        }
-                        IconButton(onClick = { onDeclineInvite(invite) }, enabled = !busy) { Icon(Icons.Rounded.Close, sh("Reddet", "Decline"), tint = SonHarfTheme.Error) }
-                        IconButton(onClick = { onAcceptInvite(invite) }, enabled = !busy) { Icon(Icons.Rounded.CheckCircle, sh("Kabul et", "Accept"), tint = SonHarfTheme.Success) }
-                    }
-                }
-            }
-        }
-
-        item { Text(sh("HIZLI DÜELLOLARIN", "YOUR QUICK DUELS"), color = SonHarfTheme.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Black) }
-        if (games.isEmpty()) {
-            item {
-                Surface(shape = RoundedCornerShape(18.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
-                    Text(sh("Henüz Hızlı Düello yok. Rakip bul veya bir arkadaşını davet et.", "No Quick Duel yet. Find a rival or invite a friend."), Modifier.fillMaxWidth().padding(18.dp), color = SonHarfTheme.TextSecondary, textAlign = TextAlign.Center)
-                }
-            }
-        }
-        items(games, key = { it.id }) { game ->
-            val opponentId = if (me == game.playerOneId) game.playerTwoId else game.playerOneId
-            val opponent = opponentId?.let(profiles::get)
-            val myTurn = game.status == "playing" && game.currentPlayerId == me
-            val misses = if (me == game.playerOneId) game.playerOneMissedTurns else game.playerTwoMissedTurns
-            Surface(
-                modifier = Modifier.fillMaxWidth().clickable { onOpen(game) },
-                shape = RoundedCornerShape(17.dp),
-                color = SonHarfTheme.Surface,
-                border = BorderStroke(1.dp, if (myTurn) SonHarfTheme.Primary else SonHarfTheme.Border),
-            ) {
-                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = if (myTurn) SonHarfTheme.Primary.copy(alpha = .12f) else SonHarfTheme.SurfaceSecondary) {
-                        Icon(if (myTurn) Icons.Rounded.Bolt else Icons.Rounded.Timer, null, tint = if (myTurn) SonHarfTheme.Primary else SonHarfTheme.TextSecondary, modifier = Modifier.padding(10.dp))
-                    }
-                    Spacer(Modifier.width(9.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(opponent?.displayName ?: if (game.status == "waiting") sh("Rakip aranıyor", "Finding rival") else sh("Rakip", "Rival"), color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            when {
-                                game.status == "waiting" -> sh("Eşleşme bekliyor", "Waiting for match")
-                                game.status == "finished" -> sh("Tamamlandı", "Finished")
-                                myTurn -> sh("Sıra sende • ${seriesDeadlineText(game.turnDeadline, System.currentTimeMillis())}", "Your turn • ${seriesDeadlineText(game.turnDeadline, System.currentTimeMillis())}")
-                                else -> sh("Rakipte • ${seriesDeadlineText(game.turnDeadline, System.currentTimeMillis())}", "Rival's turn • ${seriesDeadlineText(game.turnDeadline, System.currentTimeMillis())}")
-                            },
-                            color = if (myTurn) SonHarfTheme.Primary else SonHarfTheme.TextSecondary,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        if (game.status == "playing") Text(sh("Kaçırılan ardışık tur: $misses / 3", "Consecutive missed turns: $misses / 3"), color = SonHarfTheme.TextSecondary, fontSize = 8.sp)
-                    }
-                    Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary)
-                }
-            }
-        }
         item { Spacer(Modifier.height(16.dp)) }
     }
 }

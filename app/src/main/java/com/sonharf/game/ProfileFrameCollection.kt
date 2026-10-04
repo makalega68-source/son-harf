@@ -22,6 +22,8 @@ import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.json.put
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -88,13 +90,17 @@ internal object ProfileFrameCollection {
 @Composable
 internal fun ProfileFrameArt(frameId: String?, size: Dp, modifier: Modifier = Modifier) {
     val frame = ProfileFrameCollection.find(frameId) ?: return
-    Box(modifier.requiredSize(size * 1.42f), contentAlignment = Alignment.Center) {
-        Image(
-            painter = painterResource(frame.drawable),
+    val resources = LocalContext.current.resources
+    var bitmap by remember(frame.drawable) { mutableStateOf<android.graphics.Bitmap?>(FrameBitmaps.cached(frame.drawable)) }
+    LaunchedEffect(frame.drawable) { bitmap = FrameBitmaps.load(resources, frame.drawable) }
+    Box(modifier.requiredSize(size * 1.38f), contentAlignment = Alignment.Center) {
+        bitmap?.let { Image(
+            bitmap = it.asImageBitmap(),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit,
         )
+        }
         if (frame == ProfileFrameCollection.proFrame) ProFramePlate(size)
         if (frame == ProfileFrameCollection.throneFrame) ProFramePlate(size, "1")
     }
@@ -179,10 +185,11 @@ internal fun rememberPlayerFrame(userId: String?): String? {
     val me = remember { runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull() }
     val localFrame = if (userId == me) SonHarfCosmetics.profileFrameId else null
     var frame by remember(userId) { mutableStateOf<String?>(localFrame) }
-    LaunchedEffect(userId, localFrame) {
+    val foreground = rememberAppForeground()
+    LaunchedEffect(userId, localFrame, foreground) {
+        if (!foreground) return@LaunchedEffect
         if (!com.sonharf.game.data.SupabaseProvider.configured) return@LaunchedEffect
         if (userId == me) {
-            PublicFrames.invalidate(userId)
             frame = localFrame
         }
         while (true) {
@@ -208,4 +215,14 @@ internal fun throneRewardDeadline(serverTime: String?, expiresAt: String?, recei
     return runCatching {
         receivedAt + (java.time.Instant.parse(expiresAt).toEpochMilli() - java.time.Instant.parse(serverTime).toEpochMilli())
     }.getOrDefault(receivedAt)
+}
+
+private object FrameBitmaps {
+    private val cache = android.util.LruCache<Int, android.graphics.Bitmap>(12)
+    fun cached(id: Int): android.graphics.Bitmap? = cache.get(id)
+    suspend fun load(resources: android.content.res.Resources, id: Int): android.graphics.Bitmap? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            cached(id) ?: android.graphics.BitmapFactory.decodeResource(resources,id,
+                android.graphics.BitmapFactory.Options().apply { inScaled=false; inSampleSize=2 })?.also { cache.put(id,it) }
+        }
 }

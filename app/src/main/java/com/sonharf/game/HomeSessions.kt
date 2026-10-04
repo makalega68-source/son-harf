@@ -99,51 +99,27 @@ internal fun HomeSessions(backend: OnlineGameBackend, onOpen: (WordSiegeGameDto)
                 failed=a.isFailure || b.isFailure || c.isFailure
                 games=homeGames(a.getOrElse { games.filter { it.gameMode=="classic" } }+b.getOrElse { games.filter { it.gameMode=="series" } },me)
                 c.onSuccess { rooms=it }
-                unifiedHomeMatches(games,rooms,me).mapNotNull { it.rivalId }.distinct().filterNot(profiles::containsKey).forEach { id ->
-                    gameRequestResult { backend.getProfile(id) }.getOrNull()?.let { profiles=profiles+(id to it) }
-                }
                 loaded=true
             }
             delay(15_000)
         }
     }
     val matches=unifiedHomeMatches(games,rooms,me)
-    // An empty lobby needs no extra play panel; loading and retry remain visible.
-    if (loaded && !failed && matches.isEmpty()) return
-    Surface(shape=RoundedCornerShape(20.dp),color=Hf.Surface,border=BorderStroke(1.dp,Hf.Border)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment=Alignment.CenterVertically) {
-                Text(sh("OYUNLARIM", "MY GAMES"),Modifier.weight(1f),color=Hf.Text,fontWeight=FontWeight.Black,fontSize=16.sp)
-                TextButton(onClick={ if(matches.isEmpty()) onAll() else expanded=!expanded }) {
-                    Text(if(matches.isEmpty()) sh("OYNA", "PLAY") else if(expanded) sh("DAHA AZ", "LESS") else sh("TÜMÜ", "ALL"),color=Hf.Green,fontSize=11.sp)
-                }
+    Surface(onClick=onAll, shape=RoundedCornerShape(20.dp), color=LobbyPalette.Soft,
+        border=BorderStroke(1.dp,LobbyPalette.Line), modifier=Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(18.dp), verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Rounded.SportsEsports,null,tint=LobbyPalette.Accent,modifier=Modifier.size(32.dp))
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                Text(sh("Oyunlarım","My games"),color=LobbyPalette.Ink,fontSize=18.sp,fontWeight=FontWeight.Bold)
+                Text(when { !loaded -> sh("Oyunların yükleniyor…","Loading games…")
+                    failed -> sh("Yenilemek için aç","Open to refresh")
+                    matches.isEmpty() -> sh("Devam eden oyunun yok","No active games")
+                    else -> sh("${matches.size} oyun · ${matches.count { it.turn==HomeTurn.YOURS }} sıra sende",
+                        "${matches.size} games · ${matches.count { it.turn==HomeTurn.YOURS }} your turn") },
+                    color=LobbyPalette.Muted,fontSize=12.sp,maxLines=2)
             }
-            if(matches.isNotEmpty()) Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                listOf(null,HomeTurn.YOURS,HomeTurn.RIVAL).forEach { turn ->
-                    val label=when(turn) { HomeTurn.YOURS->sh("Sıra sende", "Your turn"); HomeTurn.RIVAL->sh("Rakip", "Rival"); else->sh("Tümü", "All") }
-                    HomeSessionFilter("$label ${matches.count { turn==null || it.turn==turn }}",filter==turn) { filter=turn }
-                }
-            }
-            if(!loaded) LinearProgressIndicator(Modifier.fillMaxWidth(),color=Hf.Green)
-            if(failed) TextButton(onClick={retry++}) { Text(sh("Maçlar güncellenemedi · Yenile", "Games unavailable · Retry"),color=Hf.Red) }
-            val shown=matches.filter { filter==null || it.turn==filter }
-            if(loaded && shown.isEmpty() && !failed) Text(sh("Devam eden maçın yok", "No ongoing games"),color=Hf.TextMuted,fontSize=12.sp)
-            shown.take(if(expanded) Int.MAX_VALUE else 3).forEach { match ->
-                Surface(Modifier.fillMaxWidth().clickable { match.siege?.let(onOpen); match.duel?.let(onLastLetter) },shape=RoundedCornerShape(13.dp),
-                    color=Hf.Ground,border=BorderStroke(1.dp,if(match.turn==HomeTurn.YOURS) Hf.Green else Hf.Border)) {
-                    Row(Modifier.padding(10.dp),verticalAlignment=Alignment.CenterVertically) {
-                        Icon(if(match.turn==HomeTurn.YOURS) Icons.Rounded.PlayArrow else Icons.Rounded.Schedule,null,tint=Hf.Green)
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(profiles[match.rivalId]?.displayName ?: if(match.duel?.isBot==true) (match.duel.botName ?: "AI") else sh("Rakip", "Rival"),color=Hf.Text,fontWeight=FontWeight.Bold,maxLines=1)
-                            Text((when(match.kind) { "son_harf"->"Son Harf"; "series"->sh("Hızlı Düello", "Quick Duel"); else->sh("Kuşatma", "Siege") })+" · "+
-                                when(match.turn) { HomeTurn.YOURS->sh("Sıra sende", "Your turn"); HomeTurn.RIVAL->sh("Rakibin sırası", "Their turn"); else->sh("Bekliyor", "Waiting") },color=Hf.TextMuted,fontSize=10.sp)
-                            match.deadline?.let { Text(socialDate(it),color=Hf.TextMuted,fontSize=10.sp) }
-                        }
-                        Icon(Icons.Rounded.ChevronRight,null,tint=Hf.Gold)
-                    }
-                }
-            }
+            Icon(Icons.Rounded.ChevronRight,null,tint=LobbyPalette.Accent)
         }
     }
 }

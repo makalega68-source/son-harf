@@ -36,16 +36,10 @@ internal fun MainSocialScreen(
 ) {
     val scope = rememberCoroutineScope()
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
+    if (tab == 2) { LatestRivalsScreen(backend, onBack = { tab = 0 }, onOpenSiege = onOpenSiege); return }
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var friendships by remember { mutableStateOf<List<FriendshipDto>>(emptyList()) }
     var requests by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
-    var invites by remember { mutableStateOf<List<GameInviteDto>>(emptyList()) }
-    var siegeInvites by remember { mutableStateOf<List<WordSiegeInviteDto>>(emptyList()) }
-    var inviteProfiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
-    var rivals by remember { mutableStateOf<List<RivalHistoryDto>>(emptyList()) }
-    var siegeHistory by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
-    var matchHistory by remember { mutableStateOf<List<MatchHistoryDto>>(emptyList()) }
-    var archRival by remember { mutableStateOf<ArchRivalDto?>(null) }
     var loading by remember { mutableStateOf(true) }
     var busyKey by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -76,41 +70,20 @@ internal fun MainSocialScreen(
                 .getOrDefault(emptyList())
         }
         val requestTask = async { gameRequestResult { backend.getIncomingFriendRequests() }.getOrDefault(emptyList()) }
-        val legacyInviteTask = async { gameRequestResult { backend.getIncomingGameInvites() }.getOrDefault(emptyList()) }
-        val siegeInviteTask = async { gameRequestResult { backend.getIncomingWordSiegeInvites() }.getOrDefault(emptyList()) }
-        val rivalTask = async { gameRequestResult { backend.getRivalHistory(30) }.getOrDefault(emptyList()) }
-        val historyTask = async { gameRequestResult { backend.getMatchHistory(30) }.getOrDefault(emptyList()) }
-        val siegeHistoryTask = async {
-            val classic = async { gameRequestResult { backend.getWordSiegeGames() } }
-            val series = async { gameRequestResult { backend.getWordSiegeSeriesGames() } }
-            val a = classic.await(); val b = series.await()
-            (a.getOrElse { siegeHistory.filter { it.gameMode == "classic" } } + b.getOrElse { siegeHistory.filter { it.gameMode == "series" } }).distinctBy { it.id }
-                .filter { it.status == "finished" }.sortedByDescending { it.finishedAt ?: it.updatedAt }
-        }
-        val archTask = async { gameRequestResult { backend.getArchRival() }.getOrNull() }
-        friends = friendTask.await().sortedByDescending { it.second.presenceStatus == "online" }
+        friends = friendTask.await().sortedByDescending { it.second.isRecentlyOnline() }
         friendships = friendshipTask.await()
         requests = requestTask.await()
-        invites = legacyInviteTask.await()
-        siegeInvites = siegeInviteTask.await()
-        rivals = rivalTask.await()
-        matchHistory = historyTask.await()
-        archRival = archTask.await()
-        siegeHistory = siegeHistoryTask.await()
-        val senders = linkedMapOf<String, ProfileDto>()
-        (invites.map { it.senderId } + siegeInvites.map { it.senderId } + siegeHistory.flatMap { listOfNotNull(it.playerOneId, it.playerTwoId) }).distinct().forEach { id ->
-            gameRequestResult { backend.getProfile(id) }.getOrNull()?.let { senders[id] = it }
-        }
-        inviteProfiles = senders
         loading = false
         // Someone waiting for an answer is the first thing to show.
         if (!autoTabDone) {
             autoTabDone = true
-            if (initialTab == 0 && (requests.isNotEmpty() || siegeInvites.isNotEmpty() || invites.isNotEmpty())) tab = 1
+            if (initialTab == 0 && requests.isNotEmpty()) tab = 1
         }
     }
 
-    LaunchedEffect(Unit) {
+    val foreground = rememberAppForeground()
+    LaunchedEffect(foreground) {
+        if (!foreground) return@LaunchedEffect
         reload()
         while (true) {
             kotlinx.coroutines.delay(30_000L)
@@ -118,8 +91,8 @@ internal fun MainSocialScreen(
         }
     }
 
-    val onlineCount = friends.count { it.second.presenceStatus == "online" }
-    val incomingCount = requests.size + invites.size + siegeInvites.size
+    val onlineCount = friends.count { it.second.isRecentlyOnline() }
+    val incomingCount = requests.size
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -384,217 +357,14 @@ internal fun MainSocialScreen(
                     }
                 }
 
-                if (siegeInvites.isNotEmpty()) item { MainSectionTitle(sh("KELİME TAHTI DAVETLERİ", "KELİME TAHTI INVITATIONS")) }
-                items(siegeInvites, key = { "siege:${it.id}" }) { invite ->
-                    val sender = inviteProfiles[invite.senderId]
-                    Surface(shape = RoundedCornerShape(17.dp), color = Color(0xFFE8F1EB), border = BorderStroke(1.dp, Color(0xFF567A64).copy(alpha = .35f))) {
-                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = Color(0xFF567A64), gender = sender?.gender)
-                                Spacer(Modifier.width(9.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(sender?.displayName ?: sh("Oyun daveti", "Game invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                                    Text(sh("Kelime Tahtı • ", "Kelime Tahtı • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 11.sp)
-                                }
-                            }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        if (busyKey != null) return@OutlinedButton
-                                        scope.launch {
-                                            busyKey = "siege:${invite.id}"
-                                            gameRequestResult { backend.respondWordSiegeInvite(invite.id, false) }
-                                            reload()
-                                            busyKey = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                ) { Text(sh("REDDET", "DECLINE"), color = MainUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                                Button(
-                                    onClick = {
-                                        if (busyKey != null) return@Button
-                                        busyKey = "siege:${invite.id}"
-                                        scope.launch {
-                                            gameRequestResult { backend.respondWordSiegeInvite(invite.id, true) }
-                                                .onSuccess { game ->
-                                                    if (game != null) {
-                                                        notice = sh("Maç hazır.", "Match is ready.")
-                                                        onOpenSiege(game)
-                                                    }
-                                                }
-                                                .onFailure { notice = sh("Oyun daveti artık kullanılamıyor.", "The game invite is no longer available."); reload() }
-                                            busyKey = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF567A64)),
-                                ) { Text(if (busyKey == "siege:${invite.id}") "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                            }
-                        }
-                    }
-                }
-
-                if (invites.isNotEmpty()) item { MainSectionTitle(sh("SON HARF DAVETLERİ", "LAST LETTER INVITATIONS")) }
-                items(invites, key = { "legacy:${it.id}" }) { invite ->
-                    val sender = inviteProfiles[invite.senderId]
-                    Surface(shape = RoundedCornerShape(17.dp), color = MainUi.BlueSoft, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .25f))) {
-                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = MainUi.Blue, gender = sender?.gender)
-                                Spacer(Modifier.width(9.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(sender?.displayName ?: sh("Son Harf daveti", "Last Letter invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                                    Text(sh("Son Harf • ", "Last Letter • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 11.sp)
-                                }
-                            }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        if (busyKey != null) return@OutlinedButton
-                                        scope.launch {
-                                            busyKey = "legacy:${invite.id}"
-                                            gameRequestResult { backend.respondGameInvite(invite.id, false) }
-                                            reload()
-                                            busyKey = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                ) { Text(sh("REDDET", "DECLINE"), color = MainUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                                Button(
-                                    onClick = {
-                                        if (busyKey != null) return@Button
-                                        scope.launch {
-                                            busyKey = "legacy:${invite.id}"
-                                            gameRequestResult { backend.respondGameInvite(invite.id, true) }
-                                                .onSuccess { room -> if (room != null) onPlay() }
-                                                .onFailure { notice = sh("Son Harf daveti artık kullanılamıyor.", "The Last Letter invite is no longer available."); reload() }
-                                            busyKey = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue, contentColor = Color.White),
-                                ) { Text(if (busyKey == "legacy:${invite.id}") "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                            }
-                        }
-                    }
-                }
-
-                if (requests.isEmpty() && invites.isEmpty() && siegeInvites.isEmpty() && results.isEmpty() && !loading) {
+                if (requests.isEmpty() && results.isEmpty() && !loading) {
                     item {
-                        Text(sh("Bekleyen istek veya davet yok.", "There are no pending requests or invitations."), Modifier.fillMaxWidth().padding(vertical = 12.dp), color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+                        Text(sh("Bekleyen arkadaşlık isteğin yok.", "No pending friend requests."), Modifier.fillMaxWidth().padding(vertical = 12.dp), color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
                     }
                 }
             }
 
-            else -> {
-                archRival?.let { rival ->
-                    item {
-                        Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .48f))) {
-                            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                                Text(sh("EZELİ RAKİP", "ARCH RIVAL"), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(shape = CircleShape, color = MainUi.Gold.copy(alpha = .12f)) {
-                                        Text("⚔", Modifier.padding(10.dp), fontSize = 23.sp)
-                                    }
-                                    Spacer(Modifier.width(10.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Text(rival.displayName, color = MainUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                                        Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L", color = MainUi.Muted, fontSize = 11.sp)
-                                    }
-                                    Text("${rival.myPoints}:${rival.theirPoints}", color = MainUi.Text, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (rivals.isNotEmpty()) item { MainSectionTitle(sh("RAKİP GEÇMİŞİ", "RIVAL HISTORY")) }
-                items(rivals, key = { it.opponentId }) { rival ->
-                    Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-                        Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(shape = CircleShape, color = if (rival.presenceStatus == "online") MainUi.Green.copy(alpha = .10f) else MainUi.SurfaceSoft) {
-                                Icon(Icons.Rounded.Person, null, tint = if (rival.presenceStatus == "online") MainUi.Green else MainUi.Muted, modifier = Modifier.padding(8.dp).size(20.dp))
-                            }
-                            Spacer(Modifier.width(9.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(rival.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1)
-                                Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L • ${rival.myPoints}:${rival.theirPoints}", color = MainUi.Muted, fontSize = 8.5.sp)
-                            }
-                            Button(
-                                onClick = {
-                                    if (busyKey != null) return@Button
-                                    scope.launch {
-                                        busyKey = rival.opponentId
-                                        if (rival.isFriend) {
-                                            gameRequestResult { backend.inviteFriendToWordSiege(rival.opponentId, SonHarfUiState.language) }
-                                                .onSuccess { notice = sh("Kelime Tahtı rövanş daveti gönderildi.", "Kelime Tahtı rematch invite sent.") }
-                                                .onFailure { notice = sh("Rövanş daveti gönderilemedi veya bekleyen bir davet var.", "Rematch invite could not be sent or one is already pending.") }
-                                        } else {
-                                            gameRequestResult { backend.sendFriendRequest(rival.opponentId) }
-                                                .onSuccess { notice = sh("Önce arkadaşlık isteği gönderildi.", "A friend request was sent first.") }
-                                                .onFailure { notice = friendRequestError(it) }
-                                        }
-                                        busyKey = null
-                                    }
-                                },
-                                enabled = busyKey == null,
-                                shape = RoundedCornerShape(11.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp),
-                            ) {
-                                Text(if (busyKey == rival.opponentId) "…" else sh("RÖVANŞ", "REMATCH"), fontSize = 8.sp, fontWeight = FontWeight.Black)
-                            }
-                        }
-                    }
-                }
-
-                if (siegeHistory.isNotEmpty()) item { MainSectionTitle(sh("KUŞATMA · RAKİP GEÇMİŞİ", "SIEGE · RIVAL HISTORY")) }
-                items(siegeHistory.take(20), key = { "siege:${it.id}" }) { game ->
-                    val me = backend.currentUserId()
-                    val opponent = if (game.playerOneId == me) game.playerTwoId else game.playerOneId
-                    val myScore = if (game.playerOneId == me) game.playerOneWordScore + game.playerOneAreaScore else game.playerTwoWordScore + game.playerTwoAreaScore
-                    val theirScore = if (game.playerOneId == me) game.playerTwoWordScore + game.playerTwoAreaScore else game.playerOneWordScore + game.playerOneAreaScore
-                    ActivityTile(inviteProfiles[opponent]?.displayName ?: sh("Rakip", "Rival")) {
-                        Text("$myScore : $theirScore · " + socialDate(game.finishedAt ?: game.updatedAt), color = MainUi.Muted, fontSize = 11.sp)
-                        TextButton(onClick = { onOpenSiege(game) }) { Text(sh("SONUÇ VE RÖVANŞ", "RESULT & REMATCH"), color = MainUi.Green) }
-                    }
-                }
-                if (matchHistory.isNotEmpty()) item { MainSectionTitle(sh("SON MAÇLAR", "RECENT MATCHES")) }
-                items(matchHistory.take(12), key = { it.matchId }) { match ->
-                    val won = match.result == "win"
-                    val draw = match.result == "draw"
-                    Surface(shape = RoundedCornerShape(16.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-                        Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(shape = RoundedCornerShape(10.dp), color = when { won -> MainUi.Green.copy(alpha = .11f); draw -> MainUi.Gold.copy(alpha = .11f); else -> MainUi.Red.copy(alpha = .09f) }) {
-                                Text(
-                                    when { won -> "G"; draw -> "B"; else -> "M" },
-                                    Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
-                                    color = when { won -> MainUi.Green; draw -> MainUi.Gold; else -> MainUi.Red },
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                )
-                            }
-                            Spacer(Modifier.width(9.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(match.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1)
-                                Text("${match.myScore}-${match.theirScore} • ${if (match.ratingDelta >= 0) "+" else ""}${match.ratingDelta} rating", color = MainUi.Muted, fontSize = 8.5.sp)
-                            }
-                            if (match.isFriend) Icon(Icons.Rounded.People, null, tint = MainUi.Blue, modifier = Modifier.size(17.dp))
-                        }
-                    }
-                }
-
-                if (rivals.isEmpty() && matchHistory.isEmpty() && siegeHistory.isEmpty() && !loading) {
-                    item {
-                        MainSocialEmpty(
-                            icon = Icons.Rounded.SportsKabaddi,
-                            title = sh("Rakip geçmişin henüz yok", "No rival history yet"),
-                            body = sh("İlk gerçek oyuncu maçından sonra rakiplerin burada görünür.", "Rivals appear here after your first real-player match."),
-                            action = sh("OYNA", "PLAY"),
-                            onAction = onSiege,
-                        )
-                    }
-                }
-            }
+            else -> Unit
         }
 
         notice?.let { message ->
@@ -618,8 +388,8 @@ private fun MainFriendCard(
     onRemove: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
-    val online = friend.presenceStatus == "online"
-    val playing = friend.presenceStatus == "in_game"
+    val online = friend.isRecentlyOnline()
+    val playing = online && friend.presenceStatus == "in_game"
     Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, if (online) MainUi.Green.copy(alpha = .28f) else MainUi.Border)) {
         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
             Box {

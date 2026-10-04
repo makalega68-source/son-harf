@@ -18,7 +18,7 @@ class SeriesGameReachabilityContractTest {
         assertTrue(series.contains("findOrCreateWordSiegeSeriesGame"))
         assertTrue(entry.contains("HIZLI DÜELLO"))
         assertTrue(entry.contains("mode = WordSiegeEntryMode.SERIES"))
-        assertTrue(entry.contains("WordSiegeSeriesScreen(verifiedAccess = true)"))
+        assertTrue(entry.contains("WordSiegeSeriesScreen(verifiedAccess = true, directEntry = true)"))
         assertTrue(entry.contains("onOpenStore"))
         assertTrue(shell.contains("PremiumDestination.SIEGE -> WordSiegeEntryScreen"))
         assertTrue(store.contains("showSeriesGame"))

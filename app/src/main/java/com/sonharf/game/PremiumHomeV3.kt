@@ -98,7 +98,7 @@ private fun HomeStatusRow(
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(profile?.displayName?.ifBlank { null } ?: sh("Oyuncu", "Player"),
-                    color = HomeLobbyStyle.Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                    color = if (SonHarfCosmetics.nameStyleId == null) HomeLobbyStyle.Ink else SonHarfCosmetics.playerNameColor, fontSize = 14.sp, style = premiumNameStyle(SonHarfCosmetics.nameStyleId),
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(profile?.let { homeLeagueName(ratingLeagueProgress(it.rating).leagueName) + sh(" Lig", " League") }
                     ?: sh("Profilim", "My profile"), color = HomeLobbyStyle.Muted, fontSize = 10.sp,
@@ -338,7 +338,7 @@ internal fun PremiumLeagueProgress(profile: ProfileDto?, onLeague: () -> Unit) {
 internal fun PremiumOtherGames(onLastLetter: () -> Unit, onWorkshop: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         HomeGameRow(sh("Son Harf", "Last Letter"), sh("1v1 kelime düellosu", "1v1 word duel"), R.drawable.son_harf_game_icon, onLastLetter)
-        HomeTournamentCard(onOpen = onWorkshop, compact = true)
+        HomeGameRow(sh("Kelime Atölyesi", "Word Workshop"), sh("Harflerini seç, kelimeni kur", "Pick letters, build words"), R.drawable.kelime_atolyesi_game_icon, onWorkshop)
     }
 }
 

@@ -7,12 +7,14 @@ import org.junit.Test
 
 class WordSiegeEntryModesContractTest {
     @Test
-    fun entryExposesLibraryAndRequestedPlayableModes() {
+    fun entryOffersModesWhileMyGamesOwnsTheLibrary() {
         val entry = projectFile("app/src/main/java/com/sonharf/game/WordSiegeEntryScreen.kt").readText()
 
-        assertTrue(entry.contains("\"OYUNLARIM\""))
-        assertTrue(entry.contains("\"DEVAM EDEN\""))
-        assertTrue(entry.contains("\"BİTEN\""))
+        val library = projectFile("app/src/main/java/com/sonharf/game/MyGamesScreen.kt").readText()
+        assertFalse(entry.contains("\"OYUNLARIM\""))
+        assertTrue(library.contains("GameInvitesScreen"))
+        assertTrue(library.contains("CompactMatchRow"))
+        assertFalse(library.contains("findOrCreateWordSiegeGame"))
         assertTrue(entry.contains("\"12 SAAT\""))
         assertTrue(entry.contains("\"24 SAAT\""))
         assertTrue(entry.contains("\"HIZLI DÜELLO\""))
@@ -20,8 +22,8 @@ class WordSiegeEntryModesContractTest {
         assertTrue(entry.contains("WordSiegeEntryMode.SERIES"))
         assertTrue(entry.contains("WordSiegeEntryMode.AI"))
         assertTrue(entry.contains("WordSiegePracticeScreen"))
-        assertTrue(entry.contains("WordSiegeLaunchConfig.classicTurnHours = 24"))
-        assertTrue(entry.contains("WordSiegeSeriesScreen(verifiedAccess = true)"))
+        assertTrue(entry.contains("startClassic(24)"))
+        assertTrue(entry.contains("WordSiegeSeriesScreen(verifiedAccess = true, directEntry = true)"))
     }
 
     @Test

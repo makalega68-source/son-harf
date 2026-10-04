@@ -1226,7 +1226,7 @@ private fun PremierVsPlayerCard(language: String, name: String, avatar: String?,
             else ProfilePhotoAvatarWithGender(avatar,gender,name,70.dp,accent=accent,visible=visible,frameId=frameId)
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(7.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically) {
-                    Text(name,Modifier.weight(1f,fill=false),color=if(nameColor==PremierUi.Ink)EventInk else nameColor,fontSize=21.sp,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Text(name,Modifier.weight(1f,fill=false),color=if(nameColor==PremierUi.Ink)EventInk else nameColor,fontSize=21.sp,style=premiumNameStyle(if(nameEmblem) SonHarfCosmetics.nameStyleId else null),maxLines=1,overflow=TextOverflow.Ellipsis)
                     if(nameEmblem&&!bot){Spacer(Modifier.width(4.dp));NameStyleEmblem(20.dp)}
                 }
                 Text(if(bot)pt(language,"AI RAKİP","AI RIVAL")else pt(language,"DÜELLO OYUNCUSU","DUEL PLAYER"),color=accent,fontSize=10.sp,fontWeight=FontWeight.Black)
@@ -3028,6 +3028,7 @@ private fun PremierChatSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = PremierUi.Surface) {
+        SecureChatContent()
         Column(
             Modifier.fillMaxWidth().imePadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),

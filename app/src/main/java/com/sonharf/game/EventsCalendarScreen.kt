@@ -27,8 +27,17 @@ internal fun atelierCalendar(now: Long): List<Pair<Long, Double>> {
 
 @Composable
 internal fun EventsCalendarScreen(onBack: () -> Unit, onAtelier: () -> Unit, onThrone: () -> Unit) {
+    var selected by remember { mutableStateOf<DailyWordEvent?>(null) }
+    val context=androidx.compose.ui.platform.LocalContext.current
+    val user=remember { OnlineGameBackend().currentUserId() ?: "guest" }
+    if(selected!=null) {
+        DailyWordEventScreen(requireNotNull(selected),user) { selected=null }
+        return
+    }
+    val prefs=remember { context.getSharedPreferences("daily_word_events_v1",0) }
+    var day by remember { mutableStateOf(dailyEventDay()) }
+    LaunchedEffect(Unit) { while(true) { day=dailyEventDay(); delay(30_000) } }
     var tournament by remember { mutableStateOf<AtelierTournament?>(null) }
-    var week by remember { mutableStateOf<ThroneWeek?>(null) }
     var failed by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
     var loadedAt by remember { mutableLongStateOf(0L) }
@@ -39,11 +48,9 @@ internal fun EventsCalendarScreen(onBack: () -> Unit, onAtelier: () -> Unit, onT
         while (true) {
             coroutineScope {
                 val event = async { gameRequestResult { ThroneBackend.tournament() } }
-                val throne = async { gameRequestResult { ThroneBackend.week() } }
-                val a = event.await(); val b = throne.await()
-                failed = a.isFailure || b.isFailure
+                val a = event.await()
+                failed = a.isFailure
                 a.onSuccess { tournament = it; loadedAt = android.os.SystemClock.elapsedRealtime() }
-                b.onSuccess { week = it }
             }
             delay(30_000)
         }
@@ -59,27 +66,25 @@ internal fun EventsCalendarScreen(onBack: () -> Unit, onAtelier: () -> Unit, onT
         if (failed) item { TextButton(onClick = { retry++ }) { Text(sh("Takvim güncellenemedi · Yenile", "Calendar unavailable · Retry"), color = Hf.Red) } }
         if (tournament == null && !failed) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Green) }
         tournament?.let { event ->
-            if (event.active) item {
-                ActivityTile(sh("ŞİMDİ · Atölye ×${event.multiplier} XP", "LIVE · Atelier ×${event.multiplier} XP")) {
-                    Text(sh("${event.stage}. tur · Bitiş ", "Stage ${event.stage} · Ends ") + socialDate(event.stageEnds), color = LobbyPalette.Muted)
-                    Button(onClick = onAtelier) { Text(sh("KATIL", "JOIN")) }
+            item(key="atelier_tournament") {
+                val next=if(now>0)atelierCalendar(now).firstOrNull() else null
+                ActivityTile(sh("Atölye Turnuvası", "Workshop Tournament")) {
+                    Text(if(event.active)sh("Şimdi açık · ×${event.multiplier} XP", "Live now · ×${event.multiplier} XP")
+                        else sh("Bir sonraki turnuva", "Next tournament"),color=LobbyPalette.Ink)
+                    Text(if(event.active)sh("${event.stage}. tur · Bitiş ", "Stage ${event.stage} · Ends ")+socialDate(event.stageEnds)
+                        else next?.let { socialDate(Instant.ofEpochMilli(it.first).toString())+" · "+tournamentClockText(it.first,now) } ?: "—",color=LobbyPalette.Muted)
+                    Button(onClick=onAtelier) { Text(if(event.active)sh("Katıl","Join")else sh("Atölyeyi aç","Open workshop")) }
                 }
             }
-            if (now > 0) {
-                item { Text(sh("YAKLAŞAN TURNUVALAR", "UPCOMING TOURNAMENTS"), color = LobbyPalette.Ink, fontWeight = FontWeight.Black) }
-                atelierCalendar(now).forEach { (start, multiplier) -> item(key = start) {
-                    ActivityTile(socialDate(Instant.ofEpochMilli(start).toString()) + " · ×$multiplier XP") {
-                        Text(tournamentClockText(start, now), color = Hf.Green)
-                        TextButton(onClick = onAtelier) { Text(sh("ATÖLYEYİ AÇ", "OPEN ATELIER")) }
-                    }
-                } }
-            }
         }
-        week?.let { w -> item {
-            ActivityTile(sh("BU HAFTA · Taht yarışı", "THIS WEEK · Throne race")) {
-                Text("${w.me.xp} XP · " + sh("Sıra ", "Rank ") + (w.me.rank.takeIf { it > 0 }?.toString() ?: "—"), color = LobbyPalette.Ink)
-                Text(sh("Sıfırlama: ", "Reset: ") + socialDate(w.resetAt), color = LobbyPalette.Muted)
-                TextButton(onClick = onThrone) { Text(sh("TAHTI AÇ", "OPEN THRONE")) }
+        item { Text(sh("Günün bulmacaları", "Daily puzzles"),color=LobbyPalette.Ink,fontWeight=FontWeight.Bold) }
+        DailyWordEvent.entries.forEach { event -> item(key=event.name) {
+            val answers=prefs.getString(eventProgressKey(user,day,SonHarfUiState.isEnglish,event),"").orEmpty()
+            ActivityTile(dailyEventTitle(event)) {
+                Text(dailyEventHint(event),color=LobbyPalette.Muted)
+                Text(if(answers.length>=5)sh("Tamamlandı · ${eventScore(answers)}/100 · Yarın yenilenir", "Complete · ${eventScore(answers)}/100 · Returns tomorrow")
+                    else sh("5 bulmaca · ${answers.length}/5 tamamlandı", "5 puzzles · ${answers.length}/5 complete"),color=LobbyPalette.Accent)
+                Button(onClick={selected=event}) { Text(if(answers.length>=5)sh("Sonucun", "Your result")else if(answers.isEmpty())sh("Oyna", "Play")else sh("Devam et", "Continue")) }
             }
         } }
     }

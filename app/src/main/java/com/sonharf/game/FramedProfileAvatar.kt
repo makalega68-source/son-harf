@@ -3,6 +3,7 @@ package com.sonharf.game
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,18 +38,18 @@ internal fun FramedProfilePhotoAvatar(
     val ringColor = if (isPro) ProGoldFrame else StandardGreyFrame
     val ringWidth = if (isPro) 3.dp else 2.dp
     Box(
-        modifier = if (framed) Modifier else Modifier.border(BorderStroke(ringWidth, ringColor), CircleShape),
+        modifier = Modifier.size(size).then(if (framed) Modifier else Modifier.border(BorderStroke(ringWidth, ringColor), CircleShape)),
         contentAlignment = Alignment.Center,
     ) {
         ProfilePhotoAvatarWithGender(
             avatarPath = avatarPath,
             gender = gender,
             name = name,
-            size = size,
+            size = if (framed) size * .72f else size,
             accent = accent,
             visible = visible,
             showGenderBadge = showGenderBadge && !framed,
         )
-        if (framed) ProfileFrameArt(frameId = legacyFrameId, size = size)
+        if (framed) ProfileFrameArt(frameId = legacyFrameId, size = size * .72f)
     }
 }

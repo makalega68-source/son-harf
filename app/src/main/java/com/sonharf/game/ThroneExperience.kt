@@ -97,13 +97,27 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
  "mastery"->if(m.game=="atelier")sh("12 atölye görevi tamamla","Complete 12 workshop tasks")else sh("3 maç kazan","Win 3 matches")
  else->sh("1.000 oyun XP kazan","Earn 1,000 game XP")
 }
-@Composable internal fun ThroneScreen(onBack:()->Unit,onLegacy:()->Unit) {
+@Composable internal fun ThroneScreen(onBack:()->Unit,onLegacy:(Int)->Unit) {
  var week by remember{mutableStateOf<ThroneWeek?>(null)}
  var error by remember{mutableStateOf(false)}
- LaunchedEffect(Unit){if(!SupabaseProvider.configured){error=true;return@LaunchedEffect};while(true){gameRequestResult{ThroneBackend.week()}.onSuccess{week=it;error=false}.onFailure{error=true};delay(20_000)}}
+ var section by remember{mutableIntStateOf(0)}
+ val foreground=rememberAppForeground()
+ LaunchedEffect(foreground){if(!foreground)return@LaunchedEffect;if(!SupabaseProvider.configured){error=true;return@LaunchedEffect};while(true){gameRequestResult{ThroneBackend.week()}.onSuccess{week=it;error=false}.onFailure{error=true};delay(20_000)}}
  val now=serverNow(week?.serverTime.orEmpty(),Unit)
  LazyColumn(Modifier.fillMaxSize().background(LobbyPalette.Ground),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
   item { MainScreenHeader(title=sh("Taht","Throne"),subtitle=sh("Üç oyun · Tek haftalık yarış","Three games · One weekly race"),onBack=onBack) }
+  item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+   listOf(sh("Ligler","Leagues"),sh("Kupa","Cup"),sh("Rakipler","Rivals")).forEachIndexed { i,label ->
+    Surface(onClick={onLegacy(i)},modifier=Modifier.weight(1f),shape=RoundedCornerShape(16.dp),color=LobbyPalette.Soft,border=BorderStroke(1.dp,LobbyPalette.Line)) {
+     Column(Modifier.padding(vertical=14.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
+      Icon(when(i){0->Icons.Rounded.WorkspacePremium;1->Icons.Rounded.EmojiEvents;else->Icons.Rounded.Groups},null,tint=LobbyPalette.Accent)
+      Text(label,color=LobbyPalette.Ink,fontWeight=FontWeight.Bold,fontSize=13.sp)
+     }
+    }
+   }
+  } }
+  item { LobbyTabs(listOf(sh("Özet","Overview"),sh("Görevler","Missions"),sh("Sıralama","Ranking")),section,{section=it}) }
+  if(section==0) {
   item { ThroneOwnerStage(week?.previousOwner?.let { ThroneRow(rank=1,userId=it.userId,name=it.name,xp=it.xp,avatarPath=it.avatarPath,gender=it.gender,avatarVisibility=it.avatarVisibility) },tournamentTimeMillis(week?.resetAt.orEmpty()),now) }
   item { GameEventStage {
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
@@ -118,6 +132,8 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
     }
    }
   } }
+  }
+  if(section==1) {
   item { Text(sh("HAFTALIK GÖREVLER","WEEKLY MISSIONS"),color=LobbyPalette.Ink,fontWeight=FontWeight.Bold) }
   items(week?.missions.orEmpty(),key={"${it.game}:${it.id}"}){m->Surface(shape=RoundedCornerShape(18.dp),color=LobbyPalette.Paper,border=BorderStroke(1.dp,SonHarfTheme.PremiumGold.copy(alpha=.4f))){Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -128,6 +144,8 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
    LinearProgressIndicator(progress={(m.progress.toFloat()/m.target.coerceAtLeast(1)).coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth().height(7.dp).clip(CircleShape),color=SonHarfTheme.Primary,trackColor=LobbyPalette.Soft)
    Text("${m.progress}/${m.target}"+if(m.awarded)sh(" · ÖDÜL KAZANILDI"," · REWARD EARNED")else "",color=LobbyPalette.Muted,fontSize=10.sp,fontWeight=FontWeight.Bold)
   }} }
+  }
+  if(section==2) {
   item { GameWeeklyPodium(week?.rows.orEmpty().take(3)) }
   items(week?.rows.orEmpty().drop(3),key={it.userId}){r->Surface(shape=RoundedCornerShape(14.dp),color=LobbyPalette.Paper){Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
    Text("${r.rank}",Modifier.width(24.dp),color=SonHarfTheme.PremiumGold,fontWeight=FontWeight.Black)
@@ -135,8 +153,8 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
    Text(r.name,Modifier.weight(1f),color=LobbyPalette.Ink,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
    Text("${r.xp} XP",color=SonHarfTheme.Primary,fontSize=12.sp,fontWeight=FontWeight.Black)
   }} }
-  item { Text(sh("Maç 35 XP · Galibiyet +85 XP · Görevler 100/150/200 XP. Sıfırlama: pazartesi 00:00.","Official match: 35 XP; win: +85 XP. Workshop score converts to XP by duration. Tournament multipliers apply only to tournament stages. Mission rewards are automatic. Practice does not award weekly XP."),color=LobbyPalette.Muted,fontSize=11.sp) }
-  item { OutlinedButton(onClick=onLegacy,modifier=Modifier.fillMaxWidth()){Text(sh("Ligler · Kupa · Rakipler","Leagues · Cup · Rivals"))} }
+  }
+  if(section==0) item { Text(sh("Maç 35 XP · Galibiyet +85 XP · Görevler 100/150/200 XP. Sıfırlama: pazartesi 00:00.","Official match: 35 XP; win: +85 XP. Workshop score converts to XP by duration. Tournament multipliers apply only to tournament stages. Mission rewards are automatic. Practice does not award weekly XP."),color=LobbyPalette.Muted,fontSize=11.sp) }
   if(week==null)item { if(error)Text(sh("Taht yüklenemedi. Bağlantı tekrar deneniyor.","Unable to load the throne. Reconnecting."),color=LobbyPalette.Muted)else CircularProgressIndicator(color=SonHarfTheme.Primary) }
  }
 }

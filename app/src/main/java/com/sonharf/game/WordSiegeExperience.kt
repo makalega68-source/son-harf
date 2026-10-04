@@ -51,7 +51,7 @@ private val SiegeLightTileMuted get() = if (WordSiegeWalnutIvory.enabled) WordSi
 private enum class SiegeListSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FINISHED }
 
 @Composable
-internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
+internal fun WordSiegeExperienceScreen(directEntry: Boolean = false, onExit: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     val scope = rememberCoroutineScope()
     // Read on every recomposition: remembering it once kept a null id forever when the session loaded late.
@@ -194,6 +194,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     }
 
     BackHandler {
+        if (directEntry) { onExit(); return@BackHandler }
         if (selectedGameId != null) {
             selectedGameId = null
             currentGame = null
@@ -259,7 +260,12 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     }
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
-        if (selectedGameId == null) {
+        if (selectedGameId == null && directEntry) {
+            Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
+                Text(notice ?: sh("Maç açılamadı. Oyunlarım'dan yeniden deneyebilirsin.", "Could not open the match. Try again from My games."), color = MainUi.Text)
+                TextButton(onClick = onExit) { Text(sh("Geri", "Back")) }
+            }
+        } else if (selectedGameId == null) {
             WordSiegeGamesList(
                 games = games,
                 profiles = profiles,
@@ -313,6 +319,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     busy = busy,
                     notice = notice,
                     onBack = {
+                        if (directEntry) onExit()
                         selectedGameId = null
                         currentGame = null
                         placements = emptyMap()
@@ -1213,7 +1220,8 @@ private fun WordSiegeChatDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { ChatDialogTitle(sh("SOHBET", "CHAT"), onDismiss) },
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+            title = { ChatDialogTitle(sh("SOHBET", "CHAT"), onDismiss) },
         text = {
             Column(Modifier.heightIn(min = 220.dp, max = 430.dp)) {
                 if (messages.isEmpty()) {

@@ -37,6 +37,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.sonharf.game.data.findOrCreateWordSiegeGame
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -87,14 +90,14 @@ internal fun WordSiegeEntryScreen(
     when (mode) {
         WordSiegeEntryMode.STANDARD -> {
             WordSiegeLaunchConfig.classicTurnHours = selectedClassicHours
-            WordSiegeExperienceScreen {
+            WordSiegeExperienceScreen(directEntry = true) {
                 WordSiegeLaunchConfig.classicTurnHours = 12
-                mode = null
+                onExit()
             }
             return
         }
         WordSiegeEntryMode.SERIES -> {
-            WordSiegeSeriesScreen(verifiedAccess = true) { mode = null }
+            WordSiegeSeriesScreen(verifiedAccess = true, directEntry = true) { onExit() }
             return
         }
         WordSiegeEntryMode.AI -> {
@@ -105,40 +108,37 @@ internal fun WordSiegeEntryScreen(
     }
 
     val backend = remember { OnlineGameBackend() }
+    val scope = rememberCoroutineScope()
+    var starting by remember { mutableStateOf(false) }
+    var launchError by remember { mutableStateOf<String?>(null) }
+    fun startClassic(hours: Int) {
+        if (starting) return
+        starting = true
+        launchError = null
+        selectedClassicHours = hours
+        WordSiegeLaunchConfig.classicTurnHours = hours
+        scope.launch {
+            gameRequestResult { backend.findOrCreateWordSiegeGame(SonHarfUiState.language, hours) }
+                .onSuccess { WordSiegeLaunchConfig.open(it); mode = WordSiegeEntryMode.STANDARD }
+                .onFailure { launchError = wordSiegeFriendlyError(it.message.orEmpty()) }
+            starting = false
+        }
+    }
     var entitlements by remember { mutableStateOf<VipEntitlementsDto?>(null) }
     var entitlementError by remember { mutableStateOf(false) }
-    var libraryLoading by remember { mutableStateOf(true) }
-    var libraryError by remember { mutableStateOf(false) }
-    var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
-    var libraryTab by remember { mutableStateOf(WordSiegeLibraryTab.ACTIVE) }
     var retry by remember { mutableIntStateOf(0) }
 
     BackHandler(onBack = onExit)
 
     LaunchedEffect(retry) {
         entitlementError = false
-        libraryError = false
-        libraryLoading = true
 
         runCatching { backend.getVipEntitlements() }
             .onSuccess { entitlements = it }
             .onFailure { entitlementError = true }
 
-        val classic = runCatching { backend.getWordSiegeGames() }
-        val series = runCatching { backend.getWordSiegeSeriesGames() }
-        if (classic.isFailure && series.isFailure) {
-            libraryError = true
-        } else {
-            games = (classic.getOrDefault(emptyList()) + series.getOrDefault(emptyList()))
-                .distinctBy { it.id }
-                .sortedByDescending { it.updatedAt.ifBlank { it.createdAt } }
-        }
-        libraryLoading = false
     }
 
-    val activeGames = games.filter { it.status == "waiting" || it.status == "playing" }
-    val finishedGames = games.filter { it.status == "finished" }
-    val shownGames = if (libraryTab == WordSiegeLibraryTab.ACTIVE) activeGames else finishedGames
     val access = entitlements
     val seriesOwned = access?.seriesGameAccess == true
     LaunchedEffect(startQuickDuel, seriesOwned) {
@@ -199,110 +199,14 @@ internal fun WordSiegeEntryScreen(
         ) {
             item(key = "header") {
                 MainScreenHeader(
-                    title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
-                    subtitle = sh("Oyununa devam et veya yeni bir maç başlat", "Continue a game or start a new match"),
+                    title = sh("Yeni Kuşatma", "New Siege"),
+                    subtitle = sh("Bir kez seç, doğrudan maça gir", "Choose once and go straight to your match"),
                     onBack = onExit,
                 )
             }
 
-            item(key = "my_games") {
-                Surface(
-                    shape = SiegeEntryCardShape,
-                    color = LobbyPalette.Paper,
-                    border = BorderStroke(1.dp, LobbyPalette.Line),
-                    shadowElevation = 2.dp,
-                ) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.SportsEsports, null, tint = LobbyPalette.Accent, modifier = Modifier.size(22.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                sh("OYUNLARIM", "MY GAMES"),
-                                modifier = Modifier.weight(1f),
-                                color = LobbyPalette.Ink,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = .4.sp,
-                            )
-                            if (libraryLoading) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp, color = LobbyPalette.Accent)
-                        }
-
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SiegeLibraryTabButton(
-                                selected = libraryTab == WordSiegeLibraryTab.ACTIVE,
-                                label = sh("DEVAM EDEN", "ACTIVE"),
-                                count = activeGames.size,
-                                modifier = Modifier.weight(1f),
-                                onClick = { libraryTab = WordSiegeLibraryTab.ACTIVE },
-                            )
-                            SiegeLibraryTabButton(
-                                selected = libraryTab == WordSiegeLibraryTab.FINISHED,
-                                label = sh("BİTEN", "FINISHED"),
-                                count = finishedGames.size,
-                                modifier = Modifier.weight(1f),
-                                onClick = { libraryTab = WordSiegeLibraryTab.FINISHED },
-                            )
-                        }
-
-                        when {
-                            libraryLoading && games.isEmpty() -> {
-                                Text(
-                                    sh("Oyunların yükleniyor…", "Loading your games…"),
-                                    color = LobbyPalette.Muted,
-                                    fontSize = 10.sp,
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                )
-                            }
-                            libraryError -> {
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        sh("Oyun listesi yenilenemedi.", "Game list could not refresh."),
-                                        modifier = Modifier.weight(1f),
-                                        color = LobbyPalette.Muted,
-                                        fontSize = 10.sp,
-                                    )
-                                    TextButton(onClick = { retry++ }) {
-                                        Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(sh("YENİLE", "RETRY"), fontWeight = FontWeight.Black, fontSize = 9.sp)
-                                    }
-                                }
-                            }
-                            shownGames.isEmpty() -> {
-                                Text(
-                                    if (libraryTab == WordSiegeLibraryTab.ACTIVE) {
-                                        sh("Devam eden oyunun yok.", "You have no active games.")
-                                    } else {
-                                        sh("Henüz biten oyunun yok.", "You have no finished games yet.")
-                                    },
-                                    color = LobbyPalette.Muted,
-                                    fontSize = 10.sp,
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                )
-                            }
-                            else -> {
-                                shownGames.take(4).forEach { game ->
-                                    SiegeGameLibraryRow(
-                                        game = game,
-                                        onClick = {
-                                            if (game.gameMode == "series") {
-                                                if (seriesOwned) {
-                                                    WordSiegeLaunchConfig.open(game)
-                                                    mode = WordSiegeEntryMode.SERIES
-                                                } else onOpenStore()
-                                            } else {
-                                                WordSiegeLaunchConfig.open(game)
-                                                selectedClassicHours = if (game.turnDurationHours == 24) 24 else 12
-                                                mode = WordSiegeEntryMode.STANDARD
-                                            }
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            if (starting) item { androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            launchError?.let { item { Text(it, color = SonHarfTheme.Error) } }
 
             item(key = "new_game_title") {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -329,10 +233,9 @@ internal fun WordSiegeEntryScreen(
                         title = sh("12 SAAT", "12 HOURS"),
                         subtitle = sh("Her hamle için 12 saat", "12 hours for each turn"),
                         accent = LobbyPalette.Accent,
+                        enabled = !starting,
                         onClick = {
-                            selectedClassicHours = 12
-                            WordSiegeLaunchConfig.classicTurnHours = 12
-                            mode = WordSiegeEntryMode.STANDARD
+                            startClassic(12)
                         },
                     )
                     SiegeModeCard(
@@ -341,10 +244,9 @@ internal fun WordSiegeEntryScreen(
                         title = sh("24 SAAT", "24 HOURS"),
                         subtitle = sh("Her hamle için 24 saat", "24 hours for each turn"),
                         accent = LobbyPalette.Gold,
+                        enabled = !starting,
                         onClick = {
-                            selectedClassicHours = 24
-                            WordSiegeLaunchConfig.classicTurnHours = 24
-                            mode = WordSiegeEntryMode.STANDARD
+                            startClassic(24)
                         },
                     )
                 }
@@ -369,7 +271,7 @@ internal fun WordSiegeEntryScreen(
                             else -> sh("HIZLI DÜELLO • 🎬 5 oyun ücretsiz", "QUICK DUEL • 🎬 5 free games")
                         },
                         accent = SonHarfTheme.ActionOrange,
-                        enabled = access != null || entitlementError,
+                        enabled = !starting && (access != null || entitlementError),
                         onClick = {
                             when {
                                 entitlementError -> retry++
@@ -385,6 +287,7 @@ internal fun WordSiegeEntryScreen(
                         title = sh("AI İLE OYNA", "PLAY AI"),
                         subtitle = sh("Anında antrenman maçı", "Instant practice match"),
                         accent = LobbyPalette.Accent,
+                        enabled = !starting,
                         onClick = { mode = WordSiegeEntryMode.AI },
                     )
                 }

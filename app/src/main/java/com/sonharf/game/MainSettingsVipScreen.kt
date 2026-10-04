@@ -105,9 +105,6 @@ internal fun MainSettingsScreen(
             }
         }
 
-        item {
-            ProfileOwnedThemesSection(backend)
-        }
 
         item {
             MainSettingsGroup(sh("BİLDİRİMLER", "NOTIFICATIONS")) {
