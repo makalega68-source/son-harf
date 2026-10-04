@@ -10,10 +10,11 @@ def adb(*args):
 
 
 def tree(name):
-    for _ in range(3):
+    for _ in range(5):
         adb("shell", "rm", "-f", "/sdcard/home-menu.xml")
-        adb("shell", "uiautomator", "dump", "--compressed", "/sdcard/home-menu.xml")
         try:
+            # The dump itself fails (exit 255, "null root node") while the window is still settling.
+            adb("shell", "uiautomator", "dump", "--compressed", "/sdcard/home-menu.xml")
             adb("pull", "/sdcard/home-menu.xml", name)
             return ET.parse(name)
         except (subprocess.CalledProcessError, ET.ParseError):

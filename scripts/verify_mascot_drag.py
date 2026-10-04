@@ -13,10 +13,11 @@ def bounds(name):
     # UiAutomator can return a null root just after a cold activity launch.
     # Never reuse a stale dump, and keep evidence if all bounded retries fail.
     node = None
-    for attempt in range(3):
+    for attempt in range(5):
         adb("shell", "rm", "-f", "/sdcard/mascot.xml")
-        adb("shell", "uiautomator", "dump", "--compressed", "/sdcard/mascot.xml")
         try:
+            # The dump itself fails (exit 255, "null root node") while the window is still settling.
+            adb("shell", "uiautomator", "dump", "--compressed", "/sdcard/mascot.xml")
             adb("pull", "/sdcard/mascot.xml", name)
             node = next((n for n in ET.parse(name).iter("node") if n.get("content-desc") == "Maskot"), None)
         except (subprocess.CalledProcessError, ET.ParseError):
