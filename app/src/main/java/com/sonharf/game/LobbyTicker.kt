@@ -57,8 +57,25 @@ internal fun TopNewsTicker(modifier: Modifier = Modifier) {
             delay(60_000)
         }
     }
-    TickerStrip(Icons.Rounded.Campaign, (lines.ifEmpty { tickerFallback() }).joinToString(TickerGap), modifier)
+    // One line at a time: it scrolls through once, rests, then the next one comes. Cheaper to draw
+    // than an endless band and easier to read.
+    val shown = lines.ifEmpty { tickerFallback() }
+    var index by remember { mutableIntStateOf(0) }
+    LaunchedEffect(shown) {
+        index = 0
+        while (true) {
+            val line = shown.getOrNull(index % shown.size).orEmpty()
+            delay((5_000L + line.length * 140L).coerceAtMost(22_000L))
+            index = (index + 1) % shown.size
+        }
+    }
+    key(index, shown) {
+        TickerStrip(Icons.Rounded.Campaign, shown.getOrNull(index % shown.size).orEmpty(), modifier, iterations = 1)
+    }
 }
+
+/** The screenshot harness turns ticker motion off so captures are deterministic. */
+internal object TickerMotion { var enabled = true }
 
 /**
  * Bottom band of the menu pages: the Kelime Atölyesi countdown, and every 5 minutes the podium
@@ -111,7 +128,8 @@ private const val TickerGap = "      •      "
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TickerStrip(icon: ImageVector, text: String, modifier: Modifier, gold: Boolean = false, scroll: Boolean = true) {
+private fun TickerStrip(icon: ImageVector, text: String, modifier: Modifier, gold: Boolean = false, scroll: Boolean = true,
+    iterations: Int = 2) {
     Row(modifier.fillMaxWidth().height(26.dp)
         .background(Brush.horizontalGradient(listOf(LobbyBrand.NavBar, LobbyBrand.Band, LobbyBrand.NavBar))),
         verticalAlignment = Alignment.CenterVertically) {
@@ -121,8 +139,8 @@ private fun TickerStrip(icon: ImageVector, text: String, modifier: Modifier, gol
         }
         Text(text,
             Modifier.weight(1f).padding(horizontal = 8.dp).then(
-                if (scroll) Modifier.basicMarquee(iterations = Int.MAX_VALUE, animationMode = MarqueeAnimationMode.Immediately,
-                    initialDelayMillis = 600, repeatDelayMillis = 800, velocity = 42.dp) else Modifier),
+                if (scroll && TickerMotion.enabled) Modifier.basicMarquee(iterations = iterations, animationMode = MarqueeAnimationMode.Immediately,
+                    initialDelayMillis = 900, repeatDelayMillis = 1_200, velocity = 46.dp) else Modifier),
             color = if (gold) LobbyBrand.Gold else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }

@@ -36,6 +36,7 @@ class UiScreenshotActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SonHarfUiState.language = "tr"
         SonHarfCosmetics.restore(this)
+        TickerMotion.enabled = false
         if (intent.getStringExtra("review_stage") == "mascot-drag" && intent.getBooleanExtra("reset_mascot_position", false)) {
             getSharedPreferences("mascot_placement", MODE_PRIVATE).edit().remove("qa-drag:x").remove("qa-drag:y").commit()
         }
