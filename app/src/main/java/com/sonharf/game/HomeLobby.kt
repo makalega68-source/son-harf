@@ -52,7 +52,7 @@ internal object LobbyBrand {
 /**
  * Lobby: brand stage on a word-board backdrop, a player card, two big letter-tile buttons
  * (Yeni Oyun / Oyunlarım) and twin cards for Kelime Atölyesi and Son Harf. Game lists live in Oyunlarım, not here;
- * the bottom bar (Mağaza, Taht, Oyna, Oyunlar, Profil) is drawn by the shell.
+ * the bottom bar (Mağaza, Taht, Oyna, Kulüp, Profil) is drawn by the shell.
  */
 @Composable
 internal fun HomeLobbyScreen(
@@ -68,6 +68,8 @@ internal fun HomeLobbyScreen(
     onEvents: () -> Unit,
     onWorkshop: () -> Unit,
     onLastLetter: () -> Unit,
+    gameLanguage: String,
+    onGameLanguage: (String) -> Unit,
 ) {
     val me = backend.currentUserId()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -127,6 +129,15 @@ internal fun HomeLobbyScreen(
                     }
                 }
                 Spacer(Modifier.weight(1f))
+                // Word language of the games (the Kulüp tab replaced the old game centre that held it).
+                Surface(onClick = { onGameLanguage(if (gameLanguage == "en") "tr" else "en") }, shape = RoundedCornerShape(50),
+                    color = LobbyBrand.Chip, modifier = Modifier.padding(end = 8.dp)) {
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Translate, sh("Oyun dili", "Game language"), tint = LobbyBrand.Gold, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text(if (gameLanguage == "en") "EN" else "TR", color = Color.White, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                    }
+                }
                 Surface(onClick = onShop, shape = RoundedCornerShape(50), color = LobbyBrand.Chip) {
                     Row(Modifier.padding(start = 6.dp, end = 12.dp, top = 5.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                         HfCoin(24.dp)
@@ -291,14 +302,14 @@ private fun LobbyBigButton(icon: ImageVector, label: String, color: Color, edge:
     }
 }
 
-/** Flat five-tab bar (Mağaza · Taht · Oyna · Oyunlar · Profil); Oyna is a green letter-tile. */
+/** Flat five-tab bar (Mağaza · Taht · Oyna · Kulüp · Profil); Oyna is a green letter-tile. */
 @Composable
 internal fun LobbyBottomBar(selected: Int, onSelect: (Int) -> Unit) {
     val items = listOf(
         Icons.Rounded.ShoppingCart to sh("Mağaza", "Store"),
         Icons.Rounded.EmojiEvents to sh("Taht", "Throne"),
         Icons.Rounded.PlayArrow to sh("Oyna", "Play"),
-        Icons.Rounded.SportsEsports to sh("Oyunlar", "Games"),
+        Icons.Rounded.Groups to sh("Kulüp", "Club"),
         Icons.Rounded.Person to sh("Profil", "Profile"),
     )
     Row(Modifier.fillMaxWidth().background(LobbyBrand.NavBar).navigationBarsPadding().height(72.dp),

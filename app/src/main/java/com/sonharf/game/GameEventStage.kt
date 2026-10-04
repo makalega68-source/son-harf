@@ -43,7 +43,7 @@ internal val EventGreen = Color(0xFF226B49)
  val shine=rememberInfiniteTransition(label="event-light").animateFloat(0f,1f,infiniteRepeatable(tween(5200,easing=LinearEasing)),label="event-glint")
  val shape=RoundedCornerShape(26.dp)
  Box(modifier.fillMaxWidth().shadow(5.dp,shape).clip(shape)
-  .background(Brush.linearGradient(if(gold)listOf(Color(0xFFFFE8A2),Color(0xFFE6B65D),Color(0xFFC68B36))else listOf(Color(0xFF3D9765),EventGreen,Color(0xFF173F32))))
+  .background(Brush.linearGradient(if(gold)listOf(Color(0xFFFFE8A2),Color(0xFFE6B65D),Color(0xFFC68B36))else listOf(LobbyBrand.Chip,LobbyBrand.Sky,LobbyBrand.Band)))
   .border(1.5.dp,if(gold)Color(0xFFFFF2C9)else EventGold.copy(alpha=.65f),shape)
   .then(if(onClick!=null)Modifier.clickable(onClick=onClick)else Modifier)) {
   Canvas(Modifier.matchParentSize()) {

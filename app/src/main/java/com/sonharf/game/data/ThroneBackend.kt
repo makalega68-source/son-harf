@@ -38,3 +38,13 @@ internal object ThroneBackend {
   put("p_event",entry.eventStart);put("p_stage",entry.stage);put("p_score",score);put("p_words",words.size);put("p_tasks",tasks);put("p_transcript",buildJsonArray{words.forEach{add(it)}})
  }).decodeAs()
 }
+
+/** One line of the lobby ticker: an admin announcement or a real store purchase. */
+@Serializable internal data class TickerFeedRow(
+ val kind:String="",@SerialName("player_name") val playerName:String?=null,
+ @SerialName("item_name_tr") val itemNameTr:String?=null,@SerialName("item_name_en") val itemNameEn:String?=null,
+ @SerialName("message_tr") val messageTr:String?=null,@SerialName("message_en") val messageEn:String?=null,
+)
+internal object TickerBackend {
+ suspend fun feed():List<TickerFeedRow> = SupabaseProvider.client.postgrest.rpc("get_ticker_feed_v1",buildJsonObject{put("p_limit",12)}).decodeList()
+}

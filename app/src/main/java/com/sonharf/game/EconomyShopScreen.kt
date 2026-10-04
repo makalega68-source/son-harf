@@ -53,7 +53,7 @@ fun EconomyShopScreen(
         val b = OnlineGameBackend()
         balance = b.currentUserId()?.let { id -> runCatching { b.getProfile(id).diamonds }.getOrNull() }
     }
-    Column(Modifier.fillMaxSize().background(LobbyPalette.Ground)) {
+    Column(Modifier.fillMaxSize().menuGround()) {
         StoreTitleBar(balance = balance, onBack = onBack)
         HorizontalDivider(color = LobbyPalette.Line.copy(alpha = .6f))
         // Keep every category visible; related products share one group instead of a hidden strip.

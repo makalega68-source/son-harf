@@ -155,7 +155,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     // the back button always returns there. topLevel only decides where invitation toasts show.
     val lobbyTabs = listOf(
         PremiumDestination.SHOP, PremiumDestination.COMPETE, PremiumDestination.HOME,
-        PremiumDestination.GAMES, PremiumDestination.PROFILE,
+        PremiumDestination.CLUB, PremiumDestination.PROFILE,
     )
     val topLevel = destination in setOf(
         PremiumDestination.HOME, PremiumDestination.MY_GAMES, PremiumDestination.EVENTS,
@@ -222,22 +222,33 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         shapes = SonHarfShapes,
     ) {
         Scaffold(
-            containerColor = if (inGame) SonHarfTheme.Background else LobbyPalette.Ground,
+            containerColor = if (inGame) SonHarfTheme.Background else if (SonHarfCosmetics.petrolMenus) LobbyBrand.NavBar else LobbyPalette.Ground,
+            // The news ticker sits above everything, games included; the ad slot only on menu pages.
+            // windowInsetsPadding consumes the status bar here, so the ad slot below adds none.
             topBar = {
-                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
+                Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
+                    TopNewsTicker()
+                    if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
+                }
             },
-            // Five-tab bar on the main pages: Mağaza · Taht · Oyna · Oyunlar · Profil.
+            // Menu pages: the workshop countdown band, then the five-tab bar
+            // (Mağaza · Taht · Oyna · Kulüp · Profil) on the main pages.
             bottomBar = {
                 val tab = lobbyTabs.indexOf(destination)
-                if (tab >= 0) LobbyBottomBar(selected = tab) { index ->
-                    if (index == 0) shopInitialTab = 0
-                    destination = lobbyTabs[index]
+                if (!inGame) Column {
+                    WorkshopPodiumTicker()
+                    if (tab >= 0) LobbyBottomBar(selected = tab) { index ->
+                        if (index == 0) shopInitialTab = 0
+                        destination = lobbyTabs[index]
+                    } else Spacer(Modifier.navigationBarsPadding())
                 }
             },
         ) { padding ->
             // consumeWindowInsets: the Scaffold padding already contains the status bar, so screens that
             // add statusBarsPadding() themselves (the game arenas) no longer get a second, empty band on top.
             Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
+                // Menu pages sit on the premium petrol board; the arenas draw their own ground.
+                if (!inGame && SonHarfCosmetics.petrolMenus) PremiumMenuBackdrop(Modifier.matchParentSize())
                 // Clean paper menus; the game arenas retain their own surfaces.
                 key(destination, gameLaunchRevision) {
                 when (destination) {
@@ -254,6 +265,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onEvents = { destination = PremiumDestination.EVENTS },
                         onWorkshop = { openGame(PremiumDestination.WORD_WORKSHOP, workshopLanguage) },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
+                        gameLanguage = siegeLanguage,
+                        onGameLanguage = { siegeLanguage = it; lastLetterLanguage = it; workshopLanguage = it },
                     )
                     PremiumDestination.MY_GAMES -> MyGamesScreen(backend, onOpen = { kind, id -> openPlayerTarget(kind, id) }, initialTab = gamesTab)
                     PremiumDestination.GAMES -> PremiumGameCenter(
@@ -270,9 +283,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.COMPETE -> CompetitionHubScreen(
                         onBack = { destination = PremiumDestination.HOME },
                     )
-                    PremiumDestination.CLUB -> {
-                        LaunchedEffect(Unit) { destination = PremiumDestination.HOME }
-                    }
+                    PremiumDestination.CLUB -> ClubComingSoonScreen()
                     PremiumDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE_DETAILS },

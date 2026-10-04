@@ -74,9 +74,9 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
 
-        // Retired: CLUB destination is intercepted and bounced to HOME, never renders CompetitionHubScreen anymore.
+        // The Kulüp tab shows a coming-soon page; the old club hub never renders for users.
         assertFalse(shell.contains("PremiumDestination.CLUB -> CompetitionHubScreen("))
-        assertTrue(shell.contains("PremiumDestination.CLUB -> {"))
+        assertTrue(shell.contains("PremiumDestination.CLUB -> ClubComingSoonScreen()"))
         assertTrue(shell.contains("destination = PremiumDestination.HOME"))
 
         assertTrue(social.contains("\"report_player\""))

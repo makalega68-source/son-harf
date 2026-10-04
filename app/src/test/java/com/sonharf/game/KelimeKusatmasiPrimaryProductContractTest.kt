@@ -45,7 +45,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(home.contains("ThroneBackend.week().rows"))
         assertTrue(home.contains("GameWeeklyPodium(players)"))
         assertTrue(File("src/main/java/com/sonharf/game/ThroneExperience.kt").readText().contains("sh(\"Kelime Atölyesi\",\"Word Workshop\")"))
-        // Lobby with a five-tab bar: Mağaza · Taht · Oyna · Oyunlar · Profil.
+        // Lobby with a five-tab bar: Mağaza · Taht · Oyna · Kulüp · Profil.
         assertFalse(shell.contains("PremiumBottomBar("))
         assertTrue(shell.contains("if (tab >= 0) LobbyBottomBar(selected = tab)"))
         assertTrue(shell.contains("PremiumDestination.HOME -> HomeLobbyScreen("))
@@ -75,7 +75,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertFalse("Club never surfaces", shell.contains("sh(\"KULÜP\", \"CLUB\")"))
         val lobby = File("src/main/java/com/sonharf/game/HomeLobby.kt").readText()
         listOf("sh(\"Yeni Oyun\", \"New Game\")", "sh(\"Oyunlarım\", \"My Games\")", "R.drawable.kelime_tahti_brand_logo",
-            "sh(\"Mağaza\", \"Store\")", "sh(\"Taht\", \"Throne\")", "sh(\"Oyna\", \"Play\")", "sh(\"Oyunlar\", \"Games\")",
+            "sh(\"Mağaza\", \"Store\")", "sh(\"Taht\", \"Throne\")", "sh(\"Oyna\", \"Play\")", "sh(\"Kulüp\", \"Club\")",
             "sh(\"Profil\", \"Profile\")", "rememberWorkshopStatus(), onWorkshop)", "sh(\"Son Harf\", \"Last Letter\")").forEach { assertTrue(it, lobby.contains(it)) }
         // Game lists live in Oyunlarım, not on the lobby.
         assertFalse(lobby.contains("SIRA SENDE"))

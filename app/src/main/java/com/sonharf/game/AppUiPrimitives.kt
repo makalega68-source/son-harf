@@ -106,22 +106,31 @@ internal fun MainScreenHeader(
     actionDescription: String = "",
     onAction: (() -> Unit)? = null,
 ) {
+    val premium = SonHarfCosmetics.petrolMenus
     Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         if (onBack != null) {
-            Surface(shape = RoundedCornerShape(16.dp), color = LobbyPalette.Paper,
-                border = BorderStroke(1.dp, LobbyPalette.Line)) {
+            Surface(shape = RoundedCornerShape(16.dp), color = if (premium) LobbyBrand.Band else LobbyPalette.Paper,
+                border = BorderStroke(1.dp, if (premium) LobbyBrand.Gold.copy(alpha = .7f) else LobbyPalette.Line)) {
                 IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Rounded.ChevronLeft, sh("Geri", "Back"), tint = LobbyPalette.Ink)
+                    Icon(Icons.Rounded.ChevronLeft, sh("Geri", "Back"), tint = if (premium) LobbyBrand.Gold else LobbyPalette.Ink)
                 }
             }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, color = LobbyPalette.Ink, fontSize = 27.sp, lineHeight = 31.sp,
-                fontWeight = FontWeight.Black)
+            if (premium) {
+                // Gold engraved title with a small ornament rule, the lobby's premium heading.
+                Text(title, fontSize = 27.sp, lineHeight = 31.sp, fontWeight = FontWeight.Black,
+                    style = androidx.compose.ui.text.TextStyle(brush = PremiumKit.goldText,
+                        shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = .45f), androidx.compose.ui.geometry.Offset(0f, 3f), 6f)))
+                PremiumRule(width = 120.dp)
+            } else {
+                Text(title, color = LobbyPalette.Ink, fontSize = 27.sp, lineHeight = 31.sp,
+                    fontWeight = FontWeight.Black)
+            }
             if (subtitle.isNotBlank()) {
-                Text(subtitle, color = LobbyPalette.Muted, fontSize = 13.sp, lineHeight = 18.sp)
+                Text(subtitle, color = if (premium) Color.White.copy(alpha = .78f) else LobbyPalette.Muted, fontSize = 13.sp, lineHeight = 18.sp)
             }
         }
         if (actionIcon != null && onAction != null) {
@@ -134,12 +143,13 @@ internal fun MainScreenHeader(
 
 @Composable
 internal fun MainMetricCard(value: String, label: String, modifier: Modifier = Modifier) {
+    val premium = SonHarfCosmetics.petrolMenus
     Surface(
-        modifier = modifier,
+        modifier = if (premium) modifier.premiumPanel(MainUiShape.Card) else modifier,
         shape = MainUiShape.Card,
-        color = MainUi.Surface,
-        border = BorderStroke(1.dp, MainUi.Border),
-        shadowElevation = 1.dp,
+        color = if (premium) Color.Transparent else MainUi.Surface,
+        border = if (premium) null else BorderStroke(1.dp, MainUi.Border),
+        shadowElevation = if (premium) 0.dp else 1.dp,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(12.dp),

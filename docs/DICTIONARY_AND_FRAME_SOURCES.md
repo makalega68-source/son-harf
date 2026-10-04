@@ -8,7 +8,7 @@ Client and server normalization both use Unicode NFC canonicalization plus langu
 
 ### Turkish (`tr`)
 
-Live source (verified in `public.dictionary_words`, 2026-10-04): `source_id = tdk-gts-autocomplete`, version "TDK GTS official 2026-09-16", the headword list of the Türk Dil Kurumu Güncel Türkçe Sözlük (`https://eski.sozluk.gov.tr/autocomplete.json`). 61,742 active rows; 60,643 of them are 2–15 letters and game-allowed, and the bundled `app/src/main/assets/dictionary/tr.txt` matches that set exactly (circumflexed letters folded to plain letters). 44 foreign entries that TDK lists without a Turkish spelling (e.g. `marketing`, `deadline`) are kept but not game-allowed. Proper nouns are not part of the headword list; a common noun that shares a spelling with a name (e.g. `deniz`, `aydın`, `ordu`) is valid as that common noun. Redistribution rights for the TDK list are not asserted by this repository.
+Live source (verified in `public.dictionary_words`, 2026-10-04): `source_id = tdk-gts-autocomplete`, version "TDK GTS official 2026-09-16", the headword list of the Türk Dil Kurumu Güncel Türkçe Sözlük (`https://eski.sozluk.gov.tr/autocomplete.json`). 61,742 active rows; 60,643 of them are 2–15 letters and game-allowed, and the bundled `app/src/main/assets/dictionary/tr.txt` matches that set exactly (circumflexed letters folded to plain letters). 44 foreign entries that TDK lists without a Turkish spelling (e.g. `marketing`, `deadline`) are kept but not game-allowed. Proper nouns are not part of the headword list; a name that is also a meaningful TDK word (e.g. `deniz`, `çiçek`, `umut`) is valid as that word. Redistribution rights for the TDK list are not asserted by this repository.
 
 ### English (`en`)
 

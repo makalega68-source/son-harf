@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
 
-@Composable private fun serverNow(server:String,key:Any?):Long {
+@Composable internal fun serverNow(server:String,key:Any?):Long {
  var anchor by remember(key) { mutableStateOf(0L to 0L) }
  var now by remember(key) { mutableStateOf(0L) }
  LaunchedEffect(server,key) {
@@ -102,14 +102,14 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
  val foreground=rememberAppForeground()
  LaunchedEffect(foreground){if(!foreground)return@LaunchedEffect;if(!SupabaseProvider.configured){error=true;return@LaunchedEffect};while(true){gameRequestResult{ThroneBackend.week()}.onSuccess{week=it;error=false}.onFailure{error=true};delay(20_000)}}
  val now=serverNow(week?.serverTime.orEmpty(),Unit)
- LazyColumn(Modifier.fillMaxSize().background(LobbyPalette.Ground),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-  item { MainScreenHeader(title=sh("Taht","Throne"),subtitle=sh("Üç oyun · Tek haftalık yarış","Three games · One weekly race"),onBack=onBack) }
+ LazyColumn(Modifier.fillMaxSize().menuGround(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+  item { ThroneHero(onBack,tournamentTimeMillis(week?.resetAt.orEmpty()),now) }
   item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
    listOf(sh("Ligler","Leagues"),sh("Kupa","Cup"),sh("Rakipler","Rivals")).forEachIndexed { i,label ->
-    Surface(onClick={onLegacy(i)},modifier=Modifier.weight(1f),shape=RoundedCornerShape(16.dp),color=LobbyPalette.Soft,border=BorderStroke(1.dp,LobbyPalette.Line)) {
+    Surface(onClick={onLegacy(i)},modifier=Modifier.weight(1f).premiumPanel(RoundedCornerShape(16.dp)),shape=RoundedCornerShape(16.dp),color=Color.Transparent) {
      Column(Modifier.padding(vertical=14.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
-      Icon(when(i){0->Icons.Rounded.WorkspacePremium;1->Icons.Rounded.EmojiEvents;else->Icons.Rounded.Groups},null,tint=LobbyPalette.Accent)
-      Text(label,color=LobbyPalette.Ink,fontWeight=FontWeight.Bold,fontSize=13.sp)
+      Icon(when(i){0->Icons.Rounded.WorkspacePremium;1->Icons.Rounded.EmojiEvents;else->Icons.Rounded.Groups},null,tint=LobbyBrand.Gold,modifier=Modifier.size(26.dp))
+      Text(label,color=Color.White,fontWeight=FontWeight.Black,fontSize=13.sp)
      }
     }
    }

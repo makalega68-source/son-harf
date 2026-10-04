@@ -1,6 +1,9 @@
 package com.sonharf.game
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +16,8 @@ import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Storefront
@@ -22,6 +27,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -121,111 +128,152 @@ internal fun MainPlayerProfileScreen(
             hasEquippedNameStyle -> SonHarfCosmetics.playerNameColor
             else -> LobbyPalette.Ink
         }
-        LobbyCard(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.clickable(onClick = onEdit)) {
-                    FramedProfilePhotoAvatar(
-                        avatarPath = p?.avatarPath,
-                        gender = p?.gender,
-                        name = p?.displayName ?: sh("Oyuncu", "Player"),
-                        size = 84.dp,
-                        frameId = rememberPlayerFrame(p?.id),
-                        accent = Hf.Gold,
-                        visible = p?.avatarVisibility != "hidden",
-                        isPro = p?.isVip == true,
-                    )
-                }
-                Spacer(Modifier.width(18.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            p?.displayName ?: sh("Oyuncu", "Player"),
-                            modifier = Modifier.weight(1f, fill = false),
-                            color = displayNameColor,
-                            fontSize = 24.sp,
-                            style = premiumNameStyle(SonHarfCosmetics.nameStyleId),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (hasEquippedNameStyle) {
-                            Spacer(Modifier.width(6.dp))
-                            NameStyleEmblem(30.dp)
-                        }
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(painterResource(R.drawable.hf_ic_club), null, tint = Hf.Gold, modifier = Modifier.size(24.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            profileLeagueName(league.leagueName) + sh(" Lig", " League"),
-                            modifier = Modifier.weight(1f), overflow = TextOverflow.Ellipsis,
-                            color = LobbyPalette.Gold,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                        )
-                        if (p?.isVip == true) {
-                            Spacer(Modifier.width(8.dp))
-                            Surface(shape = Hf.PillShape, color = Hf.Gold) {
-                                Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 2.dp), color = Hf.Ink, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                            }
-                        }
-                    }
-                }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onEdit, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                    shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-                    border = BorderStroke(1.dp, LobbyPalette.Line)) {
-                    Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp), tint = LobbyPalette.Accent)
-                    Spacer(Modifier.width(6.dp))
-                    Text(sh("Profili düzenle", "Edit profile"), color = LobbyPalette.Ink, fontSize = 13.sp)
-                }
-                OutlinedButton(onClick = { renaming = true }, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                    shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-                    border = BorderStroke(1.dp, LobbyPalette.Line)) {
-                    Text(sh("Adı değiştir", "Change name"), color = LobbyPalette.Ink, fontSize = 13.sp)
-                }
-            }
+        ProfileHero(
+            p = p,
+            leagueLabel = profileLeagueName(league.leagueName) + sh(" Lig", " League"),
+            rating = rating,
+            winRate = winRate,
+            nameColor = displayNameColor,
+            hasNameStyle = hasEquippedNameStyle,
+            onEdit = onEdit,
+            onRename = { renaming = true },
+        )
 
-            }
-        }
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ProfileStatTile(Icons.Rounded.EmojiEvents, sh("Galibiyet", "Wins"), profileGrouped(wins), Modifier.weight(1f))
-            ProfileStatTile(Icons.Rounded.SportsEsports, sh("Maç", "Matches"), profileGrouped(matches), Modifier.weight(1f))
-            ProfileStatTile(Icons.Rounded.Star, sh("Puan", "Rating"), profileGrouped(rating), Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ProfileStatTile(Icons.Rounded.EmojiEvents, sh("Galibiyet", "Wins"), profileGrouped(wins), Modifier.weight(1f).fillMaxHeight())
+            ProfileStatTile(Icons.Rounded.SportsEsports, sh("Maç", "Matches"), profileGrouped(matches), Modifier.weight(1f).fillMaxHeight())
+            ProfileStatTile(Icons.Rounded.Star, sh("Puan", "Rating"), profileGrouped(rating), Modifier.weight(1f).fillMaxHeight())
         }
 
         ProfileRecordsSection(backend, onRivals = onRivals)
 
         // Friends, Throne and events live on the home; the profile keeps only who you are.
-        HfSecondaryButton(
-            sh("Koleksiyonum", "My collection"),
-            onClick = onCollection,
-            modifier = Modifier.fillMaxWidth(),
-            trailingChevron = true,
-        )
+        ProfileCollectionEntry(onCollection)
         Spacer(Modifier.height(8.dp))
     }
 }
 
 @Composable
 private fun ProfileStatTile(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = LobbyPalette.Paper,
-        border = BorderStroke(1.dp, LobbyPalette.Line),
-        shadowElevation = 2.dp,
-    ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Icon(icon, null, tint = LobbyPalette.Gold, modifier = Modifier.size(22.dp))
-            Text(value, color = LobbyPalette.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black, maxLines = 1)
-            Text(label, color = LobbyPalette.Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Column(modifier.premiumPanel(RoundedCornerShape(18.dp)).padding(horizontal = 8.dp, vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Box(Modifier.size(36.dp).clip(CircleShape).background(LobbyBrand.Gold.copy(alpha = .16f))
+            .border(1.dp, LobbyBrand.Gold.copy(alpha = .6f), CircleShape), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = LobbyBrand.Gold, modifier = Modifier.size(20.dp))
         }
+        Text(value, fontSize = 22.sp, fontWeight = FontWeight.Black, maxLines = 1,
+            style = androidx.compose.ui.text.TextStyle(brush = PremiumKit.goldText))
+        Text(label, color = Color.White.copy(alpha = .78f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Identity stage: the framed photo inside a slowly turning gold halo, name, league and PRO. */
+@Composable
+private fun ProfileHero(
+    p: ProfileDto?,
+    leagueLabel: String,
+    rating: Int,
+    winRate: Int,
+    nameColor: Color,
+    hasNameStyle: Boolean,
+    onEdit: () -> Unit,
+    onRename: () -> Unit,
+) {
+    val t = rememberInfiniteTransition(label = "profile-halo")
+    val spin by t.animateFloat(0f, 360f, infiniteRepeatable(tween(9000, easing = LinearEasing)), label = "spin")
+    val displayNameColor = if (hasNameStyle) nameColor else Color.White
+    Column(Modifier.fillMaxWidth().premiumPanel(RoundedCornerShape(26.dp), glow = true).padding(vertical = 20.dp, horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.size(140.dp), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.matchParentSize().rotate(spin)) {
+                drawCircle(Brush.sweepGradient(listOf(Color.Transparent, PremiumKit.GoldLight, PremiumKit.Rim, Color.Transparent,
+                    PremiumKit.GoldDeep, Color.Transparent)), radius = size.minDimension / 2, style = Stroke(3.dp.toPx()))
+            }
+            Canvas(Modifier.matchParentSize()) {
+                drawCircle(Brush.radialGradient(listOf(LobbyBrand.Gold.copy(alpha = .30f), Color.Transparent)), radius = size.minDimension / 2)
+            }
+            Box(Modifier.clip(CircleShape).clickable(onClickLabel = sh("Profili düzenle", "Edit profile"), onClick = onEdit)) {
+                FramedProfilePhotoAvatar(
+                    avatarPath = p?.avatarPath,
+                    gender = p?.gender,
+                    name = p?.displayName ?: sh("Oyuncu", "Player"),
+                    size = 108.dp,
+                    frameId = rememberPlayerFrame(p?.id),
+                    accent = Hf.Gold,
+                    visible = p?.avatarVisibility != "hidden",
+                    isPro = p?.isVip == true,
+                )
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                p?.displayName ?: sh("Oyuncu", "Player"),
+                modifier = Modifier.weight(1f, fill = false),
+                color = displayNameColor,
+                fontSize = 26.sp,
+                style = premiumNameStyle(SonHarfCosmetics.nameStyleId),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (hasNameStyle) {
+                Spacer(Modifier.width(6.dp))
+                NameStyleEmblem(30.dp)
+            }
+        }
+        PremiumRule(width = 160.dp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = RoundedCornerShape(50), color = LobbyBrand.NavBar.copy(alpha = .8f),
+                border = BorderStroke(1.dp, LobbyBrand.Gold.copy(alpha = .7f))) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(painterResource(R.drawable.hf_ic_club), null, tint = LobbyBrand.Gold, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(leagueLabel, color = LobbyBrand.Gold, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                }
+            }
+            if (p?.isVip == true) {
+                Surface(shape = RoundedCornerShape(50), color = Color.Transparent,
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(PremiumKit.goldText)) {
+                    Text("PRO", Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Color(0xFF3A2A00), fontSize = 13.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+        Text(sh("$rating RP · Başarı %$winRate", "$rating RP · Win rate $winRate%"), color = Color.White.copy(alpha = .8f),
+            fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ProfileGoldOutlineButton(Icons.Rounded.Edit, sh("Profili düzenle", "Edit profile"), Modifier.weight(1f), onEdit)
+            ProfileGoldOutlineButton(Icons.Rounded.Badge, sh("Adı değiştir", "Change name"), Modifier.weight(1f), onRename)
+        }
+    }
+}
+
+@Composable
+private fun ProfileGoldOutlineButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = modifier.heightIn(min = 46.dp), shape = RoundedCornerShape(14.dp),
+        color = LobbyBrand.NavBar.copy(alpha = .55f), border = BorderStroke(1.dp, LobbyBrand.Gold.copy(alpha = .75f))) {
+        Row(Modifier.padding(horizontal = 8.dp, vertical = 12.dp), horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, Modifier.size(17.dp), tint = LobbyBrand.Gold)
+            Spacer(Modifier.width(6.dp))
+            Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+    }
+}
+
+/** Koleksiyonum entry as a gold-rimmed row with a preview of the shelves inside. */
+@Composable
+private fun ProfileCollectionEntry(onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().premiumPanel(RoundedCornerShape(20.dp)).clickable(onClickLabel = sh("Koleksiyonum", "My collection"), onClick = onClick)
+        .padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(PremiumKit.goldText), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Palette, null, tint = Color(0xFF3A2A00), modifier = Modifier.size(26.dp))
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(sh("Koleksiyonum", "My collection"), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
+            Text(sh("Temalar · Tahtalar · Çerçeveler · Maskot · Klavyeler · İsim Stili", "Themes · Boards · Frames · Mascot · Keyboards · Name Style"),
+                color = LobbyBrand.Gold, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Icon(Icons.Rounded.ChevronRight, null, tint = LobbyBrand.Gold, modifier = Modifier.size(26.dp))
     }
 }
 

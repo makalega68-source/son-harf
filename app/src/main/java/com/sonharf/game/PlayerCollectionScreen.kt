@@ -39,7 +39,7 @@ private fun collectionShelves() = listOf(
 internal fun PlayerCollectionScreen(backend: OnlineGameBackend, onBack: () -> Unit) {
     val shelves = remember { collectionShelves() }
     var shelf by rememberSaveable { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxSize().background(LobbyPalette.Ground)) {
+    Column(Modifier.fillMaxSize().menuGround()) {
         Box(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
             MainScreenHeader(sh("Koleksiyonum", "My collection"),
                 sh("Sahip olduklarını seç, tarzını yansıt", "Equip your favorites, make it yours"), onBack = onBack)

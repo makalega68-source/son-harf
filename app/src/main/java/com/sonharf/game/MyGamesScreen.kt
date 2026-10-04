@@ -95,7 +95,7 @@ internal fun MyGamesScreen(backend: OnlineGameBackend, onOpen: (String, String) 
             MainScreenHeader(sh("Oyunlarım","My games"), "", actionIcon=Icons.Rounded.Refresh,
                 actionDescription=sh("Yenile","Refresh"),onAction={retry++})
         }
-        TabRow(selectedTabIndex=tab,containerColor=LobbyPalette.Ground,contentColor=LobbyPalette.Accent) {
+        TabRow(selectedTabIndex=tab,containerColor=if(SonHarfCosmetics.petrolMenus)Color.Transparent else LobbyPalette.Ground,contentColor=LobbyPalette.Accent) {
             listOf(sh("Aktif","Active"),sh("Biten","Finished"),sh("Davet","Invites")).forEachIndexed { i,label ->
                 Tab(selected=tab==i,onClick={tab=i},text={Text(label,fontSize=16.sp,fontWeight=FontWeight.Bold)})
             }

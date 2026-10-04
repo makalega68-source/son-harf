@@ -65,8 +65,8 @@ new_game = center(node(home, "Yeni Oyun"))
 my_games = center(node(home, "Oyunlarım"))
 # The two big buttons sit side by side.
 assert abs(new_game[1] - my_games[1]) < 15 and new_game[0] < my_games[0], (new_game, my_games)
-# Bottom bar: Mağaza · Taht · Oyna · Oyunlar · Profil, left to right, below the buttons.
-tabs = [center(desc(home, label)) for label in ("Mağaza", "Taht", "Oyna", "Oyunlar", "Profil")]
+# Bottom bar: Mağaza · Taht · Oyna · Kulüp · Profil, left to right, below the buttons.
+tabs = [center(desc(home, label)) for label in ("Mağaza", "Taht", "Oyna", "Kulüp", "Profil")]
 assert [x for x, _ in tabs] == sorted(x for x, _ in tabs), tabs
 assert all(y > new_game[1] for _, y in tabs), (new_game, tabs)
 # Game lists are not on the lobby any more.
@@ -89,8 +89,17 @@ adb("shell", "input", "keyevent", "4")
 time.sleep(2)
 node(tree("Home-store-return.xml"), "Yeni Oyun")
 
+# Kulüp opens the coming-soon page and Back returns to the lobby.
+adb("shell", "input", "tap", str(tabs[3][0]), str(tabs[3][1]))
+time.sleep(3)
+node(tree("Home-club.xml"), "KULÜP")
+capture("Home-club-Android.png")
+adb("shell", "input", "keyevent", "4")
+time.sleep(2)
+node(tree("Home-club-return.xml"), "Yeni Oyun")
+
 runtime = adb("logcat", "-d", "-s", "AndroidRuntime:E")
 assert b"FATAL EXCEPTION" not in runtime, runtime
 with open("Home-menu-runtime.log", "wb") as f:
     f.write(runtime)
-print("PASS: lobby with Yeni Oyun / Oyunlarım, five-tab bar, My Games and store open and return home")
+print("PASS: lobby with Yeni Oyun / Oyunlarım, five-tab bar, My Games, store and club open and return home")

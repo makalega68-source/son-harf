@@ -20,7 +20,7 @@ fun CompleteProfileScreen(
     onBack: (() -> Unit)? = null,
 ) {
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
-    Column(Modifier.fillMaxSize().background(LobbyPalette.Ground)) {
+    Column(Modifier.fillMaxSize().menuGround()) {
         Box(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
             MainScreenHeader(sh("Oyuncu profili", "Player profile"),
                 sh("Kimliğin, gizliliğin ve tercihlerin", "Your identity, privacy and preferences"), onBack = onBack)

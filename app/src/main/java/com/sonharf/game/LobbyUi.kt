@@ -37,7 +37,12 @@ internal fun LobbyCard(
     shape: Shape = RoundedCornerShape(20.dp),
     content: @Composable () -> Unit,
 ) {
-    if (onClick == null) {
+    // Premium menus: default cards become petrol panels with a gold rim; tinted cards keep their colour.
+    val premium = SonHarfCosmetics.petrolMenus && color == LobbyPalette.Paper
+    if (premium) {
+        Surface(modifier = modifier.premiumPanel(shape), color = Color.Transparent, contentColor = LobbyPalette.Ink, shape = shape,
+            onClick = onClick ?: {}, enabled = onClick != null, content = content)
+    } else if (onClick == null) {
         Surface(modifier = modifier, color = color, contentColor = LobbyPalette.Ink, shape = shape,
             border = BorderStroke(1.dp, borderColor), shadowElevation = 1.dp, content = content)
     } else {
@@ -56,12 +61,15 @@ internal fun LobbyTabs(
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         labels.forEachIndexed { index, label ->
             val active = selected == index
+            val premium = SonHarfCosmetics.petrolMenus
+            // Premium menus: the active tab is a gold tile with dark ink, the others petrol with a gold hairline.
             Surface(onClick = { onSelect(index) }, shape = RoundedCornerShape(14.dp),
-                color = if (active) LobbyPalette.Green else LobbyPalette.Paper,
-                border = BorderStroke(1.dp, if (active) LobbyPalette.Green else LobbyPalette.Line)) {
+                color = if (active) (if (premium) LobbyBrand.Gold else LobbyPalette.Green) else LobbyPalette.Paper,
+                border = BorderStroke(1.dp, if (active) (if (premium) PremiumKit.GoldLight else LobbyPalette.Green)
+                    else if (premium) LobbyBrand.Gold.copy(alpha = .35f) else LobbyPalette.Line)) {
                 Box(Modifier.heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 12.dp),
                     contentAlignment = Alignment.Center) {
-                    Text(label, color = if (active) Color.White else LobbyPalette.Ink,
+                    Text(label, color = if (active) (if (premium) Color(0xFF3A2A00) else Color.White) else LobbyPalette.Ink,
                         fontSize = 13.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium)
                 }
             }

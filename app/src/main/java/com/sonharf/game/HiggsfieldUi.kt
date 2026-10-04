@@ -234,7 +234,11 @@ internal fun HfCard(
     shape: androidx.compose.ui.graphics.Shape = Hf.CardShape,
     content: @Composable () -> Unit,
 ) {
-    if (onClick != null) {
+    if (SonHarfCosmetics.petrolMenus && color == Hf.Surface) {
+        // Premium menus: the default card is a petrol panel with a gold rim.
+        Surface(onClick = onClick ?: {}, enabled = onClick != null, modifier = modifier.premiumPanel(shape), shape = shape,
+            color = Color.Transparent, contentColor = Hf.Text, content = content)
+    } else if (onClick != null) {
         Surface(onClick = onClick, modifier = modifier, shape = shape, color = color, border = BorderStroke(1.5.dp, borderColor), shadowElevation = 3.dp, content = content)
     } else {
         Surface(modifier = modifier, shape = shape, color = color, border = BorderStroke(1.5.dp, borderColor), shadowElevation = 3.dp, content = content)
