@@ -1,8 +1,8 @@
 package com.sonharf.game
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,8 +27,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -168,7 +166,7 @@ private fun ProfileStatTile(icon: androidx.compose.ui.graphics.vector.ImageVecto
     }
 }
 
-/** Identity stage: the framed photo inside a slowly turning gold halo, name, league and PRO. */
+/** Identity stage: the photo inside the podium artwork's gold ring, then name, league and PRO. */
 @Composable
 private fun ProfileHero(
     p: ProfileDto?,
@@ -180,25 +178,22 @@ private fun ProfileHero(
     onEdit: () -> Unit,
     onRename: () -> Unit,
 ) {
-    val t = rememberInfiniteTransition(label = "profile-halo")
-    val spin by t.animateFloat(0f, 360f, infiniteRepeatable(tween(9000, easing = LinearEasing)), label = "spin")
     val displayNameColor = if (hasNameStyle) nameColor else Color.White
-    Column(Modifier.fillMaxWidth().premiumPanel(RoundedCornerShape(26.dp), glow = true).padding(vertical = 20.dp, horizontal = 16.dp),
+    Column(Modifier.fillMaxWidth().premiumPanel(RoundedCornerShape(26.dp), glow = true).padding(bottom = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(140.dp), contentAlignment = Alignment.Center) {
-            Canvas(Modifier.matchParentSize().rotate(spin)) {
-                drawCircle(Brush.sweepGradient(listOf(Color.Transparent, PremiumKit.GoldLight, PremiumKit.Rim, Color.Transparent,
-                    PremiumKit.GoldDeep, Color.Transparent)), radius = size.minDimension / 2, style = Stroke(3.dp.toPx()))
-            }
-            Canvas(Modifier.matchParentSize()) {
-                drawCircle(Brush.radialGradient(listOf(LobbyBrand.Gold.copy(alpha = .30f), Color.Transparent)), radius = size.minDimension / 2)
-            }
-            Box(Modifier.clip(CircleShape).clickable(onClickLabel = sh("Profili düzenle", "Edit profile"), onClick = onEdit)) {
+        // Canva podium artwork; the player's photo sits inside its empty crowned gold ring
+        // (ring centre at 50 % / 38.9 % of the 1680x944 image, inner diameter about 330 px).
+        BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(1680f / 944f)) {
+            Image(painterResource(R.drawable.profile_hero_art), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+            val photo = maxWidth * (330f / 1680f)
+            Box(Modifier.size(photo).offset(x = maxWidth / 2 - photo / 2, y = maxHeight * .389f - photo / 2)
+                .clip(CircleShape).clickable(onClickLabel = sh("Profili düzenle", "Edit profile"), onClick = onEdit),
+                contentAlignment = Alignment.Center) {
                 FramedProfilePhotoAvatar(
                     avatarPath = p?.avatarPath,
                     gender = p?.gender,
                     name = p?.displayName ?: sh("Oyuncu", "Player"),
-                    size = 108.dp,
+                    size = photo,
                     frameId = rememberPlayerFrame(p?.id),
                     accent = Hf.Gold,
                     visible = p?.avatarVisibility != "hidden",
@@ -206,6 +201,8 @@ private fun ProfileHero(
                 )
             }
         }
+        Column(Modifier.padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 p?.displayName ?: sh("Oyuncu", "Player"),
@@ -243,6 +240,7 @@ private fun ProfileHero(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ProfileGoldOutlineButton(Icons.Rounded.Edit, sh("Profili düzenle", "Edit profile"), Modifier.weight(1f), onEdit)
             ProfileGoldOutlineButton(Icons.Rounded.Badge, sh("Adı değiştir", "Change name"), Modifier.weight(1f), onRename)
+        }
         }
     }
 }

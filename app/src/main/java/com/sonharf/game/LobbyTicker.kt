@@ -16,69 +16,56 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
 
-/** Lines shown when nobody has bought anything lately and no announcement is set. */
-private fun tickerFallback(): List<String> = listOf(
-    sh("Kelime Tahtı'na hoş geldin! Yeni tahtalar ve çerçeveler mağazada seni bekliyor.",
-        "Welcome to Word Throne! New boards and frames are waiting in the store."),
-    sh("Kelime Atölyesi turnuvaları her 2 saatte bir; 19:00 ve 22:00'de tecrübe ×3.",
-        "Word Workshop tournaments every 2 hours; ×3 experience at 19:00 and 22:00."),
-    sh("Haftanın Taht yarışında yerini al: üç oyunda kazandığın XP tek sıralamada toplanır.",
-        "Take your place in this week's Throne race: XP from all three games counts."),
-)
-
 internal fun tickerLine(row: TickerFeedRow): String? = when (row.kind) {
     "announcement" -> sh(row.messageTr ?: return null, row.messageEn ?: row.messageTr ?: return null)
     "purchase" -> {
         val name = row.playerName?.takeIf { it.isNotBlank() } ?: return null
         val item = sh(row.itemNameTr ?: return null, row.itemNameEn ?: row.itemNameTr ?: return null)
-        sh("$name mağazadan $item aldı!", "$name just bought $item!")
+        sh("$name, $item aldı", "$name bought $item")
     }
     else -> null
 }
 
 /**
- * Thin scrolling band at the very top of every screen, games included: admin announcements
- * first, then who bought what in the store. Polls the server once a minute while visible.
+ * Thin band at the very top of every screen, games included: each announcement and each store
+ * purchase passes once per device, then never again. Nothing new, no band.
  */
 @Composable
 internal fun TopNewsTicker(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("lobby_ticker", Context.MODE_PRIVATE) }
+    var seen by remember { mutableStateOf(prefs.getString("seen", "").orEmpty().split('\n').filter { it.isNotBlank() }) }
     var lines by remember { mutableStateOf<List<String>>(emptyList()) }
     val foreground = rememberAppForeground()
     LaunchedEffect(foreground) {
         if (!foreground || !SupabaseProvider.configured) return@LaunchedEffect
         while (true) {
-            gameRequestResult { TickerBackend.feed() }.onSuccess { rows -> lines = rows.mapNotNull(::tickerLine) }
+            gameRequestResult { TickerBackend.feed() }.onSuccess { rows -> lines = rows.mapNotNull(::tickerLine).distinct() }
             delay(60_000)
         }
     }
-    // One line at a time: it scrolls through once, rests, then the next one comes. Cheaper to draw
-    // than an endless band and easier to read.
-    val shown = lines.ifEmpty { tickerFallback() }
-    var index by remember { mutableIntStateOf(0) }
-    LaunchedEffect(shown) {
-        index = 0
-        while (true) {
-            val line = shown.getOrNull(index % shown.size).orEmpty()
-            delay((5_000L + line.length * 140L).coerceAtMost(22_000L))
-            index = (index + 1) % shown.size
-        }
+    val current = lines.firstOrNull { it !in seen } ?: return
+    LaunchedEffect(current) {
+        delay((5_000L + current.length * 140L).coerceAtMost(22_000L))
+        seen = (seen + current).takeLast(300)
+        prefs.edit().putString("seen", seen.joinToString("\n")).apply()
     }
-    key(index, shown) {
-        TickerStrip(Icons.Rounded.Campaign, shown.getOrNull(index % shown.size).orEmpty(), modifier, iterations = 1)
-    }
+    key(current) { TickerStrip(Icons.Rounded.Campaign, current, modifier, iterations = 1) }
 }
 
 /** The screenshot harness turns ticker motion off so captures are deterministic. */
 internal object TickerMotion { var enabled = true }
 
 /**
- * Bottom band of the menu pages: the Kelime Atölyesi countdown, and every 5 minutes the podium
+ * Bottom band of the menu pages: the Kelime Atölyesi countdown, and every 10 minutes the podium
  * of the last tournament scrolls past. The server rolls the podium over when a new
  * tournament finishes, so each 2-hour tournament's winners take the next turns.
  */
@@ -94,31 +81,29 @@ internal fun WorkshopPodiumTicker(modifier: Modifier = Modifier) {
             delay(30_000)
         }
     }
-    // Podium for 40 s, then the countdown until the next 5-minute mark.
+    // Podium for 30 s, then the countdown until the next 10-minute mark.
     LaunchedEffect(Unit) {
         delay(8_000)
         while (true) {
             showPodium = true
-            delay(40_000)
+            delay(30_000)
             showPodium = false
-            delay(260_000)
+            delay(570_000)
         }
     }
     val now = serverNow(event?.serverTime.orEmpty(), Unit)
     val winners = event?.winners.orEmpty().sortedBy { it.rank }.take(3)
     if (showPodium && winners.isNotEmpty()) {
         val medals = listOf("🥇", "🥈", "🥉")
-        val podium = winners.mapIndexed { i, w -> "${medals.getOrElse(i) { "" }} ${w.rank}. ${w.name} · ${w.score}" }
+        val podium = winners.mapIndexed { i, w -> "${medals.getOrElse(i) { "" }} ${w.name} ${w.score}" }
             .joinToString(TickerGap)
-        TickerStrip(Icons.Rounded.EmojiEvents, sh("Kelime Atölyesi son turnuva kazananları:  ", "Word Workshop last tournament winners:  ") + podium,
-            modifier, gold = true)
+        TickerStrip(Icons.Rounded.EmojiEvents, sh("Atölye kazananları:  ", "Workshop winners:  ") + podium,
+            modifier, gold = true, iterations = 1)
     } else {
         val text = when {
-            event?.active == true -> sh("Kelime Atölyesi turnuvası şu an açık · Tecrübe ×${event?.multiplier} · Hemen katıl!",
-                "Word Workshop tournament is live · Experience ×${event?.multiplier} · Join now!")
-            now > 0 -> sh("Kelime Atölyesi turnuvasına kalan süre: ", "Next Word Workshop tournament in: ") +
-                tournamentClockText(tournamentNextRegular(now), now)
-            else -> sh("Kelime Atölyesi turnuvaları her 2 saatte bir başlar.", "Word Workshop tournaments start every 2 hours.")
+            event?.active == true -> sh("Atölye turnuvası açık · ×${event?.multiplier}", "Workshop tournament live · ×${event?.multiplier}")
+            now > 0 -> sh("Atölye turnuvası: ", "Workshop tournament: ") + tournamentClockText(tournamentNextRegular(now), now)
+            else -> sh("Atölye turnuvası", "Workshop tournament")
         }
         TickerStrip(Icons.Rounded.EmojiEvents, text, modifier, scroll = false)
     }
