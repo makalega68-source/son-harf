@@ -84,6 +84,8 @@ jobs:
             sleep 9
             adb shell uiautomator dump /sdcard/fallback-before.xml
             adb pull /sdcard/fallback-before.xml Fallback-before.xml
+            adb logcat -d -s AndroidRuntime:E | head -80 || true
+            grep -o 'text="[^"]*"' Fallback-before.xml | head -40 || true
             ! grep -q 'AI MAÇI' Fallback-before.xml
             adb exec-out screencap -p > Fallback-before-Android.png
             sleep 6
