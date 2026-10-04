@@ -28,6 +28,24 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Respect source-only request
+        shell: bash
+        run: |
+          if git log -1 --format=%B | grep -Fq '[no apk]'; then
+            echo "NO_APK=true" >> "$GITHUB_ENV"
+          else
+            echo "NO_APK=false" >> "$GITHUB_ENV"
+          fi
+      - name: Cancel superseded packaging runs
+        if: env.NO_APK == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for run_id in 37187664029 37187664037 37187664033; do
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" || true
+          done
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin

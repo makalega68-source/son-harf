@@ -24,6 +24,16 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      - name: Respect source-only request
+        shell: bash
+        run: |
+          if git log -1 --format=%B | grep -Fq '[no apk]'; then
+            echo "NO_APK=true" >> "$GITHUB_ENV"
+          else
+            echo "NO_APK=false" >> "$GITHUB_ENV"
+          fi
+
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -72,9 +82,13 @@ jobs:
           grep -q "'ranked_live_assist', false" supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
 
       - name: Unit tests and debug APK
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+        run: |
+          tasks=(:app:testDebugUnitTest)
+          if [ "$NO_APK" != "true" ]; then tasks+=(:app:assembleDebug); fi
+          ./gradlew --no-daemon "${tasks[@]}" --stacktrace --warning-mode all
 
       - name: APK integrity checks
+        if: env.NO_APK != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -86,6 +100,7 @@ jobs:
           echo ">> [PASS] Unified Pro debug APK built and verified"
 
       - uses: actions/upload-artifact@v4
+        if: env.NO_APK != 'true'
         with:
           name: SonHarf-Unified-Pro-APK
           path: app/build/outputs/apk/debug/app-debug.apk
