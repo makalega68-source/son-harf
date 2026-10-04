@@ -3027,7 +3027,11 @@ private fun PremierChatSheet(
     }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = PremierUi.Surface) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss, sheetState = sheetState, containerColor = PremierUi.Surface,
+        // The sheet has its own window; mark it secure directly instead of relying on inheritance.
+        properties = ModalBottomSheetProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+    ) {
         SecureChatContent()
         Column(
             Modifier.fillMaxWidth().imePadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 6.dp),

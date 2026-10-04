@@ -92,8 +92,8 @@ internal fun HomeSessions(backend: OnlineGameBackend, onOpen: (WordSiegeGameDto)
         if(!foreground) return@LaunchedEffect
         while(true) {
             coroutineScope {
-                val classic=async { gameRequestResult { backend.getWordSiegeGames() } }
-                val series=async { gameRequestResult { backend.getWordSiegeSeriesGames() } }
+                val classic=async { gameRequestResult { backend.getWordSiegeGameSummaries("classic", finishedLimit = 0) } }
+                val series=async { gameRequestResult { backend.getWordSiegeGameSummaries("series", finishedLimit = 0) } }
                 val last=async { gameRequestResult { backend.getLastLetterRooms() } }
                 val a=classic.await(); val b=series.await(); val c=last.await()
                 failed=a.isFailure || b.isFailure || c.isFailure

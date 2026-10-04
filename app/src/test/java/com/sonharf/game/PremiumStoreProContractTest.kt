@@ -103,7 +103,7 @@ class PremiumStoreProContractTest {
     }
 
     @Test
-    fun `friend list is pro gated while Series gets only entitlement scoped invite candidates`() {
+    fun `friend list is free while Series keeps entitlement scoped invite candidates`() {
         val friends = repoFile("supabase/migrations/20260919120000_pro_friend_list_rls_v1.sql").readText()
         assertTrue(friends.contains("can_use_pro_friend_list_v1"))
         assertTrue(friends.contains("friendships pro accepted read v1"))
@@ -119,9 +119,17 @@ class PremiumStoreProContractTest {
         assertTrue(v2.contains("status = 'accepted'"))
         assertTrue(v2.contains("(select auth.uid())"))
 
+        // Later migration makes the basic friend list free for every signed-in player.
+        val free = repoFile("supabase/migrations/20261002203108_social_inbox_and_free_friends_v1.sql").readText()
+        assertTrue(free.contains("drop policy if exists \"friendships pro accepted read v1\""))
+        assertTrue(free.contains("friendships participant read v3"))
+
         val profile = repoFile("app/src/main/java/com/sonharf/game/MainPlayerProfileScreen.kt").readText()
-        assertTrue(profile.contains("if (loadedProfile?.isVip == true)"))
-        assertTrue(profile.contains("PRO ile arkadaş listesi ve yönetimi"))
+        assertTrue(profile.contains("runCatching { backend.getFriends() }"))
+        assertFalse(profile.contains("if (loadedProfile?.isVip == true)"))
+        assertFalse(profile.contains("PRO ile arkadaş listesi"))
+        val pro = repoFile("app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt").readText()
+        assertFalse(pro.contains("Arkadaş listesi"))
     }
 
     @Test

@@ -337,9 +337,15 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
         supabase.from("profiles").select { filter { eq("id", id) } }.decodeSingle()
 
     suspend fun getProfilesParallel(ids: List<String>): List<ProfileDto> = coroutineScope {
-        // Bounded batches avoid both serial latency and unbounded request fan-out.
-        ids.distinct().chunked(6).flatMap { batch ->
-            batch.map { id -> async { com.sonharf.game.gameRequestResult { getProfile(id) }.getOrNull() } }.awaitAll().filterNotNull()
+        // One `id in (...)` query per 50 ids; bounded per-id batches only if that query fails.
+        ids.filter { it.isNotBlank() }.distinct().chunked(50).flatMap { chunk ->
+            com.sonharf.game.gameRequestResult {
+                supabase.from("profiles").select { filter { isIn("id", chunk) } }.decodeList<ProfileDto>()
+            }.getOrElse {
+                chunk.chunked(6).flatMap { batch ->
+                    batch.map { id -> async { com.sonharf.game.gameRequestResult { getProfile(id) }.getOrNull() } }.awaitAll().filterNotNull()
+                }
+            }
         }
     }
 

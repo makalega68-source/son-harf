@@ -46,7 +46,10 @@ class ProfileFramesV2ContractTest {
     @Test fun equippedFrameIsDrawnAroundTheAvatarAndCanBeRemoved() {
         val avatar = source("src/main/java/com/sonharf/game/FramedProfileAvatar.kt")
         val profile = source("src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt")
-        assertTrue(avatar.contains("ProfileFrameArt(frameId = legacyFrameId, size = size)"))
+        // Photo and frame share the 72% inner size so the 1.38x frame art fits the avatar slot without spilling.
+        assertTrue(avatar.contains("ProfileFrameArt(frameId = legacyFrameId, size = size * .72f)"))
+        assertTrue(avatar.contains("size = if (framed) size * .72f else size"))
+        assertTrue(avatar.contains("Modifier.size(size)"))
         assertTrue(profile.contains("\"profile_frame\" -> sh(\"Çerçevesiz\", \"No frame\")"))
         listOf(
             "profile_frame_round_pearl", "profile_frame_round_golden_avatar", "profile_frame_premium_emerald", "profile_frame_premium_amethyst",

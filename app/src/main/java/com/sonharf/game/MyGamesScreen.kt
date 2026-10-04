@@ -69,8 +69,8 @@ internal fun MyGamesScreen(backend: OnlineGameBackend, onOpen: (String, String) 
         if (!foreground) return@LaunchedEffect
         while (true) {
             coroutineScope {
-                val a = async { gameRequestResult { backend.getWordSiegeGames() } }
-                val b = async { gameRequestResult { backend.getWordSiegeSeriesGames() } }
+                val a = async { gameRequestResult { backend.getWordSiegeGameSummaries("classic") } }
+                val b = async { gameRequestResult { backend.getWordSiegeGameSummaries("series") } }
                 val c = async { gameRequestResult { backend.getLastLetterRooms() } }
                 val classic=a.await(); val series=b.await(); val last=c.await()
                 games=classic.getOrElse { games.filter { it.gameMode != "series" } } + series.getOrElse { games.filter { it.gameMode == "series" } }
@@ -148,13 +148,16 @@ internal fun GameInvitesScreen(backend: OnlineGameBackend, onOpen: (String,Strin
     LaunchedEffect(foreground,retry) {
         if(!foreground)return@LaunchedEffect
         while(true) {
-            gameRequestResult {
-                val next=backend.getIncomingWordSiegeInvites().map { Invite(it.id,"siege",it.senderId) } +
-                    backend.getIncomingWordSiegeSeriesInvites().map { Invite(it.id,"series",it.senderId) } +
-                    backend.getIncomingGameInvites().map { Invite(it.id,"son_harf",it.senderId) }
-                next.forEach { i -> if(!profiles.containsKey(i.sender))gameRequestResult { backend.getProfile(i.sender) }.getOrNull()?.let { profiles=profiles+(i.sender to it) } }
+            gameRequestResult { coroutineScope {
+                // The three invite lists load together; sender profiles come in one batched query.
+                val siege=async { backend.getIncomingWordSiegeInvites().map { Invite(it.id,"siege",it.senderId) } }
+                val series=async { backend.getIncomingWordSiegeSeriesInvites().map { Invite(it.id,"series",it.senderId) } }
+                val last=async { backend.getIncomingGameInvites().map { Invite(it.id,"son_harf",it.senderId) } }
+                val next=siege.await()+series.await()+last.await()
+                val missing=next.map { it.sender }.distinct().filterNot(profiles::containsKey)
+                if(missing.isNotEmpty()) profiles=profiles+backend.getProfilesParallel(missing).associateBy { it.id }
                 next
-            }.onSuccess { invites=it;error=null }.onFailure { error=sh("Davetler alınamadı. Yeniden dene.","Could not load invitations. Retry.") }
+            } }.onSuccess { invites=it;error=null }.onFailure { error=sh("Davetler alınamadı. Yeniden dene.","Could not load invitations. Retry.") }
             loading=false;delay(15_000)
         }
     }

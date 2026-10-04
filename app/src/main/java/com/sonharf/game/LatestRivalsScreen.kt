@@ -49,12 +49,16 @@ internal fun LatestRivalsScreen(backend: OnlineGameBackend, onBack: (() -> Unit)
         if(!foreground) return@LaunchedEffect
         while(true) {
             gameRequestResult { coroutineScope {
-                val classic=async { backend.getWordSiegeGames() }
-                val series=async { backend.getWordSiegeSeriesGames() }
+                val classic=async { backend.getWordSiegeGameSummaries("classic") }
+                val series=async { backend.getWordSiegeGameSummaries("series") }
                 val history=async { backend.getMatchHistory(50) }
                 rows=latestRivalMatches(classic.await()+series.await(),history.await(),backend.currentUserId())
                 loading=false
-                profiles=backend.getProfilesParallel(rows.map { it.opponentId }).associateBy { it.id }
+                // Cached rival profiles are reused; each refresh only asks for rivals not seen yet.
+                val nextProfiles=profiles.toMutableMap()
+                val missing=rows.map { it.opponentId }.filter { userId -> !nextProfiles.containsKey(userId) }
+                backend.getProfilesParallel(missing).forEach { nextProfiles[it.id]=it }
+                profiles=nextProfiles
             } }.onSuccess { failed=false }.onFailure { failed=true }
             loading=false
             delay(30_000)

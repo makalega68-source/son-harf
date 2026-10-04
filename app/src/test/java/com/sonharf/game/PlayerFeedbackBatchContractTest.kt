@@ -26,7 +26,11 @@ class PlayerFeedbackBatchContractTest {
     }
 
     @Test fun framesShowOnPlayersEverywhere() {
-        assertTrue(source("ProfilePhotoRuntime.kt").contains("if (framed) ProfileFrameArt(resolvedFrame, size)"))
+        // The frame art is 1.38x the photo, so a framed photo shrinks to 72% and the ring stays inside the slot.
+        val photo = source("ProfilePhotoRuntime.kt")
+        assertTrue(photo.contains("if (framed) ProfileFrameArt(resolvedFrame, size * .72f)"))
+        assertTrue(photo.contains("Modifier.size(if (framed) size * .72f else size)"))
+        assertTrue(source("ProfileFrameCollection.kt").contains("requiredSize(size * 1.38f)"))
         assertTrue(source("ProfileFrameCollection.kt").contains("\"get_public_profile_frame_v2\""))
         assertTrue(source("WordSiegePanMatch.kt").contains("frameId = rememberPlayerFrame(profile?.id)"))
         assertTrue(source("PremierWordDuelScreen.kt").contains("frameId = if (room.isBot) null else rememberPlayerFrame(opponent?.id)"))

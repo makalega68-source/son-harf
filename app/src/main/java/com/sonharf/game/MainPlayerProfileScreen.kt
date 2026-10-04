@@ -18,10 +18,8 @@ import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Storefront
-import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,16 +103,6 @@ internal fun MainPlayerProfileScreen(
     val levelProgress = g?.levelProgress ?: 0
     val levelTarget = g?.levelTarget?.coerceAtLeast(1) ?: 500
     val xpProgress = (levelProgress.toFloat() / levelTarget).coerceIn(0f, 1f)
-
-    var collectionTab by rememberSaveable { mutableIntStateOf(1) }
-    val collectionTabs = listOf(
-        "mascot_hat" to sh("Obi", "Obi"),
-        "profile_frame" to sh("Çerçeve", "Frame"),
-        "game_theme" to sh("Tema", "Theme"),
-        "board_skin" to sh("Tahta", "Board"),
-        "keyboard_theme" to sh("Klavye", "Keys"),
-        "name_style" to sh("İsim", "Name"),
-    )
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp),
@@ -222,14 +210,15 @@ internal fun MainPlayerProfileScreen(
         LobbyCard(
             onClick = onSocial,
             modifier = Modifier.fillMaxWidth(),
-            borderColor = if (p?.isVip == true) Hf.Gold.copy(alpha = .75f) else Hf.Gold,
+            borderColor = Hf.Gold.copy(alpha = .75f),
         ) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // Friends are free for everyone; no PRO badge or gating on this entry.
                 Icon(
-                    if (p?.isVip == true) Icons.Rounded.Groups else Icons.Rounded.WorkspacePremium,
+                    Icons.Rounded.Groups,
                     contentDescription = null,
                     tint = Hf.Gold,
                     modifier = Modifier.size(28.dp),
@@ -237,7 +226,11 @@ internal fun MainPlayerProfileScreen(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(sh("Arkadaşlar", "Friends"), color = LobbyPalette.Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(sh("Arkadaş listesini aç", "Open your friend list"), color = LobbyPalette.Muted, fontSize = 12.sp)
+                    Text(
+                        if (friendCount > 0) "$friendCount ${sh("arkadaş", "friends")} • $onlineFriendCount ${sh("çevrimiçi", "online")}"
+                        else sh("Arkadaş listesini aç", "Open your friend list"),
+                        color = LobbyPalette.Muted, fontSize = 12.sp,
+                    )
                 }
                 Icon(Icons.Rounded.ChevronRight, null, tint = Hf.Gold)
             }

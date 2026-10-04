@@ -7,10 +7,15 @@ class ThroneIntegrationTest {
  @Test fun liveShellRoutesTheThroneAndCountdown(){
   val shell=source("PremiumUnifiedProApp.kt")
   assertTrue(shell.contains("PremiumOtherGames(onLastLetter = onLastLetter, onWorkshop = onWorkshop)"))
-  assertTrue(shell.contains("sh(\"Taht\", \"Throne\")"))
+  // The bottom bar names the tab Events; the Throne hub opens from there.
+  assertTrue(shell.contains("sh(\"Etkinlikler\", \"Events\")"))
+  assertTrue(shell.contains("onThrone = { destination = PremiumDestination.COMPETE }"))
   assertTrue(source("CompetitionHubScreen.kt").contains("ThroneScreen(onBack = onBack"))
   val home=source("PremiumHomeV3.kt")
-  assertTrue(home.contains("HomeTournamentCard(onOpen = onWorkshop, compact = true)"))
+  assertTrue(home.contains("R.drawable.kelime_atolyesi_game_icon, onWorkshop)"))
+  val events=source("EventsCalendarScreen.kt")
+  assertTrue(events.contains("item(key=\"atelier_tournament\")"))
+  assertTrue(events.contains("ThroneBackend.tournament()"))
   val tournament=source("ThroneExperience.kt")
   assertTrue(tournament.contains("ThroneBackend.tournament()"))
   assertTrue(tournament.contains("tournamentClockText(tournamentNextRegular(now),now)"))

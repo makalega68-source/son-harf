@@ -2,6 +2,8 @@ package com.sonharf.game.data
 
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -185,6 +187,32 @@ suspend fun OnlineGameBackend.getWordSiegeSeriesGames(): List<WordSiegeGameDto> 
                 }
             }.thenBy { it.turnDeadline ?: "9999" }.thenByDescending { it.updatedAt.ifBlank { it.createdAt } },
         )
+
+/** List columns only: board, bag and racks stay on the server until a game is opened. */
+private val wordSiegeSummaryColumns = Columns.list(
+    "id", "player_one_id", "player_two_id", "status", "language", "current_player_id", "winner_id", "loser_id",
+    "player_one_word_score", "player_two_word_score", "player_one_area_score", "player_two_area_score",
+    "player_one_area", "player_two_area", "consecutive_passes", "move_count", "last_action", "last_action_player_id",
+    "last_move_at", "finish_reason", "game_mode", "turn_duration_hours", "turn_duration_minutes", "turn_started_at",
+    "turn_deadline", "player_one_missed_turns", "player_two_missed_turns", "created_at", "updated_at", "finished_at",
+)
+
+/**
+ * Lightweight rows for menus (My Games, home summary, rivals, records): every open game plus the
+ * most recent finished ones. Screens that render a board keep using [getWordSiegeGames]/[getWordSiegeGame].
+ */
+suspend fun OnlineGameBackend.getWordSiegeGameSummaries(mode: String, finishedLimit: Long = 40): List<WordSiegeGameDto> {
+    val open = SupabaseProvider.client.from("word_siege_games").select(wordSiegeSummaryColumns) {
+        filter { eq("game_mode", mode); isIn("status", listOf("waiting", "playing")) }
+    }.decodeList<WordSiegeGameDto>()
+    if (finishedLimit <= 0) return open.sortedByDescending { it.updatedAt.ifBlank { it.createdAt } }
+    val finished = SupabaseProvider.client.from("word_siege_games").select(wordSiegeSummaryColumns) {
+        filter { eq("game_mode", mode); eq("status", "finished") }
+        order("updated_at", Order.DESCENDING)
+        limit(finishedLimit)
+    }.decodeList<WordSiegeGameDto>()
+    return (open + finished).distinctBy { it.id }.sortedByDescending { it.updatedAt.ifBlank { it.createdAt } }
+}
 
 suspend fun OnlineGameBackend.getWordSiegeGame(gameId: String): WordSiegeGameDto =
     SupabaseProvider.client.from("word_siege_games")

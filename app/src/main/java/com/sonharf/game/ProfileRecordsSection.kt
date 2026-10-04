@@ -29,8 +29,8 @@ internal fun ProfileRecordsSection(backend: OnlineGameBackend, onRivals: () -> U
     LaunchedEffect(retry) {
         coroutineScope {
             val personal = async { gameRequestResult { backend.getPersonalRecords() } }
-            val classic = async { gameRequestResult { backend.getWordSiegeGames() } }
-            val fast = async { gameRequestResult { backend.getWordSiegeSeriesGames() } }
+            val classic = async { gameRequestResult { backend.getWordSiegeGameSummaries("classic", finishedLimit = 1000) } }
+            val fast = async { gameRequestResult { backend.getWordSiegeGameSummaries("series", finishedLimit = 1000) } }
             val a = personal.await(); val b = classic.await(); val c = fast.await()
             records = a.getOrNull()
             siege = if (b.isSuccess && c.isSuccess) siegeRecordSummary(b.getOrThrow() + c.getOrThrow(), backend.currentUserId()) else null

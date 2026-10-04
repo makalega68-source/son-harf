@@ -54,12 +54,18 @@ class WordSiegeFriendInviteContractTest {
         assertTrue(backend.contains("invite_friend_to_word_siege_v1"))
         assertTrue(backend.contains("respond_word_siege_invite_v1"))
 
-        assertTrue(social.contains("KELİME TAHTI DAVETLERİ"))
-        assertTrue(social.contains("SON HARF DAVETLERİ"))
+        // Friends invite from the social list; rematches from rival history; all incoming game
+        // invitations (Kelime Tahtı, Hızlı Düello, Son Harf) are answered in My Games › Davet.
+        val rivals = projectFile("app/src/main/java/com/sonharf/game/LatestRivalsScreen.kt").readText()
+        val myGames = projectFile("app/src/main/java/com/sonharf/game/MyGamesScreen.kt").readText()
         assertTrue(social.contains("backend.inviteFriendToWordSiege(friend.id"))
-        assertTrue(social.contains("backend.inviteFriendToWordSiege(rival.opponentId"))
-        assertTrue(social.contains("backend.respondWordSiegeInvite(invite.id, true)"))
-        assertTrue(social.contains("backend.respondGameInvite(invite.id, true)"))
+        assertTrue(rivals.contains("backend.inviteFriendToWordSiege(row.opponentId"))
+        assertTrue(myGames.contains("backend.getIncomingWordSiegeInvites()"))
+        assertTrue(myGames.contains("backend.getIncomingGameInvites()"))
+        assertTrue(myGames.contains("\"siege\"->backend.respondWordSiegeInvite(i.id,accept)"))
+        assertTrue(myGames.contains("\"series\"->backend.respondWordSiegeSeriesInvite(i.id,accept)"))
+        assertTrue(myGames.contains("else->backend.respondGameInvite(i.id,accept)"))
+        assertTrue(myGames.contains("if (tab==2)"))
 
         assertTrue(shell.contains("onPlay = { destination = UnifiedDestination.GAME }"))
         assertTrue(shell.contains("onSiege = { destination = UnifiedDestination.SIEGE }"))

@@ -89,9 +89,12 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
 
-        assertTrue(shell.contains("fun leaveGame(target: PremiumDestination = PremiumDestination.HOME)"))
+        // A game returns to where it was opened from: My Games when started there, otherwise Home.
+        assertTrue(shell.contains("var gameReturn by remember { mutableStateOf(PremiumDestination.HOME) }"))
+        assertTrue(shell.contains("gameReturn = if (destination == PremiumDestination.MY_GAMES) PremiumDestination.MY_GAMES else PremiumDestination.HOME"))
+        assertTrue(shell.contains("fun leaveGame(target: PremiumDestination = gameReturn)"))
         assertTrue(shell.contains("PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP ->"))
-        assertTrue(shell.contains("PremiumDestination.HOME\n            }"))
+        assertTrue(shell.contains("gameReturn\n            }"))
         assertTrue(practice.contains("Modifier.fillMaxWidth().height(16.dp)"))
         assertTrue(practice.contains("readyFeedback.message"))
         assertTrue(practice.contains("lineHeight = 12.sp"))
