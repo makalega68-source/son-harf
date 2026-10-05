@@ -144,52 +144,63 @@ internal fun WordSiegeScoreCard(
         if (active) { turnSweep.snapTo(0f); turnSweep.animateTo(1f, tween(850)) }
     }
     val control = (area.coerceIn(0, WordSiegeBoardSpec.CellCount) * 100) / WordSiegeBoardSpec.CellCount
+    // Premium player card: a large framed portrait, the name in its signature style, a status pill,
+    // and three equal score columns (total, word, territory) that never cut their labels short.
     Surface(
-        modifier = modifier.height(126.dp),
+        modifier = modifier.height(WORD_SIEGE_PLAYER_CARD_HEIGHT),
         color = WordSiegeGameUi.Surface,
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(if (active) 1.8.dp else 1.dp,
-            if (active) accent else WordSiegeGameUi.Gold.copy(alpha = .38f)),
-        shadowElevation = if (active) 5.dp else 2.dp,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(if (active) 2.dp else 1.dp,
+            if (active) Brush.linearGradient(listOf(WordSiegeGameUi.Gold, accent, WordSiegeGameUi.Gold))
+            else Brush.linearGradient(listOf(WordSiegeGameUi.Gold.copy(alpha = .45f), WordSiegeGameUi.Gold.copy(alpha = .18f)))),
+        shadowElevation = if (active) 8.dp else 3.dp,
     ) {
         Column(Modifier.background(Brush.verticalGradient(listOf(
-            accent.copy(alpha = if (active) .14f else .05f), WordSiegeGameUi.Surface,
-            WordSiegeGameUi.Gold.copy(alpha = .06f))))
-            .padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            accent.copy(alpha = if (active) .18f else .07f), WordSiegeGameUi.Surface,
+            WordSiegeGameUi.Gold.copy(alpha = .08f))))
+            .padding(horizontal = 8.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(WORD_SIEGE_PLAYER_AVATAR), contentAlignment = Alignment.Center) {
                     if (leading) WordSiegeLeaderHalo(Modifier.matchParentSize())
                     ProfilePhotoAvatarWithGender(avatarPath = avatarPath, gender = gender, name = name,
-                        size = 52.dp, accent = accent, visible = avatarVisible, frameId = frameId)
+                        size = WORD_SIEGE_PLAYER_AVATAR, accent = accent, visible = avatarVisible, frameId = frameId)
                     if (leading) WordSiegeLeaderBadge(Modifier.align(Alignment.TopCenter).offset(y = (-7).dp))
                 }
                 Spacer(Modifier.width(7.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     // An equipped signature changes the typeface; the board's text colour keeps contrast.
-                    Text(name, color = WordSiegeGameUi.Text, fontSize = 13.sp, lineHeight = 15.sp,
+                    Text(name, color = WordSiegeGameUi.Text, fontSize = 15.sp, lineHeight = 17.sp,
                         style = premiumNameStyle(nameStyleId),
                         fontWeight = if (nameStyleId == null) FontWeight.Black else null,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        AdminBadge(userId, 11.dp)
-                        if (isPro) Text("PRO", color = WordSiegeGameUi.Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        AdminBadge(userId, 13.dp)
+                        if (isPro) Text("PRO", color = WordSiegeGameUi.Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
                         Text(if (rating != null) "${ratingLeagueProgress(rating).leagueName} · $rating" else if (isBot) sh("Kuşatma • AI", "Siege • AI") else sh("Kuşatma", "Siege"),
-                            modifier = Modifier.weight(1f), color = WordSiegeGameUi.Muted, fontSize = 8.sp,
+                            modifier = Modifier.weight(1f), color = WordSiegeGameUi.Muted, fontSize = 10.sp,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Box(Modifier.size(5.dp).background(if (active) accent else WordSiegeGameUi.Muted.copy(alpha = .4f), CircleShape))
+                    // Status pill: whose move it is, or who leads.
+                    Row(
+                        Modifier
+                            .background(if (active) accent else WordSiegeGameUi.SurfaceSoft, RoundedCornerShape(99.dp))
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Box(Modifier.size(5.dp).background(if (active) Color.White else if (leading) WordSiegeGameUi.Gold else WordSiegeGameUi.Muted.copy(alpha = .5f), CircleShape))
                         Text(if (active) sh("HAMLE SIRASI", "ON THE MOVE") else if (leading) sh("LİDER", "LEADING") else sh("HAZIR", "READY"),
-                            color = if (active) accent else WordSiegeGameUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                            color = if (active) Color.White else if (leading) WordSiegeGameUi.Gold else WordSiegeGameUi.Muted,
+                            fontSize = 9.sp, fontWeight = FontWeight.Black, maxLines = 1)
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().height(40.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 val totalDescription = sh("Toplam $score", "Total $score")
                 Box(
                     modifier = Modifier
-                        .width(52.dp)
-                        .height(34.dp)
+                        .weight(1.15f)
+                        .fillMaxHeight()
                         .graphicsLayer {
                             val combinedScale = scoreScale.value * lossScale.value
                             scaleX = combinedScale
@@ -227,33 +238,38 @@ internal fun WordSiegeScoreCard(
                     }
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        shape = RoundedCornerShape(13.dp),
-                        color = accent.copy(alpha = .13f),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Transparent,
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
+                        Column(
+                            Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(accent.copy(alpha = .95f), accent.copy(alpha = .75f)))),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(sh("TOPLAM", "TOTAL"), color = Color.White.copy(alpha = .85f), fontSize = 7.sp, lineHeight = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
                             Text(
                                 "$score",
                                 Modifier.semantics { contentDescription = totalDescription },
-                                color = if (lossGlow.value > 0f) lerp(WordSiegeGameUi.Text, Color(0xFFB94B4B), lossGlow.value) else WordSiegeGameUi.Text,
+                                color = if (lossGlow.value > 0f) lerp(Color.White, Color(0xFFFFD0D0), lossGlow.value) else Color.White,
                                 fontSize = scoreFontSize,
-                                lineHeight = 24.sp,
+                                lineHeight = 22.sp,
                                 fontWeight = FontWeight.Black,
                                 maxLines = 1,
                             )
                         }
                     }
                 }
-                WordSiegeScoreMetric(sh("Kelime Puanı", "Word Points"), wordPoints, accent, Modifier.weight(1f))
-                WordSiegeScoreMetric(sh("Bölge Puanı", "Territory Points"), territoryPoints, accent, Modifier.weight(1f))
+                WordSiegeScoreMetric(sh("KELİME", "WORD"), wordPoints, accent, Modifier.weight(1f).fillMaxHeight(), sh("Kelime Puanı", "Word Points"))
+                WordSiegeScoreMetric(sh("BÖLGE", "AREA"), territoryPoints, accent, Modifier.weight(1f).fillMaxHeight(), sh("Bölge Puanı", "Territory Points"))
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(sh("$area küp", "$area cubes"), color = WordSiegeGameUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Text(sh("$area küp", "$area cubes"), color = WordSiegeGameUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
-                Text(sh("%$control kontrol", "$control% control"), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Text(sh("%$control kontrol", "$control% control"), color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
             }
-            Canvas(Modifier.fillMaxWidth().height(3.dp)) {
-                drawRoundRect(accent.copy(alpha = .10f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height))
-                drawRoundRect(accent.copy(alpha = .8f), size = androidx.compose.ui.geometry.Size(size.width * control / 100f, size.height),
+            Canvas(Modifier.fillMaxWidth().height(4.dp)) {
+                drawRoundRect(accent.copy(alpha = .12f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height))
+                drawRoundRect(accent.copy(alpha = .85f), size = androidx.compose.ui.geometry.Size(size.width * control / 100f, size.height),
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height))
                 if (active && turnSweep.value < 1f) drawCircle(Color.White.copy(alpha = .8f), 3.dp.toPx(),
                     Offset(size.width * turnSweep.value, size.height / 2f))
@@ -262,10 +278,14 @@ internal fun WordSiegeScoreCard(
     }
 }
 
+/** Fixed sizes of the in-game Kuşatma player card; tests pin these so a refactor cannot shrink it. */
+internal val WORD_SIEGE_PLAYER_AVATAR = 72.dp
+internal val WORD_SIEGE_PLAYER_CARD_HEIGHT = 152.dp
+
 @Composable
-private fun WordSiegeScoreMetric(label: String, value: Int, accent: Color, modifier: Modifier = Modifier) {
+private fun WordSiegeScoreMetric(label: String, value: Int, accent: Color, modifier: Modifier = Modifier, description: String = label) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.semantics { contentDescription = "$description $value" },
         shape = RoundedCornerShape(9.dp),
         color = WordSiegeGameUi.SurfaceSoft.copy(alpha = .78f),
         border = BorderStroke(1.dp, accent.copy(alpha = .10f)),
@@ -285,7 +305,7 @@ private fun WordSiegeScoreMetric(label: String, value: Int, accent: Color, modif
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text("$value", color = WordSiegeGameUi.Text, fontSize = 12.sp, lineHeight = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text("$value", color = WordSiegeGameUi.Text, fontSize = 16.sp, lineHeight = 18.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
 }

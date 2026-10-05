@@ -2175,7 +2175,8 @@ private fun PremierArenaHeader(
     myGain: Pair<Int, Int>?,
     rivalGain: Pair<Int, Int>?,
 ) {
-    val cardHeight = 74.dp
+    // Large portraits: the cards are the players' identity during the duel.
+    val cardHeight = 92.dp
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -2254,14 +2255,14 @@ private fun PremierSymmetricPlayerCard(
     }
     val avatarView: @Composable () -> Unit = {
         if (bot) {
-            PremierBotAvatar(size = 54.dp, accent = accent, name = name)
+            PremierBotAvatar(size = 70.dp, accent = accent, name = name)
         } else {
             ProfilePhotoAvatarRectWithGender(
                 avatarPath = if (visible) avatar else null,
                 gender = gender,
                 name = name,
-                width = 54.dp,
-                height = 54.dp,
+                width = 70.dp,
+                height = 70.dp,
                 accent = accent,
                 frameId = frameId,
             )
@@ -2289,7 +2290,7 @@ private fun PremierSymmetricPlayerCard(
             Text(
                 name,
                 color = if (nameColor == PremierUi.Ink || nameColor == PremierArenaSky.Ink) PremierBoard.Ink else nameColor,
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 style = premiumNameStyle(nameStyleId),
                 fontWeight = if (nameStyleId == null) FontWeight.Black else null,
                 maxLines = 1,
@@ -2301,7 +2302,7 @@ private fun PremierSymmetricPlayerCard(
                     Text(
                         if (streak >= 2) pt(language, "$streak seri", "$streak streak") else pt(language, "Raund Puanı", "Round Score"),
                         color = if (streak >= 2) PremierBoard.GoldEdge else PremierBoard.Muted,
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                     )
@@ -2315,7 +2316,7 @@ private fun PremierSymmetricPlayerCard(
             Text(
                 shownScore.toString(),
                 color = PremierBoard.Ink,
-                fontSize = 22.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.graphicsLayer {
                     val bump = if (pop.value < 1f) 1f + .22f * kotlin.math.sin(pop.value * Math.PI.toFloat()) else 1f
@@ -2337,14 +2338,28 @@ private fun PremierSymmetricPlayerCard(
             }
         }
     }
+    // Premium card: gold-edged when it is this player's move, a soft accent wash behind the portrait.
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         color = if (active) soft else PremierBoard.Card,
-        border = BorderStroke(if (active) 1.2.dp else .75.dp, if (active) accent.copy(alpha = breath) else PremierBoard.CardBorder),
-        shadowElevation = if (active) 2.dp else .5.dp,
+        border = BorderStroke(
+            if (active) 2.dp else 1.dp,
+            if (active) Brush.linearGradient(listOf(PremierBoard.Gold, accent.copy(alpha = breath), PremierBoard.Gold))
+            else Brush.linearGradient(listOf(PremierBoard.Gold.copy(alpha = .35f), PremierBoard.CardBorder)),
+        ),
+        shadowElevation = if (active) 6.dp else 2.dp,
     ) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier
+                .fillMaxSize()
+                .background(Brush.horizontalGradient(
+                    if (mirrored) listOf(Color.Transparent, accent.copy(alpha = if (active) .14f else .06f))
+                    else listOf(accent.copy(alpha = if (active) .14f else .06f), Color.Transparent),
+                ))
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             if (!mirrored) {
                 avatarWithMascot()
                 Spacer(Modifier.width(7.dp))

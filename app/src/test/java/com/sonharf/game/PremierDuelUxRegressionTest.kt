@@ -42,6 +42,10 @@ class PremierDuelUxRegressionTest {
 
         assertTrue(screen.contains("PremierSymmetricPlayerCard("))
         assertTrue(screen.contains("Modifier.weight(1f).height(cardHeight)"))
+        // Large in-duel portraits: the cards may only grow.
+        assertTrue(screen.contains("val cardHeight = 92.dp"))
+        assertTrue(screen.contains("width = 70.dp,\n                height = 70.dp,"))
+        assertTrue(screen.contains("PremierBotAvatar(size = 70.dp, accent = accent, name = name)"))
         assertTrue(screen.contains("Modifier.align(Alignment.CenterEnd).size(mascotSize)"))
         assertTrue(screen.contains("turnSeconds = 1"))
         assertTrue(screen.contains("backend.claimTurnTimeout(active.id)"))

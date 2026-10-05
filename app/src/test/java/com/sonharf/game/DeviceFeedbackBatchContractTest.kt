@@ -31,7 +31,7 @@ class DeviceFeedbackBatchContractTest {
 
     @Test fun siegeHeaderCardsHaveRoomForTheirScores() {
         val ui = repoFile("app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt")
-        assertTrue(ui.contains("modifier = modifier.height(126.dp)"))
+        assertTrue(ui.contains("modifier = modifier.height(WORD_SIEGE_PLAYER_CARD_HEIGHT)"))
         assertTrue(ui.contains("horizontalAlignment = Alignment.CenterHorizontally,\n        ) {\n            Text(\n                label,"))
     }
 

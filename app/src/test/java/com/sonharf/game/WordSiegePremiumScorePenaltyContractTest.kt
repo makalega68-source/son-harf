@@ -13,8 +13,11 @@ class WordSiegePremiumScorePenaltyContractTest {
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val migration = projectFile("supabase/migrations/20260923131500_word_siege_capture_loss_penalty_v8.sql").readText()
 
-        assertTrue(ui.contains("size = 52.dp"))
-        assertTrue(ui.contains("modifier = modifier.height(126.dp)"))
+        // Large, premium player cards: the portrait and card sizes may only grow.
+        assertTrue(ui.contains("internal val WORD_SIEGE_PLAYER_AVATAR = 72.dp"))
+        assertTrue(ui.contains("internal val WORD_SIEGE_PLAYER_CARD_HEIGHT = 152.dp"))
+        assertTrue(ui.contains("size = WORD_SIEGE_PLAYER_AVATAR"))
+        assertTrue(ui.contains("modifier = modifier.height(WORD_SIEGE_PLAYER_CARD_HEIGHT)"))
         assertFalse(practice.contains("WordSiegeOwnershipLegend()"))
         assertFalse(pan.contains("WordSiegeOwnershipLegend()"))
         assertTrue(practice.contains("mutableIntStateOf(-1)"))
