@@ -28,7 +28,6 @@ fun FinalProfileScreen() {
     var leaders by remember { mutableStateOf<List<LeaderboardEntry>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var sound by remember { mutableStateOf(SonHarfPreferences.soundEnabled(context)) }
-    var vibration by remember { mutableStateOf(SonHarfPreferences.vibrationEnabled(context)) }
     var notifications by remember { mutableStateOf(SonHarfPreferences.notificationsEnabled(context)) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var deleteBusy by remember { mutableStateOf(false) }
@@ -109,12 +108,6 @@ fun FinalProfileScreen() {
                         sound = it
                         SonHarfPreferences.setSoundEnabled(context, it)
                         if (it) SonHarfSoundFx.tap()
-                    }
-                    HorizontalDivider(color = MainUi.Border)
-                    SettingSwitch("Titreşim", "Kısa ve hafif dokunsal geri bildirim", vibration) {
-                        vibration = it
-                        SonHarfPreferences.setVibrationEnabled(context, it)
-                        if (it) SonHarfPreferences.hapticTap(context)
                     }
                     HorizontalDivider(color = MainUi.Border)
                     SettingSwitch("Bildirimler", "Oyun daveti ve eşleşme bildirimlerine izin ver", notifications) {

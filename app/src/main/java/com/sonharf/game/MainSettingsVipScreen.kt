@@ -39,7 +39,6 @@ internal fun MainSettingsScreen(
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var music by remember { mutableStateOf(SonHarfPreferences.musicEnabled(context)) }
     var sound by remember { mutableStateOf(SonHarfPreferences.soundEnabled(context)) }
-    var vibration by remember { mutableStateOf(SonHarfPreferences.vibrationEnabled(context)) }
     var gameInvites by remember { mutableStateOf(SonHarfPreferences.gameInviteNotificationsEnabled(context)) }
     var friendRequests by remember { mutableStateOf(SonHarfPreferences.friendRequestNotificationsEnabled(context)) }
     var systemNotifications by remember { mutableStateOf(SonHarfPreferences.systemNotificationsEnabled(context)) }
@@ -70,7 +69,7 @@ internal fun MainSettingsScreen(
         }
 
         item {
-            MainSettingsGroup(sh("SES VE DOKUNUŞ", "AUDIO & HAPTICS")) {
+            MainSettingsGroup(sh("SES", "AUDIO")) {
                 MainToggleSetting(
                     icon = Icons.Rounded.MusicNote,
                     title = sh("Müzik", "Music"),
@@ -90,17 +89,6 @@ internal fun MainSettingsScreen(
                     sound = it
                     SonHarfPreferences.setSoundEnabled(context, it)
                     if (it) SonHarfSoundFx.tap()
-                }
-                HorizontalDivider(color = MainUi.Border)
-                MainToggleSetting(
-                    icon = Icons.Rounded.Vibration,
-                    title = sh("Titreşim", "Vibration"),
-                    subtitle = sh("Kısa ve hafif dokunsal geri bildirim", "Short and light haptic feedback"),
-                    checked = vibration,
-                ) {
-                    vibration = it
-                    SonHarfPreferences.setVibrationEnabled(context, it)
-                    if (it) SonHarfPreferences.hapticTap(context)
                 }
             }
         }
