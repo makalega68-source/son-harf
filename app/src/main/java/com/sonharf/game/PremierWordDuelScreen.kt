@@ -1750,7 +1750,8 @@ private fun PremierArena(
                     Box(Modifier.fillMaxWidth().height(if (veryCompact) 44.dp else 52.dp), contentAlignment = Alignment.Center) {
                         PremierLastWordCard(
                             language = language,
-                            word = latestPlayedWord,
+                            // A new round has no chain yet: the last round's word is not shown as one.
+                            word = if (room.roundWordCount == 0) "" else latestPlayedWord,
                             mine = latestMoveMine,
                             linkLetters = if (latestPlayedWord.isBlank()) 0 else required.length,
                             veryCompact = veryCompact,
@@ -1853,6 +1854,17 @@ private fun PremierArena(
             accent = if (latestMoveMine) PremierBoard.Mine else PremierBoard.Danger,
             modifier = Modifier.matchParentSize(), bannerTop = 112.dp)
         ArenaCriticalFrame(turnSeconds, live && !preparing && !reconnectGraceActive, Modifier.matchParentSize())
+        PremierRoundAnnouncements(
+            language = language,
+            roundNo = room.roundNo,
+            myRoundWords = myRoundWords,
+            rivalRoundWords = rivalRoundWords,
+            myRounds = myRounds,
+            rivalRounds = rivalRounds,
+            rivalName = rivalName,
+            live = live,
+            modifier = Modifier.matchParentSize(),
+        )
 
         // Turn and accepted-word feedback live on the target tile itself (a light sweep), so no
         // screen-centred rings are drawn over the board.
@@ -3249,10 +3261,11 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
         MatchResultScreen(
             won = won,
             title = if (won) pt(language, "KAZANDIN!", "YOU WON!") else pt(language, "KAYBETTİN", "YOU LOST"),
-            subtitle = notice.ifBlank { null },
+            subtitle = notice.ifBlank { null } ?: if (!won) pt(language, "Pes etme! Ekrandan çıkmadan rakibine rövanş teklif et.", "Don't give up! Offer your rival a rematch right here.") else null,
             mine = ResultScore(pt(language, "SEN", "YOU"), "$myScore"),
             rival = ResultScore(pt(language, "RAKİP", "RIVAL"), "$rivalScore"),
-            primaryLabel = if (busy) "…" else pt(language, "RÖVANŞ", "REMATCH"),
+            // The loser is invited to carry on straight away; the winner can offer a rematch too.
+            primaryLabel = if (busy) "…" else if (won) pt(language, "RÖVANŞ", "REMATCH") else pt(language, "DEVAM EDELİM", "LET'S GO AGAIN"),
             onPrimary = { if (!busy) onRematch() },
             secondaryLabel = pt(language, "ANA SAYFA", "HOME"),
             onSecondary = onHome,
@@ -3357,6 +3370,8 @@ private fun profileWinRate(profile: ProfileDto?): Int {
 }
 
 private fun premierRequiredToken(room: GameRoomDto, words: List<GameWordDto>): String {
+    // Every round opens fresh (the server agrees): before its first word, any word may start it.
+    if (room.roundWordCount == 0) return "★"
     val last = words.lastOrNull()?.normalizedWord?.trim().orEmpty()
     if (last.isBlank()) return "★"
     val count = if (room.gameMode == "expert") room.roundNo.coerceIn(1, 3) else 1
@@ -3457,3 +3472,77 @@ private fun premierError(language: String, raw: String): String = when {
     "word_already_used" in raw -> validationMessage(language, "word_already_used")
     else -> pt(language, "Bağlantı yenileniyor. Tekrar deneyebilirsin.", "Connection refreshed. You can try again.")
 }
+
+/**
+ * Round moments that used to pass silently: when either player reaches the 9th word a big
+ * "SON 1 KELİME" warns that the round ends with the next word, and when a round ends its result
+ * is announced before the next one starts.
+ */
+@Composable
+private fun PremierRoundAnnouncements(
+    language: String,
+    roundNo: Int,
+    myRoundWords: Int,
+    rivalRoundWords: Int,
+    myRounds: Int,
+    rivalRounds: Int,
+    rivalName: String,
+    live: Boolean,
+    modifier: Modifier,
+) {
+    var banner by remember { mutableStateOf<Pair<String, String?>?>(null) }
+    var bannerColor by remember { mutableStateOf(PremierBoard.Gold) }
+    // A round ends when both players have played their 10 words: one word short of that is the last.
+    val lastWord = live && myRoundWords + rivalRoundWords == PREMIER_ROUND_WORDS * 2 - 1
+    LaunchedEffect(roundNo, lastWord) {
+        if (!lastWord) return@LaunchedEffect
+        bannerColor = PremierBoard.Gold
+        banner = pt(language, "SON 1 KELİME!", "LAST WORD!") to
+            pt(language, "Bir sonraki kelimeyle $roundNo. raund biter", "The next word ends round $roundNo")
+        delay(2_600)
+        banner = null
+    }
+    var seenMy by remember { mutableIntStateOf(myRounds) }
+    var seenRival by remember { mutableIntStateOf(rivalRounds) }
+    var seenRound by remember { mutableIntStateOf(roundNo) }
+    LaunchedEffect(roundNo, myRounds, rivalRounds) {
+        val ended = roundNo > seenRound || myRounds > seenMy || rivalRounds > seenRival
+        val iWon = myRounds > seenMy
+        val rivalWon = rivalRounds > seenRival
+        val finishedRound = if (roundNo > seenRound) seenRound else roundNo
+        seenMy = myRounds
+        seenRival = rivalRounds
+        seenRound = roundNo
+        if (!ended) return@LaunchedEffect
+        bannerColor = when {
+            iWon -> PremierBoard.Mine
+            rivalWon -> PremierBoard.Rival
+            else -> PremierBoard.Gold
+        }
+        banner = pt(language, "$finishedRound. RAUND BİTTİ", "ROUND $finishedRound OVER") to when {
+            iWon -> pt(language, "Raundu sen kazandın! ($myRounds-$rivalRounds)", "You won the round! ($myRounds-$rivalRounds)")
+            rivalWon -> pt(language, "Raundu $rivalName kazandı ($myRounds-$rivalRounds)", "$rivalName won the round ($myRounds-$rivalRounds)")
+            else -> pt(language, "Raund berabere", "Round drawn")
+        }
+        delay(3_200)
+        banner = null
+    }
+    val shown = banner ?: return
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = bannerColor,
+            shadowElevation = 12.dp,
+            modifier = Modifier.padding(horizontal = 28.dp),
+        ) {
+            Column(Modifier.padding(horizontal = 24.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(shown.first, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp, textAlign = TextAlign.Center)
+                shown.second?.let {
+                    Text(it, color = Color.White.copy(alpha = .92f), fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                }
+            }
+        }
+    }
+}
+
+private const val PREMIER_ROUND_WORDS = 10
