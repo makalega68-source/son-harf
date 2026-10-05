@@ -114,7 +114,11 @@ class MainActivity : ComponentActivity() {
                                 SonHarfPreferences.setRememberLogin(this, true, verifiedEmail)
                             }
                         }
-                        runOnUiThread { recreate() }
+                        runOnUiThread {
+                            // Drop the consumed link so the recreated activity does not import it again.
+                            setIntent(Intent(intent).apply { data = null })
+                            recreate()
+                        }
                     }
                 },
             )

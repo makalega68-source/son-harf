@@ -89,27 +89,28 @@ private data class AuthIdentityProfile(
  * Profil teması yüklenmeden önce sabit token kullanılması ilk karede renk sıçramasını önler.
  */
 private object AuthUi {
-    val Background = Color(0xFFE6ECF2)
-    val BackgroundTop = Color(0xFFF3F6F9)
-    val Surface = Color(0xFFFFFFFF)
-    val SurfaceSoft = Color(0xFFF3F6F9)
-    val SurfaceRaised = Color(0xFFEAF0F5)
-    val Modal = Color(0xFFFFFFFF)
-    val Primary = Color(0xFF3E9F4D)
-    val PrimarySoft = Color(0xFFE1F2E3)
-    val SoftBlue = Color(0xFF5DADE2)
-    val Turquoise = Color(0xFF52B360)
-    val Lavender = Color(0xFFE0A82E)
+    // The lobby's petrol word-board with the logo's green/red tiles and gold accents.
+    val Background = Color(0xFF0D3C48)
+    val BackgroundTop = Color(0xFF14596A)
+    val Surface = Color(0xFF0F4855)
+    val SurfaceSoft = Color(0xFF0B323C)
+    val SurfaceRaised = Color(0xFF17606F)
+    val Modal = Color(0xFF0B323C)
+    val Primary = Color(0xFF2E8B45)
+    val PrimarySoft = Color(0xFF1D5E2D)
+    val SoftBlue = Color(0xFFF2C14E)
+    val Turquoise = Color(0xFFC9372C)
+    val Lavender = Color(0xFFF2C14E)
     val Sand = Color(0xFFF7E3A6)
-    val Text = Color(0xFF243142)
-    val Muted = Color(0xFF6B7A8C)
-    val Border = Color(0xFFD2DBE5)
-    val BorderSoft = Color(0xFFE3E9EF)
-    val Success = Color(0xFF3E9F4D)
-    val SuccessSoft = Color(0xFFE1F2E3)
-    val Warning = Color(0xFFE0A82E)
-    val WarningSoft = Color(0xFFFFF3D6)
-    val Error = Color(0xFFD0514A)
+    val Text = Color(0xFFF7F1E3)
+    val Muted = Color(0xFFA7C4CC)
+    val Border = Color(0xFF2A7486)
+    val BorderSoft = Color(0xFF1F7489)
+    val Success = Color(0xFF2E8B45)
+    val SuccessSoft = Color(0xFF1D5E2D)
+    val Warning = Color(0xFFF2C14E)
+    val WarningSoft = Color(0xFF4A3B14)
+    val Error = Color(0xFFE5655B)
     val Ivory = Color(0xFFFFFFFF)
     val Ink = Color(0xFF4A3217)
 }
@@ -206,11 +207,41 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 pendingVerificationEmail = null
                 otpCode = ""
                 onAuthenticated()
-            }.onFailure {
-                notice = friendly(it.message.orEmpty())
+            }.onFailure { error ->
+                // The email link may already have confirmed the account (it uses up the code), so
+                // try the password before telling the player the code is wrong.
+                val signedIn = password.length >= 6 && runCatching {
+                    SupabaseProvider.client.auth.signInWith(Email) { this.email = targetEmail; this.password = password }
+                    hasVerifiedMembershipSession()
+                }.getOrDefault(false)
+                if (signedIn) {
+                    SonHarfPreferences.clearPendingRegistration(context, targetEmail)
+                    SonHarfPreferences.setRememberLogin(context, true, targetEmail)
+                    RememberedCredentialVault.save(context, targetEmail, password)
+                    pendingVerificationEmail = null
+                    otpCode = ""
+                    onAuthenticated()
+                } else {
+                    notice = friendly(error.message.orEmpty())
+                }
             }
             busy = false
         }
+    }
+
+    // A verification link opened from the email signs the player in behind this screen: move on.
+    LaunchedEffect(pendingVerificationEmail) {
+        val targetEmail = pendingVerificationEmail ?: return@LaunchedEffect
+        SupabaseProvider.client.auth.sessionStatus.first {
+            it is SessionStatus.Authenticated && hasVerifiedMembershipSession() &&
+                SupabaseProvider.client.auth.currentUserOrNull()?.emailConfirmedAt != null
+        }
+        SonHarfPreferences.clearPendingRegistration(context, targetEmail)
+        SonHarfPreferences.setRememberLogin(context, true, targetEmail)
+        if (password.length >= 6) RememberedCredentialVault.save(context, targetEmail, password)
+        pendingVerificationEmail = null
+        otpCode = ""
+        onAuthenticated()
     }
 
     fun resendPendingCode() {
@@ -250,7 +281,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         }
     }
 
-    val authColors = lightColorScheme(
+    val authColors = darkColorScheme(
         primary = AuthUi.Primary,
         onPrimary = AuthUi.Ivory,
         primaryContainer = AuthUi.PrimarySoft,
@@ -406,20 +437,13 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 .navigationBarsPadding()
                 .imePadding(),
         ) {
-            SonHarfLeafBackdrop(Modifier.matchParentSize())
-            // Generated directly in Compose so no stale bitmap can survive an app update.
+            // Same backdrop as the lobby: a petrol word-board fading darker towards the bottom.
             Box(
                 Modifier.matchParentSize().background(
-                    Brush.verticalGradient(
-                        listOf(
-                            AuthUi.BackgroundTop,
-                            AuthUi.Background,
-                            AuthUi.Modal,
-                            AuthUi.SurfaceSoft,
-                        )
-                    )
+                    Brush.verticalGradient(listOf(AuthUi.BackgroundTop, AuthUi.Background, AuthUi.Modal))
                 )
             )
+            LobbyBoardPattern(Modifier.matchParentSize())
             Box(
                 Modifier
                     .size(360.dp)
@@ -486,18 +510,18 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                         onClick = { register = isRegister; notice = "" },
                                         modifier = Modifier.weight(1f).height(44.dp),
                                         shape = RoundedCornerShape(14.dp),
-                                        color = if (selected) AuthUi.Surface else Color.Transparent,
+                                        color = if (selected) AuthUi.Primary else Color.Transparent,
                                         shadowElevation = if (selected) 3.dp else 0.dp,
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
-                                            Text(label, color = if (selected) AuthUi.Primary else AuthUi.Muted, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                                            Text(label, color = if (selected) AuthUi.Ivory else AuthUi.Muted, fontWeight = FontWeight.Black, fontSize = 15.sp)
                                         }
                                     }
                                 }
                             }
                             Text(
-                                if (register) sh("Yeni hesabını oluştur; bir kez gir, hep hatırlansın.", "Create your account; sign in once and stay signed in.")
-                                else sh("Tekrar hoş geldin! Bir kez giriş yap, uygulama seni hatırlar.", "Welcome back! Sign in once and the app remembers you."),
+                                if (register) sh("Hesabını aç, ilk kelimeni tahtaya diz.", "Create your account and lay your first word on the board.")
+                                else sh("Tekrar hoş geldin! Tahtın seni bekliyor.", "Welcome back! Your throne is waiting."),
                                 color = AuthUi.Muted,
                                 fontSize = 13.sp,
                             )
@@ -522,16 +546,16 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                             modifier = Modifier.weight(1f).height(44.dp),
                                             shape = RoundedCornerShape(14.dp),
                                             colors = FilterChipDefaults.filterChipColors(
-                                                containerColor = AuthUi.Surface,
+                                                containerColor = AuthUi.SurfaceSoft,
                                                 labelColor = AuthUi.Muted,
                                                 selectedContainerColor = AuthUi.PrimarySoft,
-                                                selectedLabelColor = AuthUi.Primary,
+                                                selectedLabelColor = AuthUi.Ivory,
                                             ),
                                             border = FilterChipDefaults.filterChipBorder(
                                                 enabled = true,
                                                 selected = selected,
                                                 borderColor = AuthUi.Border,
-                                                selectedBorderColor = AuthUi.Primary.copy(alpha = .45f),
+                                                selectedBorderColor = AuthUi.Lavender,
                                             ),
                                         )
                                     }
@@ -660,7 +684,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                         }
                     }
                     Text(
-                        sh("Bir kez giriş yaptıktan sonra uygulama simgesine dokunman yeterli.", "After signing in once, just tap the app icon to play."),
+                        sh("Bir kez giriş yap; sonra simgeye dokun, oyna.", "Sign in once; then just tap the icon and play."),
                         color = AuthUi.Muted,
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center,
@@ -675,18 +699,27 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
 /** Brand block: the Kelime Tahtı logo. */
 @Composable
 private fun AuthBrandHeader() {
-    androidx.compose.foundation.Image(
-        painter = androidx.compose.ui.res.painterResource(R.drawable.kelime_tahti_brand_logo),
-        contentDescription = "KELİME TAHTI",
-        modifier = Modifier.widthIn(max = 300.dp).fillMaxWidth().height(160.dp),
-        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-    )
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.kelime_tahti_brand_logo),
+            contentDescription = "KELİME TAHTI",
+            modifier = Modifier.widthIn(max = 300.dp).fillMaxWidth().height(150.dp),
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+        )
+        Text(
+            sh("Kelimeni kur, tahtı fethet.", "Build your words, claim the throne."),
+            color = AuthUi.Lavender,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 @Composable
 private fun AuthLanguagePill(language: String, onLanguage: (String) -> Unit) {
     Row(
-        Modifier.background(AuthUi.Surface.copy(alpha = .9f), RoundedCornerShape(99.dp)).padding(3.dp),
+        Modifier.background(AuthUi.SurfaceSoft.copy(alpha = .9f), RoundedCornerShape(99.dp)).padding(3.dp),
     ) {
         listOf("tr" to "🇹🇷 TR", "en" to "🇬🇧 EN").forEach { (code, label) ->
             val selected = language == code

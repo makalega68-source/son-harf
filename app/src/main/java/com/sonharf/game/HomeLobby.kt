@@ -260,7 +260,7 @@ private fun LobbyGameCard(icon: Int, title: String, detail: String, onClick: () 
 
 /** A faint word-board grid: our own backdrop, the board the game is played on. */
 @Composable
-private fun LobbyBoardPattern(modifier: Modifier) {
+internal fun LobbyBoardPattern(modifier: Modifier) {
     Canvas(modifier) {
         val cell = 44.dp.toPx()
         val line = LobbyBrand.Grid.copy(alpha = .35f)

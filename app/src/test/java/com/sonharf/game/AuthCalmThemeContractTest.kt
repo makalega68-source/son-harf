@@ -13,15 +13,15 @@ class AuthCalmThemeContractTest {
 
         listOf(
             "private object AuthUi",
-            "val Background = Color(0xFFE6ECF2)",
-            "val Surface = Color(0xFFFFFFFF)",
-            "val SurfaceSoft = Color(0xFFF3F6F9)",
-            "val Primary = Color(0xFF3E9F4D)",
-            "val SoftBlue = Color(0xFF5DADE2)",
-            "val Turquoise = Color(0xFF52B360)",
-            "val Lavender = Color(0xFFE0A82E)",
+            "val Background = Color(0xFF0D3C48)",
+            "val Surface = Color(0xFF0F4855)",
+            "val SurfaceSoft = Color(0xFF0B323C)",
+            "val Primary = Color(0xFF2E8B45)",
+            "val SoftBlue = Color(0xFFF2C14E)",
+            "val Turquoise = Color(0xFFC9372C)",
+            "val Lavender = Color(0xFFF2C14E)",
             "val Sand = Color(0xFFF7E3A6)",
-            "val Border = Color(0xFFD2DBE5)",
+            "val Border = Color(0xFF2A7486)",
             "selectedContainerColor = AuthUi.PrimarySoft",
             "containerColor = if (register) AuthUi.Turquoise else AuthUi.Primary",
         ).forEach { token -> assertTrue("Missing calm auth theme token: $token", auth.contains(token)) }

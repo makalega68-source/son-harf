@@ -191,7 +191,12 @@ object SupabaseProvider {
     val client: SupabaseClient by lazy {
         createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY) {
             defaultSerializer = RowTolerantSerializer()
-            install(Auth)
+            install(Auth) {
+                // Must match the app's verification/recovery links (sonharf://auth); otherwise
+                // handleDeeplinks silently ignores them and the player is left on the code screen.
+                scheme = "sonharf"
+                host = "auth"
+            }
             install(Postgrest)
             install(Realtime)
         }
