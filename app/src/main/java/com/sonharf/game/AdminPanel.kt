@@ -457,7 +457,7 @@ private fun AdminPlayersTab() {
                     OutlinedButton(enabled = !admin, onClick = {
                         act(sh("${p.displayName ?: p.email} KALICI olarak silinsin mi? Hesap, oyunlar ve satın alınanlar geri gelmez.",
                             "Delete ${p.displayName ?: p.email} PERMANENTLY? Account, games and items cannot be restored.")) { AdminApi.deletePlayer(p.userId) }
-                    }, Modifier.weight(1f)) {
+                    }, modifier = Modifier.weight(1f)) {
                         Text(sh("Oyuncuyu sil", "Delete player"), fontSize = 11.sp, color = if (admin) Color.White.copy(alpha = .4f) else Color(0xFFFF8A80))
                     }
                 }
