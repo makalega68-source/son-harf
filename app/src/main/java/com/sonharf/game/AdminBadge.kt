@@ -45,6 +45,9 @@ internal object AdminRoster {
         private set
     private var loadedAt = 0L
 
+    /** After an admin change: read the list again right away. */
+    suspend fun forceRefresh() { loadedAt = 0L; refresh() }
+
     suspend fun refresh() {
         if (!SupabaseProvider.configured || System.currentTimeMillis() - loadedAt < 5 * 60_000L) return
         runCatching { SupabaseProvider.client.postgrest.rpc("get_admin_ids_v1").decodeList<String>() }

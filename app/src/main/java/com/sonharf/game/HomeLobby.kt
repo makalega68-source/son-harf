@@ -77,6 +77,9 @@ internal fun HomeLobbyScreen(
     var menuOpen by remember { mutableStateOf(false) }
     var leagueInfo by remember { mutableStateOf(false) }
     var guide by remember { mutableStateOf<LobbyGuideTopic?>(null) }
+    var adminOpen by remember { mutableStateOf(false) }
+    // The admin list loads once; the menu entry appears only for admins.
+    LaunchedEffect(Unit) { AdminRoster.refresh() }
     val foreground = rememberAppForeground()
 
     LaunchedEffect(Unit) {
@@ -120,6 +123,8 @@ internal fun HomeLobbyScreen(
                         LobbyMenuItem(Icons.Rounded.Event, sh("Etkinlikler", "Events")) { menuOpen = false; onEvents() }
                         LobbyMenuItem(Icons.Rounded.WorkspacePremium, "PRO") { menuOpen = false; onPro() }
                         LobbyMenuItem(Icons.Rounded.Settings, sh("Ayarlar", "Settings")) { menuOpen = false; onSettings() }
+                        // Only admins see this; every admin action is also checked on the server.
+                        if (isAdmin(p?.id)) LobbyMenuItem(Icons.Rounded.AdminPanelSettings, sh("Yönetim Paneli", "Admin Panel")) { menuOpen = false; adminOpen = true }
                         HorizontalDivider()
                         Text(sh("REHBER", "GUIDE"), Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                             fontSize = 12.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -230,6 +235,7 @@ internal fun HomeLobbyScreen(
         confirmButton = { TextButton(onClick = { leagueInfo = false }) { Text(sh("TAMAM", "OK")) } },
     )
     guide?.let { LobbyGuideDialog(it) { guide = null } }
+    if (adminOpen) AdminPanelDialog { adminOpen = false }
 }
 
 /** A game row: icon on the left, name and one live line in the middle, an arrow on the right. */

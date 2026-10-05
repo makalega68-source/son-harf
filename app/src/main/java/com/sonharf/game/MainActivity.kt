@@ -158,6 +158,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // The TR/EN dictionaries ship inside the app; they are read from here, never downloaded.
+        // First thing: a crash anywhere later is kept and reported on the next launch.
+        CrashReporter.install(this)
         com.sonharf.game.data.SharedDictionaryService.attach(this)
         passwordRecoveryRequested = savedInstanceState?.getBoolean(PASSWORD_RECOVERY_STATE_KEY) == true
 

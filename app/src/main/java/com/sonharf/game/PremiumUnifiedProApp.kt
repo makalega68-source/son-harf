@@ -228,6 +228,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             topBar = {
                 Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
                     ThroneChampionWatcher()
+                    CrashReportUploader()
                     TopNewsTicker()
                     if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
                 }
