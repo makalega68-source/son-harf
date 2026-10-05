@@ -126,6 +126,8 @@ internal data class AdminPlayerDto(
     val rating: Int? = null,
     @SerialName("last_seen_at") val lastSeenAt: String? = null,
     @SerialName("blocked_until") val blockedUntil: String? = null,
+    val diamonds: Int? = null,
+    @SerialName("is_admin") val isAdmin: Boolean = false,
 )
 
 /** The GitHub repository's size (public repository: read without a token). */
@@ -144,7 +146,9 @@ private object AdminApi {
             put("p_message_tr", tr); put("p_message_en", en); put("p_enabled", enabled); put("p_maintenance", false)
         })
     }
-    suspend fun search(query: String) = rest.rpc("admin_search_players_v2", buildJsonObject { put("p_query", query) }).decodeList<AdminPlayerDto>()
+    suspend fun search(query: String) = rest.rpc("admin_list_players_v1", buildJsonObject { put("p_query", query) }).decodeList<AdminPlayerDto>()
+    suspend fun giftCoins(id: String, amount: Int) { rest.rpc("admin_gift_coins_v1", buildJsonObject { put("p_user_id", id); put("p_amount", amount) }) }
+    suspend fun deletePlayer(id: String) { rest.rpc("admin_delete_player_v1", buildJsonObject { put("p_user_id", id) }) }
     suspend fun setVip(id: String, on: Boolean) { rest.rpc("admin_set_player_vip_v1", buildJsonObject { put("p_user_id", id); put("p_enabled", on) }) }
     suspend fun setBlocked(id: String, on: Boolean) { rest.rpc("admin_set_player_blocked_v1", buildJsonObject { put("p_user_id", id); put("p_blocked", on) }) }
     suspend fun setAdmin(id: String, on: Boolean) { rest.rpc("admin_set_admin_v1", buildJsonObject { put("p_user_id", id); put("p_enabled", on) }) }
@@ -181,7 +185,7 @@ internal fun AdminPanelDialog(onClose: () -> Unit) {
                 IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, sh("Kapat", "Close"), tint = Color.White) }
             }
             var tab by remember { mutableIntStateOf(0) }
-            val tabs = listOf(sh("Durum", "Status"), sh("Hatalar", "Errors"), sh("Duyuru", "Notice"), sh("Oyuncular", "Players"), sh("Bakım", "Upkeep"))
+            val tabs = listOf(sh("Durum", "Status"), sh("Hatalar", "Errors"), sh("Duyuru", "Notice"), sh("Oyuncu", "Players"), sh("Bakım", "Upkeep"))
             TabRow(selectedTabIndex = tab, containerColor = LobbyBrand.NavBar, contentColor = LobbyBrand.Gold) {
                 tabs.forEachIndexed { i, title ->
                     Tab(selected = tab == i, onClick = { tab = i },
@@ -335,75 +339,28 @@ private fun AdminErrorsTab() {
     }
 }
 
-/**
- * Turkish → English for admin notices through MyMemory's free public translation endpoint (no key,
- * no cost, nothing added to the APK). Notices are public text anyway. Null when it is unreachable;
- * the admin can then type the English.
- */
-private object AdminTranslator {
-    suspend fun toEnglish(text: String): String? = withContext(Dispatchers.IO) {
-        runCatching {
-            val query = java.net.URLEncoder.encode(text.take(480), "UTF-8")
-            val url = java.net.URL("https://api.mymemory.translated.net/get?q=$query&langpair=tr%7Cen")
-            val connection = (url.openConnection() as java.net.HttpURLConnection).apply {
-                connectTimeout = 8_000
-                readTimeout = 8_000
-            }
-            try {
-                if (connection.responseCode != 200) return@runCatching null
-                val body = connection.inputStream.bufferedReader().use { it.readText() }
-                Json.parseToJsonElement(body).jsonObject["responseData"]?.jsonObject
-                    ?.get("translatedText")?.jsonPrimitive?.content
-                    ?.trim()?.takeIf { it.isNotBlank() && !it.startsWith("MYMEMORY WARNING", ignoreCase = true) }
-            } finally {
-                connection.disconnect()
-            }
-        }.getOrNull()
-    }
-}
-
 @Composable
 private fun AdminAnnouncementTab() {
     var tr by remember { mutableStateOf("") }
     var en by remember { mutableStateOf("") }
-    // English follows the Turkish text until the admin edits it by hand.
-    var enEdited by remember { mutableStateOf(false) }
-    var translating by remember { mutableStateOf(false) }
-    var translateTick by remember { mutableIntStateOf(0) }
     var enabled by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) {
+    suspend fun load() {
         gameRequestResult { AdminApi.announcement() }.onSuccess { a ->
-            tr = a?.messageTr.orEmpty(); en = a?.messageEn.orEmpty(); enabled = a?.enabled == true
-            enEdited = en.isNotBlank()
+            tr = a?.messageTr.orEmpty(); enabled = a?.enabled == true
+            // A copy of the Turkish is not an English text.
+            en = a?.messageEn.orEmpty().takeUnless { it.trim().equals(tr.trim(), ignoreCase = true) }.orEmpty()
         }.onFailure { notice = it.message.orEmpty().take(160) }
     }
-    LaunchedEffect(tr, translateTick) {
-        if (enEdited || tr.isBlank()) return@LaunchedEffect
-        kotlinx.coroutines.delay(700)
-        translating = true
-        try {
-            val english = AdminTranslator.toEnglish(tr.trim())
-            if (english != null) en = english
-            else notice = sh("Çeviri şu an yapılamadı; İngilizceyi elle yazabilir ya da yeniden deneyebilirsin. Boş kalırsa duyuru yalnızca Türkçe akar.",
-                "Translation is unavailable right now; type the English or try again. If left empty, the notice runs in Turkish only.")
-        } finally {
-            // Typing restarts this effect; the label must never stay on "translating".
-            translating = false
-        }
-    }
+    LaunchedEffect(Unit) { load() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         AdminCard {
             AdminHeading(sh("ÜST BANTTA DUYURU", "TOP-BAND NOTICE"))
             OutlinedTextField(tr, { tr = it.take(500) }, Modifier.fillMaxWidth(), label = { Text("Türkçe") }, minLines = 2)
-            OutlinedTextField(en, { en = it.take(500); enEdited = it.isNotBlank() }, Modifier.fillMaxWidth(),
-                label = { Text(if (translating) sh("English · çevriliyor…", "English · translating…") else sh("English · otomatik çeviri", "English · auto-translated")) },
-                minLines = 2)
-            TextButton(enabled = tr.isNotBlank() && !translating, onClick = { enEdited = false; translateTick++ }) {
-                Text(sh("Türkçeden yeniden çevir", "Translate again from Turkish"))
-            }
+            OutlinedTextField(en, { en = it.take(500) }, Modifier.fillMaxWidth(),
+                label = { Text(sh("English (boş bırak: otomatik çevrilir)", "English (leave empty: auto-translated)")) }, minLines = 2)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(sh("Yayında", "Live"), Modifier.weight(1f), color = Color.White)
                 Switch(enabled, { enabled = it })
@@ -411,8 +368,23 @@ private fun AdminAnnouncementTab() {
             Button(enabled = !busy, onClick = {
                 busy = true
                 scope.launch {
-                    gameRequestResult { AdminApi.setAnnouncement(tr.trim(), en.trim().ifBlank { tr.trim() }, enabled) }
-                        .onSuccess { notice = sh("Kaydedildi. Oyuncular bir dakika içinde görür.", "Saved. Players see it within a minute.") }
+                    val autoTranslate = en.isBlank()
+                    gameRequestResult { AdminApi.setAnnouncement(tr.trim(), en.trim(), enabled) }
+                        .onSuccess {
+                            notice = if (autoTranslate) sh("Kaydedildi. İngilizcesi sunucuda çevriliyor…", "Saved. The English is being translated on the server…")
+                                else sh("Kaydedildi. Oyuncular bir dakika içinde görür.", "Saved. Players see it within a minute.")
+                            if (autoTranslate) {
+                                // The server translation lands within seconds; show it here.
+                                for (attempt in 0 until 6) {
+                                    kotlinx.coroutines.delay(2_500)
+                                    load()
+                                    if (en.isNotBlank()) {
+                                        notice = sh("Kaydedildi ve İngilizceye çevrildi. Oyuncular bir dakika içinde görür.", "Saved and translated. Players see it within a minute.")
+                                        break
+                                    }
+                                }
+                            }
+                        }
                         .onFailure { notice = it.message.orEmpty().take(160) }
                     busy = false
                 }
@@ -429,13 +401,23 @@ private fun AdminPlayersTab() {
     var notice by remember { mutableStateOf<String?>(null) }
     var confirm by remember { mutableStateOf<Pair<String, suspend () -> Unit>?>(null) }
     val scope = rememberCoroutineScope()
+    var gift by remember { mutableStateOf<AdminPlayerDto?>(null) }
     fun search() = scope.launch {
-        if (query.trim().length < 2) { notice = sh("En az 2 harf yaz.", "Type at least 2 letters."); return@launch }
         gameRequestResult { rows = AdminApi.search(query.trim()) }
             .onSuccess { notice = if (rows.isEmpty()) sh("Sonuç yok.", "No results.") else null }
             .onFailure { notice = it.message.orEmpty().take(160) }
     }
     fun act(label: String, action: suspend () -> Unit) { confirm = label to action }
+    fun friendly(raw: String): String = when {
+        "remove_admin_first" in raw -> sh("Yönetici silinemez; önce yöneticiliğini al.", "Admins cannot be deleted; remove admin first.")
+        "player_owns_club" in raw -> sh("Bu oyuncunun bir kulübü var; önce kulüp kapatılmalı.", "This player owns a club; close it first.")
+        "cannot_delete_self" in raw -> sh("Kendi hesabını buradan silemezsin.", "You cannot delete your own account here.")
+        "admin_delete_player_v1" in raw || "PGRST202" in raw -> sh("Silme yetkisi sunucuda henüz açılmadı.", "Deletion is not enabled on the server yet.")
+        "amount_out_of_range" in raw -> sh("Miktar 1 ile 100.000 arasında olmalı.", "Amount must be 1–100,000.")
+        else -> raw.take(160)
+    }
+    // The list is there on opening: newest activity first, search narrows it.
+    LaunchedEffect(Unit) { search() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(query, { query = it.take(60) }, Modifier.weight(1f), singleLine = true,
@@ -444,12 +426,13 @@ private fun AdminPlayersTab() {
         }
         AdminNotice(notice)
         rows.forEach { p ->
-            val admin = p.userId in AdminRoster.ids
+            val admin = p.isAdmin || p.userId in AdminRoster.ids
             val blocked = p.blockedUntil != null
             AdminCard {
                 Text((p.displayName ?: "—") + if (admin) "  · " + sh("Yönetici", "Admin") else "", color = Color.White, fontWeight = FontWeight.Black)
                 Text(p.email, color = Color.White.copy(alpha = .75f), fontSize = 12.sp)
                 Text(sh("Son görülme: ", "Last seen: ") + shortTime(p.lastSeenAt) + (if (p.isVip) " · PRO" else "") +
+                    (p.diamonds?.let { " · $it coin" } ?: "") +
                     (if (blocked) " · " + sh("Engelli", "Blocked") else ""), color = Color.White.copy(alpha = .75f), fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedButton(onClick = { act(if (p.isVip) sh("PRO kapatılsın mı?", "Turn PRO off?") else sh("PRO açılsın mı?", "Turn PRO on?")) { AdminApi.setVip(p.userId, !p.isVip) } }, Modifier.weight(1f)) {
@@ -467,8 +450,38 @@ private fun AdminPlayersTab() {
                         Text(sh("Test hükümdarı", "Test ruler"), fontSize = 11.sp, color = Color.White)
                     }
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(onClick = { gift = p }, Modifier.weight(1f)) {
+                        Text(sh("Coin hediye et", "Gift coins"), fontSize = 11.sp, color = LobbyBrand.Gold)
+                    }
+                    OutlinedButton(enabled = !admin, onClick = {
+                        act(sh("${p.displayName ?: p.email} KALICI olarak silinsin mi? Hesap, oyunlar ve satın alınanlar geri gelmez.",
+                            "Delete ${p.displayName ?: p.email} PERMANENTLY? Account, games and items cannot be restored.")) { AdminApi.deletePlayer(p.userId) }
+                    }, Modifier.weight(1f)) {
+                        Text(sh("Oyuncuyu sil", "Delete player"), fontSize = 11.sp, color = if (admin) Color.White.copy(alpha = .4f) else Color(0xFFFF8A80))
+                    }
+                }
             }
         }
+    }
+    gift?.let { target ->
+        var amount by remember(target.userId) { mutableStateOf("1000") }
+        AlertDialog(onDismissRequest = { gift = null },
+            title = { Text(sh("${target.displayName ?: target.email} için coin", "Coins for ${target.displayName ?: target.email}")) },
+            text = {
+                OutlinedTextField(amount, { amount = it.filter(Char::isDigit).take(6) }, singleLine = true,
+                    label = { Text(sh("Miktar (1–100.000)", "Amount (1–100,000)")) })
+            },
+            confirmButton = { TextButton(onClick = {
+                val value = amount.toIntOrNull() ?: 0
+                gift = null
+                scope.launch {
+                    gameRequestResult { AdminApi.giftCoins(target.userId, value) }
+                        .onSuccess { notice = sh("$value coin verildi.", "$value coins gifted."); search() }
+                        .onFailure { notice = friendly(it.message.orEmpty()) }
+                }
+            }) { Text(sh("Ver", "Gift")) } },
+            dismissButton = { TextButton(onClick = { gift = null }) { Text(sh("Vazgeç", "Cancel")) } })
     }
     confirm?.let { (label, action) ->
         AlertDialog(onDismissRequest = { confirm = null },
@@ -477,8 +490,8 @@ private fun AdminPlayersTab() {
                 confirm = null
                 scope.launch {
                     gameRequestResult { action() }
-                        .onSuccess { notice = sh("Yapıldı.", "Done."); AdminRoster.forceRefresh(); if (query.trim().length >= 2) search() }
-                        .onFailure { notice = it.message.orEmpty().take(160) }
+                        .onSuccess { notice = sh("Yapıldı.", "Done."); AdminRoster.forceRefresh(); search() }
+                        .onFailure { notice = friendly(it.message.orEmpty()) }
                 }
             }) { Text(sh("Evet", "Yes")) } },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text(sh("Vazgeç", "Cancel")) } })
