@@ -335,27 +335,25 @@ private fun AdminErrorsTab() {
     }
 }
 
-/** Turkish → English on the device (Google ML Kit); the small model downloads once. */
+/**
+ * Turkish → English with the on-device Gemini Nano the mascot already uses: no extra download in
+ * the APK and no cloud cost. Phones without it return null and the admin types the English.
+ */
 private object AdminTranslator {
-    private val client by lazy {
-        com.google.mlkit.nl.translate.Translation.getClient(
-            com.google.mlkit.nl.translate.TranslatorOptions.Builder()
-                .setSourceLanguage(com.google.mlkit.nl.translate.TranslateLanguage.TURKISH)
-                .setTargetLanguage(com.google.mlkit.nl.translate.TranslateLanguage.ENGLISH)
-                .build()
-        )
-    }
+    private val engine by lazy { MascotNanoEngine() }
 
-    suspend fun toEnglish(text: String): String {
-        client.downloadModelIfNeeded(com.google.mlkit.common.model.DownloadConditions.Builder().build()).awaitTask()
-        return client.translate(text).awaitTask()
-    }
-
-    private suspend fun <T> com.google.android.gms.tasks.Task<T>.awaitTask(): T =
-        kotlinx.coroutines.suspendCancellableCoroutine { cont ->
-            addOnSuccessListener { cont.resumeWith(Result.success(it)) }
-            addOnFailureListener { cont.resumeWith(Result.failure(it)) }
+    suspend fun toEnglish(text: String): String? {
+        when (engine.checkAvailability()) {
+            MascotNanoAvailability.READY -> Unit
+            MascotNanoAvailability.DOWNLOADABLE, MascotNanoAvailability.DOWNLOADING ->
+                if (!engine.download { _, _ -> }) return null
+            else -> return null
         }
+        return engine.generate(
+            "Translate this Turkish game announcement into natural English. " +
+                "Reply with the English text only, no quotes or notes.\n\n$text"
+        )?.trim()?.trim('"')?.takeIf { it.isNotBlank() }
+    }
 }
 
 @Composable
@@ -380,9 +378,10 @@ private fun AdminAnnouncementTab() {
         if (enEdited || tr.isBlank()) return@LaunchedEffect
         kotlinx.coroutines.delay(700)
         translating = true
-        runCatching { AdminTranslator.toEnglish(tr.trim()) }
-            .onSuccess { en = it }
-            .onFailure { notice = sh("Çeviri yapılamadı (ilk seferde internet gerekir). İngilizceyi elle yazabilirsin.", "Translation failed (first use needs internet). You can type the English yourself.") }
+        val english = runCatching { AdminTranslator.toEnglish(tr.trim()) }.getOrNull()
+        if (english != null) en = english
+        else notice = sh("Bu telefon otomatik çeviriyi desteklemiyor; İngilizceyi elle yazabilirsin. Boş kalırsa duyuru yalnızca Türkçe akar.",
+            "This phone cannot auto-translate; type the English yourself. If left empty, the notice runs in Turkish only.")
         translating = false
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
