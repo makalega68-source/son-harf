@@ -367,6 +367,19 @@ internal fun WordSiegePanMatch(
 
         }
 
+        if (boardViewportMode != WordSiegeBoardViewportMode.FIT && game.status == "playing") {
+            PanSiegeCompactScoreStrip(
+                mine = mine,
+                myName = mine?.displayName ?: sh("Sen", "You"),
+                myScore = displayedMyScore,
+                myActive = displayedCurrentPlayerId == me,
+                rival = opponent,
+                rivalName = opponent?.displayName ?: sh("Rakip", "Rival"),
+                rivalScore = displayedRivalScore,
+                rivalActive = displayedCurrentPlayerId == opponentId,
+                bagCount = game.bag.length,
+            )
+        } else
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             PanSiegePlayerCard(
                 profile = mine,
@@ -692,6 +705,20 @@ private fun PanSiegeBoard(
     }
     val boardBorderWidth = borderWidthQuarterDp.dp
     val overviewMode by remember(closeScaleState, fitScale) { derivedStateOf { closeScaleState.value <= fitScale * 1.3f } }
+    // Like Kelimelik: zooming in tells the screen to fold its header into a slim strip, so the board
+    // gets that room; zooming back out brings the large cards back. Two thresholds keep the fold
+    // from flickering as the board's own size changes with it.
+    var zoomedIn by remember(gameId) { mutableStateOf(viewportMode == WordSiegeBoardViewportMode.CLOSE) }
+    LaunchedEffect(closeScaleState, fitScale) {
+        snapshotFlow { if (fitScale > 0f) closeScaleState.value / fitScale else 1f }.collect { ratio ->
+            if (!zoomedIn && ratio > 1.3f) zoomedIn = true
+            else if (zoomedIn && ratio < 1.1f) zoomedIn = false
+        }
+    }
+    LaunchedEffect(zoomedIn) {
+        val mode = if (zoomedIn) WordSiegeBoardViewportMode.CLOSE else WordSiegeBoardViewportMode.FIT
+        if (mode != viewportMode) onViewportModeChange(mode)
+    }
     PanSiegeScoped { WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx) }
     val dragHover by remember(tileDrag) { derivedStateOf { tileDrag?.hoverCell } }
     val draggedFrom = tileDrag?.fromCell
@@ -1380,4 +1407,74 @@ private fun PanSiegeScoped(content: @Composable () -> Unit) {
 @Composable
 private fun PanSiegeScopedBox(modifier: Modifier, content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit) {
     Box(modifier, content = content)
+}
+
+/**
+ * The slim strip shown while the board is zoomed in (Kelimelik style): small portraits, names and
+ * scores either side of the bag count, so nearly the whole screen goes to the board.
+ */
+@Composable
+private fun PanSiegeCompactScoreStrip(
+    mine: ProfileDto?,
+    myName: String,
+    myScore: Int,
+    myActive: Boolean,
+    rival: ProfileDto?,
+    rivalName: String,
+    rivalScore: Int,
+    rivalActive: Boolean,
+    bagCount: Int,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().height(46.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = WordSiegeGameUi.Surface,
+        border = BorderStroke(1.dp, WordSiegeGameUi.Gold.copy(alpha = .4f)),
+        shadowElevation = 3.dp,
+    ) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            PanSiegeStripSide(mine, myName, myScore, myActive, PanSiegeMineBorder, mirrored = false, Modifier.weight(1f))
+            Column(Modifier.padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(sh("TORBA", "BAG"), color = WordSiegeGameUi.Muted, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                Text("$bagCount", color = WordSiegeGameUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            }
+            PanSiegeStripSide(rival, rivalName, rivalScore, rivalActive, PanSiegeRivalBorder, mirrored = true, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun PanSiegeStripSide(
+    profile: ProfileDto?,
+    name: String,
+    score: Int,
+    active: Boolean,
+    accent: Color,
+    mirrored: Boolean,
+    modifier: Modifier,
+) {
+    Row(
+        modifier
+            .background(if (active) accent.copy(alpha = .14f) else Color.Transparent, RoundedCornerShape(12.dp))
+            .padding(horizontal = 4.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        val avatar: @Composable () -> Unit = {
+            ProfilePhotoAvatarWithGender(
+                avatarPath = profile?.avatarPath, gender = profile?.gender, name = name,
+                size = 32.dp, accent = accent, visible = profile?.avatarVisibility != "hidden",
+                frameId = rememberPlayerFrame(profile?.id),
+            )
+        }
+        val label: @Composable (Modifier) -> Unit = { m ->
+            Text(name, m, color = WordSiegeGameUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = if (mirrored) TextAlign.End else TextAlign.Start)
+        }
+        val points: @Composable () -> Unit = {
+            Text("$score", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black,
+                modifier = Modifier.background(accent, RoundedCornerShape(8.dp)).padding(horizontal = 7.dp, vertical = 1.dp))
+        }
+        if (mirrored) { points(); label(Modifier.weight(1f)); avatar() } else { avatar(); label(Modifier.weight(1f)); points() }
+    }
 }
