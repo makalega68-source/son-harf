@@ -106,7 +106,7 @@ jobs:
             adb logcat -d -s AndroidRuntime:E > Fallback-runtime.log
             ! grep -q 'FATAL EXCEPTION' Fallback-runtime.log
             adb logcat -c; (adb logcat -v time > Mascot-drag-logcat.txt 2>&1 &)
-            python3 scripts/verify_mascot_drag.py || { echo "---- device log before the failure ----"; tail -n 250 Mascot-drag-logcat.txt; exit 1; }
+            python3 scripts/verify_mascot_drag.py || { echo "---- device log before the failure ----"; tail -n 60 Mascot-drag-logcat.txt; echo "---- host memory ----"; free -m; echo "---- host kernel ----"; sudo dmesg | grep -iE "killed process|out of memory|oom|segfault|qemu" | tail -n 20; exit 1; }
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage mascot-face
             sleep 6
