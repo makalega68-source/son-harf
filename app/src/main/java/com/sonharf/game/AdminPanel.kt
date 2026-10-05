@@ -335,10 +335,37 @@ private fun AdminErrorsTab() {
     }
 }
 
+/** Turkish → English on the device (Google ML Kit); the small model downloads once. */
+private object AdminTranslator {
+    private val client by lazy {
+        com.google.mlkit.nl.translate.Translation.getClient(
+            com.google.mlkit.nl.translate.TranslatorOptions.Builder()
+                .setSourceLanguage(com.google.mlkit.nl.translate.TranslateLanguage.TURKISH)
+                .setTargetLanguage(com.google.mlkit.nl.translate.TranslateLanguage.ENGLISH)
+                .build()
+        )
+    }
+
+    suspend fun toEnglish(text: String): String {
+        client.downloadModelIfNeeded(com.google.mlkit.common.model.DownloadConditions.Builder().build()).awaitTask()
+        return client.translate(text).awaitTask()
+    }
+
+    private suspend fun <T> com.google.android.gms.tasks.Task<T>.awaitTask(): T =
+        kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+            addOnSuccessListener { cont.resumeWith(Result.success(it)) }
+            addOnFailureListener { cont.resumeWith(Result.failure(it)) }
+        }
+}
+
 @Composable
 private fun AdminAnnouncementTab() {
     var tr by remember { mutableStateOf("") }
     var en by remember { mutableStateOf("") }
+    // English follows the Turkish text until the admin edits it by hand.
+    var enEdited by remember { mutableStateOf(false) }
+    var translating by remember { mutableStateOf(false) }
+    var translateTick by remember { mutableIntStateOf(0) }
     var enabled by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -346,13 +373,28 @@ private fun AdminAnnouncementTab() {
     LaunchedEffect(Unit) {
         gameRequestResult { AdminApi.announcement() }.onSuccess { a ->
             tr = a?.messageTr.orEmpty(); en = a?.messageEn.orEmpty(); enabled = a?.enabled == true
+            enEdited = en.isNotBlank()
         }.onFailure { notice = it.message.orEmpty().take(160) }
+    }
+    LaunchedEffect(tr, translateTick) {
+        if (enEdited || tr.isBlank()) return@LaunchedEffect
+        kotlinx.coroutines.delay(700)
+        translating = true
+        runCatching { AdminTranslator.toEnglish(tr.trim()) }
+            .onSuccess { en = it }
+            .onFailure { notice = sh("Çeviri yapılamadı (ilk seferde internet gerekir). İngilizceyi elle yazabilirsin.", "Translation failed (first use needs internet). You can type the English yourself.") }
+        translating = false
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         AdminCard {
             AdminHeading(sh("ÜST BANTTA DUYURU", "TOP-BAND NOTICE"))
             OutlinedTextField(tr, { tr = it.take(500) }, Modifier.fillMaxWidth(), label = { Text("Türkçe") }, minLines = 2)
-            OutlinedTextField(en, { en = it.take(500) }, Modifier.fillMaxWidth(), label = { Text("English") }, minLines = 2)
+            OutlinedTextField(en, { en = it.take(500); enEdited = it.isNotBlank() }, Modifier.fillMaxWidth(),
+                label = { Text(if (translating) sh("English · çevriliyor…", "English · translating…") else sh("English · otomatik çeviri", "English · auto-translated")) },
+                minLines = 2)
+            TextButton(enabled = tr.isNotBlank() && !translating, onClick = { enEdited = false; translateTick++ }) {
+                Text(sh("Türkçeden yeniden çevir", "Translate again from Turkish"))
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(sh("Yayında", "Live"), Modifier.weight(1f), color = Color.White)
                 Switch(enabled, { enabled = it })

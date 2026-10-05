@@ -25,7 +25,12 @@ import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
 
 internal fun tickerLine(row: TickerFeedRow): String? = when (row.kind) {
-    "announcement" -> sh(row.messageTr ?: return null, row.messageEn ?: row.messageTr ?: return null)
+    // Announcements reach everyone in both languages: Turkish first, then English.
+    "announcement" -> {
+        val tr = row.messageTr?.trim().orEmpty()
+        val en = row.messageEn?.trim().orEmpty()
+        listOf(tr, en).filter { it.isNotBlank() }.distinct().joinToString(TickerGap).ifBlank { null }
+    }
     "purchase" -> {
         val name = row.playerName?.takeIf { it.isNotBlank() } ?: return null
         val item = sh(row.itemNameTr ?: return null, row.itemNameEn ?: row.itemNameTr ?: return null)
@@ -36,7 +41,8 @@ internal fun tickerLine(row: TickerFeedRow): String? = when (row.kind) {
 
 /**
  * Thin band at the very top of every screen, games included: each announcement and each store
- * purchase passes once per device, then never again. Nothing new, no band.
+ * purchase passes once per device, then never again. The band itself never comes and goes, so
+ * the page below does not jump: with nothing new it rests on a quiet brand line.
  */
 @Composable
 internal fun TopNewsTicker(modifier: Modifier = Modifier) {
@@ -52,7 +58,12 @@ internal fun TopNewsTicker(modifier: Modifier = Modifier) {
             delay(60_000)
         }
     }
-    val current = lines.firstOrNull { it !in seen } ?: return
+    val current = lines.firstOrNull { it !in seen }
+    if (current == null) {
+        TickerStrip(Icons.Rounded.Campaign, sh("Kelime Tahtı · Kelimeni kur, tahtı fethet.", "Word Throne · Build your words, claim the throne."),
+            modifier, scroll = false, quiet = true)
+        return
+    }
     LaunchedEffect(current) {
         delay((5_000L + current.length * 140L).coerceAtMost(22_000L))
         seen = (seen + current).takeLast(300)
@@ -114,7 +125,7 @@ private const val TickerGap = "      •      "
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TickerStrip(icon: ImageVector, text: String, modifier: Modifier, gold: Boolean = false, scroll: Boolean = true,
-    iterations: Int = 2) {
+    iterations: Int = 2, quiet: Boolean = false) {
     Row(modifier.fillMaxWidth().height(26.dp)
         .background(Brush.horizontalGradient(listOf(LobbyBrand.NavBar, LobbyBrand.Band, LobbyBrand.NavBar))),
         verticalAlignment = Alignment.CenterVertically) {
@@ -126,6 +137,7 @@ private fun TickerStrip(icon: ImageVector, text: String, modifier: Modifier, gol
             Modifier.weight(1f).padding(horizontal = 8.dp).then(
                 if (scroll && TickerMotion.enabled) Modifier.basicMarquee(iterations = iterations, animationMode = MarqueeAnimationMode.Immediately,
                     initialDelayMillis = 900, repeatDelayMillis = 1_200, velocity = 46.dp) else Modifier),
-            color = if (gold) LobbyBrand.Gold else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            color = when { gold -> LobbyBrand.Gold; quiet -> Color.White.copy(alpha = .55f); else -> Color.White },
+            fontSize = 12.sp, fontWeight = if (quiet) FontWeight.Medium else FontWeight.Bold, maxLines = 1)
     }
 }
