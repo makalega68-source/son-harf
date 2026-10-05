@@ -66,7 +66,7 @@ jobs:
           cores: 2
           ram-size: 3072M
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          emulator-options: -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           # Its animation-settings step was the first adb call to break; the app does not need it.
           disable-animations: false
           script: |
@@ -190,7 +190,7 @@ jobs:
           cores: 2
           ram-size: 3072M
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          emulator-options: -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: false
           script: |
             adb wait-for-device
