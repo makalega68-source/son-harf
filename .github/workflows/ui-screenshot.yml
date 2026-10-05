@@ -28,6 +28,7 @@ jobs:
   build:
     if: "!contains(github.event.head_commit.message, '[reuse-apk:e948d04]')"
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
@@ -108,13 +109,13 @@ jobs:
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage mascot-face
             sleep 6
-            for i in 1 2 3; do timeout 60s adb exec-out screencap -p > Mascot-face-Android.png && break; echo "screencap retry $i"; adb wait-for-device; sleep 5; done; test -s Mascot-face-Android.png
+            for i in 1 2 3; do timeout 60s adb exec-out screencap -p > Mascot-face-Android.png && break; echo "screencap retry $i"; timeout 120 adb wait-for-device || exit 1; sleep 5; done; test -s Mascot-face-Android.png
             sleep 2
-            for i in 1 2 3; do timeout 60s adb exec-out screencap -p > Mascot-face-second-Android.png && break; echo "screencap retry $i"; adb wait-for-device; sleep 5; done; test -s Mascot-face-second-Android.png
+            for i in 1 2 3; do timeout 60s adb exec-out screencap -p > Mascot-face-second-Android.png && break; echo "screencap retry $i"; timeout 120 adb wait-for-device || exit 1; sleep 5; done; test -s Mascot-face-second-Android.png
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage gold-king
             sleep 6
-            for i in 1 2 3; do timeout 60s adb exec-out screencap -p > Mascot-gold-king-Android.png && break; echo "screencap retry $i"; adb wait-for-device; sleep 5; done; test -s Mascot-gold-king-Android.png
+            for i in 1 2 3; do timeout 60s adb exec-out screencap -p > Mascot-gold-king-Android.png && break; echo "screencap retry $i"; timeout 120 adb wait-for-device || exit 1; sleep 5; done; test -s Mascot-gold-king-Android.png
             python3 scripts/verify_home_menu.py
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage controls-dark

@@ -22,7 +22,7 @@ def bounds(name):
             node = next((n for n in ET.parse(name).iter("node") if n.get("content-desc") == "Maskot"), None)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ET.ParseError):
             # A stalled software-GPU emulator can hang one adb call; wait for it to answer again.
-            subprocess.run(["adb", "wait-for-device"], timeout=120)
+            subprocess.run(["adb", "wait-for-device"], timeout=120, check=False)
         if node is not None:
             break
         time.sleep(2)
