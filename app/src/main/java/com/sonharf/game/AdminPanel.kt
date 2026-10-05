@@ -336,23 +336,29 @@ private fun AdminErrorsTab() {
 }
 
 /**
- * Turkish → English with the on-device Gemini Nano the mascot already uses: no extra download in
- * the APK and no cloud cost. Phones without it return null and the admin types the English.
+ * Turkish → English for admin notices through MyMemory's free public translation endpoint (no key,
+ * no cost, nothing added to the APK). Notices are public text anyway. Null when it is unreachable;
+ * the admin can then type the English.
  */
 private object AdminTranslator {
-    private val engine by lazy { MascotNanoEngine() }
-
-    suspend fun toEnglish(text: String): String? {
-        when (engine.checkAvailability()) {
-            MascotNanoAvailability.READY -> Unit
-            MascotNanoAvailability.DOWNLOADABLE, MascotNanoAvailability.DOWNLOADING ->
-                if (!engine.download { _, _ -> }) return null
-            else -> return null
-        }
-        return engine.generate(
-            "Translate this Turkish game announcement into natural English. " +
-                "Reply with the English text only, no quotes or notes.\n\n$text"
-        )?.trim()?.trim('"')?.takeIf { it.isNotBlank() }
+    suspend fun toEnglish(text: String): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val query = java.net.URLEncoder.encode(text.take(480), "UTF-8")
+            val url = java.net.URL("https://api.mymemory.translated.net/get?q=$query&langpair=tr%7Cen")
+            val connection = (url.openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 8_000
+                readTimeout = 8_000
+            }
+            try {
+                if (connection.responseCode != 200) return@runCatching null
+                val body = connection.inputStream.bufferedReader().use { it.readText() }
+                Json.parseToJsonElement(body).jsonObject["responseData"]?.jsonObject
+                    ?.get("translatedText")?.jsonPrimitive?.content
+                    ?.trim()?.takeIf { it.isNotBlank() && !it.startsWith("MYMEMORY WARNING", ignoreCase = true) }
+            } finally {
+                connection.disconnect()
+            }
+        }.getOrNull()
     }
 }
 
@@ -378,11 +384,15 @@ private fun AdminAnnouncementTab() {
         if (enEdited || tr.isBlank()) return@LaunchedEffect
         kotlinx.coroutines.delay(700)
         translating = true
-        val english = runCatching { AdminTranslator.toEnglish(tr.trim()) }.getOrNull()
-        if (english != null) en = english
-        else notice = sh("Bu telefon otomatik çeviriyi desteklemiyor; İngilizceyi elle yazabilirsin. Boş kalırsa duyuru yalnızca Türkçe akar.",
-            "This phone cannot auto-translate; type the English yourself. If left empty, the notice runs in Turkish only.")
-        translating = false
+        try {
+            val english = AdminTranslator.toEnglish(tr.trim())
+            if (english != null) en = english
+            else notice = sh("Çeviri şu an yapılamadı; İngilizceyi elle yazabilir ya da yeniden deneyebilirsin. Boş kalırsa duyuru yalnızca Türkçe akar.",
+                "Translation is unavailable right now; type the English or try again. If left empty, the notice runs in Turkish only.")
+        } finally {
+            // Typing restarts this effect; the label must never stay on "translating".
+            translating = false
+        }
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         AdminCard {
