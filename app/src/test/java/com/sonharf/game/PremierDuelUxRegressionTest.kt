@@ -96,9 +96,11 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("val mascotSize = if (veryCompact) 64.dp"))
         assertTrue(screen.contains("required.length > 1 -> .34f"))
         assertTrue(screen.contains("}).toSp()"))
-        // The hint chip sits directly above the keyboard, and keys are shorter.
+        // The hint chip and notices sit under the countdown (no strip of their own above the keyboard).
         val strip = screen.indexOf("val hintVisible = myTurn")
-        assertTrue(strip > screen.indexOf("PremierInputBar(\n") && strip < screen.indexOf("PremierKeyboard(language, input, enabled"))
+        assertTrue(strip in 0 until screen.indexOf("PremierPressureStrip(\n                language = language,"))
+        assertTrue(screen.contains("below = clockLine,"))
+        assertFalse(screen.contains("Box(Modifier.fillMaxWidth().height(34.dp).padding(horizontal = 10.dp)"))
         assertTrue(screen.contains("val keyHeight = if (veryCompact) 33.dp else if (compact) 35.dp else if (tall) 42.dp else 39.dp"))
         assertTrue(screen.contains("PremierPressureStrip("))
         assertTrue(screen.contains("KRİTİK 5 SANİYE"))

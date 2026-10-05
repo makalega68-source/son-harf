@@ -1663,6 +1663,51 @@ private fun PremierArena(
                 myGain = myGain,
                 rivalGain = rivalGain,
             )
+            // Under the countdown: a hint or notice line, else the hint button. It used to be a
+            // separate strip above the keyboard; here it costs no height of its own.
+            val hintVisible = myTurn && !preparing && (hintsLeft > 0 || bankedHints > 0 || room.isBot)
+            val clockLine: @Composable () -> Unit = {
+                val shownHint = stripHint
+                val message = shownHint ?: notice.takeIf { it.isNotBlank() }
+                if (message != null) {
+                    Text(
+                        message,
+                        color = if (shownHint != null) PremierBoard.Ink else PremierBoard.Muted,
+                        fontSize = 10.sp,
+                        lineHeight = 12.sp,
+                        fontWeight = FontWeight.Black,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                } else if (hintVisible) {
+                    Surface(
+                        onClick = {
+                            when {
+                                hintsLeft > 0 -> askFreeHint()
+                                bankedHints > 0 -> useBankedHint()
+                                room.isBot -> buyHint()
+                            }
+                        },
+                        shape = RoundedCornerShape(99.dp),
+                        color = PremierBoard.Gold.copy(alpha = .18f),
+                        border = BorderStroke(1.dp, PremierBoard.Gold.copy(alpha = .7f)),
+                    ) {
+                        Text(
+                            if (hintsLeft > 0) pt(language, "💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)")
+                            else if (bankedHints > 0) pt(language, "💡 İpucu ($bankedHints)", "💡 Hint ($bankedHints)")
+                            else pt(language, "💡 +1 İpucu · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC", "💡 +1 Hint · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC"),
+                            Modifier.padding(horizontal = 12.dp, vertical = 3.dp),
+                            color = PremierBoard.Ink,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                        )
+                    }
+                } else if (myStreak >= 2) {
+                    PremierStreakFlame(streak = myStreak, language = language, modifier = Modifier)
+                }
+            }
             // The turn clock as a bar across the screen.
             PremierPressureStrip(
                 language = language,
@@ -1676,6 +1721,7 @@ private fun PremierArena(
                 active = live && !preparing,
                 myWords = myRoundWords,
                 rivalWords = rivalRoundWords,
+                below = clockLine,
             )
             Spacer(Modifier.height(primaryGap))
             // The board.
@@ -1751,7 +1797,7 @@ private fun PremierArena(
                         )
                     }
                     Spacer(Modifier.weight(1f))
-                    if (!veryCompact) PremierWordTrail(words, language, isPro, meId)
+                    PremierWordTrail(words, language, isPro, meId)
                 }
             }
             // Keep the live input and custom keyboard outside the flexible arena body.
@@ -1765,61 +1811,6 @@ private fun PremierArena(
                 shakeKey = if (moveFeedback?.accepted == false) moveFeedback.message else null,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             )
-            // One fixed-height strip for the notice and the hint chip, right above the keyboard: showing or hiding either never
-            // resizes the arena above, so the centre card stays still between turns.
-            val hintVisible = myTurn && !preparing && (hintsLeft > 0 || bankedHints > 0 || room.isBot)
-            Box(Modifier.fillMaxWidth().height(34.dp).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
-                val shownHint = stripHint
-                if (shownHint != null) {
-                    Text(
-                        shownHint,
-                        color = PremierBoard.Ink,
-                        fontSize = 11.sp,
-                        lineHeight = 13.sp,
-                        fontWeight = FontWeight.Black,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth(if (hintVisible) .6f else 1f),
-                    )
-                } else if (notice.isNotBlank()) {
-                    Text(
-                        notice,
-                        color = PremierBoard.Muted,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth(if (hintVisible) .6f else 1f),
-                    )
-                }
-                if (hintVisible) {
-                    Surface(
-                        onClick = {
-                            when {
-                                hintsLeft > 0 -> askFreeHint()
-                                bankedHints > 0 -> useBankedHint()
-                                room.isBot -> buyHint()
-                            }
-                        },
-                        modifier = Modifier.align(Alignment.CenterEnd),
-                        shape = RoundedCornerShape(99.dp),
-                        color = PremierBoard.Gold.copy(alpha = .18f),
-                        border = BorderStroke(1.dp, PremierBoard.Gold.copy(alpha = .7f)),
-                    ) {
-                        Text(
-                            if (hintsLeft > 0) pt(language, "💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)")
-                            else if (bankedHints > 0) pt(language, "💡 İpucu ($bankedHints)", "💡 Hint ($bankedHints)")
-                            else pt(language, "💡 +1 İpucu · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC", "💡 +1 Hint · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC"),
-                            Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                            color = PremierBoard.Ink,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                }
-            }
             PremierKeyboard(language, input, enabled = myTurn && !busy && !preparing && boardSynced, keyHeight = keyHeight, onInput = onInput, onSubmit = onSubmit)
         }
 
@@ -2052,7 +2043,7 @@ private fun PremierWordCountChip(label: String, words: Int, color: Color, active
         Column(
             Modifier
                 .background(Brush.verticalGradient(listOf(color.copy(alpha = .10f + .08f * glow), PremierBoard.Card)))
-                .padding(horizontal = 6.dp, vertical = 4.dp),
+                .padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(label, color = color, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp, maxLines = 1)
@@ -2305,9 +2296,10 @@ private fun PremierSymmetricPlayerCard(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                if (mirrored) { label(); scoreSlot() } else { scoreSlot(); label() }
+                if (mirrored) { Box(Modifier.weight(1f, fill = false)) { label() }; scoreSlot() } else { scoreSlot(); Box(Modifier.weight(1f, fill = false)) { label() } }
             }
         }
     }
@@ -2317,6 +2309,8 @@ private fun PremierSymmetricPlayerCard(
                 shownScore.toString(),
                 color = PremierBoard.Ink,
                 fontSize = 26.sp,
+                maxLines = 1,
+                softWrap = false,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.graphicsLayer {
                     val bump = if (pop.value < 1f) 1f + .22f * kotlin.math.sin(pop.value * Math.PI.toFloat()) else 1f
@@ -2499,6 +2493,7 @@ private fun PremierPressureStrip(
     active: Boolean = true,
     myWords: Int = 0,
     rivalWords: Int = 0,
+    below: @Composable () -> Unit = {},
 ) {
     val danger = active && myTurn && seconds in 1..5
     val progress by animateFloatAsState(
@@ -2565,9 +2560,9 @@ private fun PremierPressureStrip(
             }
             // The line is always reserved so the board does not jump when it appears. It carries the
             // critical warning, or else the player's streak (in the layout, never over the cards).
-            Box(Modifier.height(16.dp), contentAlignment = Alignment.Center) {
-                if (!danger && myStreak >= 2) {
-                    PremierStreakFlame(streak = myStreak, language = language, modifier = Modifier)
+            Box(Modifier.height(28.dp), contentAlignment = Alignment.Center) {
+                if (!danger) {
+                    below()
                 } else {
                     Text(
                         pt(language, "KRİTİK 5 SANİYE", "CRITICAL 5 SECONDS"),
@@ -2702,12 +2697,18 @@ private fun PremierTargetCard(
                 Text(
                     required,
                     color = PremierBoard.TileInk,
-                    fontSize = letterSize,
-                    lineHeight = letterSize,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 0.sp,
                     maxLines = 1,
                     softWrap = false,
+                    textAlign = TextAlign.Center,
+                    // Centred on the tile's own middle: no font padding, line box trimmed both ends.
+                    style = TextStyle(
+                        fontSize = letterSize,
+                        lineHeight = letterSize,
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+                    ),
                 )
                 PremierTileShine(shine.value, Modifier.matchParentSize())
             }
@@ -2862,8 +2863,15 @@ private fun PremierInputBar(
         null
     }
     val shake = remember { Animatable(0f) }
+    // A rejected word: a red "YANLIŞ" flashes over the bar, then fades away.
+    val wrongAlpha = remember { Animatable(0f) }
     LaunchedEffect(shakeKey) {
         if (shakeKey != null) {
+            launch {
+                wrongAlpha.snapTo(1f)
+                delay(900)
+                wrongAlpha.animateTo(0f, tween(350))
+            }
             for (offset in listOf(14f, -12f, 9f, -6f, 3f, 0f)) shake.animateTo(offset, tween(45))
         }
     }
@@ -2872,8 +2880,9 @@ private fun PremierInputBar(
         myTurn -> PremierBoard.Mine
         else -> PremierBoard.CardBorder
     }
+    Box(modifier.fillMaxWidth()) {
     Surface(
-        modifier = modifier.fillMaxWidth().graphicsLayer { translationX = shake.value },
+        modifier = Modifier.fillMaxWidth().graphicsLayer { translationX = shake.value },
         shape = RoundedCornerShape(16.dp),
         color = PremierBoard.Card,
         border = BorderStroke(if (myTurn) 2.dp else 1.dp, accent),
@@ -2931,6 +2940,24 @@ private fun PremierInputBar(
                 }
             }
         }
+    }
+    if (wrongAlpha.value > 0f) {
+        Surface(
+            modifier = Modifier.align(Alignment.Center).graphicsLayer { alpha = wrongAlpha.value },
+            shape = RoundedCornerShape(99.dp),
+            color = PremierBoard.Danger,
+            shadowElevation = 6.dp,
+        ) {
+            Text(
+                pt(language, "✕  YANLIŞ", "✕  WRONG"),
+                Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp,
+            )
+        }
+    }
     }
 }
 
