@@ -16,6 +16,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.SerialName
@@ -437,7 +438,12 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     suspend fun getTriviaQuestion(id: Long): TriviaQuestionDto =
         supabase.from("trivia_questions").select { filter { eq("id", id) } }.decodeSingle()
 
-    fun observeRoom(id: String, intervalMs: Long = 700): Flow<GameRoomDto> = flow {
+    // Each screen used to poll every 0.7 s (room, words) and 0.9 s (chat): about four requests a
+    // second per player, which slows everyone down as players come online. Realtime now wakes the
+    // loop on a real change; while it is connected only a slow safety read remains (the room keeps
+    // its 4-second presence heartbeat), and if it drops the old interval takes over again.
+    fun observeRoom(id: String, intervalMs: Long = 700): Flow<GameRoomDto> = channelFlow {
+        val wake = LiveWake(this, listOf(LiveWatch("game_rooms", "id", id)))
         var previous: GameRoomDto? = null
         var lastHeartbeatAt = 0L
         while (currentCoroutineContext().isActive) {
@@ -452,44 +458,46 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {
-                    emit(next)
+                    send(next)
                     previous = next
                 }
-                delay(intervalMs)
+                wake.await(pollMs = intervalMs, safetyMs = 3_800)
             } else {
                 delay(1200)
             }
         }
     }
 
-    fun observeWords(id: String, intervalMs: Long = 700): Flow<List<GameWordDto>> = flow {
+    fun observeWords(id: String, intervalMs: Long = 700): Flow<List<GameWordDto>> = channelFlow {
+        val wake = LiveWake(this, listOf(LiveWatch("game_words", "room_id", id)))
         var previous = emptyList<GameWordDto>()
         while (currentCoroutineContext().isActive) {
             val result = com.sonharf.game.gameRequestResult { getWords(id) }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {
-                    emit(next)
+                    send(next)
                     previous = next
                 }
-                delay(intervalMs)
+                wake.await(pollMs = intervalMs, safetyMs = 6_000)
             } else {
                 delay(1200)
             }
         }
     }
 
-    fun observeChat(id: String, intervalMs: Long = 900): Flow<List<ChatMessageDto>> = flow {
+    fun observeChat(id: String, intervalMs: Long = 900): Flow<List<ChatMessageDto>> = channelFlow {
+        val wake = LiveWake(this, listOf(LiveWatch("chat_messages", "room_id", id)))
         var previous = emptyList<ChatMessageDto>()
         while (currentCoroutineContext().isActive) {
             val result = com.sonharf.game.gameRequestResult { getChat(id) }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {
-                    emit(next)
+                    send(next)
                     previous = next
                 }
-                delay(intervalMs)
+                wake.await(pollMs = intervalMs, safetyMs = 10_000)
             } else {
                 delay(1400)
             }

@@ -121,6 +121,30 @@ internal fun WordSiegePanMatch(
     val myTurn = game.status == "playing" && game.currentPlayerId == me
     val rack = if (me == game.playerOneId) game.playerOneRack else game.playerTwoRack.orEmpty()
     val canAct = myTurn && !busy
+    // Mascot hints: three per match (a word the rack can make, worked out off the main thread).
+    val hintContext = androidx.compose.ui.platform.LocalContext.current
+    val hintScope = rememberCoroutineScope()
+    var hintsUsed by androidx.compose.runtime.saveable.rememberSaveable(game.id) { mutableIntStateOf(0) }
+    var hintRequest by remember(game.id) { mutableStateOf<Pair<Int, String>?>(null) }
+    var hintBusy by remember(game.id) { mutableStateOf(false) }
+    val hintsLeft = (MascotHints.HINTS_PER_MATCH - hintsUsed).coerceAtLeast(0)
+    fun askHint() {
+        if (hintBusy || hintsLeft <= 0 || !canAct) return
+        hintBusy = true
+        hintScope.launch {
+            val text = runCatching {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    if (!com.sonharf.game.data.SharedDictionaryService.hasSnapshot(game.language)) {
+                        com.sonharf.game.data.SharedDictionaryService.restorePersisted(hintContext, game.language)
+                    }
+                    MascotHints.fromRack(hintContext, game.language, rack)
+                }
+            }.getOrElse { sh("Harflerini karıştır, gözden kaçan bir kelime çıkabilir!", "Shuffle your letters, a word may pop out!") }
+            hintsUsed += 1
+            hintRequest = ((hintRequest?.first ?: 0) + 1) to text
+            hintBusy = false
+        }
+    }
     val lastMove = moves.lastOrNull()
     val myAreaCount = panSiegeAreaCount(game, myOwner)
     val rivalAreaCount = panSiegeAreaCount(game, rivalOwner)
@@ -461,6 +485,7 @@ internal fun WordSiegePanMatch(
             pendingScore = pendingScore.takeIf { scoreAccess },
             onCell = onBoardCell,
             onChat = onChat,
+            hint = hintRequest,
         )
         ArenaMoveImpact(
             eventKey = lastMove?.id?.toString(),
@@ -526,6 +551,8 @@ internal fun WordSiegePanMatch(
                     canAct, Modifier.weight(1f), onPass)
                 WordSiegeCompactAction(sh("DEĞİŞTİR", "EXCHANGE"), Icons.Rounded.SwapHoriz,
                     canAct && game.bag.isNotEmpty(), Modifier.weight(1f), onExchange)
+                WordSiegeCompactAction(sh("İPUCU ($hintsLeft)", "HINT ($hintsLeft)"), Icons.Rounded.Lightbulb,
+                    canAct && hintsLeft > 0 && !hintBusy, Modifier.weight(1f), ::askHint)
             }
             Row(
                 Modifier.fillMaxWidth(),
@@ -609,6 +636,7 @@ private fun PanSiegeBoard(
     pendingScore: Int? = null,
     onCell: (Int) -> Unit,
     onChat: () -> Unit,
+    hint: Pair<Int, String>? = null,
 ) {
     val density = LocalDensity.current
     val tilePx = with(density) { PanSiegeCellSize.toPx() }
@@ -632,17 +660,22 @@ private fun PanSiegeBoard(
         wordSiegeSkinnedFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx, boardSkin)
     }
     val maxScale = maxOf(WORD_SIEGE_ONLINE_MAX_CLOSE_SCALE * 1.15f, fitScale)
-    val closeScale = remember(viewport, boardPx, userScale, viewportMode, fitScale) {
-        val start = if (viewportMode == WordSiegeBoardViewportMode.FIT) fitScale else wordSiegeOnlineCloseScale(
+    val startScale = remember(viewport, boardPx, viewportMode, fitScale) {
+        if (viewportMode == WordSiegeBoardViewportMode.FIT) fitScale else wordSiegeOnlineCloseScale(
             viewportWidthPx = viewport.width.toFloat(),
             viewportHeightPx = viewport.height.toFloat(),
             boardWidthPx = boardPx,
         )
-        (userScale ?: start).coerceIn(fitScale, maxScale)
     }
-
-    val transform by remember(viewport, boardPx, closePan, closeScale, boardSkin) {
+    // Zoom and pan change every frame of a pinch. They are read only in derived states, the draw
+    // layer and small child scopes, never in this body: reading them here recomposed all 225 cells
+    // on every frame, which is what made zooming stutter.
+    val closeScaleState = remember(fitScale, maxScale, startScale) {
+        derivedStateOf { (userScale ?: startScale).coerceIn(fitScale, maxScale) }
+    }
+    val transformState = remember(viewport, boardPx, boardSkin, closeScaleState) {
         derivedStateOf {
+            val closeScale = closeScaleState.value
             // Pan limits include the skin's frame, so the frame can be seen and never covers cells.
             WordSiegeBoardTransform(
                 scale = closeScale,
@@ -652,8 +685,14 @@ private fun PanSiegeBoard(
             )
         }
     }
-    val boardBorderWidth = wordSiegeBoardBorderWidthDp(transform.scale).dp
-    WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx)
+    val transform by transformState
+    // Quantised, so the cells only redraw when the visible border width really changes.
+    val borderWidthQuarterDp by remember(transformState) {
+        derivedStateOf { kotlin.math.round(wordSiegeBoardBorderWidthDp(transform.scale) * 4f) / 4f }
+    }
+    val boardBorderWidth = borderWidthQuarterDp.dp
+    val overviewMode by remember(closeScaleState, fitScale) { derivedStateOf { closeScaleState.value <= fitScale * 1.3f } }
+    PanSiegeScoped { WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx) }
     val dragHover by remember(tileDrag) { derivedStateOf { tileDrag?.hoverCell } }
     val draggedFrom = tileDrag?.fromCell
 
@@ -662,7 +701,7 @@ private fun PanSiegeBoard(
         viewport.width.toFloat(),
         viewport.height.toFloat(),
         boardPx,
-        closeScale,
+        closeScaleState.value,
         boardSkin,
     )
 
@@ -673,13 +712,11 @@ private fun PanSiegeBoard(
             viewportHeightPx = viewport.height.toFloat(),
             boardWidthPx = boardPx,
             cellSizePx = tilePx,
-            scale = closeScale,
+            scale = closeScaleState.value,
         )
 
     // The gesture handler outlives recompositions: it reads the latest sizes, scale and pan, and is
     // never restarted mid-pinch (restarting it was what stopped the zoom after a tiny step).
-    val gestureScale by rememberUpdatedState(closeScale)
-    val gesturePan by rememberUpdatedState(transform.pan)
     val gestureFit by rememberUpdatedState(fitScale)
     val gestureMax by rememberUpdatedState(maxScale)
     val gestureViewport by rememberUpdatedState(viewport)
@@ -699,7 +736,7 @@ private fun PanSiegeBoard(
         )
     }
 
-    LaunchedEffect(viewport, gameId, boardPx, closeScale) {
+    LaunchedEffect(viewport, gameId, boardPx) {
         if (!initialized && viewport.width > 0 && viewport.height > 0) {
             closePan = centerCloseOn(WordSiegeBoardSpec.CenterIndex)
             initialized = true
@@ -789,12 +826,12 @@ private fun PanSiegeBoard(
                 // One finger pans, two fingers pinch to zoom around the fingers.
                 .pointerInput(gameId) {
                     detectWordSiegeBoardGestures { centroid, pan, zoom ->
-                        val oldScale = gestureScale
+                        val oldScale = closeScaleState.value
                         val newScale = (oldScale * zoom).coerceIn(gestureFit, gestureMax)
                         val ratio = if (oldScale > 0f) newScale / oldScale else 1f
                         userScale = newScale
                         closePan = clampWordSiegeSkinnedPan(
-                            centroid + (gesturePan - centroid) * ratio + pan,
+                            centroid + (transformState.value.pan - centroid) * ratio + pan,
                             gestureViewport.width.toFloat(),
                             gestureViewport.height.toFloat(),
                             boardPx,
@@ -832,7 +869,7 @@ private fun PanSiegeBoard(
                                 pending = pending,
                                 myOwner = myOwner,
                                 enabled = enabled,
-                                overview = closeScale <= fitScale * 1.3f,
+                                overview = overviewMode,
                                 size = PanSiegeCellSize,
                                 borderWidth = boardBorderWidth,
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
@@ -855,92 +892,75 @@ private fun PanSiegeBoard(
                 }
             }
 
-            WordSiegePendingMoveBadges(
-                cells = placements.keys.filter { it != draggedFrom }.takeIf { it.size == placements.size }.orEmpty(),
-                transform = transform,
-                cellSizePx = tilePx,
-                valid = pendingValid,
-                score = pendingScore,
-            )
-
-            PurchasedBoardActionVfxOverlay(
-                events = actionVfxEvents,
-                transform = transform,
-                cellSizePx = tilePx,
-                modifier = Modifier.matchParentSize(),
-            )
-
-            captureEffect?.let { effect ->
-                val sourcePositions = effect.batch.indices.associateWith { index ->
-                    wordSiegeCaptureCellCenterInWindow(
-                        index = index,
-                        transform = transform,
-                        cellSizePx = tilePx,
-                        viewportOriginInWindow = viewportOriginInWindow,
-                    )
-                }
-                WordSiegeCaptureFlightOverlay(
-                    effect = effect,
-                    sourcePositionsInWindow = sourcePositions,
-                    anchorOriginInWindow = viewportOriginInWindow,
+            // Overlays follow the zoom in their own scope, so a pinch never redraws the cells.
+            PanSiegeScopedBox(Modifier.matchParentSize()) {
+                WordSiegePendingMoveBadges(
+                    cells = placements.keys.filter { it != draggedFrom }.takeIf { it.size == placements.size }.orEmpty(),
+                    transform = transform,
+                    cellSizePx = tilePx,
+                    valid = pendingValid,
+                    score = pendingScore,
                 )
-            }
 
-            // Tapping the mascot sends it flying to another perch; the right corners stay free
-            // for the centre and chat buttons.
-            WordSiegeMascotCompanion(
-                anchors = WordSiegeBoardMascotPerches,
-                mascotSize = 76.dp,
-                moveId = lastMove?.id,
-                lastMoveMine = lastMoveMine,
-                playerTurn = playerTurn,
-                modifier = Modifier.matchParentSize().padding(3.dp),
-                moveScore = lastMove?.totalScore ?: 0,
-                capturedCells = lastMove?.capturedCells ?: 0,
-                opponentCaptured = lastMove?.opponentCaptured ?: 0,
-                moveCell = lastMove?.placedTiles?.firstOrNull()?.index,
-                pendingCells = placements.keys,
-                signal = mascotSignal,
-                outcome = mascotOutcome,
-                playerName = playerName,
-                playerGender = playerGender,
-                touches = mascotTouches,
-                // After a strong capture it may fly over to admire the new territory.
-                visit = lastMove?.takeIf { lastMoveMine && (it.capturedCells >= 2 || it.opponentCaptured > 0) }?.let { move ->
-                    wordSiegeMascotCellVisit(
-                        key = "cap:${move.id}",
-                        indices = move.placedTiles.map { it.index },
-                        transform = transform,
-                        cellSizePx = tilePx,
-                        viewportWidthPx = viewport.width.toFloat(),
-                        viewportHeightPx = viewport.height.toFloat(),
-                        kind = WordSiegeMascotVisitKind.CAPTURE,
+                PurchasedBoardActionVfxOverlay(
+                    events = actionVfxEvents,
+                    transform = transform,
+                    cellSizePx = tilePx,
+                    modifier = Modifier.matchParentSize(),
+                )
+
+                captureEffect?.let { effect ->
+                    val sourcePositions = effect.batch.indices.associateWith { index ->
+                        wordSiegeCaptureCellCenterInWindow(
+                            index = index,
+                            transform = transform,
+                            cellSizePx = tilePx,
+                            viewportOriginInWindow = viewportOriginInWindow,
+                        )
+                    }
+                    WordSiegeCaptureFlightOverlay(
+                        effect = effect,
+                        sourcePositionsInWindow = sourcePositions,
+                        anchorOriginInWindow = viewportOriginInWindow,
                     )
-                },
-            )
-
-            SmallFloatingActionButton(
-                onClick = { recenterOn(WordSiegeBoardSpec.CenterIndex) },
-                modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
-                shape = CircleShape,
-                containerColor = WordSiegeGameUi.Surface.copy(alpha = .95f),
-                contentColor = Color(0xFF2C3E55),
-            ) {
-                Icon(Icons.Rounded.CenterFocusStrong, sh("Merkeze dön", "Center board"), Modifier.size(19.dp))
-            }
-
-            SmallFloatingActionButton(
-                onClick = onChat,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp),
-                shape = CircleShape,
-                containerColor = WordSiegeGameUi.Surface.copy(alpha = .95f),
-                contentColor = Color(0xFF2C3E55),
-            ) {
-                Box {
-                    Icon(Icons.Rounded.Chat, sh("Oyun içi sohbet", "In-game chat"), Modifier.size(20.dp))
                 }
+
+                // Tapping the mascot sends it flying to another perch.
+                WordSiegeMascotCompanion(
+                    anchors = WordSiegeBoardMascotPerches,
+                    mascotSize = 76.dp,
+                    moveId = lastMove?.id,
+                    lastMoveMine = lastMoveMine,
+                    playerTurn = playerTurn,
+                    modifier = Modifier.matchParentSize().padding(3.dp),
+                    moveScore = lastMove?.totalScore ?: 0,
+                    capturedCells = lastMove?.capturedCells ?: 0,
+                    opponentCaptured = lastMove?.opponentCaptured ?: 0,
+                    moveCell = lastMove?.placedTiles?.firstOrNull()?.index,
+                    pendingCells = placements.keys,
+                    signal = mascotSignal,
+                    outcome = mascotOutcome,
+                    playerName = playerName,
+                    hint = hint,
+                    playerGender = playerGender,
+                    touches = mascotTouches,
+                    // After a strong capture it may fly over to admire the new territory.
+                    visit = lastMove?.takeIf { lastMoveMine && (it.capturedCells >= 2 || it.opponentCaptured > 0) }?.let { move ->
+                        wordSiegeMascotCellVisit(
+                            key = "cap:${move.id}",
+                            indices = move.placedTiles.map { it.index },
+                            transform = transform,
+                            cellSizePx = tilePx,
+                            viewportWidthPx = viewport.width.toFloat(),
+                            viewportHeightPx = viewport.height.toFloat(),
+                            kind = WordSiegeMascotVisitKind.CAPTURE,
+                        )
+                    },
+                )
+
             }
-            if (GameChatBadge.unread > 0) Box(Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp)) { ChatUnreadDot(GameChatBadge.unread) }
+            // The board stays clear: chat lives in the action row below, and pinching or double-
+            // tapping is enough to move around.
         }
       }
     }
@@ -1348,4 +1368,16 @@ internal fun wordSiegeMascotCellVisit(
     val y = (transform.pan.y + row * cellSizePx * transform.scale) / viewportHeightPx
     if (x !in .06f..0.94f || y !in .06f..0.94f) return null
     return WordSiegeMascotVisit(key, Offset(x, y), kind)
+}
+
+/** A separate recomposition scope: state read inside [content] does not redraw the caller. */
+@Composable
+private fun PanSiegeScoped(content: @Composable () -> Unit) {
+    content()
+}
+
+/** [PanSiegeScoped] with a box, for overlays laid over the board. */
+@Composable
+private fun PanSiegeScopedBox(modifier: Modifier, content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit) {
+    Box(modifier, content = content)
 }

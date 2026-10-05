@@ -224,6 +224,11 @@ internal fun WordSiegeExperienceScreen(directEntry: Boolean = false, onExit: () 
         GameChatBadge.select(gameId)
         // Only a real change redraws the board; moves are re-read only after a new move.
         var movesFor = -1
+        // Realtime wakes this loop on a move or a message; polling is only the fallback.
+        val wake = com.sonharf.game.data.LiveWake(this, listOf(
+            com.sonharf.game.data.LiveWatch("word_siege_games", "id", gameId),
+            com.sonharf.game.data.LiveWatch("word_siege_messages", "game_id", gameId),
+        ))
         while (currentCoroutineContext().isActive) {
             val pollStartedWith = currentGame
             gameRequestResult { backend.refreshWordSiegeGame(gameId) }
@@ -255,7 +260,7 @@ internal fun WordSiegeExperienceScreen(directEntry: Boolean = false, onExit: () 
             // Chat is read in the background too, so the chat button can show new messages.
             gameRequestResult { backend.getWordSiegeMessages(gameId) }.getOrNull()?.let { if (it != messages) messages = it }
             if (selectedGameId == gameId) GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
-            delay(2_500)
+            wake.await(pollMs = 2_500, safetyMs = 8_000)
         }
     }
 

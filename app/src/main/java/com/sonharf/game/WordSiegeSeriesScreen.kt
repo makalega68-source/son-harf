@@ -183,8 +183,13 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, directEntry:
         // the whole board every second, which made the match stutter).
         var tick = 0
         var movesFor = -1
+        // Realtime wakes this loop on a move or a message; polling is only the fallback.
+        val wake = com.sonharf.game.data.LiveWake(this, listOf(
+            com.sonharf.game.data.LiveWatch("word_siege_games", "id", gameId),
+            com.sonharf.game.data.LiveWatch("word_siege_messages", "game_id", gameId),
+        ))
         while (currentCoroutineContext().isActive) {
-            if (tick % 2 == 0) {
+            if (tick % 2 == 0 || wake.live.get()) {
                 val pollStartedWith = currentGame
                 gameRequestResult { backend.refreshWordSiegeGame(gameId) }
                     .onSuccess { next ->
@@ -213,12 +218,12 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, directEntry:
                 }
             }
             // Chat is read in the background too, so the chat button can show new messages.
-            if (tick % 4 == 0 || showChat) {
+            if (tick % 4 == 0 || showChat || wake.live.get()) {
                 gameRequestResult { backend.getWordSiegeMessages(gameId) }.getOrNull()?.let { if (it != messages) messages = it }
                 if (selectedGameId == gameId) GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
             }
             tick += 1
-            delay(1_000)
+            wake.await(pollMs = 1_000, safetyMs = 5_000)
         }
     }
 

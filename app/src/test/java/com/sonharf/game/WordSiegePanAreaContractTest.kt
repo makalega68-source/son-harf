@@ -33,7 +33,8 @@ class WordSiegePanAreaContractTest {
         assertTrue(pan.contains("centerCloseOn(WordSiegeBoardSpec.CenterIndex)"))
         assertTrue(pan.contains("clipToBounds"))
         assertTrue(pan.contains("onGloballyPositioned"))
-        assertTrue(pan.contains("CenterFocusStrong"))
+        // The board carries no floating buttons: pinch / double tap move around it.
+        assertFalse(pan.contains("CenterFocusStrong"))
         assertTrue(pan.contains("Modifier.fillMaxWidth().weight(1f)"))
         assertFalse(pan.contains("detectTapGestures"))
         assertFalse(pan.contains("Çift dokun:"))
