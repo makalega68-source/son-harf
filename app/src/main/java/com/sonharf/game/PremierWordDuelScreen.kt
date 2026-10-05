@@ -51,6 +51,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -1373,13 +1374,32 @@ private fun PremierArena(
     } else {
         MascotHints.tip((hintRequest?.first ?: 0) + 1 + words.size)
     }
-    fun askFreeHint() {
-        if (hintsLeft <= 0) return
-        freeHintsUsed += 1
-        showHintText(hintText())
-    }
     // Free hints used up against a bot: one more costs Son Coin (server-checked).
     val hintScope = rememberCoroutineScope()
+    // Working out a hint can read the whole dictionary: never on the main thread, and a failure
+    // only gives a general tip instead of taking the player out of the match.
+    suspend fun safeHintText(): String {
+        if (!room.isBot) return hintText()
+        // Read the match state here, then search the dictionary in the background.
+        val prefix = if (required == "★") "" else required.lowercase(premierLocale(language))
+        val used = words.map { it.normalizedWord.ifBlank { it.word } }.toSet()
+        val matchLanguage = room.language
+        return runCatching {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                MascotHints.startWord(hintContext, matchLanguage, prefix, used)
+            }
+        }.getOrElse { MascotHints.tip(used.size) }
+    }
+    var computingHint by remember(room.id) { mutableStateOf(false) }
+    fun askFreeHint() {
+        if (hintsLeft <= 0 || computingHint) return
+        freeHintsUsed += 1
+        computingHint = true
+        hintScope.launch {
+            showHintText(safeHintText())
+            computingHint = false
+        }
+    }
     var buyingHint by remember(room.id) { mutableStateOf(false) }
     fun buyHint() {
         if (buyingHint || !room.isBot) return
@@ -1387,7 +1407,7 @@ private fun PremierArena(
         hintScope.launch {
             val bought = com.sonharf.game.data.GameHintBackend.buyHint("son_harf")
             if (bought != null) {
-                showHintText(hintText())
+                showHintText(safeHintText())
             } else {
                 showHintText(pt(language, "Jeton yetmedi... maç kazanıp biriktirelim mi?", "Not enough coins... let's win some matches?"))
             }
@@ -1402,7 +1422,7 @@ private fun PremierArena(
         buyingHint = true
         hintScope.launch {
             if (RewardPassState.useHint("son_harf")) {
-                showHintText(hintText())
+                showHintText(safeHintText())
             } else {
                 showHintText(pt(language, "İpucu şu an alınamadı, tekrar dene.", "Couldn't get a hint right now, try again."))
             }
@@ -1691,15 +1711,19 @@ private fun PremierArena(
                         )
                     }
                     // A rival's slip is a small readable label here; the last word's tiles stay visible.
-                    Box(Modifier.fillMaxWidth().height(16.dp), contentAlignment = Alignment.Center) {
+                    // Drawn above the letter tile below it, whose bounce used to cover the label.
+                    Box(Modifier.fillMaxWidth().height(22.dp).zIndex(2f), contentAlignment = Alignment.Center) {
                         if (slip != null) {
                             Text(
                                 slip,
-                                color = PremierBoard.Rival,
+                                color = Color.White,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Black,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .background(PremierBoard.Rival, RoundedCornerShape(99.dp))
+                                    .padding(horizontal = 10.dp, vertical = 2.dp),
                             )
                         } else {
                             Text("▼", color = PremierBoard.Ink.copy(alpha = .45f), fontSize = 12.sp)
@@ -2260,7 +2284,7 @@ private fun PremierSymmetricPlayerCard(
             }
         }
     }
-    val info: @Composable (Modifier) -> Unit = { infoModifier ->
+    val info: @Composable (Modifier, @Composable () -> Unit) -> Unit = { infoModifier, scoreSlot ->
         Column(infoModifier, horizontalAlignment = if (mirrored) Alignment.End else Alignment.Start) {
             Text(
                 name,
@@ -2271,13 +2295,19 @@ private fun PremierSymmetricPlayerCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                if (streak >= 2) pt(language, "$streak seri", "$streak streak") else pt(language, "Raund Puanı", "Round Score"),
-                color = if (streak >= 2) PremierBoard.GoldEdge else PremierBoard.Muted,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-            )
+            // The score sits under the name, so the name gets the card's whole width.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val label: @Composable () -> Unit = {
+                    Text(
+                        if (streak >= 2) pt(language, "$streak seri", "$streak streak") else pt(language, "Raund Puanı", "Round Score"),
+                        color = if (streak >= 2) PremierBoard.GoldEdge else PremierBoard.Muted,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                    )
+                }
+                if (mirrored) { label(); scoreSlot() } else { scoreSlot(); label() }
+            }
         }
     }
     val scoreView: @Composable () -> Unit = {
@@ -2318,11 +2348,9 @@ private fun PremierSymmetricPlayerCard(
             if (!mirrored) {
                 avatarWithMascot()
                 Spacer(Modifier.width(7.dp))
-                info(Modifier.weight(1f))
-                scoreView()
+                info(Modifier.weight(1f), scoreView)
             } else {
-                scoreView()
-                info(Modifier.weight(1f))
+                info(Modifier.weight(1f), scoreView)
                 Spacer(Modifier.width(7.dp))
                 avatarWithMascot()
             }

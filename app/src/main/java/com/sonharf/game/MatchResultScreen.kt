@@ -6,6 +6,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -77,21 +81,22 @@ internal fun MatchResultScreen(
         onDismissRequest = onSecondary,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        Box(
-            Modifier.fillMaxSize().background(Brush.verticalGradient(background)),
+        // Portrait: clip above, details below. Landscape (tablets on their side): clip on the left,
+        // details on the right, so neither is cut off; the details scroll if a screen is very short.
+        BoxWithConstraints(
+            Modifier
+                .fillMaxSize()
+                .background(Brush.verticalGradient(background))
+                .systemBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 18.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .systemBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
+            val landscape = maxWidth > maxHeight
+            val clipSize = if (landscape) minOf(maxHeight, 360.dp) else minOf(maxWidth, 360.dp, maxHeight * .42f)
+            val clipView: @Composable () -> Unit = {
                 // The clip, centred, with a soft glow of the result's colour behind it.
                 Box(
-                    Modifier.fillMaxWidth().widthIn(max = 360.dp).aspectRatio(1f),
+                    Modifier.size(clipSize),
                     contentAlignment = Alignment.Center,
                 ) {
                     Box(
@@ -108,10 +113,12 @@ internal fun MatchResultScreen(
                         speed = if (won) 1f else .5f,
                     )
                 }
+            }
+            val detailsView: @Composable (Modifier) -> Unit = { detailsModifier ->
                 Column(
-                    Modifier
-                        .fillMaxWidth()
+                    detailsModifier
                         .widthIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState())
                         .graphicsLayer {
                             alpha = reveal.value
                             translationY = (1f - reveal.value) * 36f
@@ -200,6 +207,25 @@ internal fun MatchResultScreen(
                             Text(primaryLabel, fontSize = 15.sp, fontWeight = FontWeight.Black, maxLines = 1)
                         }
                     }
+                }
+            }
+            if (landscape) {
+                Row(
+                    Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),
+                ) {
+                    clipView()
+                    detailsView(Modifier.weight(1f, fill = false))
+                }
+            } else {
+                Column(
+                    Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    clipView()
+                    detailsView(Modifier.fillMaxWidth())
                 }
             }
         }
