@@ -184,14 +184,22 @@ jobs:
       # The same store-shrunk APK signed with the real upload key (test ad IDs, never for the
       # store): proves the signing secrets work and serves the Play developer-verification upload.
       - name: Sign check APK with the upload key
+        id: upload_key_sign
         if: success() && env.STORE_BUILD == 'true' && env.HAS_SIGNING_CONFIG == 'true' && env.NO_APK != 'true'
+        # A wrong signing secret is reported here without failing the app build itself.
+        continue-on-error: true
         env:
           RELEASE_KEYSTORE_B64: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 }}
           SIGN_STORE_PASSWORD: ${{ secrets.SON_HARF_RELEASE_STORE_PASSWORD }}
           SIGN_KEY_ALIAS: ${{ secrets.SON_HARF_RELEASE_KEY_ALIAS }}
           SIGN_KEY_PASSWORD: ${{ secrets.SON_HARF_RELEASE_KEY_PASSWORD }}
         run: |
-          printf '%s' "$RELEASE_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          printf '%s' "$RELEASE_KEYSTORE_B64" | tr -d ' \r\n' | base64 --decode > "$RUNNER_TEMP/upload.jks" || true
+          echo "Decoded keystore size: $(wc -c < "$RUNNER_TEMP/upload.jks") bytes (the upload key is about 2600 bytes)"
+          if ! keytool -list -keystore "$RUNNER_TEMP/upload.jks" -storepass "$SIGN_STORE_PASSWORD" -alias "$SIGN_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::warning::Upload-key secrets do not open the keystore: re-enter SON_HARF_RELEASE_KEYSTORE_B64 (the whole long line) and check the password and alias."
+            rm -f "$RUNNER_TEMP/upload.jks"; exit 1
+          fi
           APKSIGNER="${ANDROID_HOME}/build-tools/36.0.0/apksigner"
           "$APKSIGNER" sign --ks "$RUNNER_TEMP/upload.jks" --ks-key-alias "$SIGN_KEY_ALIAS" \
             --ks-pass env:SIGN_STORE_PASSWORD --key-pass env:SIGN_KEY_PASSWORD \
@@ -200,7 +208,7 @@ jobs:
           rm -f "$RUNNER_TEMP/upload.jks"
 
       - name: Upload upload-key signed check APK
-        if: success() && env.STORE_BUILD == 'true' && env.HAS_SIGNING_CONFIG == 'true' && env.NO_APK != 'true'
+        if: success() && steps.upload_key_sign.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: Kelime-Tahti-Imzali-Dogrulama
