@@ -183,6 +183,10 @@ class MainActivity : ComponentActivity() {
         bestEffortStartup("art cache") {
             lifecycleScope.launch {
                 ArtCache.prefetch(this@MainActivity, R.drawable.kelime_tahti_brand_logo, R.drawable.son_harf_game_icon, R.drawable.kelime_atolyesi_game_icon)
+                // Frames and the page heroes, so avatars and pages open with their art already drawn.
+                FrameBitmaps.prefetchAll(resources)
+                ArtCache.prefetchAt(this@MainActivity, ArtCache.HERO_MAX_WIDTH_PX, R.drawable.profile_hero_art, R.drawable.throne_hero_art)
+                ArtCache.prefetchAt(this@MainActivity, 1200, R.drawable.weekly_podium_blue, R.drawable.weekly_podium_gold)
             }
         }
         bestEffortStartup("ad privacy") { AdPrivacyManager.requestConsent(this) }

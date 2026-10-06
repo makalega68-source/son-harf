@@ -39,37 +39,94 @@ internal fun tickerLine(row: TickerFeedRow): String? = when (row.kind) {
     else -> null
 }
 
+/** What a ticker line is counted by: an announcement by its Turkish text, so the English half or
+ * a language switch never makes it "new"; a purchase by who bought what. */
+internal fun tickerKey(row: TickerFeedRow): String? = when (row.kind) {
+    "announcement" -> row.messageTr?.trim()?.takeIf { it.isNotBlank() }?.let { "a|$it" }
+    "purchase" -> "p|${row.playerName.orEmpty()}|${row.itemNameTr.orEmpty()}|${row.happenedAt.orEmpty()}"
+    else -> null
+}
+
+/** How many times a line may pass on one device: an announcement 3 times, a purchase once. */
+internal fun tickerShowLimit(kind: String): Int = if (kind == "announcement") ANNOUNCEMENT_SHOW_LIMIT else 1
+
+internal const val ANNOUNCEMENT_SHOW_LIMIT = 3
+
+private data class TickerItem(val key: String, val text: String, val limit: Int)
+
+/** Per-device show counts, kept in preferences so an app restart never resets them. */
+private object TickerShows {
+    private const val PREFS = "lobby_ticker"
+    private const val COUNTS = "shown_counts"
+    private var counts: LinkedHashMap<String, Int>? = null
+
+    private fun load(context: Context): LinkedHashMap<String, Int> = counts ?: LinkedHashMap<String, Int>().also { map ->
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(COUNTS, "").orEmpty().split('\n').forEach { line ->
+            val tab = line.indexOf('\t')
+            if (tab > 0) line.substring(0, tab).toIntOrNull()?.let { map[line.substring(tab + 1)] = it }
+        }
+        counts = map
+    }
+
+    fun count(context: Context, key: String): Int = load(context)[key] ?: 0
+
+    fun bump(context: Context, key: String) {
+        val map = load(context)
+        map[key] = (map.remove(key) ?: 0) + 1
+        while (map.size > 300) map.remove(map.keys.first())
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(COUNTS, map.entries.joinToString("\n") { "${it.value}\t${it.key.replace('\n', ' ')}" }).apply()
+    }
+}
+
 /**
- * Thin band at the very top of every screen, games included: each announcement and each store
- * purchase passes once per device, then never again. The band itself never comes and goes, so
- * the page below does not jump: with nothing new it rests on a quiet brand line.
+ * Thin band at the very top of every screen, games included: each announcement passes at most
+ * three times per device and each store purchase once, then never again. A pass is counted the
+ * moment it starts, so closing the app mid-scroll still counts it. The band itself never comes
+ * and goes, so the page below does not jump: with nothing new it rests on a quiet brand line.
  */
 @Composable
 internal fun TopNewsTicker(modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("lobby_ticker", Context.MODE_PRIVATE) }
-    var seen by remember { mutableStateOf(prefs.getString("seen", "").orEmpty().split('\n').filter { it.isNotBlank() }) }
-    var lines by remember { mutableStateOf<List<String>>(emptyList()) }
+    val context = LocalContext.current.applicationContext
+    var items by remember { mutableStateOf<List<TickerItem>>(emptyList()) }
+    var showing by remember { mutableStateOf<TickerItem?>(null) }
     val foreground = rememberAppForeground()
     LaunchedEffect(foreground) {
         if (!foreground || !SupabaseProvider.configured) return@LaunchedEffect
         while (true) {
-            gameRequestResult { TickerBackend.feed() }.onSuccess { rows -> lines = rows.mapNotNull(::tickerLine).distinct() }
+            gameRequestResult { TickerBackend.feed() }.onSuccess { rows ->
+                items = rows.mapNotNull { row ->
+                    val key = tickerKey(row) ?: return@mapNotNull null
+                    val text = tickerLine(row) ?: return@mapNotNull null
+                    TickerItem(key, text, tickerShowLimit(row.kind))
+                }.distinctBy { it.key }
+            }
             delay(60_000)
         }
     }
-    val current = lines.firstOrNull { it !in seen }
+    LaunchedEffect(foreground) {
+        if (!foreground) return@LaunchedEffect
+        while (true) {
+            val next = items.firstOrNull { TickerShows.count(context, it.key) < it.limit }
+            if (next == null) {
+                showing = null
+                delay(2_000)
+                continue
+            }
+            TickerShows.bump(context, next.key)
+            showing = next
+            delay((5_000L + next.text.length * 140L).coerceAtMost(22_000L))
+            showing = null
+            delay(1_500)
+        }
+    }
+    val current = showing
     if (current == null) {
         TickerStrip(Icons.Rounded.Campaign, sh("Kelime Tahtı · Kelimeni kur, tahtı fethet.", "Word Throne · Build your words, claim the throne."),
             modifier, scroll = false, quiet = true)
         return
     }
-    LaunchedEffect(current) {
-        delay((5_000L + current.length * 140L).coerceAtMost(22_000L))
-        seen = (seen + current).takeLast(300)
-        prefs.edit().putString("seen", seen.joinToString("\n")).apply()
-    }
-    key(current) { TickerStrip(Icons.Rounded.Campaign, current, modifier, iterations = 1) }
+    key(current.key, current.text) { TickerStrip(Icons.Rounded.Campaign, current.text, modifier, iterations = 1) }
 }
 
 /** The screenshot harness turns ticker motion off so captures are deterministic. */

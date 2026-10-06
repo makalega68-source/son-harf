@@ -45,6 +45,9 @@ internal object ProfilePhotoRuntime {
     private val cache = LinkedHashMap<String, ByteArray>()
     private val genderCache = LinkedHashMap<String, String?>()
 
+    /** Bytes already downloaded this session, so a page can show the photo on its first frame. */
+    fun cached(path: String?): ByteArray? = if (path.isNullOrBlank()) null else synchronized(cache) { cache[path] }
+
     suspend fun load(path: String): ByteArray? {
         if (path.isBlank() || !SupabaseProvider.configured) return null
         synchronized(cache) { cache[path] }?.let { return it }
@@ -158,7 +161,7 @@ internal fun ProfilePhotoAvatar(
     frameId: String? = null,
 ) {
     val framed = ProfileFrameCollection.find(frameId) != null
-    var bytes by remember(avatarPath, visible) { mutableStateOf<ByteArray?>(null) }
+    var bytes by remember(avatarPath, visible) { mutableStateOf(if (visible) ProfilePhotoRuntime.cached(avatarPath) else null) }
     var resolvedGender by remember(avatarPath, gender) { mutableStateOf(gender) }
     LaunchedEffect(avatarPath, visible, gender) {
         bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
@@ -194,7 +197,13 @@ internal fun ProfilePhotoAvatarWithGender(
 ) {
     val resolvedFrame = if (userId != null) rememberPlayerFrame(userId) else frameId
     val framed = ProfileFrameCollection.find(resolvedFrame) != null
-    var bytes by remember(avatarPath, visible, userId) { mutableStateOf<ByteArray?>(null) }
+    var bytes by remember(avatarPath, visible, userId) {
+        mutableStateOf(
+            if (!visible) null
+            else if (userId == null) ProfilePhotoRuntime.cached(avatarPath)
+            else PlayerIdentityCache.peek(userId)?.takeIf { it.avatarVisibility != "hidden" }?.let { ProfilePhotoRuntime.cached(it.avatarPath) }
+        )
+    }
     var resolvedGender by remember(avatarPath, gender, userId) { mutableStateOf(gender) }
     LaunchedEffect(avatarPath, visible, gender, userId) {
         val identity = userId?.let { runCatching { PlayerIdentityCache.get(it) }.getOrNull() }
@@ -231,7 +240,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
     frameId: String? = null,
 ) {
     val framed = ProfileFrameCollection.find(frameId) != null
-    var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
+    var bytes by remember(avatarPath) { mutableStateOf(ProfilePhotoRuntime.cached(avatarPath)) }
     LaunchedEffect(avatarPath) {
         bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
@@ -273,11 +282,32 @@ internal fun ProfilePhotoAvatarRectWithGender(
 /** Photo decoding must not block gestures or the mascot/UI render thread. */
 @Composable
 internal fun rememberProfileBitmap(bytes: ByteArray?): Bitmap? {
-    var bitmap by remember(bytes) { mutableStateOf<Bitmap?>(null) }
+    var bitmap by remember(bytes) { mutableStateOf(bytes?.let { ProfileBitmaps.cache.get(it) }) }
     LaunchedEffect(bytes) {
-        bitmap = withContext(Dispatchers.Default) {
-            bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() }
-        }
+        if (bitmap == null) bitmap = withContext(Dispatchers.Default) { bytes?.let(ProfileBitmaps::decode) }
     }
     return bitmap
+}
+
+/**
+ * Decoded avatars, keyed by their downloaded bytes (an array is its own identity), so opening a
+ * page again shows the photo at once instead of decoding it anew. Photos are decoded near the
+ * size they are shown, never at camera resolution.
+ */
+private object ProfileBitmaps {
+    private const val MAX_SIDE_PX = 384
+    val cache = object : android.util.LruCache<ByteArray, Bitmap>(16 * 1024 * 1024) {
+        override fun sizeOf(key: ByteArray, value: Bitmap): Int = value.byteCount
+    }
+
+    fun decode(bytes: ByteArray): Bitmap? {
+        cache.get(bytes)?.let { return it }
+        return runCatching {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            var sample = 1
+            while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MAX_SIDE_PX) sample *= 2
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+        }.getOrNull()?.also { cache.put(bytes, it) }
+    }
 }

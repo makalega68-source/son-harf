@@ -44,7 +44,7 @@ internal fun ThroneHero(onBack: () -> Unit, resetAt: Long, now: Long) {
     val t = rememberInfiniteTransition(label = "throne-hero")
     val glow by t.animateFloat(.55f, 1f, infiniteRepeatable(tween(2200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "glow")
     Box(Modifier.fillMaxWidth().height(318.dp).premiumPanel(RoundedCornerShape(28.dp), glow = true)) {
-        Image(painterResource(R.drawable.throne_hero_art), sh("Altın taht", "Golden throne"),
+        Image(rememberArtPainter(R.drawable.throne_hero_art, ArtCache.HERO_MAX_WIDTH_PX), sh("Altın taht", "Golden throne"),
             contentScale = ContentScale.Crop, alignment = Alignment.TopCenter,
             modifier = Modifier.fillMaxWidth().height(232.dp))
         // Breathing light on the throne, then a fade into the panel so the text below stays readable.

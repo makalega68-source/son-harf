@@ -99,7 +99,7 @@ internal fun ProfileFrameArt(frameId: String?, size: Dp, modifier: Modifier = Mo
     if (frame == ProfileFrameCollection.adminFrame) { AdminFrameArt(size, modifier); return }
     val resources = LocalContext.current.resources
     var bitmap by remember(frame.drawable) { mutableStateOf<android.graphics.Bitmap?>(FrameBitmaps.cached(frame.drawable)) }
-    LaunchedEffect(frame.drawable) { bitmap = FrameBitmaps.load(resources, frame.drawable) }
+    LaunchedEffect(frame.drawable) { if (bitmap == null) bitmap = FrameBitmaps.load(resources, frame.drawable) }
     Box(modifier.requiredSize(size * 1.38f), contentAlignment = Alignment.Center) {
         bitmap?.let { Image(
             bitmap = it.asImageBitmap(),
@@ -171,6 +171,14 @@ internal object PublicFrames {
 
     fun rewardDeadline(userId: String): Long? = cache[userId]?.expiresAt
 
+    /** The frame last read for this player, if still valid this week: shown on the first frame. */
+    fun peek(userId: String): String? {
+        val entry = cache[userId] ?: return null
+        if (entry.week != weekKey()) return null
+        if (entry.expiresAt != null && System.currentTimeMillis() >= entry.expiresAt) return null
+        return entry.frame
+    }
+
     private val requests = SharedRequests<String?>()
 
     suspend fun get(userId: String): String? {
@@ -199,7 +207,12 @@ internal fun rememberPlayerFrame(userId: String?): String? {
     if (userId.isNullOrBlank()) return null
     val me = remember { runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull() }
     val localFrame = if (userId == me) SonHarfCosmetics.profileFrameId else null
-    var frame by remember(userId) { mutableStateOf<String?>(localFrame) }
+    var frame by remember(userId) {
+        mutableStateOf(
+            if (userId == me) PublicFrames.peek(userId)?.takeIf { it in ProfileFrameCollection.serverFrameIds } ?: localFrame
+            else PublicFrames.peek(userId)
+        )
+    }
     val foreground = rememberAppForeground()
     LaunchedEffect(userId, localFrame, foreground) {
         if (!foreground) return@LaunchedEffect
@@ -247,8 +260,15 @@ internal fun parseServerInstantMs(value: String?): Long? {
         ?: runCatching { java.time.OffsetDateTime.parse(text.replace(Regex("([+-]\\d{2})$"), "$1:00")).toInstant().toEpochMilli() }.getOrNull()
 }
 
-private object FrameBitmaps {
-    private val cache = android.util.LruCache<Int, android.graphics.Bitmap>(12)
+/** Frame art decoded once at half size; all frames fit, so none is decoded twice in a session. */
+internal object FrameBitmaps {
+    private val cache = android.util.LruCache<Int, android.graphics.Bitmap>(24)
+
+    /** Decodes every frame at startup so avatars open with their frame already drawn. */
+    suspend fun prefetchAll(resources: android.content.res.Resources) {
+        (ProfileFrameCollection.all.map { it.drawable }).distinct().forEach { runCatching { load(resources, it) } }
+    }
+
     fun cached(id: Int): android.graphics.Bitmap? = cache.get(id)
     suspend fun load(resources: android.content.res.Resources, id: Int): android.graphics.Bitmap? =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {

@@ -34,6 +34,9 @@ internal object ArtCache {
     /** Images are decoded no wider than this; the largest art is shown well under it. */
     const val DEFAULT_MAX_WIDTH_PX = 900
 
+    /** Full-width page heroes (profile podium, throne) keep more detail. */
+    const val HERO_MAX_WIDTH_PX = 1200
+
     private fun key(res: Int, maxWidthPx: Int): Long = (res.toLong() shl 16) or (maxWidthPx.toLong() and 0xFFFF)
 
     fun cached(@DrawableRes res: Int, maxWidthPx: Int = DEFAULT_MAX_WIDTH_PX): ImageBitmap? = cache.get(key(res, maxWidthPx))
@@ -57,6 +60,11 @@ internal object ArtCache {
     /** Warms the cache so the first page that shows this art has it at once. */
     suspend fun prefetch(context: Context, vararg res: Int) {
         res.forEach { load(context, it) }
+    }
+
+    /** Same, for art shown at [maxWidthPx]. */
+    suspend fun prefetchAt(context: Context, maxWidthPx: Int, vararg res: Int) {
+        res.forEach { load(context, it, maxWidthPx) }
     }
 }
 

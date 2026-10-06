@@ -31,6 +31,9 @@ internal object PlayerIdentityCache {
     private val cache = ConcurrentHashMap<String, Entry>()
     private val requests = SharedRequests<com.sonharf.game.data.ProfileDto>()
 
+    /** The last profile seen for this player, however old: enough to draw a first frame. */
+    fun peek(userId: String): com.sonharf.game.data.ProfileDto? = cache[userId]?.profile
+
     suspend fun get(userId: String): com.sonharf.game.data.ProfileDto {
         val now = System.currentTimeMillis()
         cache[userId]?.takeIf { now - it.savedAt < 60_000L }?.let { return it.profile }

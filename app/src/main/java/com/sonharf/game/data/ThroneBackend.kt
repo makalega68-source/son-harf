@@ -44,6 +44,7 @@ internal object ThroneBackend {
  val kind:String="",@SerialName("player_name") val playerName:String?=null,
  @SerialName("item_name_tr") val itemNameTr:String?=null,@SerialName("item_name_en") val itemNameEn:String?=null,
  @SerialName("message_tr") val messageTr:String?=null,@SerialName("message_en") val messageEn:String?=null,
+ @SerialName("happened_at") val happenedAt:String?=null,
 )
 internal object TickerBackend {
  suspend fun feed():List<TickerFeedRow> = SupabaseProvider.client.postgrest.rpc("get_ticker_feed_v1",buildJsonObject{put("p_limit",12)}).decodeList()

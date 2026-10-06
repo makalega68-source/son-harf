@@ -105,7 +105,7 @@ internal fun PremiumLetterTiles(word: String, tile: Dp = 30.dp, modifier: Modifi
 @Composable
 internal fun PodiumPortrait(modifier: Modifier = Modifier, portrait: @Composable (Dp) -> Unit) {
     androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth().aspectRatio(1680f / 944f)) {
-        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.profile_hero_art), null,
+        androidx.compose.foundation.Image(rememberArtPainter(R.drawable.profile_hero_art, ArtCache.HERO_MAX_WIDTH_PX), null,
             contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.matchParentSize())
         val photo = maxWidth * (330f / 1680f)
         Box(Modifier.size(photo).offset(x = maxWidth / 2 - photo / 2, y = maxHeight * .389f - photo / 2)
