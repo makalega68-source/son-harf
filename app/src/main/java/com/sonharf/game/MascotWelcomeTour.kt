@@ -91,6 +91,9 @@ private val welcomeSteps = listOf(
     ),
 )
 
+/** The screenshot harness turns the tour off so its captures and checks see the home screen itself. */
+internal object MascotWelcomeTourGate { var enabled = true }
+
 private object MascotWelcomeTourState {
     private const val PREFS = "mascot_welcome_tour"
     private const val KEY_SEEN = "seen_v1"
@@ -109,6 +112,7 @@ private object MascotWelcomeTourState {
  */
 @Composable
 internal fun MascotWelcomeTour(playerName: String?) {
+    if (!MascotWelcomeTourGate.enabled) return
     val context = LocalContext.current
     var open by remember { mutableStateOf(!MascotWelcomeTourState.seen(context)) }
     if (!open) return
