@@ -258,7 +258,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         backend = backend,
                         isPro = isPro,
                         onProfile = { destination = PremiumDestination.PROFILE },
-                        onShop = { shopInitialTab = 0; destination = PremiumDestination.SHOP },
+                        // The balance chip's + opens the Gold packs.
+                        onShop = { shopInitialTab = 9; destination = PremiumDestination.SHOP },
                         onPro = { proReturn = PremiumDestination.HOME; destination = PremiumDestination.PRO },
                         onSettings = { settingsReturn = PremiumDestination.HOME; destination = PremiumDestination.SETTINGS },
                         onNewGame = { openGame(PremiumDestination.SIEGE, siegeLanguage) },

@@ -152,7 +152,7 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Un
                         notice = sh("Çerçeve koleksiyonuna eklendi.", "Frame added to your collection.")
                     }
                     .onFailure {
-                        notice = if ("insufficient_diamonds" in it.message.orEmpty()) sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                        notice = if ("insufficient_diamonds" in it.message.orEmpty()) sh("Yeterli Altının yok.", "Not enough Gold.")
                             else sh("Satın alma tamamlanamadı.", "Purchase failed.")
                     }
                 busy = null
@@ -170,10 +170,10 @@ internal fun ProfileFrameStoreSection(onBalance: (Int?) -> Unit, onPro: () -> Un
             FrameCard(frame, owned = frame.id in owned, equipped = equipped == frame.id, busy = busy != null,
                 price = offer?.formattedPrice ?: sh("Satışta değil", "Unavailable"), premium = true, available = offer != null || frame.id in owned) { onFrame(frame) }
         }
-        FrameSectionTitle(sh("SON COIN ÇERÇEVELERİ", "SON COIN FRAMES"), sh("Sade halkalar • Son Coin ile", "Simple rings • for Son Coin"))
+        FrameSectionTitle(sh("ALTIN ÇERÇEVELER", "GOLD FRAMES"), sh("Sade halkalar • Altın ile", "Simple rings • for Gold"))
         FrameGrid(ProfileFrameCollection.coinFrames.filter { it.id in coinItems || it.id in owned }) { frame ->
             FrameCard(frame, owned = frame.id in owned, equipped = equipped == frame.id, busy = busy != null,
-                price = coinItems[frame.id]?.let { "${it.diamondPrice} SC" } ?: "—", premium = false) { onFrame(frame) }
+                price = coinItems[frame.id]?.let { "${it.diamondPrice} ${goldUnit()}" } ?: "—", premium = false) { onFrame(frame) }
         }
 
     }

@@ -391,7 +391,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
         scope.launch {
             gameRequestResult { AtelierCompetitionBackend.claimWeeklyReward(language) }
                 .onSuccess { r ->
-                    lobbyNotice = if (r.claimed) sh("+${r.reward} Son Coin hesabına eklendi!", "+${r.reward} Son Coin added!")
+                    lobbyNotice = if (r.claimed) sh("+${r.reward} Altın hesabına eklendi!", "+${r.reward} Gold added!")
                         else sh("Bu ödül alınamadı.", "This reward could not be claimed.")
                     if (r.claimed) SonHarfSoundFx.bonus()
                     boardNonce += 1
@@ -514,7 +514,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                 hintsLeft += 1
                 askHint()
             } else {
-                hintText = sh("Jeton yetmedi... biraz daha oynayıp biriktirelim!", "Not enough coins... let's play a bit more!")
+                hintText = sh("Altın yetmedi... biraz daha oynayıp biriktirelim!", "Not enough gold... let's play a bit more!")
             }
             } finally { buyingHint = false }
         }
@@ -829,7 +829,7 @@ private fun AtelierMascotRow(
             ) {
                 Text(
                     if (hintsLeft > 0) sh("💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)")
-                    else "💡 ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC",
+                    else "💡 ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} ${goldUnit()}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                 )

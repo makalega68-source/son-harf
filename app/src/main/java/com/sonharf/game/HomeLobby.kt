@@ -149,7 +149,7 @@ internal fun HomeLobbyScreen(
                         Spacer(Modifier.width(6.dp))
                         Text(p?.diamonds?.let { lobbyGrouped(it) } ?: "—", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Spacer(Modifier.width(4.dp))
-                        Icon(Icons.Rounded.AddCircle, sh("Jeton al", "Get coins"), tint = LobbyBrand.Gold, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Rounded.AddCircle, sh("Altın al", "Get gold"), tint = LobbyBrand.Gold, modifier = Modifier.size(20.dp))
                     }
                 }
             }

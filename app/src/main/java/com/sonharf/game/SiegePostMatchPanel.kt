@@ -104,7 +104,7 @@ internal fun SiegePostMatchPanel(game: WordSiegeGameDto, onReplay: () -> Unit, r
         if (failed && loaded) TextButton(onClick = { retry++ }) { Text(sh("Sonuç ayrıntıları eksik · Yenile", "Incomplete result details · Retry")) }
         notice?.let { Text(it, color = Hf.TextMuted, fontSize = 12.sp) }
         missions.forEach { mission ->
-            Text((if (SonHarfUiState.isEnglish) mission.titleEn else mission.titleTr) + " · +${mission.rewardCoins} Son Coin", color = Hf.Gold, fontSize = 12.sp)
+            Text((if (SonHarfUiState.isEnglish) mission.titleEn else mission.titleTr) + " · +${mission.rewardCoins} ${goldUnit()}", color = Hf.Gold, fontSize = 12.sp)
             TextButton(enabled = !busy && !replayBusy, onClick = {
                 busy = true
                 scope.launch {
@@ -112,7 +112,7 @@ internal fun SiegePostMatchPanel(game: WordSiegeGameDto, onReplay: () -> Unit, r
                         gameRequestResult { backend.claimUnifiedMission(mission.missionId) }
                             .onSuccess { result ->
                                 if (result.success) {
-                                    notice = sh("+${result.rewardCoins} Son Coin alındı", "+${result.rewardCoins} Son Coins claimed")
+                                    notice = sh("+${result.rewardCoins} Altın alındı", "+${result.rewardCoins} Gold claimed")
                                     missions = missions.filterNot { it.missionId == mission.missionId }
                                 } else notice = sh("Ödül artık alınabilir değil", "Reward is no longer claimable")
                             }.onFailure { notice = sh("Ödül alınamadı; tekrar dene", "Reward could not be claimed; retry") }

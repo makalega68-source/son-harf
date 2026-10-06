@@ -92,7 +92,7 @@ internal fun MonsterStyleStoreScreen() {
                 if (error is CancellationException && error !is TimeoutCancellationException) throw error
                 reload()
                 notice = when {
-                    "insufficient_diamonds" in error.message.orEmpty() -> sh("Yeterli Son Coin'in yok.", "You do not have enough Son Coin.")
+                    "insufficient_diamonds" in error.message.orEmpty() -> sh("Yeterli Altının yok.", "You do not have enough Gold.")
                     "vip_required" in error.message.orEmpty() -> sh("Bu görünüm PRO üyelerine özel.", "This style is exclusive to PRO members.")
                     item.id in owned -> sh("Ürün koleksiyonunda. Uygulamak için KULLAN düğmesine dokun.", "The item is in your collection. Tap EQUIP to apply it.")
                     else -> sh("İşlem doğrulanamadı. Bakiyeyi ve koleksiyonu yenileyip tekrar dene.", "The action could not be confirmed. Refresh your balance and collection before retrying.")
@@ -218,7 +218,7 @@ private fun StoreHeader(balance: Int, collected: Int, total: Int) {
                 Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Toll, null, Modifier.size(16.dp), tint = StoreGold)
                     Spacer(Modifier.width(4.dp))
-                    Text("$balance SC", color = StoreText, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                    Text("$balance ${goldUnit()}", color = StoreText, fontWeight = FontWeight.Black, fontSize = 12.sp)
                 }
             }
         }
@@ -289,7 +289,7 @@ private fun ProductInfo(item: ShopItemDto, owned: Boolean, equipped: Boolean, bu
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = RoundedCornerShape(99.dp), color = if (owned) StoreGreen.copy(.11f) else StoreGold.copy(.13f)) {
                 Text(
-                    if (equipped) sh("AKTİF", "ACTIVE") else if (owned) sh("SAHİPSİN", "OWNED") else "${item.diamondPrice} SC",
+                    if (equipped) sh("AKTİF", "ACTIVE") else if (owned) sh("SAHİPSİN", "OWNED") else "${item.diamondPrice} ${goldUnit()}",
                     Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                     color = if (owned) StoreGreen else StoreText,
                     fontWeight = FontWeight.Black,

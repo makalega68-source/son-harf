@@ -414,8 +414,8 @@ fun ProfileExperienceV2Screen() {
                                     }.onSuccess { result ->
                                         SonHarfSoundFx.bonus()
                                         notice = sh(
-                                            "Sezon ödülü: +${result.rewardCoins} Son Coin",
-                                            "Season reward: +${result.rewardCoins} Son Coin",
+                                            "Sezon ödülü: +${result.rewardCoins} Altın",
+                                            "Season reward: +${result.rewardCoins} Gold",
                                         )
                                         refresh()
                                     }.onFailure { error ->
@@ -793,8 +793,8 @@ private fun CompetitiveSeasonHistoryCardV2(
                 history.rewardClaimed -> {
                     Text(
                         sh(
-                            "✓ +${history.rewardCoins} Son Coin alındı",
-                            "✓ +${history.rewardCoins} Son Coin claimed",
+                            "✓ +${history.rewardCoins} Altın alındı",
+                            "✓ +${history.rewardCoins} Gold claimed",
                         ),
                         color = SonHarfGreen,
                         fontSize = 10.sp,
@@ -813,8 +813,8 @@ private fun CompetitiveSeasonHistoryCardV2(
                                 "…"
                             else
                                 sh(
-                                    "+${history.rewardCoins} SON COIN AL",
-                                    "CLAIM +${history.rewardCoins} SON COIN",
+                                    "+${history.rewardCoins} ALTIN AL",
+                                    "CLAIM +${history.rewardCoins} GOLD",
                                 ),
                             color = Color(0xFF2A210F),
                             fontWeight = FontWeight.Black,
@@ -857,7 +857,7 @@ private fun AchievementLineV2(
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(if (unlocked) "✓" else "○", color = if (unlocked) SonHarfGreen else SonHarfMuted, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                if (rewardCoin > 0) Text("+$rewardCoin SC", color = SonHarfGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                if (rewardCoin > 0) Text("+$rewardCoin ${goldUnit()}", color = SonHarfGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
             }
         }
     }

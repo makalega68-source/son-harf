@@ -130,8 +130,8 @@ private fun ComebackGiftDialog(gift: ComebackGiftDto, onDismiss: () -> Unit) {
         text = {
             Text(
                 sh(
-                    "${gift.daysAway} gündür yoktun. Obi sana ${gift.gift} Son Coin biriktirdi. Hoş geldin!",
-                    "You were away for ${gift.daysAway} days. Obi saved ${gift.gift} Son Coins for you. Welcome back!",
+                    "${gift.daysAway} gündür yoktun. Obi sana ${gift.gift} Altın biriktirdi. Hoş geldin!",
+                    "You were away for ${gift.daysAway} days. Obi saved ${gift.gift} Gold for you. Welcome back!",
                 ),
             )
         },

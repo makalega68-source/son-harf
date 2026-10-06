@@ -457,7 +457,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                     owned -> sh("SAHİPSİN", "OWNED")
                                     vipLocked -> sh("VIP / PRO KİLİTLİ", "VIP / PRO LOCKED")
                                     playProduct?.oneTimePurchaseOfferDetails != null -> playProduct.oneTimePurchaseOfferDetails?.formattedPrice.orEmpty()
-                                    item != null -> "${item.diamondPrice} SC"
+                                    item != null -> "${item.diamondPrice} ${goldUnit()}"
                                     else -> sh(spec.accessTr, spec.accessEn)
                                 },
                                 modifier = Modifier.weight(1f),
@@ -495,7 +495,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                                     refreshPurchasedFrames()
                                                 }.onFailure { error ->
                                                     notice = if ("insufficient_diamonds" in error.message.orEmpty()) {
-                                                        sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                                                        sh("Yeterli Altının yok.", "Not enough Gold.")
                                                     } else {
                                                         sh("Style işlemi tamamlanamadı. Daha sonra tekrar dene.", "Style action could not be completed. Try again later.")
                                                     }

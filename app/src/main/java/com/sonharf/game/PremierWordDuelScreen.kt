@@ -1415,7 +1415,7 @@ private fun PremierArena(
             if (bought != null) {
                 showHintText(safeHintText())
             } else {
-                showHintText(pt(language, "Jeton yetmedi... maç kazanıp biriktirelim mi?", "Not enough coins... let's win some matches?"))
+                showHintText(pt(language, "Altın yetmedi... maç kazanıp biriktirelim mi?", "Not enough gold... let's win some matches?"))
             }
             buyingHint = false
         }
@@ -1702,7 +1702,7 @@ private fun PremierArena(
                         Text(
                             if (hintsLeft > 0) pt(language, "💡 İpucu ($hintsLeft)", "💡 Hint ($hintsLeft)")
                             else if (bankedHints > 0) pt(language, "💡 İpucu ($bankedHints)", "💡 Hint ($bankedHints)")
-                            else pt(language, "💡 +1 İpucu · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC", "💡 +1 Hint · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} SC"),
+                            else pt(language, "💡 +1 İpucu · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} Altın", "💡 +1 Hint · ${com.sonharf.game.data.GameHintBackend.HINT_PRICE} Gold"),
                             Modifier.padding(horizontal = 12.dp, vertical = 3.dp),
                             color = PremierBoard.Ink,
                             fontSize = 11.sp,

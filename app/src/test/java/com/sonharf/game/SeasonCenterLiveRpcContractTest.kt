@@ -45,7 +45,7 @@ class SeasonCenterLiveRpcContractTest {
         val shop = repoFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
         val pass = repoFile("app/src/main/java/com/sonharf/game/SeasonPassPurchaseCard.kt").readText()
 
-        assertTrue(shop.contains("initialTab.coerceIn(0, 8)"))
+        assertTrue(shop.contains("initialTab.coerceIn(0, 9)"))
         // The store now sells only PRO and mascots, so the season pass is off the shelf.
         assertFalse(shop.contains("sh(\"Sezon\", \"Season\")"))
         assertFalse(shop.contains("SeasonCenterContent()"))

@@ -153,7 +153,7 @@ internal fun HomeLeague(backend: OnlineGameBackend, onOpen: (() -> Unit)? = null
                 LinearProgressIndicator(progress = { league.progress }, modifier = Modifier.fillMaxWidth().height(6.dp), color = Hf.Green, trackColor = Hf.Ground)
                 Text(sh("Sezon bitişi: ", "Season ends: ") + socialDate(s.endsAt), color = Hf.TextMuted, fontSize = 11.sp)
                 val available = rewards?.filter { it.rewardEligible && !it.rewardClaimed }.orEmpty()
-                Text(if (available.isNotEmpty()) sh("Sezon ödülü: ${available.sumOf { it.rewardCoins }} Son Coin alınabilir", "Season reward: ${available.sumOf { it.rewardCoins }} Son Coins available")
+                Text(if (available.isNotEmpty()) sh("Sezon ödülü: ${available.sumOf { it.rewardCoins }} Altın alınabilir", "Season reward: ${available.sumOf { it.rewardCoins }} Gold available")
                     else sh("Ödül: sezon sıralaması", "Reward: season ranking"), color = Hf.Gold, fontSize = 11.sp)
             }
             rewards.orEmpty().filter { it.rewardEligible && !it.rewardClaimed }.forEach { reward ->
@@ -163,7 +163,7 @@ internal fun HomeLeague(backend: OnlineGameBackend, onOpen: (() -> Unit)? = null
                         try {
                             gameRequestResult { backend.claimCompetitiveSeasonReward(reward.seasonId) }
                                 .onSuccess { result ->
-                                    claimNotice = if (result.success) sh("+${result.rewardCoins} Son Coin alındı", "+${result.rewardCoins} Son Coins claimed")
+                                    claimNotice = if (result.success) sh("+${result.rewardCoins} Altın alındı", "+${result.rewardCoins} Gold claimed")
                                         else sh("Ödül artık alınabilir değil", "Reward is no longer claimable")
                                     retry++
                                 }.onFailure { claimNotice = sh("Ödül alınamadı; tekrar dene", "Reward could not be claimed; retry") }

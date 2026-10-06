@@ -37,7 +37,7 @@ fun EconomyShopScreen(
     onCollection: () -> Unit = {},
     onPro: () -> Unit = {},
 ) {
-    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 8)) }
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 9)) }
     var kindFilter by remember { mutableStateOf<String?>(null) }
     var balance by remember { mutableStateOf<Int?>(null) }
     var rewards by remember { mutableStateOf(false) }
@@ -57,7 +57,7 @@ fun EconomyShopScreen(
         StoreTitleBar(balance = balance, onBack = onBack)
         HorizontalDivider(color = LobbyPalette.Line.copy(alpha = .6f))
         // Keep every category visible; related products share one group instead of a hidden strip.
-        val shown = if (tab in setOf(0, 2, 3, 4, 5, 6, 7, 8)) tab else 0
+        val shown = if (tab in setOf(0, 2, 3, 4, 5, 6, 7, 8, 9)) tab else 0
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             TextButton(onClick = onCollection) {
                 Icon(Icons.Rounded.Checkroom, null, modifier = Modifier.size(18.dp))
@@ -71,7 +71,7 @@ fun EconomyShopScreen(
             }
         }
         val selectedGroup = when (shown) { 4 -> 5; 6 -> 2; else -> shown }
-        val categories = listOf(0 to sh("Vitrin", "Featured"), 2 to sh("Stil", "Style"),
+        val categories = listOf(9 to sh("Altın", "Gold"), 0 to sh("Vitrin", "Featured"), 2 to sh("Stil", "Style"),
             5 to "Obi", 7 to sh("Çerçeve", "Frames"), 3 to "PRO")
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             categories.forEach { (index, label) ->
@@ -98,6 +98,8 @@ fun EconomyShopScreen(
             // Mascot characters, each a permanent Google Play product.
             // Optional rewarded videos: coins, a day's keyboard or theme, Quick Duels, hints.
             if (shown == 8) RewardCenterScreen()
+            // Gold packs, bought with real money through Google Play.
+            else if (shown == 9) GoldStoreSection(onBalance = { balance = it })
             else if (shown == 4) MascotStoreSection()
             // Profile frames: ornate crests via Google Play, simple rings for Son Coin.
             else if (shown == 7) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -276,7 +278,7 @@ private fun EconomyCatalogScreen(
             item { StoreProBanner(profile?.isVip == true) { onSection(3) } }
             item {
                 HfSecondaryButton(
-                    sh("Son Coin al", "Get Son Coin"),
+                    sh("Altın al", "Get Gold"),
                     onClick = { showCoins = true },
                     modifier = Modifier.fillMaxWidth(),
                     trailingChevron = true,
@@ -354,7 +356,7 @@ private fun EconomyCatalogScreen(
                                     .onFailure {
                                         val raw = it.message.orEmpty()
                                         notice = when {
-                                            "insufficient_diamonds" in raw -> sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                                            "insufficient_diamonds" in raw -> sh("Yeterli Altının yok.", "Not enough Gold.")
                                             "vip_required" in raw -> sh("Bu ürün PRO üyelerine özel.", "This item is exclusive to PRO members.")
                                             "already_owned" in raw -> sh("Bu ürüne zaten sahipsin.", "You already own this item.")
                                             "play_only" in raw -> sh("Bu ürün Google Play ile satılır.", "This item is sold through Google Play.")
@@ -381,7 +383,7 @@ private fun EconomyCatalogScreen(
                         busy = "daily"
                         runCatching { b.claimDailyCheckin() }
                             .onSuccess { amount ->
-                                notice = if (amount > 0) sh("+$amount Son Coin eklendi.", "+$amount Son Coin added.")
+                                notice = if (amount > 0) sh("+$amount Altın eklendi.", "+$amount Gold added.")
                                     else sh("Bugünkü ödülünü aldın.", "You already claimed today's gift.")
                                 reload()
                             }.onFailure { notice = sh("Ödül alınamadı. Tekrar deneyebilirsin.", "Could not claim the gift. Please retry.") }
@@ -424,7 +426,7 @@ private fun EconomyCatalogScreen(
             title = { Text(sh(bundle.nameTr, bundle.nameEn)) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 bundle.items.forEach { p -> Text(sh(p.nameTr, p.nameEn) + if (p.id in owned) sh(" · Sende var", " · Owned") else "") }
-                Text("${bundle.diamondPrice} Son Coin", fontWeight = FontWeight.Bold)
+                Text("${bundle.diamondPrice} ${goldUnit()}", fontWeight = FontWeight.Bold)
                 Text(sh("Sende olan ürünler tekrar verilmez.", "Already owned items are not granted again."), fontSize = 12.sp)
             } },
             confirmButton = { TextButton(enabled = busy == null, onClick = {
@@ -434,7 +436,7 @@ private fun EconomyCatalogScreen(
                     runCatching { b.purchaseStoreBundle(bundle.id) }
                         .onSuccess { notice = sh("Paket koleksiyonuna eklendi.", "Bundle added to your collection."); reload() }
                         .onFailure { error ->
-                            notice = if ("insufficient_diamonds" in error.message.orEmpty()) sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                            notice = if ("insufficient_diamonds" in error.message.orEmpty()) sh("Yeterli Altının yok.", "Not enough Gold.")
                                 else sh("Paket alınamadı. Teklifi yenileyip tekrar dene.", "Could not purchase. Refresh the offer and retry.")
                         }
                     selectedBundle = null
@@ -614,7 +616,7 @@ internal fun VerifiedStoreProductCard(
             StoreProductPreview(item, Modifier.fillMaxWidth().height(230.dp), expanded = true)
             Text(tier.label, color = tierColor, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp)
             Text(storeItemEffect(item) ?: storeKindLabel(item.kind), color = LobbyPalette.Ink, fontSize = 15.sp, lineHeight = 21.sp)
-            Text(if (owned || equipped) sh("Koleksiyonunda", "In your collection") else if (lockedByPro) sh("PRO'ya özel", "PRO exclusive") else playPrice ?: "${item.diamondPrice} Son Coin", color = LobbyPalette.Gold, fontWeight = FontWeight.Bold)
+            Text(if (owned || equipped) sh("Koleksiyonunda", "In your collection") else if (lockedByPro) sh("PRO'ya özel", "PRO exclusive") else playPrice ?: "${item.diamondPrice} ${goldUnit()}", color = LobbyPalette.Gold, fontWeight = FontWeight.Bold)
         } },
         confirmButton = { Button(enabled = !busy && !lockedByPro, onClick = {
             previewOpen = false

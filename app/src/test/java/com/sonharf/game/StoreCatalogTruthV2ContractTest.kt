@@ -10,7 +10,8 @@ class StoreCatalogTruthV2ContractTest {
     fun shopNavigationHasNoDeadMascotTabOrStaleBrand() {
         val shop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
 
-        assertTrue(shop.contains("initialTab.coerceIn(0, 8)"))
+        assertTrue(shop.contains("initialTab.coerceIn(0, 9)"))
+        assertTrue(shop.contains("GoldStoreSection("))
         assertTrue(shop.contains("StoreProBanner("))
         assertTrue(shop.contains("onSection(3)"))
         assertTrue(shop.contains("if (section == 3)"))

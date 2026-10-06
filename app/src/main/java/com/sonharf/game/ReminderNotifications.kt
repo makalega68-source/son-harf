@@ -104,7 +104,7 @@ internal object ReminderNotifications {
         Reminder.MISS_YOU -> sh("Obi seni özledi 🥺", "Obi misses you 🥺") to
             sh("Tahta hazır, rakiplerin bekliyor. Bir tur atalım mı?", "The board is ready and your rivals are waiting. One round?")
         Reminder.GIFT -> sh("Obi sana hediye hazırladı 🎁", "Obi has a gift for you 🎁") to
-            sh("Geri dön, Son Coin hediyeni al.", "Come back and collect your Son Coin gift.")
+            sh("Geri dön, Altın hediyeni al.", "Come back and collect your Gold gift.")
     }
 
     private fun fireAt(reminder: Reminder): Long = Calendar.getInstance().apply {

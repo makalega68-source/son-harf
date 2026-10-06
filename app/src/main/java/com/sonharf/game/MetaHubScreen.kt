@@ -111,7 +111,7 @@ private fun RetentionGoalsPanel(backend: OnlineGameBackend?) {
             val title=if(SonHarfUiState.isEnglish)g.titleEn else g.titleTr; val desc=if(SonHarfUiState.isEnglish)g.descriptionEn else g.descriptionTr; val done=g.progress>=g.target
             Card(colors=CardDefaults.cardColors(containerColor=SonHarfSurface),shape=RoundedCornerShape(18.dp)){
                 Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(title,fontWeight=FontWeight.Black);Text("◈ ${g.rewardDiamonds} SC",color=SonHarfCyan,fontWeight=FontWeight.Black)}
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(title,fontWeight=FontWeight.Black);Text("◈ ${g.rewardDiamonds} ${goldUnit()}",color=SonHarfCyan,fontWeight=FontWeight.Black)}
                     Text(desc,color=SonHarfMuted,fontSize=10.sp)
                     LinearProgressIndicator(progress={g.progress.toFloat()/g.target.coerceAtLeast(1)},modifier=Modifier.fillMaxWidth())
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){

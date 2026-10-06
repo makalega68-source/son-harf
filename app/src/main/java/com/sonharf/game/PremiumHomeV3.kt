@@ -118,7 +118,7 @@ private fun HomeStatusRow(
                 Column {
                     Text(profile?.diamonds?.let { homeGrouped(it) } ?: "—", color = HomeLobbyStyle.Ink,
                         fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                    Text("Son Coin", color = HomeLobbyStyle.Muted, fontSize = 10.sp)
+                    Text("${goldUnit()}", color = HomeLobbyStyle.Muted, fontSize = 10.sp)
                 }
                 Spacer(Modifier.width(5.dp))
                 Icon(Icons.Rounded.Add, sh("Mağazayı aç", "Open store"), tint = HomeLobbyStyle.Muted,

@@ -369,8 +369,8 @@ private fun ClubCompetitionTab() {
                                     if (result?.success == true) {
                                         SonHarfSoundFx.bonus()
                                         notice = sh(
-                                            "Takım Sandığı ${mission.tier}: +${result.rewardCoin} Son Coin",
-                                            "Team Chest ${mission.tier}: +${result.rewardCoin} Son Coin",
+                                            "Takım Sandığı ${mission.tier}: +${result.rewardCoin} Altın",
+                                            "Team Chest ${mission.tier}: +${result.rewardCoin} Gold",
                                         )
                                     } else {
                                         notice = sh("Bu sandığı zaten aldın.", "You already claimed this chest.")
@@ -614,7 +614,7 @@ private fun CreateClubDialog(
                 ) {
                     Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            sh("KULÜP KURMA BEDELİ: 1.000 SON COIN", "CLUB CREATION FEE: 1,000 SON COIN"),
+                            sh("KULÜP KURMA BEDELİ: 1.000 ALTIN", "CLUB CREATION FEE: 1,000 GOLD"),
                             color = SonHarfGold,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
@@ -636,7 +636,7 @@ private fun CreateClubDialog(
             Button(
                 onClick = { onCreate(name, tag, description) },
                 enabled = !busy && name.trim().length >= 3 && tag.trim().length >= 2,
-            ) { Text(if (busy) "…" else sh("1.000 SC İLE OLUŞTUR", "CREATE FOR 1,000 SC")) }
+            ) { Text(if (busy) "…" else sh("1.000 ALTIN İLE OLUŞTUR", "CREATE FOR 1,000 GOLD")) }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(sh("VAZGEÇ", "CANCEL")) } },
     )
@@ -752,15 +752,15 @@ private fun WeeklyTournamentTab() {
                                     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text(medal, fontSize = 26.sp)
                                         Text(amount, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                                        Text("SC", color = Color.White.copy(alpha = .85f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text("${goldUnit()}", color = Color.White.copy(alpha = .85f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
                         }
                         Text(
                             sh(
-                                "4–10: 40 SC • En az 1 maç oynayan diğer oyuncular: 10 SC",
-                                "4–10: 40 SC • Other players with at least 1 match: 10 SC",
+                                "4–10: 40 Altın • En az 1 maç oynayan diğer oyuncular: 10 Altın",
+                                "4–10: 40 Gold • Other players with at least 1 match: 10 Gold",
                             ),
                             color = SonHarfMuted,
                             fontSize = 12.sp,
@@ -788,8 +788,8 @@ private fun WeeklyTournamentTab() {
                                 .onSuccess { reward ->
                                     if (reward != null) {
                                         notice = sh(
-                                            "Ödül: #${reward.rank} • +${reward.rewardCoins} Son Coin",
-                                            "Reward: #${reward.rank} • +${reward.rewardCoins} Son Coin",
+                                            "Ödül: #${reward.rank} • +${reward.rewardCoins} Altın",
+                                            "Reward: #${reward.rank} • +${reward.rewardCoins} Gold",
                                         )
                                         reload()
                                     }
@@ -923,12 +923,12 @@ private fun WeeklyTournamentTab() {
                                     "No ranking or reward because no match was played.",
                                 )
                                 h.rewardClaimed -> sh(
-                                    "✓ +${h.rewardCoins} Son Coin alındı",
-                                    "✓ +${h.rewardCoins} Son Coin claimed",
+                                    "✓ +${h.rewardCoins} Altın alındı",
+                                    "✓ +${h.rewardCoins} Gold claimed",
                                 )
                                 h.rewardEligible -> sh(
-                                    "+${h.rewardCoins} Son Coin alınabilir",
-                                    "+${h.rewardCoins} Son Coin available",
+                                    "+${h.rewardCoins} Altın alınabilir",
+                                    "+${h.rewardCoins} Gold available",
                                 )
                                 else -> sh("Ödül durumu kapalı.", "Reward unavailable.")
                             },
@@ -1034,7 +1034,7 @@ private fun ClubMissionCard(
                         fontSize = 9.sp,
                     )
                 }
-                Text("+${mission.rewardCoin} SC", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Text("+${mission.rewardCoin} ${goldUnit()}", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 12.sp)
             }
 
             Text(
@@ -1113,7 +1113,7 @@ private fun CompetitionMetric(value: String, label: String, modifier: Modifier) 
 
 private fun friendlyCompetitionError(raw: String): String = when {
     "insufficient_club_creation_balance" in raw ->
-        sh("Kulüp kurmak için 1.000 Son Coin gerekir.", "You need 1,000 Son Coin to create a club.")
+        sh("Kulüp kurmak için 1.000 Altın gerekir.", "You need 1,000 Gold to create a club.")
     "club_creation_not_confirmed" in raw ->
         sh(
             "Kulüp kurulumu bağlantı nedeniyle doğrulanamadı. Bağlantıyı kontrol edip kulüp merkezini yenile.",

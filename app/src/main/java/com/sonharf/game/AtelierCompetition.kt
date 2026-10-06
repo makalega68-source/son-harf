@@ -202,7 +202,7 @@ internal fun AtelierLobby(
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(sh("Geçen hafta ${reward.rank}. oldun!", "You finished #${reward.rank} last week!"), color = CompUi.Ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text(sh("Ödülünü al: +${reward.reward} Son Coin", "Claim your reward: +${reward.reward} Son Coin"), color = CompUi.InkMuted, fontSize = 13.sp)
+                    Text(sh("Ödülünü al: +${reward.reward} Altın", "Claim your reward: +${reward.reward} Gold"), color = CompUi.InkMuted, fontSize = 13.sp)
                 }
                 Text(sh("AL", "CLAIM"), color = CompUi.Green, fontSize = 15.sp, fontWeight = FontWeight.Black)
             }
@@ -224,7 +224,7 @@ internal fun AtelierLobby(
             }
             if (weekly) {
                 Text(
-                    sh("Haftalık ödül: 1. 100 · 2. 60 · 3. 40 · 4–10. 15 Son Coin", "Weekly reward: 1st 100 · 2nd 60 · 3rd 40 · 4–10th 15 Son Coin"),
+                    sh("Haftalık ödül: 1. 100 · 2. 60 · 3. 40 · 4–10. 15 Altın", "Weekly reward: 1st 100 · 2nd 60 · 3rd 40 · 4–10th 15 Gold"),
                     color = CompUi.InkMuted, fontSize = 12.sp,
                 )
             }

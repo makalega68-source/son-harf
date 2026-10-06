@@ -414,7 +414,7 @@ private fun PremiumProfileHero(profile: ProfileDto?, onProfile: () -> Unit) {
                         Icon(Icons.Rounded.WorkspacePremium, null, tint = Color(0xFF8C6834), modifier = Modifier.size(19.dp))
                         Spacer(Modifier.width(5.dp))
                         Text(
-                            "SC ${profile?.diamonds ?: 0}",
+                            "${goldUnit()} ${profile?.diamonds ?: 0}",
                             color = Color(0xFF795A2E),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Black,

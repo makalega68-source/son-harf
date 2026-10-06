@@ -104,10 +104,10 @@ fun RewardCenterScreen() {
 
     fun successMessage(rewardType: String, claim: RewardClaimDto): String = when (rewardType) {
         RewardKeys.COINS -> sh(
-            "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 5)} Son Coin hesabına eklendi.",
-            "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 5)} Son Coin added.",
+            "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 5)} Altın hesabına eklendi.",
+            "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 5)} Gold added.",
         )
-        RewardKeys.DAILY_DOUBLE -> sh("Günlük hediyen ikiye katlandı: +${claim.diamondsAwarded} Son Coin!", "Daily gift doubled: +${claim.diamondsAwarded} Son Coin!")
+        RewardKeys.DAILY_DOUBLE -> sh("Günlük hediyen ikiye katlandı: +${claim.diamondsAwarded} Altın!", "Daily gift doubled: +${claim.diamondsAwarded} Gold!")
         RewardKeys.KEYBOARD_DAY -> sh("${itemName(claim.trialItemId)} 24 saat senin! Tüm oyunlarda kullanılıyor.", "${itemName(claim.trialItemId)} is yours for 24 hours, in every game.")
         RewardKeys.THEME_DAY -> sh("${itemName(claim.trialItemId)} 24 saat senin!", "${itemName(claim.trialItemId)} is yours for 24 hours!")
         RewardKeys.QUICK_GAMES -> sh("${claim.amount} Hızlı Düello hakkı açıldı! Kuşatma > Hızlı Düello.", "${claim.amount} Quick Duels unlocked! Siege > Quick Duel.")
@@ -265,8 +265,8 @@ fun RewardCenterScreen() {
             item {
                 RewardVideoCard(
                     icon = "🪙",
-                    title = sh("+${s?.coinPerAd ?: 10} SON COIN", "+${s?.coinPerAd ?: 10} SON COIN"),
-                    description = sh("Her video Son Coin verir.", "Each video gives Son Coin."),
+                    title = sh("+${s?.coinPerAd ?: 10} ALTIN", "+${s?.coinPerAd ?: 10} GOLD"),
+                    description = sh("Her video Altın verir.", "Each video gives Gold."),
                     progress = sh("Bugün ${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 3}", "Today ${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 3}"),
                     enabled = !isPro && adReady && (s?.coinAdsUsed ?: 0) < (s?.coinAdsLimit ?: 3) && busy == null,
                     busy = busy == RewardKeys.COINS,
@@ -361,8 +361,8 @@ fun RewardCenterScreen() {
                     )
                     Text(
                         sh(
-                            "Son Harf ve Kuşatma maçları Kumbarayı doldurur; günde bir kez açılır. Hazır olan: ${s?.piggyBonusSc ?: 0} Son Coin.",
-                            "Last Letter and Siege matches fill the Piggy Bank; it opens once a day. Ready now: ${s?.piggyBonusSc ?: 0} Son Coin.",
+                            "Son Harf ve Kuşatma maçları Kumbarayı doldurur; günde bir kez açılır. Hazır olan: ${s?.piggyBonusSc ?: 0} Altın.",
+                            "Last Letter and Siege matches fill the Piggy Bank; it opens once a day. Ready now: ${s?.piggyBonusSc ?: 0} Gold.",
                         ),
                         color = Hf.TextMuted,
                         fontSize = 12.sp,
@@ -375,7 +375,7 @@ fun RewardCenterScreen() {
                                 busy = "piggy"
                                 runCatching { b.openPiggyBank() }
                                     .onSuccess { reward ->
-                                        notice = sh("Kumbara açıldı: +${reward.bonusSc} Son Coin.", "Piggy Bank opened: +${reward.bonusSc} Son Coin.")
+                                        notice = sh("Kumbara açıldı: +${reward.bonusSc} Altın.", "Piggy Bank opened: +${reward.bonusSc} Gold.")
                                         reload()
                                     }
                                     .onFailure { e -> notice = if ("piggy_daily_limit" in e.message.orEmpty()) sh("Kumbarayı bugün açtın; yarın yeniden dolmuş olacak.", "You opened the Piggy Bank today; it will be full again tomorrow.") else sh("Kumbara henüz hazır değil.", "The Piggy Bank is not ready yet.") }

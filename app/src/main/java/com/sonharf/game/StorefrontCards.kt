@@ -24,7 +24,7 @@ internal fun StoreDailyRewardCard(state: StorefrontDto?, busy: Boolean, onClaim:
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(sh("Günlük hediyen", "Your daily gift"), fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 19.sp)
-                Text(state?.let { "${it.dailyReward} Son Coin" } ?: sh("Yükleniyor…", "Loading…"), color = SonHarfMuted, fontSize = 12.sp, lineHeight = 17.sp)
+                Text(state?.let { "${it.dailyReward} ${goldUnit()}" } ?: sh("Yükleniyor…", "Loading…"), color = SonHarfMuted, fontSize = 12.sp, lineHeight = 17.sp)
             }
             TextButton(onClick = onClaim, enabled = state != null && !state.dailyClaimed && !busy) {
                 Text(if (state?.dailyClaimed == true) sh("Alındı", "Claimed") else sh("Ücretsiz al", "Claim free"))
@@ -56,7 +56,7 @@ internal fun StoreBundleCard(bundle: StoreBundleDto, ownedItems: Set<String>, bu
                         Text(sh("$end tarihine kadar", "Available until $end"), color = SonHarfMuted, fontSize = 11.sp, lineHeight = 15.sp)
                     }
                 }
-                Text("${bundle.diamondPrice} SC", color = SonHarfTheme.Primary, fontWeight = FontWeight.Bold)
+                Text("${bundle.diamondPrice} ${goldUnit()}", color = SonHarfTheme.Primary, fontWeight = FontWeight.Bold)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 bundle.items.forEach { product ->
