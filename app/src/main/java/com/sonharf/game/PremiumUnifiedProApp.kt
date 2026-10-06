@@ -163,8 +163,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     )
     var incomingSocialCount by remember { mutableIntStateOf(0) }
     LaunchedEffect(destination) { if (destination == PremiumDestination.SOCIAL) incomingSocialCount = 0 }
-    // Menu pages take the lobby's petrol colours; the game arenas keep their own palettes.
-    SonHarfCosmetics.menuPetrol = destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)
+    // Every page, game screens included, wears the app's petrol colours unless a bought theme
+    // (Black, Walnut) is equipped; the siege board keeps its own board skin.
+    SonHarfCosmetics.menuPetrol = true
     val scheme = if (SonHarfTheme.IsDark || SonHarfCosmetics.darkArenaTheme) {
         darkColorScheme(
             primary = SonHarfTheme.Primary,

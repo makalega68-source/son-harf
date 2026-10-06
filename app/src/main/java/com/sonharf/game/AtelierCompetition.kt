@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -107,6 +108,7 @@ internal fun AtelierLobby(
     onPractice: () -> Unit,
     onClaim: () -> Unit,
     tournament: @Composable () -> Unit = {},
+    leaderboard: @Composable () -> Unit = {},
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Last week's reward first: it is the one thing waiting for the player.
@@ -174,6 +176,8 @@ internal fun AtelierLobby(
 
         // 3. The tournament.
         tournament()
+        // 4. The tournament leaderboard (top 100, new every 2 hours).
+        leaderboard()
 
         notice?.let { Text(it, color = CompUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
 
@@ -225,5 +229,101 @@ private fun BoardRow(row: AtelierBoardRowDto) {
         ) {
             Text("${row.score}", color = CompUi.Green, fontSize = 16.sp, fontWeight = FontWeight.Black)
         }
+    }
+}
+
+/**
+ * The workshop tournament's leaderboard: the top 100 of the live tournament, or of the latest one
+ * until the next starts, so it changes every 2 hours. Scrolls inside its own card; the player's
+ * own place is pinned under it when they are outside the top 100.
+ */
+@Composable
+internal fun AtelierTournamentLeaderboard(online: Boolean) {
+    var board by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.sonharf.game.data.TournamentBoard?>(null) }
+    var loading by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+    val foreground = rememberAppForeground()
+    androidx.compose.runtime.LaunchedEffect(online, foreground) {
+        if (!online || !foreground || !com.sonharf.game.data.SupabaseProvider.configured) { loading = false; return@LaunchedEffect }
+        while (true) {
+            gameRequestResult { com.sonharf.game.data.ThroneBackend.tournamentBoard() }.onSuccess { board = it }
+            loading = false
+            kotlinx.coroutines.delay(60_000)
+        }
+    }
+    val current = board
+    val started = parseServerInstantMs(current?.eventStart)
+    val time = started?.let {
+        java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.of("Europe/Istanbul")).toLocalTime()
+            .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(sh("TURNUVA SIRALAMASI", "TOURNAMENT LEADERBOARD"), color = LobbyPalette.Ink, fontSize = 13.sp,
+                    fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(
+                    when {
+                        current?.live == true && time != null -> sh("Canlı · $time turnuvası · ilk 100", "Live · $time tournament · top 100")
+                        time != null -> sh("$time turnuvası · her 2 saatte yenilenir", "$time tournament · new every 2 hours")
+                        else -> sh("Her 2 saatte yenilenir · ilk 100", "New every 2 hours · top 100")
+                    },
+                    color = LobbyPalette.Muted, fontSize = 12.sp,
+                )
+            }
+            if (current?.live == true) Box(Modifier.clip(RoundedCornerShape(50)).background(Color(0xFFD7263D)).padding(horizontal = 8.dp, vertical = 3.dp)) {
+                Text(sh("CANLI", "LIVE"), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(CompUi.Cream)
+                .border(1.dp, CompUi.Edge.copy(alpha = .6f), RoundedCornerShape(18.dp)),
+        ) {
+            val rows = current?.rows.orEmpty()
+            when {
+                !online -> Text(sh("Sıralama çevrim dışıyken görünmez.", "The leaderboard is not available offline."),
+                    Modifier.fillMaxWidth().padding(18.dp), color = CompUi.InkMuted, fontSize = 13.sp, textAlign = TextAlign.Center)
+                loading && current == null -> Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(Modifier.size(24.dp), color = CompUi.Green, strokeWidth = 2.dp)
+                }
+                rows.isEmpty() -> Text(sh("Henüz kimse yarışmadı. İlk turnuvada kürsüye sen çık!", "No one has raced yet. Take the podium in the first tournament!"),
+                    Modifier.fillMaxWidth().padding(18.dp), color = CompUi.InkMuted, fontSize = 13.sp, textAlign = TextAlign.Center)
+                else -> {
+                    // Up to 100 rows scroll inside the card (about eight are visible at once).
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 6.dp),
+                    ) {
+                        items(rows.size, key = { rows[it].userId.ifBlank { "r$it" } }) { index -> TournamentBoardLine(rows[index]) }
+                    }
+                    val me = current?.me
+                    if (me != null && rows.none { it.me }) {
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(CompUi.Edge.copy(alpha = .6f)))
+                        Text(sh("Sen: ${me.rank}. · ${me.score} puan · ${me.stages}/3 aşama", "You: #${me.rank} · ${me.score} pts · ${me.stages}/3 stages"),
+                            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), color = CompUi.Green, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Text(sh("${current?.total ?: rows.size} oyuncu yarıştı", "${current?.total ?: rows.size} players raced"),
+                        Modifier.fillMaxWidth().padding(bottom = 10.dp), color = CompUi.InkMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TournamentBoardLine(row: com.sonharf.game.data.TournamentBoardRow) {
+    Row(
+        Modifier.fillMaxWidth().background(if (row.me) CompUi.GreenSoft else Color.Transparent)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val medal = when (row.rank) { 1 -> "🥇"; 2 -> "🥈"; 3 -> "🥉"; else -> null }
+        Box(Modifier.width(40.dp), contentAlignment = Alignment.CenterStart) {
+            if (medal != null) Text(medal, fontSize = 20.sp)
+            else Text("${row.rank}.", color = CompUi.InkMuted, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+        Text(row.name, Modifier.weight(1f), color = CompUi.Ink, fontSize = 15.sp,
+            fontWeight = if (row.me || row.rank <= 3) FontWeight.Bold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(sh("${row.stages}/3", "${row.stages}/3"), Modifier.width(44.dp), color = CompUi.InkMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
+        Text("${row.score}", Modifier.width(64.dp), color = CompUi.Ink, fontSize = 15.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.End)
     }
 }

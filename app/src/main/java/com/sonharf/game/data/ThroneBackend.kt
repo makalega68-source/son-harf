@@ -30,8 +30,16 @@ import kotlinx.serialization.json.put
  @SerialName("previous_owner") val previousOwner:ThroneOwner?=null,
  val missions:List<ThroneMission> = emptyList(),val breakdown:List<ThroneGameTotal> = emptyList(),
 )
+@Serializable internal data class TournamentBoardRow(val rank:Int=0,@SerialName("user_id") val userId:String="",val name:String="",val score:Int=0,val stages:Int=0,val me:Boolean=false)
+@Serializable internal data class TournamentBoardMe(val rank:Int=0,val score:Int=0,val stages:Int=0)
+@Serializable internal data class TournamentBoard(
+ @SerialName("server_time") val serverTime:String="",@SerialName("event_start") val eventStart:String?=null,val live:Boolean=false,
+ @SerialName("next_start") val nextStart:String="",val rows:List<TournamentBoardRow> = emptyList(),val me:TournamentBoardMe?=null,val total:Int=0,
+)
 internal object ThroneBackend {
  suspend fun tournament():AtelierTournament=SupabaseProvider.client.postgrest.rpc("get_atelier_tournament_v1").decodeAs()
+ /** Top 100 of the live tournament, or of the latest one until the next starts (every 2 hours). */
+ suspend fun tournamentBoard():TournamentBoard=SupabaseProvider.client.postgrest.rpc("get_atelier_tournament_board_v1").decodeAs()
  suspend fun week():ThroneWeek=SupabaseProvider.client.postgrest.rpc("get_throne_week_v1").decodeAs()
  suspend fun start(language:String):TournamentEntry=SupabaseProvider.client.postgrest.rpc("start_atelier_tournament_v1",buildJsonObject{put("p_language",language)}).decodeAs()
  suspend fun finish(entry:TournamentEntry,score:Int,words:List<String>,tasks:Int):TournamentResult=SupabaseProvider.client.postgrest.rpc("finish_atelier_tournament_v1",buildJsonObject{

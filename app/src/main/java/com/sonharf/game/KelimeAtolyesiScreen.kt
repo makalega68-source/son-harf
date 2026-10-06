@@ -89,18 +89,20 @@ private const val COMBO_MAX_BONUS = 30
 /** Word Workshop palette: warm wood by default, a matching night palette on the Black Theme. */
 private object AtelierUi {
     private val dark: Boolean get() = SonHarfCosmetics.darkArenaTheme
-    val WoodTop: Color get() = if (dark) Color(0xFF1A2029) else Color(0xFFF3E8D3)
-    val WoodBottom: Color get() = if (dark) Color(0xFF0F1318) else Color(0xFFE6D3B0)
-    val Cream: Color get() = if (dark) Color(0xFF1F2630) else Color(0xFFFCF8F0)
-    val TileEdge: Color get() = if (dark) Color(0xFF3A4452) else Color(0xFFCDB387)
-    val TileUsed: Color get() = if (dark) Color(0xFF2A313B) else Color(0xFFE9DCC3)
-    val Ink: Color get() = if (dark) Color(0xFFEEF2F6) else Color(0xFF2B2720)
-    val InkMuted: Color get() = if (dark) Color(0xFFA3AFBD) else Color(0xFF6E665A)
-    val Green: Color get() = if (dark) Color(0xFF3E9F6A) else Color(0xFF2E7A53)
-    val GreenSoft: Color get() = if (dark) Color(0xFF1E3A2B) else Color(0xFFDDEDE1)
-    val Gold: Color get() = if (dark) Color(0xFFE0B45C) else Color(0xFFB08D45)
-    val GoldSoft: Color get() = if (dark) Color(0xFF3A3222) else Color(0xFFF1E4C3)
-    val Danger: Color get() = if (dark) Color(0xFFE57A73) else Color(0xFFA9453D)
+    // The app's petrol look (no bought theme equipped): the same light-on-dark contrast as Black.
+    private val petrol: Boolean get() = SonHarfCosmetics.petrolMenus
+    val WoodTop: Color get() = if (dark) Color(0xFF1A2029) else if (petrol) Color(0xFF14596A) else Color(0xFFF3E8D3)
+    val WoodBottom: Color get() = if (dark) Color(0xFF0F1318) else if (petrol) Color(0xFF0B323C) else Color(0xFFE6D3B0)
+    val Cream: Color get() = if (dark) Color(0xFF1F2630) else if (petrol) Color(0xFF135463) else Color(0xFFFCF8F0)
+    val TileEdge: Color get() = if (dark) Color(0xFF3A4452) else if (petrol) Color(0xFF2A7486) else Color(0xFFCDB387)
+    val TileUsed: Color get() = if (dark) Color(0xFF2A313B) else if (petrol) Color(0xFF0E3E4A) else Color(0xFFE9DCC3)
+    val Ink: Color get() = if (dark) Color(0xFFEEF2F6) else if (petrol) Color(0xFFF2F8F9) else Color(0xFF2B2720)
+    val InkMuted: Color get() = if (dark) Color(0xFFA3AFBD) else if (petrol) Color(0xFFA8C8CF) else Color(0xFF6E665A)
+    val Green: Color get() = if (dark) Color(0xFF3E9F6A) else if (petrol) Color(0xFF2E8B45) else Color(0xFF2E7A53)
+    val GreenSoft: Color get() = if (dark) Color(0xFF1E3A2B) else if (petrol) Color(0xFF1D5E45) else Color(0xFFDDEDE1)
+    val Gold: Color get() = if (dark) Color(0xFFE0B45C) else if (petrol) Color(0xFFF2C14E) else Color(0xFFB08D45)
+    val GoldSoft: Color get() = if (dark) Color(0xFF3A3222) else if (petrol) Color(0xFF3B4A3A) else Color(0xFFF1E4C3)
+    val Danger: Color get() = if (dark) Color(0xFFE57A73) else if (petrol) Color(0xFFFF9A8F) else Color(0xFFA9453D)
 }
 
 private data class AtelierFeedback(val text: String, val positive: Boolean, val nonce: Int)
@@ -621,6 +623,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                         AtelierTournamentCompact(tournament, startingDaily || startingRound, onJoin = { startTournament() },
                             ready = readyForTournament, onReady = { readyForTournament = true })
                     },
+                    leaderboard = { AtelierTournamentLeaderboard(online) },
                 )
                 }
                 current == null -> Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
