@@ -85,8 +85,8 @@ class PremiumStoreProContractTest {
         assertTrue(history.contains("game_words_participant_history_v1"))
 
         val screen = repoFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
-        assertTrue(screen.contains("PRO • Tüm oynanan kelimeler"))
-        assertTrue(screen.contains("val ordered = words.reversed()"))
+        // The played-words strip was removed from the arena; the word list still guards repeats.
+        assertFalse(screen.contains("PremierWordTrail("))
     }
 
     @Test

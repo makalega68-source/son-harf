@@ -327,7 +327,6 @@ internal fun MainVipScreen(
                     MainVipBenefit(Icons.Rounded.Block, sh("Reklamsız deneyim", "Ad-free experience"), sh("Maç dışında da sade ve kesintisiz", "Clean and uninterrupted outside matches"))
                     MainVipBenefit(Icons.Rounded.Verified, sh("VIP profil rozeti", "VIP profile badge"), sh("Profil ve sosyal alanlarda görünür", "Visible on profile and social surfaces"))
                     MainVipBenefit(Icons.Rounded.Checkroom, sh("Özel Style içerikleri", "Exclusive Style content"), sh("Profil çerçevesi ve kişiselleştirme", "Profile frames and personalization"))
-                    MainVipBenefit(Icons.Rounded.History, sh("Kelime geçmişi", "Word history"), sh("Düelloda son kelimeleri gör", "See recent words during a duel"))
                     MainVipBenefit(Icons.Rounded.Insights, sh("Gelişmiş istatistikler", "Advanced statistics"), sh("Performansını daha ayrıntılı incele", "Review performance in more detail"))
                     MainVipBenefit(Icons.Rounded.Lock, sh("Özel oda oluşturma", "Create private rooms"), sh("Arkadaşlarınla kodlu oda aç", "Open coded rooms with friends"))
                     MainVipBenefit(Icons.Rounded.Storefront, sh("VIP Style görünümü", "VIP Style view"), sh("Üyelere özel ürünleri keşfet", "Discover member-only items"))
@@ -341,8 +340,8 @@ internal fun MainVipScreen(
                     Text(sh("PRO OYUN YARDIMLARI", "PRO GAME HELPERS"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh(
-                            "PRO: Hamle Önizleme, Kalan Harfler ve kelime geçmişi.",
-                            "PRO: Move Preview, Letters Left and word history.",
+                            "PRO: Hamle Önizleme ve Kalan Harfler.",
+                            "PRO: Move Preview and Letters Left.",
                         ),
                         color = MainUi.Text,
                         fontSize = 11.sp,

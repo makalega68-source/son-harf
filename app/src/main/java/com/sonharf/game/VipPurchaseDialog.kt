@@ -121,7 +121,7 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                 ProBenefit(Icons.Rounded.MeetingRoom, sh("ÖZEL ODALAR", "PRIVATE ROOMS"), sh("Arkadaşlarınla davet kodlu özel masalar", "Invite-code private tables with friends"))
                 ProBenefit(Icons.Rounded.Groups, sh("SOSYAL", "SOCIAL"), sh("Kayıtlı arkadaş listesi ve çevrim içi durum", "Saved friends and online status"))
                 ProBenefit(Icons.Rounded.Insights, sh("MAÇ ANALİZİ", "MATCH INSIGHTS"), sh("Biten maçların ayrıntılı özeti", "Detailed recap of finished matches"))
-                ProBenefit(Icons.Rounded.Calculate, sh("KONFOR ARAÇLARI", "COMFORT TOOLS"), sh("Hamle Önizleme, Kalan Harfler ve Son Harf kelime geçmişi", "Move Preview, Letters Left and Last Letter word history"))
+                ProBenefit(Icons.Rounded.Calculate, sh("KONFOR ARAÇLARI", "COMFORT TOOLS"), sh("Hamle Önizleme ve Kalan Harfler", "Move Preview and Letters Left"))
 
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {

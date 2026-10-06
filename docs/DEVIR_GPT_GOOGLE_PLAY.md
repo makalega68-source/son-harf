@@ -40,7 +40,7 @@ Kesin kurallar:
 |---|---|
 | Uygulama | Kelime Tahtı — paket `com.sonharf.game` |
 | Repo / dal | `makalega68-source/son-harf`, dal `claude/mascot-animations-behavior-31rof9`, PR #459 |
-| Sürüm | `versionCode 43`, `versionName 1.0.6` (`app/build.gradle.kts`) |
+| Sürüm | `versionCode 44`, `versionName 1.0.7` (`app/build.gradle.kts`) |
 | Sunucu | Supabase projesi `bzdtftzdjtjoqhtcqtxb`; migration dosyaları `supabase/migrations/` |
 | CI | GitHub Actions: Android CI, Branch APK CI, Final Unified Validation, Frame Provenance Gate |
 | APK | Push sonrası çalışan CI'da `Kelime-Tahti-Guncel` artifact'ı |
@@ -110,7 +110,7 @@ kesintisiz** kapalı teste katılmış olmalı. Bu süre ancak kapalı test baş
 
 ### Adım adım (kullanıcı Play Console'da yapar, asistan yönlendirir)
 1. **En yeni AAB'yi al:** Son yeşil CI çalışmasından `son-harf-release-NNNN` artifact'ını indir,
-   zip'ten `app-release.aab` çıkar. (versionCode 43 olmalı.)
+   zip'ten `app-release.aab` çıkar. (versionCode 44 olmalı.)
 2. **Uygulama içeriği (App content) formlarını tamamla** (Panel → Uygulama içeriği):
    - Gizlilik politikası URL'si (herkese açık bir sayfa; hesap, profil fotoğrafı, sohbet,
      satın alma, reklam (AdMob) verilerini anlatmalı). Yoksa asistan metni hazırlasın,

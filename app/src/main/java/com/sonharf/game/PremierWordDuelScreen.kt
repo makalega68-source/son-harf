@@ -1371,7 +1371,6 @@ private fun PremierArena(
     onQuickChat: () -> Unit,
     onSubmit: () -> Unit,
 ) {
-    val isPro = me?.isVip == true
     val amHost = meId == room.hostId
     val myScore = if (amHost) room.hostScore else room.guestScore
     val rivalScore = if (amHost) room.guestScore else room.hostScore
@@ -1844,7 +1843,6 @@ private fun PremierArena(
                         )
                     }
                     Spacer(Modifier.weight(1f))
-                    PremierWordTrail(words, language, isPro, meId)
                 }
             }
             // Keep the live input and custom keyboard outside the flexible arena body.
@@ -2849,62 +2847,6 @@ private fun PremierLastWordCard(
                     alpha = fall.value.coerceIn(0f, 1f)
                 },
             )
-        }
-    }
-}
-
-@Composable
-private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: Boolean = false, meId: String? = null) {
-    if (words.isEmpty()) {
-        Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierBoard.Ink.copy(alpha = .6f), fontSize = 10.sp)
-        return
-    }
-    // Seeing the words played in the match is a PRO perk; others see how many and a lock.
-    if (!isPro) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Lock, null, tint = PremierBoard.Ink.copy(alpha = .5f), modifier = Modifier.size(12.dp))
-            Spacer(Modifier.width(4.dp))
-            Text(
-                pt(language, "Çıkan ${words.size} kelimeyi görmek PRO'ya özel", "Seeing the ${words.size} played words is PRO"),
-                color = PremierBoard.Ink.copy(alpha = .55f),
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        return
-    }
-    val ordered = words.reversed()
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (isPro) {
-            Text(
-                pt(language, "PRO • Tüm oynanan kelimeler (${words.size})", "PRO • All played words (${words.size})"),
-                color = PremierBoard.Ink.copy(alpha = .55f),
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 6.dp),
-            )
-        }
-        LazyRow(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
-            contentPadding = PaddingValues(horizontal = 4.dp),
-        ) {
-            items(ordered, key = { it.id }) { entry ->
-                val mine = entry.playerId != null && entry.playerId == meId
-                Surface(
-                    shape = RoundedCornerShape(9.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, (if (mine) PremierBoard.Mine else PremierBoard.Rival).copy(alpha = .8f)),
-                ) {
-                    Text(
-                        premierUpper(entry.normalizedWord.ifBlank { entry.word }, language),
-                        Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        color = PremierBoard.Ink.copy(alpha = .9f),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
         }
     }
 }

@@ -166,8 +166,8 @@ internal fun UnifiedProVipScreen(
             LobbyCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     Text(sh("Oyun içi konfor","In-game comfort"),color=UProText,fontWeight=FontWeight.Bold)
-                    Text(sh("Hamle Önizleme ve Kalan Harfler, Kuşatma tahtasındaki araçlardan açılır. Son Harf kelime geçmişi maç ekranındadır.",
-                        "Open Move Preview and Letters Left from the Siege board tools. Last Letter word history is in the match screen."),color=UProMuted,fontSize=13.sp,lineHeight=19.sp)
+                    Text(sh("Hamle Önizleme ve Kalan Harfler, Kuşatma tahtasındaki araçlardan açılır.",
+                        "Open Move Preview and Letters Left from the Siege board tools."),color=UProMuted,fontSize=13.sp,lineHeight=19.sp)
                 }
             }
         }
