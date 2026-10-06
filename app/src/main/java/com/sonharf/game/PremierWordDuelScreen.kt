@@ -2527,11 +2527,12 @@ private fun PremierPressureStrip(
         myTurn -> PremierBoard.Mine
         else -> PremierBoard.Rival
     }
-    val flash = if (danger) {
+    // The flash is read only while drawing the bar, so the strip (and its slot) never recomposes
+    // every frame during the last seconds.
+    val flashState: State<Float>? = if (danger) {
         val transition = rememberInfiniteTransition(label = "bar-pulse")
-        val value by transition.animateFloat(.72f, 1f, infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "bar-flash")
-        value
-    } else 1f
+        transition.animateFloat(.72f, 1f, infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "bar-flash")
+    } else null
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2550,7 +2551,7 @@ private fun PremierPressureStrip(
                             // Drains symmetrically toward the middle.
                             val w = size.width * progress
                             drawRoundRect(
-                                barColor.copy(alpha = if (danger) flash else 1f),
+                                barColor.copy(alpha = flashState?.value ?: 1f),
                                 topLeft = Offset((size.width - w) / 2f, 0f),
                                 size = Size(w, size.height),
                                 cornerRadius = CornerRadius(r, r),

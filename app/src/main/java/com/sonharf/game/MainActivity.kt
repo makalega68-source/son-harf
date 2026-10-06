@@ -25,6 +25,8 @@ import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 
 internal val SonHarfBg: Color get() = SonHarfTheme.Background
 internal val SonHarfSurface: Color get() = SonHarfTheme.Surface
@@ -177,6 +179,12 @@ class MainActivity : ComponentActivity() {
         bestEffortStartup("ui preferences") { SonHarfPreferences.syncUi(this) }
         bestEffortStartup("cosmetics") { SonHarfCosmetics.restore(this); ThroneChampion.restore(this); WordSiegeBoardSkins.restore(this); WordSiegeBonusIcons.init(this); GameChatBadge.init(this) }
         bestEffortStartup("remote experience cache") { RemoteExperience.loadCached(this) }
+        // Decode the large lobby art in the background now, so the first pages show it at once.
+        bestEffortStartup("art cache") {
+            lifecycleScope.launch {
+                ArtCache.prefetch(this@MainActivity, R.drawable.kelime_tahti_brand_logo, R.drawable.son_harf_game_icon, R.drawable.kelime_atolyesi_game_icon)
+            }
+        }
         bestEffortStartup("ad privacy") { AdPrivacyManager.requestConsent(this) }
 
         val authDeepLink = intent.data?.let { it.scheme == "sonharf" && it.host == "auth" } == true

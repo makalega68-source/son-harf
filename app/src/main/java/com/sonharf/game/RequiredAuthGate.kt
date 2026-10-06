@@ -701,7 +701,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
 private fun AuthBrandHeader() {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(R.drawable.kelime_tahti_brand_logo),
+            painter = rememberArtPainter(R.drawable.kelime_tahti_brand_logo),
             contentDescription = "KELİME TAHTI",
             modifier = Modifier.widthIn(max = 300.dp).fillMaxWidth().height(150.dp),
             contentScale = androidx.compose.ui.layout.ContentScale.Fit,

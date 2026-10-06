@@ -429,7 +429,7 @@ internal fun HfProgressBar(progress: Float, modifier: Modifier = Modifier, color
 @Composable
 internal fun HfGameArt(res: Int, width: Dp, height: Dp = width, modifier: Modifier = Modifier, description: String? = null) {
     androidx.compose.foundation.Image(
-        painter = painterResource(res),
+        painter = rememberArtPainter(res),
         contentDescription = description,
         modifier = modifier.size(width, height),
         contentScale = androidx.compose.ui.layout.ContentScale.Fit,

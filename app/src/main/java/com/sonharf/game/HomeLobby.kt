@@ -156,7 +156,7 @@ internal fun HomeLobbyScreen(
 
             // Brand stage.
             Box(Modifier.fillMaxWidth().height(150.dp).padding(horizontal = 32.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
-                Image(painterResource(R.drawable.kelime_tahti_brand_logo), sh("Kelime Tahtı", "Word Throne"),
+                Image(rememberArtPainter(R.drawable.kelime_tahti_brand_logo), sh("Kelime Tahtı", "Word Throne"),
                     contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
             }
 

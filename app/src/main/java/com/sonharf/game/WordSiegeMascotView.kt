@@ -1221,9 +1221,14 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         if (isAttachedToWindow && isShown && windowVisibility == VISIBLE) {
             // Full-rate reactions; quiet, small companions need half as many draw passes.
             // This clock belongs to the View and never recomposes the game board.
+            // Idle breathing and blinking are slow, so an idle companion draws far less often.
             val reacting = now < actionUntil || now < motionUntil || flying || speaking
-            if (reacting || width >= 180f * resources.displayMetrics.density) postInvalidateOnAnimation()
-            else postInvalidateDelayed(33L)
+            when {
+                reacting -> postInvalidateOnAnimation()
+                sleeping -> postInvalidateDelayed(80L)
+                width >= 180f * resources.displayMetrics.density -> postInvalidateDelayed(33L)
+                else -> postInvalidateDelayed(50L)
+            }
         }
     }
 

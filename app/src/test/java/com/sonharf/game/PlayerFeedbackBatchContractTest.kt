@@ -98,7 +98,7 @@ class PlayerFeedbackBatchContractTest {
         assertTrue(art.contains("Image(bitmap.asImageBitmap(), seat.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)"))
         assertFalse(art.contains("ProfileFrameArt("))
         // Photos sit behind the art (wells are cut out), so rings and the 1-2-3 badges stay on top.
-        assertTrue(art.indexOf("if (seat != null) PodiumPhoto(seat, size) else EmptyWell()") < art.indexOf("Image(painterResource(style.art)"))
+        assertTrue(art.indexOf("if (seat != null) PodiumPhoto(seat, size) else EmptyWell()") < art.indexOf("Image(rememberArtPainter(style.art"))
         assertTrue(art.contains("(labelH * (if (compete) .46f else .36f)).toSp()"))
         assertFalse(art.contains("ProfilePhotoAvatarWithGender("))
         for (name in listOf("weekly_podium_blue.png", "weekly_podium_gold.png")) {

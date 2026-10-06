@@ -120,7 +120,7 @@ internal fun WeeklyPodiumArt(
             }
         }
         // 2) The art on top: rings, crowns and the 1-2-3 badges cover the photo edges.
-        Image(painterResource(style.art), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+        Image(rememberArtPainter(style.art, 1200), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
         // 3) Names and points, sized to their plate so they always fit.
         for (place in 0..2) {
             val seat = seats.getOrNull(place)

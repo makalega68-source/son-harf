@@ -35,7 +35,7 @@ internal fun IntroWelcomeScreen(onContinue: (String) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Spacer(Modifier.height(24.dp))
-            Image(painterResource(R.drawable.kelime_tahti_brand_logo), "Kelime Tahtı",
+            Image(rememberArtPainter(R.drawable.kelime_tahti_brand_logo), "Kelime Tahtı",
                 modifier = Modifier.fillMaxWidth().height(190.dp), contentScale = ContentScale.Fit)
             Text(if (english) "YOUR WORDS. YOUR THRONE." else "KELİMELER SENİN. TAHT SENİN.",
                 color = LobbyBrand.Gold, fontWeight = FontWeight.Black, fontSize = 19.sp, textAlign = TextAlign.Center)
