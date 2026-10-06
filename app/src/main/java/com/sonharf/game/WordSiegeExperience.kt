@@ -699,6 +699,7 @@ private fun WordSiegeGameCard(
         Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
             ProfilePhotoAvatarWithGender(
                 avatarPath = opponent?.avatarPath,
+                frameId = rememberPlayerFrame(opponent?.id),
                 gender = opponent?.gender,
                 name = opponent?.displayName ?: sh("Rakip", "Rival"),
                 size = 44.dp,
@@ -973,6 +974,7 @@ private fun WordSiegePlayerCard(
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             ProfilePhotoAvatarWithGender(
                 avatarPath = profile?.avatarPath,
+                frameId = rememberPlayerFrame(profile?.id),
                 gender = profile?.gender,
                 name = profile?.displayName ?: fallbackName,
                 size = 36.dp,

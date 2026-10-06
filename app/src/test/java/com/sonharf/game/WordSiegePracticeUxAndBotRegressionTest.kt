@@ -52,7 +52,7 @@ class WordSiegePracticeUxAndBotRegressionTest {
         assertTrue(screen.contains("if (tutorialStep == 2) tutorialStep = 3"))
         assertTrue(screen.contains("if (tutorialStep == 3) tutorialStep = 4"))
         assertTrue(guidance.contains("Taşlarınla kelime kur, tahtada toprak kazan."))
-        assertTrue(guidance.contains("Ele geçirdiğin her küp sana +2 Bölge Puanı"))
+        assertTrue(guidance.contains("Ele geçirdiğin her küp sana +2 Küp Puanı"))
         assertTrue(guidance.contains("Kelime puanı kalıcıdır"))
     }
 
@@ -66,7 +66,7 @@ class WordSiegePracticeUxAndBotRegressionTest {
         assertTrue(guidance.contains("WordSiegeBoardSpec.StarBonus"))
         assertTrue(guidance.contains("WordSiegePracticeStatusBar"))
         assertTrue(guidance.contains("MERKEZ • Açılış kelimesi merkezden geçer"))
-        assertTrue(guidance.contains("ÖDÜL • Bu sürpriz bölge hamlene +"))
+        assertTrue(guidance.contains("ÖDÜL • Bu sürpriz kare hamlene +"))
         assertTrue(guidance.contains("maxLines = 2"))
     }
 }

@@ -194,7 +194,7 @@ private fun PremiumCenterAnalysisBody(analysis: VipMatchAnalysisDto) {
             Surface(shape = RoundedCornerShape(14.dp), color = SonHarfSurface2) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                     CenterMetric(sh("KELİME", "WORD"), wordScore.toString())
-                    CenterMetric(sh("BÖLGE", "TERRITORY"), areaScore.toString())
+                    CenterMetric(sh("KÜP", "CUBES"), areaScore.toString())
                     CenterMetric(sh("TOPLAM", "TOTAL"), totalScore.toString())
                 }
             }

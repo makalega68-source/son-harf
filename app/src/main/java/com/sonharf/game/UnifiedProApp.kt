@@ -375,6 +375,7 @@ private fun PremiumProfileHero(profile: ProfileDto?, onProfile: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ProfilePhotoAvatarWithGender(
                     avatarPath = profile?.avatarPath,
+                    frameId = rememberPlayerFrame(profile?.id),
                     gender = profile?.gender,
                     name = profile?.displayName ?: sh("Oyuncu", "Player"),
                     size = 61.dp,

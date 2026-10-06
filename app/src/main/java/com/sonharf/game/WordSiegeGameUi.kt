@@ -260,7 +260,7 @@ internal fun WordSiegeScoreCard(
                     }
                 }
                 WordSiegeScoreMetric(sh("KELİME", "WORD"), wordPoints, accent, Modifier.weight(1f).fillMaxHeight(), sh("Kelime Puanı", "Word Points"))
-                WordSiegeScoreMetric(sh("BÖLGE", "AREA"), territoryPoints, accent, Modifier.weight(1f).fillMaxHeight(), sh("Bölge Puanı", "Territory Points"))
+                WordSiegeScoreMetric(sh("KÜP", "CUBES"), territoryPoints, accent, Modifier.weight(1f).fillMaxHeight(), sh("Küp Puanı", "Cube Points"))
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(sh("$area küp", "$area cubes"), color = WordSiegeGameUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)

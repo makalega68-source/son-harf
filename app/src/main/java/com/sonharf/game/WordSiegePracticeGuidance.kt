@@ -56,11 +56,11 @@ internal fun wordSiegePracticeZoneExplanation(code: String, turkish: Boolean): S
         "STARTING SEAL • The opening word passes through the seal and scores four times its total."
     }
     WordSiegeBoardSpec.StarBonus -> if (turkish) {
-        "ÖDÜL • Bu sürpriz bölge hamlene +${WordSiegeBoardSpec.StarBonusPoints} puan ekler."
+        "ÖDÜL • Bu sürpriz kare hamlene +${WordSiegeBoardSpec.StarBonusPoints} puan ekler."
     } else {
         "REWARD • This surprise zone adds +${WordSiegeBoardSpec.StarBonusPoints} points to the move."
     }
-    else -> if (turkish) "Stratejik bölge." else "Strategic zone."
+    else -> if (turkish) "Stratejik kare." else "Strategic zone."
 }
 
 @Composable
@@ -109,11 +109,11 @@ internal fun WordSiegePracticeTutorialCard(
         1 -> if (turkish) "1/4 • TAŞINI AL" else "1/4 • TAKE A TILE"
         2 -> if (turkish) "2/4 • MERKEZDEN BAŞLA" else "2/4 • OPEN THE SEAL"
         3 -> if (turkish) "3/4 • KELİMEYİ KİLİTLE" else "3/4 • LOCK IN THE WORD"
-        else -> if (turkish) "4/4 • BÖLGE VE BONUSLAR" else "4/4 • GROUND AND BONUSES"
+        else -> if (turkish) "4/4 • KÜPLER VE BONUSLAR" else "4/4 • CUBES AND BONUSES"
     }
     val body = when (step) {
         0 -> if (turkish) {
-            "Taşlarınla kelime kur, tahtada toprak kazan. Her yeni kelime tahtadaki bir harfe satır ya da sütun boyunca dokunmalı. Maç sonunda kelime ve bölge puanı toplamı yüksek olan kazanır."
+            "Taşlarınla kelime kur, tahtada küp kazan. Her yeni kelime tahtadaki bir harfe satır ya da sütun boyunca dokunmalı. Maç sonunda kelime ve küp puanı toplamı yüksek olan kazanır."
         } else {
             "Build words with your tiles and win ground on the board. Every new word must touch a letter already on the board along a row or column. Highest word plus territory total wins."
         }
@@ -133,7 +133,7 @@ internal fun WordSiegePracticeTutorialCard(
             "Line the tiles up as a word in a single row or column, then tap CONFIRM MOVE."
         }
         else -> if (turkish) {
-            "Ele geçirdiğin her küp sana +2 Bölge Puanı yazar; rakipten kopardığın küp onun Bölge Puanını 1 azaltır. Kelime puanı kalıcıdır. Bonuslar yalnız üstüne ilk taş konunca çalışır:"
+            "Ele geçirdiğin her küp sana +2 Küp Puanı yazar; rakipten kopardığın küp onun Küp Puanını 1 azaltır. Kelime puanı kalıcıdır. Bonuslar yalnız üstüne ilk taş konunca çalışır:"
         } else {
             "Each cube you take writes +2 Territory Points for you; a cube pulled from your rival lowers their Territory Points by 1. Word points are permanent. A bonus works only for the first tile placed on it:"
         }
@@ -166,7 +166,7 @@ internal fun WordSiegePracticeTutorialCard(
             )
             // The last step shows every bonus as it looks on the board, with one short line each.
             if (step >= 4) Text(
-                if (turkish) "Harf bonusu: harf değeri iki veya üç kat. Kelime bonusu: kelime toplamı iki veya üç kat. Açılış: kelime toplamı dört kat. Ödül bölgesi: 25 ek puan."
+                if (turkish) "Harf bonusu: harf değeri iki veya üç kat. Kelime bonusu: kelime toplamı iki veya üç kat. Açılış: kelime toplamı dört kat. Ödül karesi: 25 ek puan."
                 else "Letter bonus: double or triple tile value. Word bonus: double or triple word total. Opening: quadruple word total. Reward cell: 25 extra points.",
                 color = Color(0xFF3F554A), fontSize = if (compact) 9.sp else 10.sp,
             )

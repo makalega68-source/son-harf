@@ -32,7 +32,7 @@ class KelimeKusatmasiFinalBrandingContractTest {
         val online = source("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
 
         assertTrue(online.contains("Kelime +${'$'}{move.wordScore}"))
-        assertTrue(online.contains("Bölge +${'$'}{move.areaScore}"))
+        assertTrue(online.contains("Küp +${'$'}{move.areaScore}"))
         assertFalse(state.contains("Regex(\"Bölge \\\\+(\\\\d+)\")"))
         assertFalse(state.contains("KUŞATMA +${'$'}territoryScore"))
         assertFalse(state.contains("SIEGE +${'$'}territoryScore"))

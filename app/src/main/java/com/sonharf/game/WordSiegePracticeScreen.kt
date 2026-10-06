@@ -329,8 +329,8 @@ private fun WordSiegePracticeContent(
                 actionVfxEvent += 1
                 val areaPoints = move.capturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS
                 notice = sh(
-                    "${move.primaryWord} • Kelime +${move.wordScore} • Bölge +$areaPoints",
-                    "${move.primaryWord} • Word +${move.wordScore} • Territory +$areaPoints",
+                    "${move.primaryWord} • Kelime +${move.wordScore} • Küp +$areaPoints",
+                    "${move.primaryWord} • Word +${move.wordScore} • Cubes +$areaPoints",
                 )
                 if (tutorialStep == 3) tutorialStep = 4
                 clearSelection()
@@ -420,8 +420,8 @@ private fun WordSiegePracticeContent(
                 actionVfxEvent += 1
                 val areaPoints = move.capturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS
                 notice = sh(
-                    "${botProfile.name}: ${move.primaryWord} • Kelime +${move.wordScore} • Bölge +$areaPoints",
-                    "${botProfile.name}: ${move.primaryWord} • Word +${move.wordScore} • Territory +$areaPoints",
+                    "${botProfile.name}: ${move.primaryWord} • Kelime +${move.wordScore} • Küp +$areaPoints",
+                    "${botProfile.name}: ${move.primaryWord} • Word +${move.wordScore} • Cubes +$areaPoints",
                 )
                 SonHarfSoundFx.scoreTick()
             }
@@ -623,7 +623,7 @@ private fun WordSiegePracticeContent(
                     )
                     ArenaMoveImpact(eventKey = if (actionVfxEvent > 0) actionVfxEvent.toString() else null,
                         label = lastMove?.let { move ->
-                            if (move.opponentCaptured > 0) sh("BÖLGE ELE GEÇİRİLDİ · ${move.opponentCaptured}", "TERRITORY TAKEN · ${move.opponentCaptured}")
+                            if (move.opponentCaptured > 0) sh("KÜP ELE GEÇİRİLDİ · ${move.opponentCaptured}", "CUBES CAPTURED · ${move.opponentCaptured}")
                             else "${move.primaryWord} · +${move.wordScore}"
                         }.orEmpty(),
                         accent = if (state.currentOwner == 2) PracticePlayerAccent else PracticeRivalAccent,
@@ -662,8 +662,8 @@ private fun WordSiegePracticeContent(
                             Spacer(Modifier.width(5.dp))
                             Text(
                                 sh(
-                                    "Bölge +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
-                                    "Territory +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
+                                    "Küp +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
+                                    "Cubes +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
                                 ),
                                 color = WordSiegeGameUi.Muted,
                                 fontSize = 8.sp,
@@ -835,7 +835,7 @@ private fun WordSiegePracticeContent(
                                     fontSize = 14.sp,
                                 )
                                 Text(
-                                    sh("Kelime ve bölge puanların ayrı hesaplandı.", "Word and territory points were scored separately."),
+                                    sh("Kelime ve küp puanların ayrı hesaplandı.", "Word and cube points were scored separately."),
                                     color = WordSiegeGameUi.Muted,
                                     fontSize = 8.sp,
                                 )
@@ -849,8 +849,8 @@ private fun WordSiegePracticeContent(
 
                 val statusMessage = notice ?: lastMove?.let { move ->
                     sh(
-                        "Son: ${move.formedWords.joinToString(" + ")} • Kelime +${move.wordScore} • Bölge +${move.capturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
-                        "Last: ${move.formedWords.joinToString(" + ")} • Word +${move.wordScore} • Territory +${move.capturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
+                        "Son: ${move.formedWords.joinToString(" + ")} • Kelime +${move.wordScore} • Küp +${move.capturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
+                        "Last: ${move.formedWords.joinToString(" + ")} • Word +${move.wordScore} • Cubes +${move.capturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
                     )
                 } ?: sh(
                     "Harf seç → boş hücreye yerleştir → kelimeyi tamamla → HAMLEYİ ONAYLA",
@@ -1221,7 +1221,7 @@ internal fun practiceAiChatReply(message: String, turn: Int): String {
         listOf("tebrik", "bravo", "güzel", "nice", "well played", "wp", "helal") .any { it in m } ->
             pick("Teşekkürler! Sıradaki hamlen de güzel olur eminim." to "Thanks! Your next move will be good too.", "Sağ ol, sen de iyi oynuyorsun." to "Thanks, you play well too.")
         listOf("kolay", "yeneceğim", "yenerim", "kazanacağım", "easy", "win") .any { it in m } ->
-            pick("Göreceğiz, ben de hazırım!" to "We'll see, I'm ready too!", "Bölgeler henüz bitmedi." to "The territory isn't settled yet.")
+            pick("Göreceğiz, ben de hazırım!" to "We'll see, I'm ready too!", "Küpler henüz paylaşılmadı." to "The cubes aren't settled yet.")
         listOf("şans", "hile", "luck", "cheat") .any { it in m } ->
             pick("Şans değil, strateji!" to "Not luck, strategy!", "Harf torbası herkese adil." to "The bag is fair to everyone.")
         listOf("bye", "görüşürüz", "hoşça", "gg", "iyi oyunlar") .any { it in m } ->

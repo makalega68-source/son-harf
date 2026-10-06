@@ -54,7 +54,8 @@ internal fun HomePlayTogether(profile: ProfileDto?, onSocial: () -> Unit) {
             friends.forEach { friend ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 32.dp,
-                        accent = SonHarfTheme.Primary, visible = friend.avatarVisibility != "hidden")
+                        accent = SonHarfTheme.Primary, visible = friend.avatarVisibility != "hidden",
+                        frameId = rememberPlayerFrame(friend.id))
                     Spacer(Modifier.width(8.dp))
                     Text(friend.displayName, Modifier.weight(1f), color = SonHarfTheme.TextPrimary,
                         fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

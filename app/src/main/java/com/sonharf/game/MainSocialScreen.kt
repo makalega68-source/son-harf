@@ -191,7 +191,7 @@ internal fun MainSocialScreen(
                                 friends.map { it.second }.sortedByDescending { it.rating }.take(8).forEachIndexed { index, friend ->
                                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                         Text("${index + 1}", color = MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(22.dp))
-                                        ProfilePhotoAvatar(friend.avatarPath, friend.displayName, 30.dp, visible = friend.avatarVisibility != "hidden", accent = if (friend.isVip) MainUi.Gold else MainUi.Blue, gender = friend.gender)
+                                        ProfilePhotoAvatar(friend.avatarPath, friend.displayName, 30.dp, visible = friend.avatarVisibility != "hidden", accent = if (friend.isVip) MainUi.Gold else MainUi.Blue, gender = friend.gender, frameId = rememberPlayerFrame(friend.id))
                                         Spacer(Modifier.width(8.dp))
                                         Text(friend.displayName, color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
                                         Text(friend.rating.toString(), color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)

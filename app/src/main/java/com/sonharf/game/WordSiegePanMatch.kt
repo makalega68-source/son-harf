@@ -504,7 +504,7 @@ internal fun WordSiegePanMatch(
             eventKey = lastMove?.id?.toString(),
             label = lastMove?.let { move ->
                 when {
-                    move.opponentCaptured > 0 -> sh("BÖLGE ELE GEÇİRİLDİ · ${move.opponentCaptured}", "TERRITORY TAKEN · ${move.opponentCaptured}")
+                    move.opponentCaptured > 0 -> sh("KÜP ELE GEÇİRİLDİ · ${move.opponentCaptured}", "CUBES CAPTURED · ${move.opponentCaptured}")
                     move.totalScore >= 25 -> sh("GÜÇLÜ HAMLE · +${move.totalScore}", "POWER MOVE · +${move.totalScore}")
                     else -> sh("${move.primaryWord} · +${move.totalScore}", "${move.primaryWord} · +${move.totalScore}")
                 }
@@ -1003,8 +1003,8 @@ private fun PanSiegeLastMoveInfo(move: WordSiegeMoveDto) {
     ) {
         Text(
             sh(
-                "Kelime +${move.wordScore}  •  Bölge +${move.areaScore}  •  Toplam +${move.totalScore}",
-                "Word +${move.wordScore}  •  Territory +${move.areaScore}  •  Total +${move.totalScore}",
+                "Kelime +${move.wordScore}  •  Küp +${move.areaScore}  •  Toplam +${move.totalScore}",
+                "Word +${move.wordScore}  •  Cubes +${move.areaScore}  •  Total +${move.totalScore}",
             ),
             Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
             color = WordSiegeGameUi.Text,

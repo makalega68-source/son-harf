@@ -279,7 +279,7 @@ private fun BoardRow(row: AtelierBoardRowDto) {
             if (medal != null) Text(medal, fontSize = 20.sp)
             else Text("${row.rank}", color = CompUi.InkMuted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         }
-        ProfilePhotoAvatar(avatarPath = row.avatarPath, name = row.name, size = 34.dp, accent = CompUi.Gold)
+        ProfilePhotoAvatar(avatarPath = row.avatarPath, name = row.name, size = 34.dp, accent = CompUi.Gold, frameId = rememberPlayerFrame(row.userId.takeIf { it.isNotBlank() }))
         Spacer(Modifier.width(8.dp))
         Text(
             row.name + if (row.me) sh(" (sen)", " (you)") else "",

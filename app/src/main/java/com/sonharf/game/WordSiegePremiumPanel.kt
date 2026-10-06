@@ -232,8 +232,8 @@ internal fun WordSiegePremiumPanel(
                                     !resolvedAccess.scoreCalculatorAccess -> sh("PRO özelliği", "PRO feature")
                                     placements.isEmpty() -> sh("Taş koy, hamleni gör", "Place tiles to see your move")
                                     preview != null -> sh(
-                                        "+${preview!!.totalScore} • kelime ${preview!!.wordScore} + bölge ${preview!!.areaScore}",
-                                        "+${preview!!.totalScore} • word ${preview!!.wordScore} + territory ${preview!!.areaScore}",
+                                        "+${preview!!.totalScore} • kelime ${preview!!.wordScore} + küp ${preview!!.areaScore}",
+                                        "+${preview!!.totalScore} • word ${preview!!.wordScore} + cubes ${preview!!.areaScore}",
                                     )
                                     previewError -> previewReason ?: sh("Önizleme alınamadı", "Preview unavailable")
                                     else -> sh("Hesaplanıyor…", "Calculating…")

@@ -22,9 +22,9 @@ internal fun lobbyGuideTopics(): List<LobbyGuideTopic> = listOf(
         sh("Elindeki taşlarla tahtaya kelime kur ve tahtada toprak kazan.", "Build words with your tiles and win ground on the board."),
         sh("Açılış kelimesi tahtanın ortasındaki Başlangıç Mührü'nden geçmelidir. Sonraki her kelime tek satırda ya da tek sütunda dizilir ve tahtadaki bir harfe dokunur.",
             "The opening word must pass through the Starting Seal in the middle. Every later word sits in one row or column and touches a letter on the board."),
-        sh("Kelime puanı kalıcıdır. Ele geçirdiğin her küp +2 bölge puanı yazar; rakipten kopardığın küp onun bölge puanını 1 azaltır. Bonus kareler yalnız üzerine ilk taş konduğunda çalışır.",
+        sh("Kelime puanı kalıcıdır. Ele geçirdiğin her küp +2 küp puanı yazar; rakipten kopardığın küp onun küp puanını 1 azaltır. Bonus kareler yalnız üzerine ilk taş konduğunda çalışır.",
             "Word points are permanent. Each cube you take is worth +2 territory points; a cube pulled from your rival lowers theirs by 1. A bonus square works only for the first tile placed on it."),
-        sh("Oyun sonunda kelime ve bölge puanı toplamı yüksek olan kazanır. Süresi dolan ya da pes eden oyuncu hükmen kaybeder.",
+        sh("Oyun sonunda kelime ve küp puanı toplamı yüksek olan kazanır. Süresi dolan ya da pes eden oyuncu hükmen kaybeder.",
             "Highest word plus territory total wins. A player who runs out of time or resigns loses by forfeit."),
     )),
     LobbyGuideTopic("last_letter", Icons.Rounded.Link, sh("Son Harf", "Last Letter"), listOf(

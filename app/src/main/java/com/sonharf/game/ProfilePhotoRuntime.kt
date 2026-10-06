@@ -155,7 +155,9 @@ internal fun ProfilePhotoAvatar(
     visible: Boolean = true,
     accent: Color = SonHarfCyan,
     gender: String? = null,
+    frameId: String? = null,
 ) {
+    val framed = ProfileFrameCollection.find(frameId) != null
     var bytes by remember(avatarPath, visible) { mutableStateOf<ByteArray?>(null) }
     var resolvedGender by remember(avatarPath, gender) { mutableStateOf(gender) }
     LaunchedEffect(avatarPath, visible, gender) {
@@ -165,7 +167,7 @@ internal fun ProfilePhotoAvatar(
     val bitmap = rememberProfileBitmap(bytes)
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFF2C14E), accent, Color(0xFFB07F1E), Color(0xFFF2C14E)))).padding(3.dp),
+            Modifier.size(if (framed) size * .72f else size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFF2C14E), accent, Color(0xFFB07F1E), Color(0xFFF2C14E)))).padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (visible && bitmap != null) {
@@ -174,6 +176,7 @@ internal fun ProfilePhotoAvatar(
                 SyntheticProfilePortrait(name, resolvedGender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
+        if (framed) ProfileFrameArt(frameId, size * .72f)
     }
 }
 
