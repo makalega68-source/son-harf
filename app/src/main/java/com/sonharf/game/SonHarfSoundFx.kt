@@ -8,8 +8,8 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 
-/** Word-game palette rendered offline by scripts/generate_word_game_sfx.py: wooden tile taps,
- * marimba for accepted words and wins, glockenspiel sparkle for bonuses, soft low bonks for
+/** Soft word-game palette rendered offline by scripts/generate_word_game_sfx.py: wooden tile taps,
+ * bubble pops for accepted words and bonuses, warm rounded tones for wins, soft low bonks for
  * mistakes. All synthesised from scratch; SoundPool playback only.
  */
 object SonHarfSoundFx {

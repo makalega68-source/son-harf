@@ -277,14 +277,19 @@ internal fun WordSiegeRegisterBoardHitTest(
     drag: WordSiegeTileDrag?,
     viewportOriginInWindow: Offset,
     viewport: androidx.compose.ui.unit.IntSize,
-    transform: WordSiegeBoardTransform,
+    transformOf: () -> WordSiegeBoardTransform,
     cellSizePx: Float,
 ) {
     if (drag == null) return
+    // The transform is read lazily (it changes every pinch frame without recomposing the board).
+    androidx.compose.runtime.LaunchedEffect(drag, cellSizePx) {
+        androidx.compose.runtime.snapshotFlow { transformOf().scale }.collect { drag.cellStepPx = cellSizePx * it }
+    }
     androidx.compose.runtime.SideEffect {
-        drag.cellStepPx = cellSizePx * transform.scale
+        drag.cellStepPx = cellSizePx * transformOf().scale
         drag.cellAt = { window ->
             val origin = viewportOriginInWindow
+            val transform = transformOf()
             val step = cellSizePx * transform.scale
             if (!origin.isSpecified || step <= 0f) null else {
                 val local = window - origin
@@ -299,7 +304,7 @@ internal fun WordSiegeRegisterBoardHitTest(
         }
         drag.cellCenter = { index ->
             val origin = viewportOriginInWindow
-            if (!origin.isSpecified) null else origin + wordSiegeCellCenterInViewport(index, transform, cellSizePx)
+            if (!origin.isSpecified) null else origin + wordSiegeCellCenterInViewport(index, transformOf(), cellSizePx)
         }
     }
 }

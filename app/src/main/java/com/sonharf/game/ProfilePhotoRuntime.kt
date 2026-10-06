@@ -45,12 +45,31 @@ internal object ProfilePhotoRuntime {
     private val cache = LinkedHashMap<String, ByteArray>()
     private val genderCache = LinkedHashMap<String, String?>()
 
-    /** Bytes already downloaded this session, so a page can show the photo on its first frame. */
-    fun cached(path: String?): ByteArray? = if (path.isNullOrBlank()) null else synchronized(cache) { cache[path] }
+    @Volatile private var diskDir: java.io.File? = null
+
+    /** Photos are also kept on disk (a new upload gets a new path), so a cold start shows them at once. */
+    fun init(context: android.content.Context) {
+        diskDir = java.io.File(context.applicationContext.cacheDir, "avatars").apply { mkdirs() }
+    }
+
+    private fun diskFile(path: String): java.io.File? = diskDir?.let { java.io.File(it, path.replace(Regex("[^A-Za-z0-9._-]"), "_").takeLast(150)) }
+
+    /** Bytes already downloaded (this session or an earlier one), so a page shows the photo on its first frame. */
+    fun cached(path: String?): ByteArray? {
+        if (path.isNullOrBlank()) return null
+        synchronized(cache) { cache[path] }?.let { return it }
+        val bytes = runCatching { diskFile(path)?.takeIf { it.isFile }?.readBytes() }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return null
+        synchronized(cache) {
+            cache[path] = bytes
+            while (cache.size > 40) cache.remove(cache.keys.first())
+        }
+        return bytes
+    }
 
     suspend fun load(path: String): ByteArray? {
         if (path.isBlank() || !SupabaseProvider.configured) return null
         synchronized(cache) { cache[path] }?.let { return it }
+        withContext(Dispatchers.IO) { cached(path) }?.let { return it }
         val session = SupabaseProvider.client.auth.currentSessionOrNull() ?: return null
         val response = runCatching {
             http.get("${BuildConfig.SUPABASE_URL}/storage/v1/object/authenticated/profile-photos/$path") {
@@ -60,9 +79,12 @@ internal object ProfilePhotoRuntime {
         }.getOrNull() ?: return null
         if (!response.status.isSuccess()) return null
         val bytes = response.bodyAsBytes()
-        if (bytes.isNotEmpty()) synchronized(cache) {
-            cache[path] = bytes
-            while (cache.size > 40) cache.remove(cache.keys.first())
+        if (bytes.isNotEmpty()) {
+            synchronized(cache) {
+                cache[path] = bytes
+                while (cache.size > 40) cache.remove(cache.keys.first())
+            }
+            withContext(Dispatchers.IO) { runCatching { diskFile(path)?.writeBytes(bytes) } }
         }
         return bytes
     }
@@ -162,9 +184,13 @@ internal fun ProfilePhotoAvatar(
 ) {
     val framed = ProfileFrameCollection.find(frameId) != null
     var bytes by remember(avatarPath, visible) { mutableStateOf(if (visible) ProfilePhotoRuntime.cached(avatarPath) else null) }
+    // The drawn portrait only stands in once we know there is no photo; while one loads the
+    // circle stays plain, so a wrong face never flashes before the real one.
+    var photoMissing by remember(avatarPath, visible) { mutableStateOf(!visible || avatarPath.isNullOrBlank()) }
     var resolvedGender by remember(avatarPath, gender) { mutableStateOf(gender) }
     LaunchedEffect(avatarPath, visible, gender) {
         bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+        photoMissing = bytes == null
         resolvedGender = gender ?: ProfilePhotoRuntime.genderForAvatar(avatarPath)
     }
     val bitmap = rememberProfileBitmap(bytes)
@@ -175,7 +201,7 @@ internal fun ProfilePhotoAvatar(
         ) {
             if (visible && bitmap != null) {
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-            } else {
+            } else if (photoMissing) {
                 SyntheticProfilePortrait(name, resolvedGender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
@@ -205,11 +231,19 @@ internal fun ProfilePhotoAvatarWithGender(
         )
     }
     var resolvedGender by remember(avatarPath, gender, userId) { mutableStateOf(gender) }
+    var photoMissing by remember(avatarPath, visible, userId) {
+        mutableStateOf(
+            if (!visible) true
+            else if (userId == null) avatarPath.isNullOrBlank()
+            else PlayerIdentityCache.peek(userId)?.let { it.avatarVisibility == "hidden" || it.avatarPath.isNullOrBlank() } ?: false
+        )
+    }
     LaunchedEffect(avatarPath, visible, gender, userId) {
         val identity = userId?.let { runCatching { PlayerIdentityCache.get(it) }.getOrNull() }
         resolvedGender = gender ?: identity?.gender ?: ProfilePhotoRuntime.genderForAvatar(avatarPath)
         val path = if (userId != null) identity?.avatarPath else avatarPath
         bytes = if (visible && (userId == null || identity?.avatarVisibility != "hidden") && !path.isNullOrBlank()) ProfilePhotoRuntime.load(path) else null
+        photoMissing = bytes == null
     }
     val bitmap = rememberProfileBitmap(bytes)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
@@ -219,7 +253,7 @@ internal fun ProfilePhotoAvatarWithGender(
         ) {
             if (visible && bitmap != null) {
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-            } else {
+            } else if (photoMissing) {
                 SyntheticProfilePortrait(name, resolvedGender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
@@ -241,8 +275,10 @@ internal fun ProfilePhotoAvatarRectWithGender(
 ) {
     val framed = ProfileFrameCollection.find(frameId) != null
     var bytes by remember(avatarPath) { mutableStateOf(ProfilePhotoRuntime.cached(avatarPath)) }
+    var photoMissing by remember(avatarPath) { mutableStateOf(avatarPath.isNullOrBlank()) }
     LaunchedEffect(avatarPath) {
         bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+        photoMissing = bytes == null
     }
     val bitmap = rememberProfileBitmap(bytes)
     // Historical callers supplied rectangular slots. The slot may remain rectangular, but the
@@ -271,7 +307,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
                     Modifier.fillMaxSize().clip(CircleShape),
                     contentScale = ContentScale.Crop,
                 )
-            } else {
+            } else if (photoMissing) {
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }

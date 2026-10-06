@@ -72,7 +72,7 @@ internal fun HomeLobbyScreen(
     onGameLanguage: (String) -> Unit,
 ) {
     val me = backend.currentUserId()
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var waitingForMe by remember { mutableIntStateOf(0) }
     var menuOpen by remember { mutableStateOf(false) }
     var leagueInfo by remember { mutableStateOf(false) }

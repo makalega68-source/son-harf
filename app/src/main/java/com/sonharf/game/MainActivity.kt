@@ -179,6 +179,8 @@ class MainActivity : ComponentActivity() {
         bestEffortStartup("ui preferences") { SonHarfPreferences.syncUi(this) }
         bestEffortStartup("cosmetics") { SonHarfCosmetics.restore(this); ThroneChampion.restore(this); WordSiegeBoardSkins.restore(this); WordSiegeBonusIcons.init(this); GameChatBadge.init(this) }
         bestEffortStartup("remote experience cache") { RemoteExperience.loadCached(this) }
+        // Your own profile and photo from the last session, so "you" appears on the first frame.
+        bestEffortStartup("own profile") { OwnProfile.init(this); ProfilePhotoRuntime.init(this) }
         // Decode the large lobby art in the background now, so the first pages show it at once.
         bestEffortStartup("art cache") {
             lifecycleScope.launch {

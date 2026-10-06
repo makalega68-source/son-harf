@@ -23,7 +23,7 @@ fun FinalProfileScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var blocked by remember { mutableStateOf<List<ProfileDto>>(emptyList()) }
     var leaders by remember { mutableStateOf<List<LeaderboardEntry>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }

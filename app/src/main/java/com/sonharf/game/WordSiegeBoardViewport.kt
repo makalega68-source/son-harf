@@ -250,6 +250,7 @@ internal fun wordSiegeBoardIndexAt(
  * left the board stuck zoomed in.
  */
 internal suspend fun PointerInputScope.detectWordSiegeBoardGestures(
+    onEnd: () -> Unit = {},
     onTransform: (centroid: Offset, pan: Offset, zoom: Float) -> Unit,
 ) = coroutineScope {
     launch { detectTransformGestures { centroid, pan, zoom, _ -> onTransform(centroid, pan, zoom) } }
@@ -258,7 +259,10 @@ internal suspend fun PointerInputScope.detectWordSiegeBoardGestures(
             awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             while (true) {
                 val event = awaitPointerEvent(PointerEventPass.Initial)
-                if (event.changes.none { it.pressed }) break
+                if (event.changes.none { it.pressed }) {
+                    onEnd()
+                    break
+                }
                 if (event.changes.count { it.pressed } >= 2) {
                     val zoom = event.calculateZoom()
                     val pan = event.calculatePan()

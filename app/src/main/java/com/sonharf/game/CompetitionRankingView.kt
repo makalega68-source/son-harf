@@ -40,7 +40,7 @@ private val RankBronze = Color(0xFFB0835A)
 internal fun CompetitionRankingView(onCup: () -> Unit, onRivals: () -> Unit) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var period by rememberSaveable { mutableIntStateOf(0) }
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var myId by remember { mutableStateOf<String?>(null) }
     var weekly by remember { mutableStateOf<List<RankingRow>>(emptyList()) }
     var overall by remember { mutableStateOf<List<RankingRow>?>(null) }

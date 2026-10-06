@@ -118,7 +118,9 @@ internal fun WordSiegePracticeBoard(
         wordSiegeSkinnedFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx, boardSkin)
     }
     val minScale = minOf(fitScale, WORD_SIEGE_PRACTICE_MAX_SCALE)
-    val transform by remember(viewport, boardPx, closePan, closeScale, boardSkin) {
+    // Read only where it is used (draw layer, gestures, the small overlays), never in this body:
+    // a pinch then redraws the board layer instead of recomposing all 225 cells every frame.
+    val transformState = remember(viewport, boardPx, boardSkin) {
         derivedStateOf {
             // Pan limits include the skin's frame, so the frame can be seen and never covers cells.
             WordSiegeBoardTransform(
@@ -133,7 +135,6 @@ internal fun WordSiegePracticeBoard(
     val gestureMin by rememberUpdatedState(minScale)
     val gestureViewport by rememberUpdatedState(viewport)
     val gestureSkin by rememberUpdatedState(boardSkin)
-    val gesturePan by rememberUpdatedState(transform.pan)
     var consumedHighlightKey by remember { mutableStateOf(moveEventKey) }
     var highlightedIndices by remember { mutableStateOf<Set<Int>>(emptySet()) }
     val highlightAlpha = remember { Animatable(0f) }
@@ -195,7 +196,7 @@ internal fun WordSiegePracticeBoard(
             viewportModeCallback(next)
         }
     }
-    WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx)
+    WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, { transformState.value }, tilePx)
     // Only the hovered cell matters, so the board recomposes when it changes, not every finger move.
     val dragHover by remember(tileDrag) { derivedStateOf { tileDrag?.hoverCell } }
     val hiddenCells: Set<Int> = buildSet {
@@ -242,13 +243,13 @@ internal fun WordSiegePracticeBoard(
                 // One finger pans, two fingers pinch to zoom; no double tap.
                 .pointerInput(Unit) {
                     run {
-                        detectWordSiegeBoardGestures { centroid, pan, zoom ->
+                        // The header folds only once the fingers lift, so the board never jumps mid-pinch.
+                        detectWordSiegeBoardGestures(onEnd = { reportZoom(closeScale) }) { centroid, pan, zoom ->
                             val oldScale = closeScale
                             val newScale = (oldScale * zoom).coerceIn(gestureMin, WORD_SIEGE_PRACTICE_MAX_SCALE)
                             val ratio = if (oldScale > 0f) newScale / oldScale else 1f
-                            val candidate = centroid + (gesturePan - centroid) * ratio + pan
+                            val candidate = centroid + (transformState.value.pan - centroid) * ratio + pan
                             closeScale = newScale
-                            if (zoom != 1f) reportZoom(newScale)
                             closePan = clampWordSiegeSkinnedPan(
                                 candidate,
                                 gestureViewport.width.toFloat(),
@@ -266,6 +267,7 @@ internal fun WordSiegePracticeBoard(
                     .wrapContentSize(Alignment.TopStart, unbounded = true)
                     .requiredSize(PracticeSiegeCellSize * WordSiegeBoardSpec.Size)
                     .graphicsLayer {
+                        val transform = transformState.value
                         translationX = transform.pan.x
                         translationY = transform.pan.y
                         scaleX = transform.scale
@@ -325,6 +327,7 @@ internal fun WordSiegePracticeBoard(
                 }
             }
 
+            WithBoardTransform(transformState) { transform ->
             WordSiegePendingMoveBadges(
                 cells = placements.keys.filter { it !in hiddenCells }.takeIf { it.size == placements.size }.orEmpty(),
                 transform = transform,
@@ -411,6 +414,7 @@ internal fun WordSiegePracticeBoard(
                     else -> null
                 },
             )
+            }
         }
       }
     }
@@ -768,4 +772,14 @@ private fun practiceHasLetterNeighbour(board: List<WordSiegeCellDto>, index: Int
         r in 0 until WordSiegeBoardSpec.Size && c in 0 until WordSiegeBoardSpec.Size &&
             board.getOrNull(WordSiegeBoardSpec.index(r, c))?.letter != null
     }
+}
+
+/** Runs [content] in its own small recomposition scope, so reading the board transform there
+ * (which changes every frame of a pinch) never recomposes the board's cells. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.WithBoardTransform(
+    state: androidx.compose.runtime.State<WordSiegeBoardTransform>,
+    content: @Composable androidx.compose.foundation.layout.BoxScope.(WordSiegeBoardTransform) -> Unit,
+) {
+    content(state.value)
 }

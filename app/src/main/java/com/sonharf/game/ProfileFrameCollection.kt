@@ -209,7 +209,8 @@ internal fun rememberPlayerFrame(userId: String?): String? {
     val localFrame = if (userId == me) SonHarfCosmetics.profileFrameId else null
     var frame by remember(userId) {
         mutableStateOf(
-            if (userId == me) PublicFrames.peek(userId)?.takeIf { it in ProfileFrameCollection.serverFrameIds } ?: localFrame
+            if (userId == me) PublicFrames.peek(userId)?.takeIf { it in ProfileFrameCollection.serverFrameIds }
+                ?: ProfileFrameCollection.throneFrame.id.takeIf { SonHarfCosmetics.throneChampion } ?: localFrame
             else PublicFrames.peek(userId)
         )
     }
@@ -222,8 +223,9 @@ internal fun rememberPlayerFrame(userId: String?): String? {
         }
         while (true) {
             // Keep a valid reward visible during refresh; revoke on expiry or transport failure.
+            // Only a known, passed deadline revokes it; an unknown one waits for the server's answer below.
             if (frame == ProfileFrameCollection.throneFrame.id &&
-                (PublicFrames.rewardDeadline(userId) ?: 0L) <= System.currentTimeMillis()) frame = localFrame
+                (PublicFrames.rewardDeadline(userId) ?: Long.MAX_VALUE) <= System.currentTimeMillis()) frame = localFrame
             // Your own frame always follows your local selection, so a new choice shows at once and a
             // stale server read can never hide it; the server only adds the weekly throne reward.
             runCatching { PublicFrames.get(userId) }

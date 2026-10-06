@@ -241,7 +241,7 @@ private fun UnifiedHomeScreen(
     onTasks: () -> Unit,
     onVip: () -> Unit,
 ) {
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
         val id = backend.currentUserId()

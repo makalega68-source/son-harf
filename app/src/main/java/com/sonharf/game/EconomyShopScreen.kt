@@ -163,7 +163,7 @@ private fun EconomyCatalogScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var items by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
     var equipped by remember { mutableStateOf<EquippedCosmeticsDto?>(null) }

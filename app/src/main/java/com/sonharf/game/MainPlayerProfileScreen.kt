@@ -55,7 +55,7 @@ internal fun MainPlayerProfileScreen(
     onRivals: () -> Unit = onSocial,
     onCompete: () -> Unit = {},
 ) {
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
     var loading by remember { mutableStateOf(true) }
     var renaming by remember { mutableStateOf(false) }

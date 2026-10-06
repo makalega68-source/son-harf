@@ -42,7 +42,7 @@ internal fun MonsterStyleStoreScreen() {
     val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) runCatching { OnlineGameBackend() }.getOrNull() else null }
     val scope = rememberCoroutineScope()
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var catalog by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
     var equipped by remember { mutableStateOf<EquippedCosmeticsDto?>(null) }

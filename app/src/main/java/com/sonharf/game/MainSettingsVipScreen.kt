@@ -36,7 +36,7 @@ internal fun MainSettingsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var music by remember { mutableStateOf(SonHarfPreferences.musicEnabled(context)) }
     var sound by remember { mutableStateOf(SonHarfPreferences.soundEnabled(context)) }
     var gameInvites by remember { mutableStateOf(SonHarfPreferences.gameInviteNotificationsEnabled(context)) }
@@ -260,7 +260,7 @@ internal fun MainVipScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var loading by remember { mutableStateOf(true) }
     var showPurchase by remember { mutableStateOf(false) }
 

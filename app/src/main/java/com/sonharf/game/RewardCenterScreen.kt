@@ -49,7 +49,7 @@ fun RewardCenterScreen() {
     var status by remember { mutableStateOf<RewardCenterStatusDto?>(null) }
     var items by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var storefront by remember { mutableStateOf<StorefrontDto?>(null) }
     var seriesAccess by remember { mutableStateOf(false) }
     var adReady by remember { mutableStateOf(false) }

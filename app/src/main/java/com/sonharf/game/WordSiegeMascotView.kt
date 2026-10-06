@@ -1156,7 +1156,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         drawLids(canvas, RIGHT_EYE_X, EYE_Y, 122f, 126f, lid, slant, 1f, lower)
         canvas.restoreToCount(eyeLayer)
         if (skin == WordSiegeMascotSkin.PINK) drawGirlLashes(canvas, RIGHT_EYE_X, EYE_Y, 122f, 126f, lid, 1f)
-        drawAnimeEyes(canvas, now, mood, lid, gazeX + tremor, gazeY)
+        val king = skin == WordSiegeMascotSkin.GOLD_KING
+        if (!king) drawAnimeEyes(canvas, now, mood, lid, gazeX + tremor, gazeY)
 
         val browY = poseValue[P_BROW_Y] - lid * 6f - yawn * 22f - shrug * 26f
         val browTilt = Math.toDegrees(poseValue[P_BROW_TILT].toDouble()).toFloat()
@@ -1166,13 +1167,16 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val cheek = poseValue[P_CHEEK].coerceIn(0f, 1f)
         for (index in 0 until 2) {
             val cheekPaint = cheekPaints[index]
+            if (king) break
             val blush = if (skin == WordSiegeMascotSkin.PINK) 40f else 18f
             cheekPaint.alpha = (blush + cheek * 92f).toInt().coerceIn(0, 255)
             canvas.drawCircle(if (index == 0) LEFT_CHEEK_X else RIGHT_CHEEK_X, CHEEK_Y, 96f, cheekPaint)
         }
-        drawLayer(canvas, "cheek_left", 0f, -lower * 10f)
-        drawLayer(canvas, "cheek_right", 0f, -lower * 10f)
-        drawBlushLines(canvas, mood, cheek)
+        if (!king) {
+            drawLayer(canvas, "cheek_left", 0f, -lower * 10f)
+            drawLayer(canvas, "cheek_right", 0f, -lower * 10f)
+            drawBlushLines(canvas, mood, cheek)
+        }
 
         // Talking: irregular syllables layered on the current expression.
         val mouthOpen = if (speaking && actionKind != WordSiegeMascotAction.EAT) {
@@ -1188,6 +1192,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val mouthBlend = 1f - kotlin.math.exp(-dt * 15f)
         for (i in 0 until 3) mouthValue[i] += (mouthTarget[i] - mouthValue[i]) * mouthBlend
         drawMouth(canvas, mouthValue[0], mouthValue[1], mouthValue[2])
+        if (king) drawKingMustache(canvas, mouthTopY(mouthValue[0], mouthValue[1]))
         if (actionKind == WordSiegeMascotAction.EAT && faceT >= 0f) drawLetterSnack(canvas, faceT)
         decor.drawFace(canvas, mouthTopY(mouthValue[0], mouthValue[1]), mouthValue[1])
         if (mood == WordSiegeMascotEmotion.TEARY) drawTears(canvas, now)
@@ -1251,6 +1256,23 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             WordSiegeMascotEmotion.SPEAKING -> SPEAKING_POSE
         }
         values.copyInto(out)
+        if (skin == WordSiegeMascotSkin.GOLD_KING) regalPose(out)
+    }
+
+    /**
+     * The Golden King never looks cute or coy: heavy, assured lids, level brows drawn slightly in,
+     * a closed confident smile and no blush, whatever the mood.
+     */
+    private fun regalPose(out: FloatArray) {
+        out[P_LID] = max(out[P_LID], .26f)
+        out[P_SLANT] = min(out[P_SLANT], -.1f)
+        out[P_BROW_Y] = out[P_BROW_Y] * .45f + 8f
+        out[P_BROW_TILT] = min(out[P_BROW_TILT], -.12f)
+        out[P_SMILE] = out[P_SMILE].coerceIn(-.3f, .5f)
+        out[P_OPEN] = min(out[P_OPEN], .08f)
+        out[P_WIDTH] = min(out[P_WIDTH], .88f)
+        out[P_CHEEK] = 0f
+        out[P_IRIS] = .9f
     }
 
     private fun WordSiegeMascotEmotion.isSorrow(): Boolean =
@@ -1581,6 +1603,32 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             canvas.drawOval(ovalRect, detailPaint)
             detailPaint.xfermode = null
             detailPaint.alpha = 255
+        }
+    }
+
+    private val mustachePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF6B4208.toInt() }
+    private val mustacheShine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE; strokeWidth = 7f; strokeCap = Paint.Cap.ROUND; color = 0x88FFE7A3.toInt()
+    }
+    private val mustachePath = Path()
+
+    /** A proud, curled gold-brown moustache just above the mouth (Golden King only). */
+    private fun drawKingMustache(canvas: Canvas, mouthTop: Float) {
+        val x = MOUTH_X
+        val y = mouthTop - 20f
+        for (side in floatArrayOf(-1f, 1f)) {
+            mustachePath.rewind()
+            mustachePath.moveTo(x, y - 8f)
+            mustachePath.cubicTo(x + side * 40f, y - 34f, x + side * 96f, y - 30f, x + side * 126f, y - 4f)
+            mustachePath.cubicTo(x + side * 146f, y + 12f, x + side * 156f, y - 22f, x + side * 140f, y - 42f)
+            mustachePath.cubicTo(x + side * 166f, y - 26f, x + side * 160f, y + 24f, x + side * 112f, y + 22f)
+            mustachePath.cubicTo(x + side * 70f, y + 20f, x + side * 30f, y + 10f, x, y + 12f)
+            mustachePath.close()
+            canvas.drawPath(mustachePath, mustachePaint)
+            mustachePath.rewind()
+            mustachePath.moveTo(x + side * 18f, y - 10f)
+            mustachePath.quadTo(x + side * 70f, y - 24f, x + side * 112f, y - 6f)
+            canvas.drawPath(mustachePath, mustacheShine)
         }
     }
 

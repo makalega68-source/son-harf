@@ -709,8 +709,12 @@ private fun PanSiegeBoard(
     // gets that room; zooming back out brings the large cards back. Two thresholds keep the fold
     // from flickering as the board's own size changes with it.
     var zoomedIn by remember(gameId) { mutableStateOf(viewportMode == WordSiegeBoardViewportMode.CLOSE) }
+    // The fold waits until the fingers lift: folding mid-pinch resized the board under the fingers,
+    // which made the zoom wobble and stutter.
+    var pinching by remember(gameId) { mutableStateOf(false) }
     LaunchedEffect(closeScaleState, fitScale) {
-        snapshotFlow { if (fitScale > 0f) closeScaleState.value / fitScale else 1f }.collect { ratio ->
+        snapshotFlow { if (pinching) null else if (fitScale > 0f) closeScaleState.value / fitScale else 1f }.collect { ratio ->
+            if (ratio == null) return@collect
             if (!zoomedIn && ratio > 1.3f) zoomedIn = true
             else if (zoomedIn && ratio < 1.1f) zoomedIn = false
         }
@@ -719,7 +723,7 @@ private fun PanSiegeBoard(
         val mode = if (zoomedIn) WordSiegeBoardViewportMode.CLOSE else WordSiegeBoardViewportMode.FIT
         if (mode != viewportMode) onViewportModeChange(mode)
     }
-    PanSiegeScoped { WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx) }
+    PanSiegeScoped { WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, { transform }, tilePx) }
     val dragHover by remember(tileDrag) { derivedStateOf { tileDrag?.hoverCell } }
     val draggedFrom = tileDrag?.fromCell
 
@@ -852,7 +856,8 @@ private fun PanSiegeBoard(
                 .wordSiegeMascotTouchWatcher(mascotTouches)
                 // One finger pans, two fingers pinch to zoom around the fingers.
                 .pointerInput(gameId) {
-                    detectWordSiegeBoardGestures { centroid, pan, zoom ->
+                    detectWordSiegeBoardGestures(onEnd = { pinching = false }) { centroid, pan, zoom ->
+                        if (zoom != 1f) pinching = true
                         val oldScale = closeScaleState.value
                         val newScale = (oldScale * zoom).coerceIn(gestureFit, gestureMax)
                         val ratio = if (oldScale > 0f) newScale / oldScale else 1f

@@ -89,13 +89,14 @@ internal fun GoldKingOnThrone(modifier: Modifier = Modifier) {
     var actionKey by remember { mutableLongStateOf(0L) }
     var action by remember { mutableStateOf<WordSiegeMascotAction?>(null) }
     LaunchedEffect(Unit) {
-        val moves = listOf(WordSiegeMascotAction.SPARKLE, WordSiegeMascotAction.WAVE, WordSiegeMascotAction.NOD,
-            WordSiegeMascotAction.SPARKLE, WordSiegeMascotAction.CHEER, WordSiegeMascotAction.LOOK_AROUND)
+        // Slow, sovereign moves only: a measured look over the realm, an approving nod, a gleam.
+        val moves = listOf(WordSiegeMascotAction.LOOK_AROUND, WordSiegeMascotAction.NOD,
+            WordSiegeMascotAction.SPARKLE, WordSiegeMascotAction.LOOK_AROUND)
         var i = 0
         delay(1_200)
         while (true) {
             action = moves[i % moves.size]; actionKey += 1; i++
-            delay(4_800)
+            delay(6_500)
         }
     }
     Box(modifier, contentAlignment = Alignment.TopCenter) {
@@ -106,11 +107,11 @@ internal fun GoldKingOnThrone(modifier: Modifier = Modifier) {
         }
         WordSiegeMascot(
             moveId = null, lastMoveMine = false, pendingCells = emptyList(), playerTurn = false,
-            requestedEmotion = WordSiegeMascotEmotion.HAPPY,
+            requestedEmotion = WordSiegeMascotEmotion.PROUD,
             modifier = Modifier.padding(top = 6.dp).size(124.dp),
             actionKey = actionKey, action = action,
             hat = WordSiegeMascotHat.NONE, skin = WordSiegeMascotSkin.GOLD_KING,
-            onTap = { action = WordSiegeMascotAction.CHEER; actionKey += 1 },
+            onTap = { action = WordSiegeMascotAction.NOD; actionKey += 1 },
         )
         // Twinkling four-point stars and gold motes drifting up around the king.
         Canvas(Modifier.matchParentSize()) {

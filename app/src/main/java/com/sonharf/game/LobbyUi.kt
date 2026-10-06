@@ -57,20 +57,24 @@ internal fun LobbyTabs(
     labels: List<String>, selected: Int, onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 4.dp),
+    // Up to four tabs share the width equally (symmetric); more than that scroll.
+    val equal = labels.size <= 4
+    Row(modifier.fillMaxWidth().then(if (equal) Modifier else Modifier.horizontalScroll(rememberScrollState())).padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         labels.forEachIndexed { index, label ->
             val active = selected == index
             val premium = SonHarfCosmetics.petrolMenus
             // Premium menus: the active tab is a gold tile with dark ink, the others petrol with a gold hairline.
             Surface(onClick = { onSelect(index) }, shape = RoundedCornerShape(14.dp),
+                modifier = if (equal) Modifier.weight(1f) else Modifier,
                 color = if (active) (if (premium) LobbyBrand.Gold else LobbyPalette.Green) else LobbyPalette.Paper,
                 border = BorderStroke(1.dp, if (active) (if (premium) PremiumKit.GoldLight else LobbyPalette.Green)
                     else if (premium) LobbyBrand.Gold.copy(alpha = .35f) else LobbyPalette.Line)) {
-                Box(Modifier.heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+                Box(Modifier.heightIn(min = 48.dp).padding(horizontal = if (equal) 6.dp else 16.dp, vertical = 12.dp),
                     contentAlignment = Alignment.Center) {
                     Text(label, color = if (active) (if (premium) Color(0xFF3A2A00) else Color.White) else LobbyPalette.Ink,
-                        fontSize = 13.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium)
+                        fontSize = 13.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
         }

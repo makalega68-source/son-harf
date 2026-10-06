@@ -50,7 +50,7 @@ internal fun UnifiedProVipScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var entitlements by remember { mutableStateOf<VipEntitlementsDto?>(null) }
     var loading by remember { mutableStateOf(true) }
     var entitlementError by remember { mutableStateOf(false) }

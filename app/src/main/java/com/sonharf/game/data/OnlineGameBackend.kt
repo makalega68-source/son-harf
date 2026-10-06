@@ -340,7 +340,8 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
         supabase.from("friendships").select().decodeList()
 
     suspend fun getProfile(id: String): ProfileDto =
-        supabase.from("profiles").select { filter { eq("id", id) } }.decodeSingle()
+        supabase.from("profiles").select { filter { eq("id", id) } }.decodeSingle<ProfileDto>()
+            .also { com.sonharf.game.OwnProfile.remember(it) }
 
     suspend fun getProfilesParallel(ids: List<String>): List<ProfileDto> = coroutineScope {
         // One `id in (...)` query per 50 ids; bounded per-id batches only if that query fails.

@@ -1,8 +1,8 @@
 """Original word-game audio palette, synthesised from scratch (no sampled or borrowed audio).
 
-The feel follows what players know from popular word games: a soft wooden tile tap per key,
-a bright two-note marimba for an accepted word, glockenspiel sparkle for bonuses, a muted
-low "bonk" (never a buzzer) for a wrong word and short marimba fanfares for wins.
+The feel follows what players know from popular word games, kept deliberately soft: a wooden
+tile tap per key, bubble pops for accepted words and bonuses, a muted low "bonk" (never a
+buzzer) for a wrong word and warm, rounded tones for wins. No bells or bright metal.
 Pure standard library so it runs anywhere: python3 scripts/generate_word_game_sfx.py
 """
 from pathlib import Path
@@ -120,43 +120,73 @@ def seq(notes, voice, step, length, gain=1.0, ring=.6):
     return mix([(i * step, gain, voice(NOTE[n], ring)) for i, n in enumerate(notes)], length)
 
 
-def main():
-    # Typing and taps: quiet, short, woody.
-    write('sfx_key_click', wood(1250, .05), peak=.45)
-    write('sfx_ui_tap', pop(), peak=.40)
-    write('sfx_rival_move', wood(820, .07, noise=.15), peak=.45)
-    write('sfx_countdown', wood(1700, .045, noise=.1), peak=.40)
-    write('sfx_heartbeat', mix([(0, 1, bonk(110, .16)), (.17, .7, bonk(98, .16))], .36), peak=.50)
+def bubble(f0, f1, length, decay=.035):
+    """Soft bubble: a rounded sine glide, no bright overtones."""
+    n = int(length * RATE)
+    out, phase = [], 0.0
+    for i in range(n):
+        t = i / RATE
+        f = f0 + (f1 - f0) * min(1.0, t / max(length * .6, 1e-3))
+        phase += 2 * math.pi * f / RATE
+        out.append(math.sin(phase) * math.exp(-t / decay) * (1 - math.exp(-t / .003)))
+    return out
 
-    # Accepted word: the classic bright upward two-note marimba.
-    write('sfx_word_accepted', mix([(0, .9, marimba(NOTE['C6'], .32)), (.075, 1, marimba(NOTE['G6'], .42))], .5))
-    # A notification: one soft glockenspiel note.
-    write('sfx_soft_notify', glock(NOTE['E6'], .7), peak=.45)
-    # Your turn: gentle G-C chime.
-    write('sfx_turn_start', mix([(0, .8, glock(NOTE['G5'], .5)), (.11, 1, glock(NOTE['C6'], .6))], .75), peak=.50)
+
+def soft(hz, length, decay=.16):
+    """Soft rounded tone: a pure sine with a slow attack and a whisper of the octave."""
+    n = int(length * RATE)
+    out = []
+    for i in range(n):
+        t = i / RATE
+        v = (.9 * math.sin(2 * math.pi * hz * t) + .08 * math.sin(4 * math.pi * hz * t) * math.exp(-t / .03))
+        out.append(v * math.exp(-t / decay) * (1 - math.exp(-t / .006)))
+    return out
+
+
+def lowpass(buf, k=.25):
+    """Gentle one-pole low-pass to take any edge off."""
+    out, y = [], 0.0
+    for v in buf:
+        y += k * (v - y)
+        out.append(y)
+    return out
+
+
+def main():
+    # Every cue is built from the same soft family as the key tap and the bubble pop:
+    # no bells, no bright metal, fundamentals kept low, rounded attacks, gentle peaks.
+    write('sfx_key_click', wood(1250, .05), peak=.42)
+    write('sfx_ui_tap', pop(), peak=.38)
+    write('sfx_rival_move', wood(820, .07, noise=.15), peak=.40)
+    write('sfx_countdown', wood(1100, .045, noise=.1), peak=.36)
+    write('sfx_heartbeat', mix([(0, 1, bonk(110, .16)), (.17, .7, bonk(98, .16))], .36), peak=.45)
+
+    # Accepted word: two quick rising bubbles.
+    write('sfx_word_accepted', lowpass(mix([(0, .85, bubble(420, 620, .09)), (.07, 1, bubble(560, 840, .11))], .22)), peak=.48)
+    # Notification: one soft bubble.
+    write('sfx_soft_notify', lowpass(bubble(480, 660, .12, decay=.05)), peak=.38)
+    # Your turn: soft two-note tone, low register.
+    write('sfx_turn_start', lowpass(mix([(0, .8, soft(NOTE['G4'], .28, .09)), (.10, 1, soft(NOTE['C5'], .34, .11))], .48)), peak=.40)
     # Wrong word: two soft low bonks.
-    write('sfx_warning', mix([(0, 1, bonk(196, .18)), (.13, .85, bonk(165, .22))], .38), peak=.55)
-    # Bonus: quick glockenspiel sparkle arpeggio.
-    write('sfx_bonus', seq(['C6', 'E6', 'G6', 'C7'], glock, .055, .95, ring=.75))
-    # Streak / combo: rising marimba run topped with a glock note.
-    write('sfx_streak', mix([(0, .8, marimba(NOTE['E5'], .3)), (.06, .85, marimba(NOTE['G5'], .3)),
-                             (.12, .9, marimba(NOTE['C6'], .35)), (.18, .7, glock(NOTE['E7'], .5))], .75))
-    # Round won: marimba arpeggio resolving on a chord.
-    write('sfx_round_win', mix([(0, .8, marimba(NOTE['C5'], .4)), (.09, .85, marimba(NOTE['E5'], .4)),
-                                (.18, .9, marimba(NOTE['G5'], .5)), (.30, 1, marimba(NOTE['C6'], .6)),
-                                (.30, .5, glock(NOTE['E6'], .7))], 1.05))
-    # Round lost: mellow falling third, low and soft.
-    write('sfx_round_lost', mix([(0, .9, marimba(NOTE['E5'], .45)), (.17, 1, marimba(NOTE['C5'], .6))], .85), peak=.50)
-    # Match won: a short marimba fanfare with a glockenspiel crown.
-    write('sfx_victory', mix([(0, .7, marimba(NOTE['C5'], .4)), (.10, .75, marimba(NOTE['E5'], .4)),
-                              (.20, .8, marimba(NOTE['G5'], .4)), (.32, .9, marimba(NOTE['C6'], .5)),
-                              (.46, .8, marimba(NOTE['E6'], .5)), (.60, 1, marimba(NOTE['G6'], .8)),
-                              (.60, .6, marimba(NOTE['C6'], .8)), (.60, .55, glock(NOTE['C7'], 1.0)),
-                              (.60, .35, marimba(NOTE['C5'], .9))], 1.75), peak=.66)
-    # Match lost: slow, gentle descending marimba, not a sad trombone.
-    write('sfx_defeat', mix([(0, .8, marimba(NOTE['G5'], .5)), (.20, .85, marimba(NOTE['E5'], .5)),
-                             (.40, .9, marimba(NOTE['D5'], .5)), (.62, 1, marimba(NOTE['C5'], .9)),
-                             (.62, .4, marimba(NOTE['G4'], .9))], 1.6), peak=.52)
+    write('sfx_warning', mix([(0, 1, bonk(196, .18)), (.13, .85, bonk(165, .22))], .38), peak=.48)
+    # Bonus: a quick run of three rising bubbles.
+    write('sfx_bonus', lowpass(mix([(0, .8, bubble(420, 600, .08)), (.06, .9, bubble(520, 740, .08)),
+                                    (.12, 1, bubble(620, 900, .11))], .28)), peak=.48)
+    # Streak: four bubbles, a touch faster.
+    write('sfx_streak', lowpass(mix([(i * .05, .75 + i * .08, bubble(380 + i * 90, 560 + i * 110, .08)) for i in range(4)], .3)), peak=.48)
+    # Round won: soft rising tones resolving gently.
+    write('sfx_round_win', lowpass(mix([(0, .8, soft(NOTE['C5'], .3, .10)), (.10, .85, soft(NOTE['E5'], .3, .10)),
+                                        (.20, 1, soft(NOTE['G5'], .55, .18)), (.20, .45, soft(NOTE['C5'], .55, .18))], .8)), peak=.44)
+    # Round lost: soft falling pair, low.
+    write('sfx_round_lost', lowpass(mix([(0, .9, soft(NOTE['E5'], .3, .12)), (.16, 1, soft(NOTE['C5'], .5, .18))], .72)), peak=.40)
+    # Match won: bubbles rising into a warm soft chord.
+    write('sfx_victory', lowpass(mix([(0, .7, bubble(380, 560, .08)), (.07, .75, bubble(460, 680, .08)),
+                                      (.14, .8, bubble(560, 820, .09)),
+                                      (.26, 1, soft(NOTE['C5'], .9, .30)), (.26, .7, soft(NOTE['E5'], .9, .30)),
+                                      (.26, .6, soft(NOTE['G5'], .9, .30))], 1.25)), peak=.46)
+    # Match lost: slow soft descending tones.
+    write('sfx_defeat', lowpass(mix([(0, .85, soft(NOTE['G4'] * 1.5, .4, .14)), (.22, .9, soft(NOTE['E5'], .4, .14)),
+                                     (.44, 1, soft(NOTE['C5'], .8, .28))], 1.3)), peak=.40)
 
 
 if __name__ == '__main__':

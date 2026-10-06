@@ -42,7 +42,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf<DailyCipherStatusDto?>(null) }
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var guess by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
