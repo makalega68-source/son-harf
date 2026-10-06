@@ -92,7 +92,9 @@ private const val PREMIER_RECONNECT_SECONDS = 60
 /** Breather before every new round; the server adds it to the round's first turn. */
 private const val PREMIER_ROUND_PREP_SECONDS = 20
 // The server starts a new round's first turn clock this much later (online and AI alike).
-private const val PREMIER_ROUND_BREAK_SECONDS = 7
+private const val PREMIER_ROUND_BREAK_SECONDS = 10
+// The "round over" banner stays alone on screen this long before the break screen opens.
+private const val PREMIER_ROUND_END_BANNER_MS = 4_000L
 
 /** Son Harf arena colours; the Black Theme swaps in graphite surfaces and black-gold tiles. */
 private object PremierUi {
@@ -1345,6 +1347,8 @@ private fun PremierArena(
     val myTurn = room.currentPlayerId == meId && !room.botTurn && !reconnectingMe &&
         room.status in setOf("playing", "final", "sudden_death")
     val preparing = prepSeconds > 0
+    // The round result is shown on its own first; the break screen opens only after it.
+    var roundEndHold by remember { mutableStateOf(false) }
     val live = room.status in setOf("playing", "final", "sudden_death")
     val rivalName = if (room.isBot) room.botName?.replace("KelimeBot", "KelimeAI")?.replace("WordBot", "WordAI") ?: pt(language, "KelimeAI", "WordAI") else opponent?.displayName ?: pt(language, "Rakip", "Rival")
     val required = premierRequiredToken(room, words)
@@ -1865,6 +1869,7 @@ private fun PremierArena(
             rivalRounds = rivalRounds,
             rivalName = rivalName,
             live = live,
+            onRoundEndShowing = { roundEndHold = it },
             modifier = Modifier.matchParentSize(),
         )
 
@@ -1873,7 +1878,7 @@ private fun PremierArena(
 
         // Between rounds: a breather with a countdown and quick chat.
         AnimatedVisibility(
-            visible = preparing,
+            visible = preparing && !roundEndHold,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.matchParentSize(),
@@ -3490,10 +3495,12 @@ private fun PremierRoundAnnouncements(
     rivalRounds: Int,
     rivalName: String,
     live: Boolean,
+    onRoundEndShowing: (Boolean) -> Unit,
     modifier: Modifier,
 ) {
     var banner by remember { mutableStateOf<Pair<String, String?>?>(null) }
     var bannerColor by remember { mutableStateOf(PremierBoard.Gold) }
+    var roundOver by remember { mutableStateOf(false) }
     // A round ends when both players have played their 10 words: one word short of that is the last.
     val lastWord = live && myRoundWords + rivalRoundWords == PREMIER_ROUND_WORDS * 2 - 1
     LaunchedEffect(roundNo, lastWord) {
@@ -3521,21 +3528,34 @@ private fun PremierRoundAnnouncements(
             rivalWon -> PremierBoard.Rival
             else -> PremierBoard.Gold
         }
+        onRoundEndShowing(true)
+        roundOver = true
         banner = pt(language, "$finishedRound. RAUND BİTTİ", "ROUND $finishedRound OVER") to when {
             iWon -> pt(language, "Raundu sen kazandın! ($myRounds-$rivalRounds)", "You won the round! ($myRounds-$rivalRounds)")
             rivalWon -> pt(language, "Raundu $rivalName kazandı ($myRounds-$rivalRounds)", "$rivalName won the round ($myRounds-$rivalRounds)")
             else -> pt(language, "Raund berabere", "Round drawn")
         }
-        delay(3_200)
-        banner = null
+        try {
+            delay(PREMIER_ROUND_END_BANNER_MS)
+        } finally {
+            banner = null
+            roundOver = false
+            onRoundEndShowing(false)
+        }
     }
     val shown = banner ?: return
-    Box(modifier, contentAlignment = Alignment.Center) {
+    // The round result pops in over a dimmed arena so it cannot be missed.
+    val pop = remember(shown) { Animatable(.6f) }
+    LaunchedEffect(shown) { pop.animateTo(1f, spring(dampingRatio = .55f, stiffness = 380f)) }
+    Box(
+        modifier.then(if (roundOver) Modifier.background(Color.Black.copy(alpha = .55f)) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
         Surface(
             shape = RoundedCornerShape(22.dp),
             color = bannerColor,
             shadowElevation = 12.dp,
-            modifier = Modifier.padding(horizontal = 28.dp),
+            modifier = Modifier.padding(horizontal = 28.dp).graphicsLayer { scaleX = pop.value; scaleY = pop.value },
         ) {
             Column(Modifier.padding(horizontal = 24.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(shown.first, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp, textAlign = TextAlign.Center)
