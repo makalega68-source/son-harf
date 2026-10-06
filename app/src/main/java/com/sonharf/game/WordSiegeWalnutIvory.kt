@@ -49,25 +49,26 @@ internal object WordSiegeWalnutIvory {
     val enabled: Boolean get() = SonHarfCosmetics.walnutTheme || SonHarfCosmetics.darkArenaTheme
 
     private val walnut = BoardMaterial(
-        frame = Color(0xFF3A2417),
-        frameEdge = Color(0xFFC39A5B),
-        frameShade = Color(0xFF22150C),
-        board = Color(0xFF6B4630),
-        // Repeating diagonal streaks read as quarter-sawn walnut grain.
+        // Light honey-oak wood: warm and bright, so the ivory stones and bonus inlays read clearly.
+        frame = Color(0xFF8A6239),
+        frameEdge = Color(0xFFE2C08A),
+        frameShade = Color(0xFF5C3E22),
+        board = Color(0xFFC9A270),
+        // Repeating diagonal streaks read as light quarter-sawn wood grain.
         boardGrain = Brush.linearGradient(
-            0f to Color(0xFF74503A),
-            .18f to Color(0xFF684430),
-            .34f to Color(0xFF5E3C29),
-            .52f to Color(0xFF6F4A34),
-            .70f to Color(0xFF643F2C),
-            .86f to Color(0xFF79553D),
-            1f to Color(0xFF74503A),
+            0f to Color(0xFFD2AC7A),
+            .18f to Color(0xFFC59D69),
+            .34f to Color(0xFFBC935F),
+            .52f to Color(0xFFCDA673),
+            .70f to Color(0xFFC09864),
+            .86f to Color(0xFFD6B282),
+            1f to Color(0xFFD2AC7A),
             start = Offset.Zero,
             end = Offset(90f, 150f),
             tileMode = TileMode.Mirror,
         ),
-        empty = Color(0xFF553624),
-        emptyEdge = Color(0xFF8A6446),
+        empty = Color(0xFFB48A57),
+        emptyEdge = Color(0xFFDDBD8C),
         ivory = Color(0xFFFAF3E3),
         ivoryShade = Color(0xFFE7D8BC),
         ivoryHighlight = Color(0xFFFFFDF6),
