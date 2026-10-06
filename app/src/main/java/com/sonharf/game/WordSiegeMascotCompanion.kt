@@ -666,7 +666,7 @@ internal fun WordSiegeMascotCompanion(
     ambientScenes: Boolean = false,
     /** Speech belongs only in an explicitly opened mascot conversation. */
     allowSpeech: Boolean = false,
-    /** The home screen: says its hello (missing you, first meeting after a purchase) out loud, once per app session. */
+    /** The home screen: acts out its hello (missing you, first meeting after a purchase) once per app session, without speech. */
     greetAloud: Boolean = false,
     positionKey: String = "arena",
 ) {
@@ -977,7 +977,8 @@ internal fun WordSiegeMascotCompanion(
                 delay(350L)
                 val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
                 val together = bond.daysTogether()
-                // Only the home screen greets out loud, and only once per app session.
+                // Only the home screen greets, once per app session, and only with expressions and moves:
+                // the lines below are kept for later but stay unsaid (say() needs allowSpeech).
                 val aloud = greetAloud && MascotGreetingSession.claim()
                 val mascotName = sh(skin.titleTr, skin.titleEn)
                 when {
@@ -986,13 +987,13 @@ internal fun WordSiegeMascotCompanion(
                         MascotIntroductions.markDone(context, skin)
                         perform(WordSiegeMascotAction.CHEER)
                         stageEmotion = WordSiegeMascotEmotion.EXCITED
-                        say(mind.line(WordSiegeMascotLines.introHello, currentName, word = mascotName), 600L, explicitRequest = true)
+                        say(mind.line(WordSiegeMascotLines.introHello, currentName, word = mascotName), 600L)
                         delay(3_400L)
                         perform(WordSiegeMascotAction.DANCE)
-                        say(mind.line(WordSiegeMascotLines.introWho, currentName, word = mascotName), 600L, explicitRequest = true)
+                        say(mind.line(WordSiegeMascotLines.introWho, currentName, word = mascotName), 600L)
                         delay(3_800L)
                         perform(WordSiegeMascotAction.SPARKLE)
-                        say(mind.line(WordSiegeMascotLines.introPromise, currentName, word = mascotName), 900L, explicitRequest = true)
+                        say(mind.line(WordSiegeMascotLines.introPromise, currentName, word = mascotName), 900L)
                         delay(3_600L)
                         stageEmotion = null
                         bond.add(10)
@@ -1005,27 +1006,27 @@ internal fun WordSiegeMascotCompanion(
                             daysAway >= 3L -> WordSiegeMascotLines.missed
                             else -> WordSiegeMascotLines.missedDay
                         }
-                        say(mind.line(missLines, currentName, number = daysAway.toInt()), 900L, explicitRequest = true)
+                        say(mind.line(missLines, currentName, number = daysAway.toInt()), 900L)
                         delay(2_600L)
                         stageEmotion = WordSiegeMascotEmotion.HAPPY
                         perform(WordSiegeMascotAction.NUZZLE)
                         delay(2_400L)
                         perform(WordSiegeMascotAction.HOP)
-                        say(mind.line(WordSiegeMascotLines.gladBack, currentName), 400L, explicitRequest = true)
+                        say(mind.line(WordSiegeMascotLines.gladBack, currentName), 400L)
                         delay(2_400L)
                         stageEmotion = null
                         bond.add(3)
                     }
                     meetings in MILESTONES -> {
                         perform(WordSiegeMascotAction.CHEER)
-                        say(mind.line(WordSiegeMascotLines.milestone, currentName, number = meetings), holdExtraMillis = 800L, explicitRequest = aloud)
+                        say(mind.line(WordSiegeMascotLines.milestone, currentName, number = meetings), holdExtraMillis = 800L)
                     }
                     together > 0L && together % 365L == 0L -> {
                         perform(WordSiegeMascotAction.SPARKLE)
-                        say(mind.line(WordSiegeMascotLines.anniversary, currentName), holdExtraMillis = 800L, explicitRequest = aloud)
+                        say(mind.line(WordSiegeMascotLines.anniversary, currentName), holdExtraMillis = 800L)
                     }
-                    meetings <= 1 -> say(mind.line(lines(WordSiegeMascotTopic.GREET_FIRST, WordSiegeMascotLines.greetFirst), currentName), explicitRequest = aloud)
-                    daysAway >= 3L -> say(mind.line(WordSiegeMascotLines.missed, currentName), explicitRequest = aloud)
+                    meetings <= 1 -> say(mind.line(lines(WordSiegeMascotTopic.GREET_FIRST, WordSiegeMascotLines.greetFirst), currentName))
+                    daysAway >= 3L -> say(mind.line(WordSiegeMascotLines.missed, currentName))
                     mind.chance(.7f) -> {
                         val greetLines = when {
                             hour in 5..10 && mind.chance(.6f) -> WordSiegeMascotLines.morning
@@ -1035,7 +1036,7 @@ internal fun WordSiegeMascotCompanion(
                             else -> lines(WordSiegeMascotTopic.GREET, WordSiegeMascotLines.greet)
                         }
                         if (aloud) perform(WordSiegeMascotAction.WAVE)
-                        say(mind.line(greetLines, currentName), explicitRequest = aloud)
+                        say(mind.line(greetLines, currentName))
                     }
                 }
             }
