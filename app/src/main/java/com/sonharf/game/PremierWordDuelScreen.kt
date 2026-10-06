@@ -91,6 +91,8 @@ private const val PREMIER_TURN_SECONDS = 15
 private const val PREMIER_RECONNECT_SECONDS = 60
 /** Breather before every new round; the server adds it to the round's first turn. */
 private const val PREMIER_ROUND_PREP_SECONDS = 20
+// The server starts a new round's first turn clock this much later (online and AI alike).
+private const val PREMIER_ROUND_BREAK_SECONDS = 7
 
 /** Son Harf arena colours; the Black Theme swaps in graphite surfaces and black-gold tiles. */
 private object PremierUi {
@@ -483,7 +485,7 @@ fun PremierWordDuelScreen() {
         // A new round that the bot opens starts with the same preparation break as any other.
         if (active.lastEvent == "round_started" || active.lastEvent == "sudden_death_started") {
             try {
-                for (second in PREMIER_ROUND_PREP_SECONDS downTo 1) {
+                for (second in PREMIER_ROUND_BREAK_SECONDS downTo 1) {
                     botPrepSeconds = second
                     delay(1_000)
                 }

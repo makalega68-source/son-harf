@@ -496,6 +496,19 @@ private fun WordSiegePracticeContent(
                 }
                 }
 
+                if (boardViewportMode == WordSiegeBoardViewportMode.CLOSE) {
+                    PanSiegeCompactScoreStrip(
+                        mine = playerProfile,
+                        myName = playerProfile?.displayName ?: sh("Sen", "You"),
+                        myScore = displayedPlayerScore,
+                        myActive = displayedOwner == 1,
+                        rival = null,
+                        rivalName = botProfile.name,
+                        rivalScore = displayedBotScore,
+                        rivalActive = displayedOwner == 2,
+                        bagCount = state.bag.length,
+                    )
+                } else
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     WordSiegePracticeScoreCard(
                         name = playerProfile?.displayName ?: sh("SEN", "YOU"),

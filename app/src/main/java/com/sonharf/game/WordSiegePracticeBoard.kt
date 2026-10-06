@@ -176,6 +176,24 @@ internal fun WordSiegePracticeBoard(
         scale = closeScale,
     )
 
+    // Zooming in folds the screen's header and score cards into a slim strip so the board gets the
+    // room (as in online matches); zooming back out restores them. Two thresholds stop flicker.
+    val viewportModeCallback by rememberUpdatedState(onViewportModeChange)
+    LaunchedEffect(fitScale) {
+        var zoomedIn = mode == WordSiegeBoardViewportMode.CLOSE
+        snapshotFlow { if (fitScale > 0f) closeScale / fitScale else 1f }.collect { ratio ->
+            val next = when {
+                !zoomedIn && ratio > 1.3f -> true
+                zoomedIn && ratio < 1.1f -> false
+                else -> zoomedIn
+            }
+            if (next != zoomedIn) {
+                zoomedIn = next
+                mode = if (next) WordSiegeBoardViewportMode.CLOSE else WordSiegeBoardViewportMode.FIT
+                viewportModeCallback(mode)
+            }
+        }
+    }
     WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx)
     // Only the hovered cell matters, so the board recomposes when it changes, not every finger move.
     val dragHover by remember(tileDrag) { derivedStateOf { tileDrag?.hoverCell } }

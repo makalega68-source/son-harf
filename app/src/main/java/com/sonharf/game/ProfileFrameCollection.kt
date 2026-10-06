@@ -229,9 +229,22 @@ internal fun rememberPlayerFrame(userId: String?): String? {
 /** Convert the server's remaining reward time to a client deadline, even with clock skew. */
 internal fun throneRewardDeadline(serverTime: String?, expiresAt: String?, receivedAt: Long): Long? {
     if (expiresAt == null) return null
-    return runCatching {
-        receivedAt + (java.time.Instant.parse(expiresAt).toEpochMilli() - java.time.Instant.parse(serverTime).toEpochMilli())
-    }.getOrDefault(receivedAt)
+    val expires = parseServerInstantMs(expiresAt) ?: return receivedAt
+    // Without a server clock, trust the device clock rather than revoking the reward at once.
+    val server = parseServerInstantMs(serverTime) ?: return expires
+    return receivedAt + (expires - server)
+}
+
+/**
+ * Postgres sends timestamps as "2026-10-12T20:15:30.666776+00:00". Instant.parse on older Android
+ * accepts only a trailing "Z", which silently revoked the throne owner's week, so parse offsets too.
+ */
+internal fun parseServerInstantMs(value: String?): Long? {
+    if (value.isNullOrBlank()) return null
+    val text = value.trim().replace(' ', 'T')
+    return runCatching { java.time.OffsetDateTime.parse(text).toInstant().toEpochMilli() }.getOrNull()
+        ?: runCatching { java.time.Instant.parse(text).toEpochMilli() }.getOrNull()
+        ?: runCatching { java.time.OffsetDateTime.parse(text.replace(Regex("([+-]\\d{2})$"), "$1:00")).toInstant().toEpochMilli() }.getOrNull()
 }
 
 private object FrameBitmaps {

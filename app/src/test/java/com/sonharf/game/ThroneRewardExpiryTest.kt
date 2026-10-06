@@ -14,5 +14,8 @@ class ThroneRewardExpiryTest {
     @Test fun expiredOrMalformedRewardNeverGetsExtraTime() {
         assertEquals(2_000L, throneRewardDeadline("2026-10-04T21:00:01Z", "2026-10-04T21:00:00Z", 3_000L))
         assertEquals(3_000L, throneRewardDeadline(null, "invalid", 3_000L))
+        // Postgres offsets ("+00:00", "+00") must parse, or the throne week is revoked at once.
+        assertEquals(8_000L, throneRewardDeadline("2026-10-04T20:59:55.5+00:00", "2026-10-04T21:00:00.5+00:00", 3_000L))
+        assertEquals(8_000L, throneRewardDeadline("2026-10-04 20:59:55+00", "2026-10-04 21:00:00+00", 3_000L))
     }
 }

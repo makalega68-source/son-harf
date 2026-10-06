@@ -1414,7 +1414,7 @@ private fun PanSiegeScopedBox(modifier: Modifier, content: @Composable androidx.
  * scores either side of the bag count, so nearly the whole screen goes to the board.
  */
 @Composable
-private fun PanSiegeCompactScoreStrip(
+internal fun PanSiegeCompactScoreStrip(
     mine: ProfileDto?,
     myName: String,
     myScore: Int,
