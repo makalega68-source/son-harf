@@ -165,6 +165,8 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var newBest by remember { mutableStateOf(false) }
     // Mascot hints: three per round, only when the player taps the hint button.
     var hintsLeft by remember { mutableIntStateOf(MascotHints.freeHints) }
+    // Once the free hints are used, one more can be bought per round, never more.
+    var hintBought by remember { mutableStateOf(false) }
     // Action: quick words chain into a combo.
     var combo by remember { mutableIntStateOf(0) }
     var comboNonce by remember { mutableIntStateOf(0) }
@@ -290,6 +292,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                 feedback = null
                 newBest = false
                 hintsLeft = MascotHints.freeHints
+                hintBought = false
                 hintText = null
                 combo = 0
                 lastWordAt = 0L
@@ -505,12 +508,13 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     val hintScope = rememberCoroutineScope()
     var buyingHint by remember { mutableStateOf(false) }
     fun buyHint() {
-        if (buyingHint) return
+        if (buyingHint || hintBought) return
         buyingHint = true
         hintScope.launch {
             try {
             val bought = gameRequestResult { com.sonharf.game.data.GameHintBackend.buyHint("kelime_atolyesi") }.getOrNull()
             if (bought != null) {
+                hintBought = true
                 hintsLeft += 1
                 askHint()
             } else {
@@ -586,7 +590,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     else -> sh("Harflere dokun, kelimeni kur.", "Tap letters to build your word.")
                 },
                 hintsLeft = if (current != null && !current.over) hintsLeft + bankedHints else 0,
-                canBuyHint = current != null && !current.over,
+                canBuyHint = current != null && !current.over && !hintBought,
                 onHint = {
                     when {
                         hintsLeft > 0 -> askHint()

@@ -49,6 +49,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
@@ -1407,12 +1408,15 @@ private fun PremierArena(
         }
     }
     var buyingHint by remember(room.id) { mutableStateOf(false) }
+    // Once the free hints are used, one more can be bought per match, never more.
+    var hintBought by rememberSaveable(room.id) { mutableStateOf(false) }
     fun buyHint() {
-        if (buyingHint || !room.isBot) return
+        if (buyingHint || hintBought || !room.isBot) return
         buyingHint = true
         hintScope.launch {
             val bought = com.sonharf.game.data.GameHintBackend.buyHint("son_harf")
             if (bought != null) {
+                hintBought = true
                 showHintText(safeHintText())
             } else {
                 showHintText(pt(language, "Altın yetmedi... maç kazanıp biriktirelim mi?", "Not enough gold... let's win some matches?"))
@@ -1671,7 +1675,7 @@ private fun PremierArena(
             )
             // Under the countdown: a hint or notice line, else the hint button. It used to be a
             // separate strip above the keyboard; here it costs no height of its own.
-            val hintVisible = myTurn && !preparing && (hintsLeft > 0 || bankedHints > 0 || room.isBot)
+            val hintVisible = myTurn && !preparing && (hintsLeft > 0 || bankedHints > 0 || (room.isBot && !hintBought))
             val clockLine: @Composable () -> Unit = {
                 val shownHint = stripHint
                 val message = shownHint ?: notice.takeIf { it.isNotBlank() }

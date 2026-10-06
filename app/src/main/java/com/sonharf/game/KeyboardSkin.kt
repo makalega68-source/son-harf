@@ -210,6 +210,9 @@ internal fun Modifier.keyFace(
             cornerRadius = r,
         )
     }
+    // A faded (disabled) key sits on an opaque plate of the tray colour, so nothing behind it
+    // (its shadow, the tray) shows through as a ghost outline.
+    if (!enabled) drawRoundRect(p.background.copy(alpha = 1f), cornerRadius = r)
     drawRoundRect(Brush.verticalGradient(listOf(top, bottom)), cornerRadius = r, alpha = alpha)
     if (p.crystal) {
         // Cut-glass facets: a bright upper-left plane, a deeper lower-right plane and a table line.
@@ -266,7 +269,7 @@ internal fun SkinKey(
     val faced = if (image != null) {
         base.keyFace(palette, kind, enabled, radius, image, pressed)
     } else {
-        base.shadow(if (kind == KeyKind.ACTION) 5.dp else 1.5.dp, RoundedCornerShape(radius), clip = false)
+        base.shadow(if (!enabled) 0.dp else if (kind == KeyKind.ACTION) 5.dp else 1.5.dp, RoundedCornerShape(radius), clip = false)
             .keyFace(palette, kind, enabled, radius)
     }
     Box(
