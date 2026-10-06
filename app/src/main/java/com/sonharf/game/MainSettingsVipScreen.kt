@@ -96,6 +96,17 @@ internal fun MainSettingsScreen(
 
         item {
             MainSettingsGroup(sh("BİLDİRİMLER", "NOTIFICATIONS")) {
+                // One switch for all notifications; the detailed ones only show while it is on.
+                val anyOn = gameInvites || friendRequests || systemNotifications || reminders
+                MainToggleSetting(Icons.Rounded.Notifications, sh("Bildirimler", "Notifications"),
+                    if (anyOn) sh("Açık · aşağıdan tek tek seçebilirsin", "On · choose each kind below") else sh("Kapalı · hiç bildirim gelmez", "Off · no notifications at all"),
+                    anyOn) {
+                    gameInvites = it; friendRequests = it; systemNotifications = it; reminders = it
+                    SonHarfPreferences.setNotificationsEnabled(context, it)
+                    ReminderNotifications.setEnabled(context, it)
+                }
+                if (anyOn) {
+                HorizontalDivider(color = MainUi.Border)
                 MainToggleSetting(Icons.Rounded.SportsEsports, sh("Oyun davetleri", "Game invitations"), sh("Arkadaşların düelloya çağırdığında", "When friends invite you to a duel"), gameInvites) {
                     gameInvites = it
                     SonHarfPreferences.setGameInviteNotificationsEnabled(context, it)
@@ -114,6 +125,7 @@ internal fun MainSettingsScreen(
                 MainToggleSetting(Icons.Rounded.Alarm, sh("Hatırlatmalar", "Reminders"), sh("Günlük yarış, seri uyarısı ve Obi'nin mesajları", "Daily race, streak alerts and notes from Obi"), reminders) {
                     reminders = it
                     ReminderNotifications.setEnabled(context, it)
+                }
                 }
             }
         }

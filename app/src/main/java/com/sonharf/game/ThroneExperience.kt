@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
@@ -154,6 +155,54 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
   }
   if(section==0) item { Text(sh("Maç 35 XP · Galibiyet +85 XP · Görevler 100/150/200 XP. Sıfırlama: pazartesi 00:00.","Official match: 35 XP; win: +85 XP. Workshop score converts to XP by duration. Tournament multipliers apply only to tournament stages. Mission rewards are automatic. Practice does not award weekly XP."),color=LobbyPalette.Muted,fontSize=11.sp) }
   if(week==null)item { if(error)Text(sh("Taht yüklenemedi. Bağlantı tekrar deneniyor.","Unable to load the throne. Reconnecting."),color=LobbyPalette.Muted)else CircularProgressIndicator(color=SonHarfTheme.Primary) }
+ }
+}
+
+/**
+ * The workshop lobby's tournament row: one line saying when it starts (or which stage is live),
+ * one button, and a "Nasıl?" link for the rules. Same entry rules as [AtelierTournamentPanel].
+ */
+@Composable internal fun AtelierTournamentCompact(event:AtelierTournament?,busy:Boolean,onJoin:()->Unit,ready:Boolean,onReady:()->Unit) {
+ val now=serverNow(event?.serverTime.orEmpty(),event?.eventStart)
+ val already=event?.myStages?.any{it.stage==event.stage}==true
+ val previous=event==null||event.stage==1||event.myStages.any{it.stage==event.stage-1&&it.finished}
+ val canJoin=event?.active==true&&!already&&previous&&now>0&&tournamentTimeMillis(event.stageEnds)-now>(event.stage*60+10)*1000L
+ val waiting=event?.active!=true
+ val missed=!waiting&&!already&&!previous
+ var showRules by remember{mutableStateOf(false)}
+ Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+  .background(Brush.verticalGradient(listOf(Color(0xFF1F6F80),Color(0xFF12485A)))).padding(14.dp),
+  verticalArrangement=Arrangement.spacedBy(10.dp)) {
+  Row(verticalAlignment=Alignment.CenterVertically) {
+   Icon(Icons.Rounded.EmojiEvents,null,tint=EventGold,modifier=Modifier.size(28.dp))
+   Spacer(Modifier.width(10.dp))
+   Column(Modifier.weight(1f)) {
+    Text(if(waiting)sh("TURNUVA","TOURNAMENT")else sh("TURNUVA · CANLI","TOURNAMENT · LIVE"),color=EventGold,fontSize=11.sp,fontWeight=FontWeight.Black,letterSpacing=1.sp)
+    val clock=if(now==0L)"—:—:—" else if(waiting)tournamentClockText(tournamentTimeMillis(event?.nextStart.orEmpty()),now) else tournamentClockText(tournamentTimeMillis(event!!.stageEnds),now)
+    Text(if(waiting)sh("Başlamasına $clock","Starts in $clock")else sh("${event!!.stage}/3. aşama · $clock kaldı","Stage ${event!!.stage}/3 · $clock left"),
+     color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold,maxLines=1)
+   }
+   Text(sh("Nasıl?","How?"),color=EventGold,fontSize=13.sp,fontWeight=FontWeight.Bold,
+    modifier=Modifier.clip(RoundedCornerShape(10.dp)).clickable{showRules=!showRules}.padding(horizontal=8.dp,vertical=6.dp))
+  }
+  if(showRules) Text(sh("Turnuva 3 kısa aşamadır: 1, 2 ve 3 dakika. \"Hazırım\"a bas, turnuva başlayınca otomatik girersin; sonraki aşamalar da kendiliğinden gelir. En çok aşamayı bitirip en çok puanı toplayan kürsüye çıkar.",
+   "The tournament has 3 short stages: 1, 2 and 3 minutes. Tap \"I'm ready\" and you join automatically when it starts; the next stages follow by themselves. Most stages and points take the podium."),
+   color=Color.White.copy(alpha=.85f),fontSize=12.sp,lineHeight=17.sp)
+  val label=when {
+   busy->sh("Hazırlanıyor…","Preparing…")
+   (waiting||missed)&&ready->sh("Hazırsın ✓ Başlayınca otomatik gireceksin","Ready ✓ You'll join automatically")
+   waiting||missed->sh("Hazırım","I'm ready")
+   already->sh("Aşama tamam ✓ Sonraki kendiliğinden gelir","Stage done ✓ The next one comes by itself")
+   !canJoin->sh("Bu aşamanın girişi kapandı","This stage is closed")
+   else->sh("Turnuvaya Gir","Join the Tournament")
+  }
+  val enabled=(canJoin||((waiting||missed)&&!ready))&&!busy
+  Button(onClick={ if(waiting||missed) onReady() else onJoin() },enabled=enabled,
+   modifier=Modifier.fillMaxWidth().height(48.dp),shape=RoundedCornerShape(14.dp),
+   colors=ButtonDefaults.buttonColors(containerColor=EventGold,contentColor=EventInk,
+    disabledContainerColor=Color.White.copy(alpha=.16f),disabledContentColor=Color.White.copy(alpha=.85f))) {
+   Text(label,fontSize=15.sp,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
+  }
  }
 }
 

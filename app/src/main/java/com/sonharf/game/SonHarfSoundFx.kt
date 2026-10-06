@@ -8,8 +8,9 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 
-/** Original 44.1 kHz wood/ceramic contacts, plucked rewards and short scene swishes.
- * Rendered offline, kept under a conservative master ceiling; SoundPool playback only.
+/** Word-game palette rendered offline by scripts/generate_word_game_sfx.py: wooden tile taps,
+ * marimba for accepted words and wins, glockenspiel sparkle for bonuses, soft low bonks for
+ * mistakes. All synthesised from scratch; SoundPool playback only.
  */
 object SonHarfSoundFx {
     @Volatile private var enabled = true

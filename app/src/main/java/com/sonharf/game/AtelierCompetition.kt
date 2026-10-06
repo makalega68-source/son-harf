@@ -87,7 +87,10 @@ internal fun AtelierRivalStrip(board: AtelierBoardDto?, score: Int) {
     }
 }
 
-/** Lobby: today's official race, free practice, last week's reward and the two leaderboards. */
+/**
+ * Lobby, top to bottom in the order a player decides: pick a length, play (free practice), the
+ * one official daily race, the tournament, then the boards. One short line per card, no essays.
+ */
 @Composable
 internal fun AtelierLobby(
     online: Boolean,
@@ -103,90 +106,10 @@ internal fun AtelierLobby(
     onDaily: () -> Unit,
     onPractice: () -> Unit,
     onClaim: () -> Unit,
+    tournament: @Composable () -> Unit = {},
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(sh("YARIŞ SÜRENİ SEÇ","CHOOSE YOUR RACE"),color=LobbyPalette.Ink,fontSize=14.sp,fontWeight=FontWeight.Black,letterSpacing=1.sp)
-        // Round length for both the race and practice; each length has its own daily race and board.
-        listOf(
-            60 to sh("1 Dakika · 6 görev", "1 Minute · 6 tasks"),
-            120 to sh("2 Dakika · 15 görev", "2 Minutes · 15 tasks"),
-            180 to sh("3 Dakika · 24 görev", "3 Minutes · 24 tasks"),
-            300 to sh("5 Dakika · 36 görev", "5 Minutes · 36 tasks"),
-        ).chunked(2).forEach { pair ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                pair.forEach { (value, label) ->
-                    val selected = seconds == value
-                    Box(
-                        Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
-                            .background(Brush.verticalGradient(if(selected)listOf(Color(0xFFFFE4A0),Color(0xFFEBC06B))else listOf(LobbyPalette.Paper,LobbyPalette.Paper)))
-                            .border(1.dp, if (selected) CompUi.Gold else CompUi.Edge, RoundedCornerShape(14.dp))
-                            .clickable(enabled = !starting) { onSeconds(value) }.padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                            Icon(if(selected)Icons.Rounded.Bolt else Icons.Rounded.Timer,null,tint=CompUi.Green,modifier=Modifier.size(23.dp))
-                            Text(label, color = if (selected) CompUi.Ink else LobbyPalette.Ink, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                            Text(when(value){60->sh("HIZLI ISINMA","QUICK WARM-UP");120->sh("TAKTİK YARIŞ","TACTICAL RACE");180->sh("UZUN MÜCADELE","LONG CHALLENGE");else->sh("USTALIK KOŞUSU","MASTERY RUN")},color=if(selected)CompUi.InkMuted else LobbyPalette.Muted,fontSize=10.sp,fontWeight=FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        }
-        Text(sh("Kelime kur, görevleri tamamla, kombo yap. Her yeni görev setinde mücadele büyür.","Build words, complete tasks, chain combos. Each new task set raises the challenge."),color=LobbyPalette.Muted,fontSize=12.sp,lineHeight=17.sp)
-        val today = board?.today
-        // Official daily race card.
-        GameEventStage {
-            EventTag(sh("GÜNLÜK YARIŞ", "DAILY RACE"))
-            Text(
-                sh("Bugün herkes aynı harflerle yarışıyor. Tek resmî hakkın var!", "Everyone races with the same letters today. You get one official try!"),
-                color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-            )
-            when {
-                !online -> Text(sh("Yarış için internet bağlantısı gerekli.", "The race needs an internet connection."), color = Color.White.copy(alpha = .8f), fontSize = 13.sp)
-                today?.finished == true -> {
-                    val me = if (!weekly) board?.me else null
-                    val total = board?.total ?: 0
-                    Text(
-                        sh("Bugünkü puanın: ${today.score}", "Today's score: ${today.score}") +
-                            (me?.let { sh(" · ${it.rank}. / $total", " · #${it.rank} of $total") } ?: ""),
-                        color = Color(0xFFBFF0C8), fontSize = 16.sp, fontWeight = FontWeight.Bold,
-                    )
-                    Text(sh("Yeni yarış yarın başlıyor. Sıralamayı buradan izle.", "A new race starts tomorrow. Follow the board here."), color = Color.White.copy(alpha = .8f), fontSize = 12.sp)
-                }
-                today?.started == true -> Text(
-                    sh("Bugünkü hakkını başlattın ama bitirmedin; puan kaydedilmedi. Yarın tekrar!", "You started today's try but didn't finish; no score saved. Try again tomorrow!"),
-                    color = Color.White.copy(alpha = .85f), fontSize = 13.sp,
-                )
-                else -> {
-                    Text(sh("Başladıktan sonra çıkarsan hakkın yanar.", "Leaving after you start uses up your try."), color = Color.White.copy(alpha = .75f), fontSize = 12.sp)
-                    Button(
-                        onClick = onDaily,
-                        enabled = !starting,
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC94A), contentColor = CompUi.Ink),
-                    ) {
-                        if (starting) CircularProgressIndicator(Modifier.size(20.dp), color = CompUi.Ink, strokeWidth = 2.dp)
-                        else Text(sh("Günlük Yarışa Başla", "Start the Daily Race"), fontSize = 17.sp, fontWeight = FontWeight.Black)
-                    }
-                }
-            }
-        }
-
-        OutlinedButton(
-            onClick = onPractice,
-            enabled = !starting,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, CompUi.Edge),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = CompUi.Ink, containerColor = CompUi.Cream),
-        ) {
-            Text(sh("Serbest Antrenman", "Free Practice"), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
-
-        notice?.let { Text(it, color = CompUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
-
-        // Last week's reward.
+        // Last week's reward first: it is the one thing waiting for the player.
         if (reward != null && reward.reward > 0 && !reward.claimed) {
             Row(
                 Modifier
@@ -208,6 +131,101 @@ internal fun AtelierLobby(
             }
         }
 
+        // 1. Length: four small chips; the line under them says what the choice means.
+        val lengths = listOf(
+            60 to sh("1 Dakika · 6 görev", "1 Minute · 6 tasks"),
+            120 to sh("2 Dakika · 15 görev", "2 Minutes · 15 tasks"),
+            180 to sh("3 Dakika · 24 görev", "3 Minutes · 24 tasks"),
+            300 to sh("5 Dakika · 36 görev", "5 Minutes · 36 tasks"),
+        )
+        Text(sh("SÜRE", "LENGTH"), color = LobbyPalette.Ink, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            lengths.forEach { (value, _) ->
+                val selected = seconds == value
+                Box(
+                    Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(12.dp))
+                        .background(if (selected) CompUi.Green else LobbyPalette.Paper)
+                        .border(1.dp, if (selected) CompUi.Green else CompUi.Edge, RoundedCornerShape(12.dp))
+                        .clickable(enabled = !starting) { onSeconds(value) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(sh("${value / 60} dk", "${value / 60} min"), color = if (selected) Color.White else LobbyPalette.Ink,
+                        fontSize = 15.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+        Text(lengths.firstOrNull { it.first == seconds }?.second.orEmpty(), color = LobbyPalette.Muted, fontSize = 12.sp)
+
+        // 2. Play: the big obvious button.
+        Button(
+            onClick = onPractice,
+            enabled = !starting,
+            modifier = Modifier.fillMaxWidth().height(64.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = CompUi.Green, contentColor = Color.White),
+        ) {
+            Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.Start) {
+                Text(sh("OYNA", "PLAY"), fontSize = 20.sp, fontWeight = FontWeight.Black)
+                Text(sh("Serbest Antrenman", "Free Practice"), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = .85f))
+            }
+        }
+
+        // 3. The daily race: one line, one button.
+        val today = board?.today
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(LobbyPalette.Paper)
+                .border(1.dp, CompUi.Gold, RoundedCornerShape(18.dp)).padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.CalendarToday, null, tint = CompUi.Gold, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(sh("GÜNLÜK YARIŞ", "DAILY RACE"), color = CompUi.Ink, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                    Text(sh("Herkes aynı harflerle · günde 1 hak", "Same letters for all · 1 try a day"), color = CompUi.InkMuted, fontSize = 12.sp)
+                }
+            }
+            when {
+                !online -> Text(sh("Yarış için internet gerekli.", "The race needs the internet."), color = CompUi.InkMuted, fontSize = 13.sp)
+                today?.finished == true -> {
+                    val me = if (!weekly) board?.me else null
+                    val total = board?.total ?: 0
+                    Text(
+                        sh("Bugünkü puanın: ${today.score}", "Today's score: ${today.score}") +
+                            (me?.let { sh(" · ${it.rank}. / $total", " · #${it.rank} of $total") } ?: "") +
+                            sh(" · yarın yeni yarış", " · new race tomorrow"),
+                        color = CompUi.Green, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                    )
+                }
+                today?.started == true -> Text(
+                    sh("Bugünkü hakkın kullanıldı. Yarın tekrar!", "Today's try is used. Again tomorrow!"),
+                    color = CompUi.InkMuted, fontSize = 13.sp,
+                )
+                else -> {
+                    Button(
+                        onClick = onDaily,
+                        enabled = !starting,
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC94A), contentColor = CompUi.Ink),
+                    ) {
+                        if (starting) CircularProgressIndicator(Modifier.size(20.dp), color = CompUi.Ink, strokeWidth = 2.dp)
+                        else Text(sh("Günlük Yarışa Başla", "Start the Daily Race"), fontSize = 17.sp, fontWeight = FontWeight.Black)
+                    }
+                    Text(sh("Başladıktan sonra çıkarsan hakkın yanar.", "Leaving after you start uses up your try."), color = CompUi.InkMuted, fontSize = 11.sp)
+                }
+            }
+        }
+
+        // 4. The tournament.
+        tournament()
+
+        notice?.let { Text(it, color = CompUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
+
+        Text(sh("SIRALAMA", "LEADERBOARD"), color = LobbyPalette.Ink, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp,
+            modifier = Modifier.padding(top = 4.dp))
         // Leaderboards.
         Column(
             Modifier

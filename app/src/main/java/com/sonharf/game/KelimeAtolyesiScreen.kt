@@ -603,11 +603,6 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             when {
                 loadFailed -> AtelierLoadError { loadNonce += 1 }
                 mode == AtelierMode.LOBBY -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AtelierTournamentPanel(tournament, startingDaily || startingRound, onJoin = { startTournament() },
-                        ready = readyForTournament, onReady = { readyForTournament = true })
-                    Text(sh("ANTRENMAN VE GÜNLÜK YARIŞ", "PRACTICE AND DAILY RACE"), color = AtelierUi.Ink, fontSize = 13.sp,
-                        fontWeight = FontWeight.Black, letterSpacing = 1.sp, modifier = Modifier.padding(top = 6.dp))
-                    lobbyNotice?.let { Text(it, color = AtelierUi.Ink, fontSize = 12.sp) }
                     AtelierLobby(
                     online = online,
                     board = board,
@@ -622,6 +617,10 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                     onDaily = { startDaily() },
                     onPractice = { if (engine != null) startPractice() },
                     onClaim = { claimReward() },
+                    tournament = {
+                        AtelierTournamentCompact(tournament, startingDaily || startingRound, onJoin = { startTournament() },
+                            ready = readyForTournament, onReady = { readyForTournament = true })
+                    },
                 )
                 }
                 current == null -> Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
