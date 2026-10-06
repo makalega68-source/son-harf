@@ -3,6 +3,7 @@ package com.sonharf.game
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -183,7 +185,7 @@ class MainActivity : ComponentActivity() {
         startupSessionPolicyApplied = true
         val clearUnrememberedSession = SupabaseProvider.configured && applySessionPolicy && !rememberLogin && !authDeepLink
 
-        setContent {
+        safeSetContent {
             val appColors = if (SonHarfTheme.IsDark) {
                 darkColorScheme(
                     primary = SonHarfBlue,
@@ -305,5 +307,18 @@ internal fun LaunchSplashFrame() {
                 strokeWidth = 2.5.dp,
             )
         }
+    }
+}
+
+/**
+ * Some Huawei tablets hand a relaunched activity a decor view without its content frame, and
+ * Compose's setContent then crashes on getChildAt. Fall back to installing a ComposeView directly.
+ */
+private fun ComponentActivity.safeSetContent(content: @Composable () -> Unit) {
+    val frame = runCatching { window.decorView.findViewById<ViewGroup?>(android.R.id.content) }.getOrNull()
+    if (frame == null) {
+        setContentView(ComposeView(this).apply { setContent(content) })
+    } else {
+        setContent(content = content)
     }
 }
