@@ -41,6 +41,8 @@ data class ProfileDto(
     val wins: Int = 0,
     val losses: Int = 0,
     val rating: Int = 1000,
+    /** When the account was created; only brand-new accounts get Obi's welcome tour. */
+    @SerialName("created_at") val createdAt: String? = null,
 )
 
 @Serializable
