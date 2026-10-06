@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NO_APK: ${{ contains(github.event.head_commit.message, '[no apk]') }}
+      # The signed Google Play bundle (AAB) is built for main, the release-preparation branch and manual runs.
+      STORE_BUILD: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/mascot-animations-behavior-31rof9')) }}
       HAS_RELEASE_CONFIG: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 != '' && secrets.SON_HARF_RELEASE_STORE_PASSWORD != '' && secrets.SON_HARF_RELEASE_KEY_ALIAS != '' && secrets.SON_HARF_RELEASE_KEY_PASSWORD != '' && secrets.SON_HARF_ADMOB_APP_ID != '' && secrets.SON_HARF_ADMOB_REWARDED_ID != '' && secrets.SON_HARF_ADMOB_BANNER_ID != '' }}
     steps:
       - uses: actions/checkout@v4
@@ -179,7 +181,7 @@ jobs:
           retention-days: 7
 
       - name: Build signed release APK and AAB
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true' && env.NO_APK != 'true'
+        if: success() && env.STORE_BUILD == 'true' && env.HAS_RELEASE_CONFIG == 'true' && env.NO_APK != 'true'
         env:
           RELEASE_KEYSTORE_B64: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 }}
           SON_HARF_RELEASE_STORE_PASSWORD: ${{ secrets.SON_HARF_RELEASE_STORE_PASSWORD }}
@@ -200,7 +202,7 @@ jobs:
             -PSON_HARF_ADMOB_BANNER_ID="$SON_HARF_ADMOB_BANNER_ID"
 
       - name: Upload signed release artifacts
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true' && env.NO_APK != 'true'
+        if: success() && env.STORE_BUILD == 'true' && env.HAS_RELEASE_CONFIG == 'true' && env.NO_APK != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: son-harf-release-${{ github.run_number }}
@@ -211,7 +213,7 @@ jobs:
           retention-days: 7
 
       - name: Report missing release secrets
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG != 'true' && env.NO_APK != 'true'
+        if: success() && env.STORE_BUILD == 'true' && env.HAS_RELEASE_CONFIG != 'true' && env.NO_APK != 'true'
         run: echo "::warning::Debug build passed, but signed release AAB was skipped because release signing and/or production AdMob secrets (including banner ID) are not configured."
 
       - name: Publish stable final-test release
