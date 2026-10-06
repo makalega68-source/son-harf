@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -127,22 +129,59 @@ internal fun WordSiegePanMatch(
     var hintsUsed by androidx.compose.runtime.saveable.rememberSaveable(game.id) { mutableIntStateOf(0) }
     var hintRequest by remember(game.id) { mutableStateOf<Pair<Int, String>?>(null) }
     var hintBusy by remember(game.id) { mutableStateOf(false) }
+    // The hint move's cells: its tiles are placed for the player and the mascot flies there.
+    var hintCells by remember(game.id) { mutableStateOf<List<Int>>(emptyList()) }
+    // The coroutine checks the live game, not the one captured when the hint was asked.
+    val currentGame = rememberUpdatedState(game to moves.lastOrNull()?.id)
     val hintsLeft = (MascotHints.HINTS_PER_MATCH - hintsUsed).coerceAtLeast(0)
     fun askHint() {
         if (hintBusy || hintsLeft <= 0 || !canAct) return
         hintBusy = true
+        val boardSnapshot = game.board
+        val rackSnapshot = rack
+        val moveKey = moves.lastOrNull()?.id
+        val latestGame = currentGame
         hintScope.launch {
-            val text = runCatching {
+            // Same as practice: the best move this rack can play on the real board, worked out off
+            // the main thread on a copy where "mine" is owner 1, then placed for the player to confirm.
+            val move = runCatching {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                     if (!com.sonharf.game.data.SharedDictionaryService.hasSnapshot(game.language)) {
                         com.sonharf.game.data.SharedDictionaryService.restorePersisted(hintContext, game.language)
                     }
-                    MascotHints.fromRack(hintContext, game.language, rack)
+                    val state = WordSiegePracticeState(
+                        board = boardSnapshot.map { cell ->
+                            cell.copy(owner = when (cell.owner) { 0 -> 0; myOwner -> 1; else -> 2 })
+                        },
+                        bag = "",
+                        playerRack = rackSnapshot,
+                        botRack = "",
+                        language = game.language,
+                        currentOwner = 1,
+                    )
+                    WordSiegePracticeEngine.hintMove(state)
                 }
-            }.getOrElse { sh("Harflerini karıştır, gözden kaçan bir kelime çıkabilir!", "Shuffle your letters, a word may pop out!") }
-            hintsUsed += 1
-            hintRequest = ((hintRequest?.first ?: 0) + 1) to text
+            }.getOrNull()
             hintBusy = false
+            // The turn moved on while it was thinking: say nothing stale.
+            if (latestGame.value.second != moveKey || latestGame.value.first.board != boardSnapshot) return@launch
+            hintsUsed += 1
+            val key = (hintRequest?.first ?: 0) + 1
+            if (move != null) {
+                onPlacementsChange(move.placements)
+                hintCells = move.placements.keys.sorted()
+                val word = MascotHints.full(move.primaryWord, game.language)
+                hintRequest = key to sh(
+                    "Tam buraya: $word (+${move.wordScore} puan). Taşları yerleştirdim, onayla!",
+                    "Right here: $word (+${move.wordScore} points). Tiles placed, confirm it!",
+                )
+            } else {
+                hintCells = emptyList()
+                hintRequest = key to sh(
+                    "Bu harflerle oynanacak kelime yok. DEĞİŞTİR ile harflerini yenile.",
+                    "No playable word with these letters. Use EXCHANGE for new ones.",
+                )
+            }
         }
     }
     val lastMove = moves.lastOrNull()
@@ -499,6 +538,7 @@ internal fun WordSiegePanMatch(
             onCell = onBoardCell,
             onChat = onChat,
             hint = hintRequest,
+            hintCells = hintCells,
         )
         ArenaMoveImpact(
             eventKey = lastMove?.id?.toString(),
@@ -650,6 +690,7 @@ private fun PanSiegeBoard(
     onCell: (Int) -> Unit,
     onChat: () -> Unit,
     hint: Pair<Int, String>? = null,
+    hintCells: List<Int> = emptyList(),
 ) {
     val density = LocalDensity.current
     val tilePx = with(density) { PanSiegeCellSize.toPx() }
@@ -703,7 +744,6 @@ private fun PanSiegeBoard(
     val borderWidthQuarterDp by remember(transformState) {
         derivedStateOf { kotlin.math.round(wordSiegeBoardBorderWidthDp(transform.scale) * 4f) / 4f }
     }
-    val boardBorderWidth = borderWidthQuarterDp.dp
     val overviewMode by remember(closeScaleState, fitScale) { derivedStateOf { closeScaleState.value <= fitScale * 1.3f } }
     // Like Kelimelik: zooming in tells the screen to fold its header into a slim strip, so the board
     // gets that room; zooming back out brings the large cards back. Two thresholds keep the fold
@@ -723,6 +763,42 @@ private fun PanSiegeBoard(
         val mode = if (zoomedIn) WordSiegeBoardViewportMode.CLOSE else WordSiegeBoardViewportMode.FIT
         if (mode != viewportMode) onViewportModeChange(mode)
     }
+    // Where the mascot should fly (a hint's answer, fresh territory). Only a new place counts as a
+    // change, so the pinch moving the board under it does not recompose the mascot every frame.
+    val mascotVisitState = remember(hint, hintCells, placements, lastMove, lastMoveMine, viewport, tilePx) {
+        derivedStateOf(
+            object : SnapshotMutationPolicy<WordSiegeMascotVisit?> {
+                override fun equivalent(a: WordSiegeMascotVisit?, b: WordSiegeMascotVisit?) = a?.key == b?.key
+            },
+        ) {
+            if (hint != null && hintCells.isNotEmpty() && placements.keys.containsAll(hintCells)) {
+                // A requested hint: fly to the exact spot of the answer word.
+                wordSiegeMascotCellVisit(
+                    key = "hintmove:${hint.first}",
+                    indices = hintCells,
+                    transform = transformState.value,
+                    cellSizePx = tilePx,
+                    viewportWidthPx = viewport.width.toFloat(),
+                    viewportHeightPx = viewport.height.toFloat(),
+                    kind = WordSiegeMascotVisitKind.ANSWER,
+                )
+            } else {
+                // After a strong capture it may fly over to admire the new territory.
+                lastMove?.takeIf { lastMoveMine && (it.capturedCells >= 2 || it.opponentCaptured > 0) }?.let { move ->
+                    wordSiegeMascotCellVisit(
+                        key = "cap:${move.id}",
+                        indices = move.placedTiles.map { it.index },
+                        transform = transformState.value,
+                        cellSizePx = tilePx,
+                        viewportWidthPx = viewport.width.toFloat(),
+                        viewportHeightPx = viewport.height.toFloat(),
+                        kind = WordSiegeMascotVisitKind.CAPTURE,
+                    )
+                }
+            }
+        }
+    }
+    val mascotVisit by mascotVisitState
     PanSiegeScoped { WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, { transform }, tilePx) }
     val dragHover by remember(tileDrag) { derivedStateOf { tileDrag?.hoverCell } }
     val draggedFrom = tileDrag?.fromCell
@@ -903,8 +979,9 @@ private fun PanSiegeBoard(
                                 enabled = enabled,
                                 overview = overviewMode,
                                 size = PanSiegeCellSize,
-                                borderWidth = boardBorderWidth,
-                                lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
+                                // Only pending tiles use the zoom-dependent outline.
+                                borderWidth = if (pending) borderWidthQuarterDp.dp else 0.dp,
+                                lastMoveHighlight = { if (index in highlightedIndices) highlightAlpha.value else 0f },
                                 onClick = { onCell(index) },
                                 dropTarget = dragHover == index && boardCell.letter == null,
                                 // Keyed on the placed tile so the gesture survives the tile hiding while carried.
@@ -956,7 +1033,10 @@ private fun PanSiegeBoard(
                         anchorOriginInWindow = viewportOriginInWindow,
                     )
                 }
-
+            }
+            // The mascot sits in its own scope: a pinch changes its target only when the place to
+            // visit changes, so it is not rebuilt on every frame of a zoom.
+            Box(Modifier.matchParentSize()) {
                 // Tapping the mascot sends it flying to another perch.
                 WordSiegeMascotCompanion(
                     anchors = WordSiegeBoardMascotPerches,
@@ -976,20 +1056,8 @@ private fun PanSiegeBoard(
                     hint = hint,
                     playerGender = playerGender,
                     touches = mascotTouches,
-                    // After a strong capture it may fly over to admire the new territory.
-                    visit = lastMove?.takeIf { lastMoveMine && (it.capturedCells >= 2 || it.opponentCaptured > 0) }?.let { move ->
-                        wordSiegeMascotCellVisit(
-                            key = "cap:${move.id}",
-                            indices = move.placedTiles.map { it.index },
-                            transform = transform,
-                            cellSizePx = tilePx,
-                            viewportWidthPx = viewport.width.toFloat(),
-                            viewportHeightPx = viewport.height.toFloat(),
-                            kind = WordSiegeMascotVisitKind.CAPTURE,
-                        )
-                    },
+                    visit = mascotVisit,
                 )
-
             }
             // The board stays clear: chat lives in the action row below, and pinching or double-
             // tapping is enough to move around.
@@ -1030,7 +1098,8 @@ private fun PanSiegeBoardCell(
     overview: Boolean,
     size: Dp,
     borderWidth: Dp,
-    lastMoveHighlight: Float,
+    /** Read at draw time, so the last-move glow animates without recomposing the board. */
+    lastMoveHighlight: () -> Float,
     onClick: () -> Unit,
     dropTarget: Boolean = false,
     dragSource: Modifier = Modifier,
@@ -1104,11 +1173,21 @@ private fun PanSiegeBoardCell(
                     // Placed stones are raised like the board's cells, with no outline.
                     .then(if (letter != null && !pending && !WordSiegeWalnutIvory.enabled) Modifier.wordSiegeCellBevel(dark = false) else Modifier),
             )
-            .border(
-                width = if (dropTarget) 3.dp else if (lastMoveHighlight > 0f) 2.5.dp + 1.dp * lastMoveHighlight else 0.dp,
-                color = if (dropTarget) Color(0xFF2FB36A) else PanSiegeLastMove.copy(alpha = .6f + .4f * lastMoveHighlight),
-                shape = RoundedCornerShape(7.dp),
-            ),
+            .then(if (dropTarget) Modifier.border(3.dp, Color(0xFF2FB36A), RoundedCornerShape(7.dp)) else Modifier)
+            .drawWithContent {
+                drawContent()
+                val glow = lastMoveHighlight()
+                if (!dropTarget && glow > 0f) {
+                    val stroke = (2.5.dp + 1.dp * glow).toPx()
+                    drawRoundRect(
+                        color = PanSiegeLastMove.copy(alpha = .6f + .4f * glow),
+                        topLeft = Offset(stroke / 2f, stroke / 2f),
+                        size = androidx.compose.ui.geometry.Size(this.size.width - stroke, this.size.height - stroke),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(7.dp.toPx()),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(stroke),
+                    )
+                }
+            },
         contentAlignment = Alignment.Center,
     ) {
         Surface(
@@ -1122,10 +1201,13 @@ private fun PanSiegeBoardCell(
             ),
         ) {
             Box(
-                modifier = if (WordSiegeWalnutIvory.enabled && letter != null) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier,
+                modifier = (if (WordSiegeWalnutIvory.enabled && letter != null) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier)
+                    .drawBehind {
+                        val glow = lastMoveHighlight()
+                        if (glow > 0f) drawRect(PanSiegeLastMove.copy(alpha = .2f * glow))
+                    },
                 contentAlignment = Alignment.Center,
             ) {
-                if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(PanSiegeLastMove.copy(alpha = .2f * lastMoveHighlight)))
                 if (WordSiegeWalnutIvory.enabled && owner != 0 && !pending) {
                     Box(
                         Modifier.align(if (owner == myOwner) Alignment.TopStart else Alignment.TopEnd)

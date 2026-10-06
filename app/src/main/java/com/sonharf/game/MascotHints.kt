@@ -8,8 +8,8 @@ import kotlin.random.Random
 /**
  * Hints the mascot gives in games.
  *
- * Fair play: against a real opponent the mascot never names a word; it only gives strategy tips.
- * Against a bot, in practice and in solo modes it reveals the start of a real, everyday word.
+ * A hint is a clear answer: a real, everyday word the player can play now. Against a real opponent
+ * both players get the same three per match, so it stays even.
  */
 internal object MascotHints {
     const val HINTS_PER_MATCH = 3

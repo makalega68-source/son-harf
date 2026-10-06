@@ -208,6 +208,12 @@ internal fun HomeLobbyScreen(
                     rememberWorkshopStatus(), onWorkshop)
                 LobbyGameCard(R.drawable.son_harf_game_icon, sh("Son Harf", "Last Letter"),
                     sh("Son harfle başla · 15 saniye", "Start with the last letter · 15 seconds"), onLastLetter)
+                // Friends in plain sight, not only in the menu.
+                LobbyFriendsCard(
+                    detail = sh("Arkadaş ekle, davet et, birlikte oyna", "Add friends, invite them, play together") +
+                        if (isPro) "" else " · PRO",
+                    onClick = onFriends,
+                )
             }
             Spacer(Modifier.height(96.dp))
         }
@@ -252,6 +258,26 @@ private fun LobbyGameCard(icon: Int, title: String, detail: String, onClick: () 
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text(detail, color = LobbyBrand.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = .8f), modifier = Modifier.size(26.dp))
+        }
+    }
+}
+
+/** The friends row: same size and style as the game cards, with the friends icon on a gold chip. */
+@Composable
+private fun LobbyFriendsCard(detail: String, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth().height(76.dp), shape = RoundedCornerShape(18.dp),
+        color = LobbyBrand.Band, border = BorderStroke(1.dp, LobbyBrand.Grid)) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(LobbyBrand.Gold), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Groups, null, tint = LobbyBrand.NavBar, modifier = Modifier.size(32.dp))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(sh("Arkadaşlar", "Friends"), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
                 Text(detail, color = LobbyBrand.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

@@ -191,7 +191,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, directEntry:
         while (currentCoroutineContext().isActive) {
             if (tick % 2 == 0 || wake.live.get()) {
                 val pollStartedWith = currentGame
-                gameRequestResult { backend.refreshWordSiegeGame(gameId) }
+                gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.refreshWordSiegeGame(gameId) } }
                     .onSuccess { next ->
                         clearErrorNotice()
                         val shown = currentGame
@@ -211,7 +211,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, directEntry:
                     .onFailure { showError(it.message.orEmpty()) }
                 val moveCount = currentGame?.moveCount ?: -1
                 if (moveCount != movesFor) {
-                    gameRequestResult { backend.getWordSiegeMoves(gameId) }.getOrNull()?.let {
+                    gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.getWordSiegeMoves(gameId) } }.getOrNull()?.let {
                         if (it != moves) moves = it
                         movesFor = moveCount
                     }
@@ -219,7 +219,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, directEntry:
             }
             // Chat is read in the background too, so the chat button can show new messages.
             if (tick % 4 == 0 || showChat || wake.live.get()) {
-                gameRequestResult { backend.getWordSiegeMessages(gameId) }.getOrNull()?.let { if (it != messages) messages = it }
+                gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.getWordSiegeMessages(gameId) } }.getOrNull()?.let { if (it != messages) messages = it }
                 if (selectedGameId == gameId) GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
             }
             tick += 1

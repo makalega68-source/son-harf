@@ -81,10 +81,19 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Locale
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+
+/** Restarts a live watch after any failure (bounded back-off) instead of letting it end. */
+private fun <T> kotlinx.coroutines.flow.Flow<T>.premierKeepAlive(onFailure: () -> Unit = {}): kotlinx.coroutines.flow.Flow<T> =
+    retryWhen { cause, attempt ->
+        if (cause is kotlinx.coroutines.CancellationException) return@retryWhen false
+        onFailure()
+        delay((600L * (attempt + 1)).coerceAtMost(3_000L))
+        true
+    }
 
 private enum class PremierStage { Loading, Lobby, Searching, Vs, Playing, Finished }
 private data class PremierMoveFeedback(val accepted: Boolean, val message: String)
@@ -393,21 +402,26 @@ fun PremierWordDuelScreen() {
 
     LaunchedEffect(room?.id) {
         val active = room ?: return@LaunchedEffect
+        // A failed read must never end the watch: a stopped room watch froze the arena and, with
+        // no presence heartbeat left, the server counted the player as gone and ended the match.
+        // Each watch restarts itself after a short back-off instead.
+        val reconnecting = pt(language, "Bağlantı yenileniyor…", "Reconnecting…")
         launch {
             backend.observeRoom(active.id)
-                .catch { notice = pt(language, "Bağlantı yenileniyor…", "Reconnecting…") }
+                .premierKeepAlive { notice = reconnecting }
                 .collect { next ->
+                    if (notice == reconnecting) notice = ""
                     if (acceptRoom(next) && next.isPremierFinished()) stage = PremierStage.Finished
                 }
         }
         launch {
             backend.observeWords(active.id)
-                .catch { }
+                .premierKeepAlive()
                 .collect { acceptWords(it) }
         }
         if (!active.isBot) launch {
             backend.observeChat(active.id)
-                .catch { }
+                .premierKeepAlive()
                 .collect { next ->
                     if (room?.id != active.id) return@collect
                     val previousId = chat.lastOrNull()?.id
@@ -449,6 +463,15 @@ fun PremierWordDuelScreen() {
         if (floatingMessage != null) {
             delay(2600)
             floatingMessage = null
+        }
+    }
+
+    // In the arena a notice is brief: it shares its line with the hint button, and a notice left
+    // there (a restored-match greeting, a passed reconnect) used to hide the hint for the match.
+    LaunchedEffect(notice, stage) {
+        if (stage == PremierStage.Playing && notice.isNotBlank()) {
+            delay(5_000)
+            notice = ""
         }
     }
 
@@ -521,8 +544,14 @@ fun PremierWordDuelScreen() {
             val advanced = gameRequestResult { backend.botTakeTurn(active.id) }.getOrNull()
             if (advanced != null) {
                 acceptRoom(advanced)
-                notice = ""
-                return@LaunchedEffect
+                // Only a real move ends the wait. An answer that still says "AI's turn" used to end
+                // it too, and with nothing left to restart it the match sat frozen until it expired.
+                if (!advanced.botTurn || advanced.isPremierFinished() ||
+                    advanced.status !in setOf("playing", "final", "sudden_death")
+                ) {
+                    notice = ""
+                    return@LaunchedEffect
+                }
             }
             attempt += 1
             if (attempt >= 4) notice = pt(language, "Rakip hamlesi yeniden eşitleniyor…", "Resyncing rival move…")
@@ -647,7 +676,7 @@ fun PremierWordDuelScreen() {
         // once from the local estimate; the server's remaining_ms re-anchors them when it answers,
         // so neither a slow request nor clock skew can stall or freeze the countdown.
         var initialRemainingMs = Duration.between(Instant.now(), deadline).toMillis()
-            .coerceIn(1_000L, (PREMIER_TURN_SECONDS + PREMIER_ROUND_PREP_SECONDS) * 1000L)
+            .coerceIn(1_000L, (PREMIER_TURN_SECONDS + PREMIER_ROUND_BREAK_SECONDS) * 1000L)
         var countdownAnchor = SystemClock.elapsedRealtime()
         var serverClockResolved = false
         fun syncTurnClock() {
@@ -673,7 +702,8 @@ fun PremierWordDuelScreen() {
             // separately so the turn clock itself always counts down from 15. Only the server
             // clock may open the break, so a skewed phone clock never flashes it.
             val prepMs = initialRemainingMs - elapsedMs - PREMIER_TURN_SECONDS * 1000L
-            prepSeconds = if (serverClockResolved && prepMs > 0L) ((prepMs + 999L) / 1000L).toInt() else 0
+            // Never longer than the set break, whatever extra time the deadline carries.
+            prepSeconds = if (serverClockResolved && prepMs > 0L) ((prepMs + 999L) / 1000L).toInt().coerceAtMost(PREMIER_ROUND_BREAK_SECONDS) else 0
             val remaining = premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs)
             if (remaining > 0 || !serverClockResolved) {
                 turnSeconds = remaining.coerceAtLeast(1)
@@ -1105,7 +1135,7 @@ private fun PremierHowToPlay(language: String) {
                             val link=i==word.lastIndex||index>0&&i==0
                             val lift by animateFloatAsState(if(active&&link)-4f else 0f,tween(350),label="rule-letter")
                             Box(Modifier.graphicsLayer{translationY=lift}.size(32.dp).shadow(2.dp,RoundedCornerShape(7.dp))
-                                .clip(RoundedCornerShape(7.dp)).background(Brush.verticalGradient(if(link)listOf(Color(0xFFFFEAB0),EventGold)else listOf(PremierBoard.Tile,PremierBoard.BoardBottom)))
+                                .clip(RoundedCornerShape(7.dp)).background(Brush.verticalGradient(if(link)listOf(Color(0xFFFFEAB0),EventGold)else listOf(PremierBoard.Tile,PremierBoard.TileShade)))
                                 .border(1.dp,PremierBoard.TileEdge,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center) {
                                 Text(ch.toString(),color=if(link)EventInk else PremierBoard.TileInk,fontSize=17.sp,fontWeight=FontWeight.Black)
                             }
@@ -1276,8 +1306,10 @@ private fun PremierStatPill(text: String, accent: Color) {
 
 /** Word-game palette: a calm teal board, cream letter tiles, one soft colour per player. */
 private object PremierBoard {
-    val BoardTop: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1E2127) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF7EEDC) else Color(0xFFF6F1E3)
-    val BoardBottom: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF15171B) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEADCC0) else Color(0xFFEFE7D2)
+    val BoardTop: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1E2127) else if (SonHarfCosmetics.petrolMenus) Color(0xFF135463) else if (SonHarfCosmetics.walnutTheme) Color(0xFFF7EEDC) else Color(0xFFF6F1E3)
+    val BoardBottom: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF15171B) else if (SonHarfCosmetics.petrolMenus) Color(0xFF0F4350) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEADCC0) else Color(0xFFEFE7D2)
+    /** The lower shade of a letter tile (tiles stay gold on every board colour). */
+    val TileShade: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF15171B) else if (SonHarfCosmetics.walnutTheme) Color(0xFFEADCC0) else Color(0xFFEFE7D2)
     val Tile: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF1F2025) else if (SonHarfCosmetics.walnutTheme) Color(0xFFFAF3E3) else Color(0xFFF7E3A6)
     val TileEdge: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFB8903A) else if (SonHarfCosmetics.walnutTheme) Color(0xFFCDB58E) else Color(0xFFC9A560)
     val TileInk: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFF2C75C) else if (SonHarfCosmetics.walnutTheme) Color(0xFF2A2018) else Color(0xFF4A3217)
@@ -1368,14 +1400,14 @@ private fun PremierArena(
     val latestPlayedWord = latestMove?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
     val latestMoveMine = latestMove != null && latestMove.playerId == meId
 
-    // Mascot hints. Against a bot the hint is a real answer word: mascot owners get three free
-    // ones, then banked (rewarded video) hints, then Son Coin. Against a real opponent a hint is
-    // only a strategy tip (fair play), so it is free and never spends banked or bought hints.
+    // Mascot hints are a real answer word. Against a bot mascot owners get three free ones, then
+    // banked (rewarded video) hints, then Son Coin. Against a real opponent every player gets the
+    // same three per match, so it stays even, and banked or bought hints are never spent there.
     val hintContext = androidx.compose.ui.platform.LocalContext.current
     // The hint words come from the bundled dictionary: load it off the main thread before the
     // first hint so asking for one never stalls a turn.
     LaunchedEffect(room.language) {
-        if (room.isBot) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             runCatching { com.sonharf.game.data.SharedDictionaryService.restorePersisted(hintContext, room.language) }
         }
     }
@@ -1386,18 +1418,11 @@ private fun PremierArena(
     fun showHintText(text: String) {
         hintRequest = ((hintRequest?.first ?: 0) + 1) to text
     }
-    fun hintText(): String = if (room.isBot) {
-        val prefix = if (required == "★") "" else required.lowercase(premierLocale(language))
-        MascotHints.startWord(hintContext, room.language, prefix, words.map { it.normalizedWord.ifBlank { it.word } }.toSet())
-    } else {
-        MascotHints.tip((hintRequest?.first ?: 0) + 1 + words.size)
-    }
     // Free hints used up against a bot: one more costs Son Coin (server-checked).
     val hintScope = rememberCoroutineScope()
     // Working out a hint can read the whole dictionary: never on the main thread, and a failure
     // only gives a general tip instead of taking the player out of the match.
     suspend fun safeHintText(): String {
-        if (!room.isBot) return hintText()
         // Read the match state here, then search the dictionary in the background.
         val prefix = if (required == "★") "" else required.lowercase(premierLocale(language))
         val used = words.map { it.normalizedWord.ifBlank { it.word } }.toSet()
@@ -2119,7 +2144,12 @@ private fun PremierRoundPrep(
 ) {
     val pulse = rememberInfiniteTransition(label = "prep")
     val beat by pulse.animateFloat(1f, 1.08f, infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "prep-beat")
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF22324A), Color(0xFF2C3E55)))).pointerInput(Unit) {}, contentAlignment = Alignment.Center) {
+    val breakSky = if (SonHarfCosmetics.darkArenaTheme || SonHarfCosmetics.petrolMenus) {
+        listOf(PremierArenaSky.BackgroundTop, PremierArenaSky.Surface)
+    } else {
+        listOf(Color(0xFF22324A), Color(0xFF2C3E55))
+    }
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(breakSky)).pointerInput(Unit) {}, contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 24.dp)) {
             if (lastRoundWon != null) {
                 Text(

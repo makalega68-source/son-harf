@@ -231,7 +231,8 @@ internal fun WordSiegeExperienceScreen(directEntry: Boolean = false, onExit: () 
         ))
         while (currentCoroutineContext().isActive) {
             val pollStartedWith = currentGame
-            gameRequestResult { backend.refreshWordSiegeGame(gameId) }
+            // Network and JSON decoding stay off the main thread, so the board never waits on a poll.
+            gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.refreshWordSiegeGame(gameId) } }
                 .onSuccess { next ->
                     clearErrorNotice()
                     val shown = currentGame
@@ -252,13 +253,13 @@ internal fun WordSiegeExperienceScreen(directEntry: Boolean = false, onExit: () 
                 .onFailure { showError(it.message.orEmpty()) }
             val moveCount = currentGame?.moveCount ?: -1
             if (moveCount != movesFor) {
-                gameRequestResult { backend.getWordSiegeMoves(gameId) }.getOrNull()?.let {
+                gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.getWordSiegeMoves(gameId) } }.getOrNull()?.let {
                     if (it != moves) moves = it
                     movesFor = moveCount
                 }
             }
             // Chat is read in the background too, so the chat button can show new messages.
-            gameRequestResult { backend.getWordSiegeMessages(gameId) }.getOrNull()?.let { if (it != messages) messages = it }
+            gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.getWordSiegeMessages(gameId) } }.getOrNull()?.let { if (it != messages) messages = it }
             if (selectedGameId == gameId) GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
             wake.await(pollMs = 2_500, safetyMs = 8_000)
         }
