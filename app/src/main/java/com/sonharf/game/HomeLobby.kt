@@ -218,8 +218,10 @@ internal fun HomeLobbyScreen(
             moveId = null, lastMoveMine = false, playerTurn = false,
             modifier = Modifier.matchParentSize(),
             playerName = p?.displayName, playerGender = p?.gender,
-            stageY = .5f,
+            stageY = .5f, greetAloud = true,
         )
+        // A brand-new player is welcomed by Obi once, with a short tour of the game.
+        MascotWelcomeTour(playerName = p?.displayName)
     }
 
     if (leagueInfo) AlertDialog(

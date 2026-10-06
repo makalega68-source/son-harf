@@ -288,6 +288,39 @@ internal object WordSiegeMascotLines {
     val missed = listOf(
         "Seni özledim %s! Neredeydin?" to "I missed you, %s! Where have you been?",
         "Uzun zaman oldu! Kaldığımız yerden devam." to "It's been a while! Let's pick up where we left off.",
+        "%n gündür kapıyı gözlüyorum %s… 🥺" to "I've watched the door for %n days, %s… 🥺",
+        "Sensiz tahta çok sessizdi %s." to "The board was so quiet without you, %s.",
+    )
+    /** Away for a day or two. */
+    val missedDay = listOf(
+        "Dün seni bekledim %s… 🥺" to "I waited for you yesterday, %s… 🥺",
+        "Bir gün bile yoktun ama özledim seni!" to "You were gone just a day, but I missed you!",
+        "Neredeydin? Merak ettim seni %s." to "Where were you? I wondered about you, %s.",
+    )
+    /** Away for a week or more. */
+    val missedLong = listOf(
+        "Tam %n gün oldu… Seni çok özledim %s! 🥹" to "%n whole days… I missed you so much, %s! 🥹",
+        "%n gündür yoktun! Bir daha bu kadar uzun gitme, olur mu? 🥹" to "%n days away! Don't stay away this long again, okay? 🥹",
+        "Her gün seni düşündüm %s. %n gün çok uzundu!" to "I thought of you every day, %s. %n days was so long!",
+    )
+    /** Right after missing them: joy that they are back. */
+    val gladBack = listOf(
+        "Ama iyi ki geldin! Hadi, birlikte kazanalım! 💛" to "But I'm so glad you're here! Come on, let's win together! 💛",
+        "Geldin ya, gerisi önemli değil! ✨" to "You're here now, nothing else matters! ✨",
+        "Yaşasın, takım yeniden bir arada! 🎉" to "Hooray, the team is back together! 🎉",
+    )
+    /** The first meeting with a newly bought mascot (%w is the mascot's name). */
+    val introHello = listOf(
+        "Yaşasın! Sonunda tanıştık %s! 🎉" to "Hooray! We finally meet, %s! 🎉",
+        "Merhaba %s! Beni seçtiğin için çok mutluyum! 🎉" to "Hi %s! I'm so happy you picked me! 🎉",
+    )
+    val introWho = listOf(
+        "Ben %w! Bugünden sonra her maçta yanındayım." to "I'm %w! From today on I'm with you in every match.",
+        "Adım %w. Artık senin oyun arkadaşınım!" to "My name is %w. I'm your game buddy now!",
+    )
+    val introPromise = listOf(
+        "Her maçta sana 3 ipucu vereceğim. Birlikte tahtı fethedelim! ✨" to "I'll give you 3 hints every match. Let's conquer the throne together! ✨",
+        "Kazandığında dans edeceğim, zorlandığında yanında olacağım. Söz! 💛" to "I'll dance when you win and stay by you when it's tough. Promise! 💛",
     )
     val praise = listOf(
         "Güzel hamle!" to "Nice move!",
@@ -633,6 +666,8 @@ internal fun WordSiegeMascotCompanion(
     ambientScenes: Boolean = false,
     /** Speech belongs only in an explicitly opened mascot conversation. */
     allowSpeech: Boolean = false,
+    /** The home screen: says its hello (missing you, first meeting after a purchase) out loud, once per app session. */
+    greetAloud: Boolean = false,
     positionKey: String = "arena",
 ) {
     if (anchors.isEmpty()) return
@@ -942,17 +977,55 @@ internal fun WordSiegeMascotCompanion(
                 delay(350L)
                 val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
                 val together = bond.daysTogether()
+                // Only the home screen greets out loud, and only once per app session.
+                val aloud = greetAloud && MascotGreetingSession.claim()
+                val mascotName = sh(skin.titleTr, skin.titleEn)
                 when {
+                    aloud && skin != WordSiegeMascotSkin.GOLD_KING && !MascotIntroductions.done(context, skin) -> {
+                        // First time with a newly bought mascot: an excited introduction.
+                        MascotIntroductions.markDone(context, skin)
+                        perform(WordSiegeMascotAction.CHEER)
+                        stageEmotion = WordSiegeMascotEmotion.EXCITED
+                        say(mind.line(WordSiegeMascotLines.introHello, currentName, word = mascotName), 600L, explicitRequest = true)
+                        delay(3_400L)
+                        perform(WordSiegeMascotAction.DANCE)
+                        say(mind.line(WordSiegeMascotLines.introWho, currentName, word = mascotName), 600L, explicitRequest = true)
+                        delay(3_800L)
+                        perform(WordSiegeMascotAction.SPARKLE)
+                        say(mind.line(WordSiegeMascotLines.introPromise, currentName, word = mascotName), 900L, explicitRequest = true)
+                        delay(3_600L)
+                        stageEmotion = null
+                        bond.add(10)
+                    }
+                    aloud && daysAway >= 1L -> {
+                        // Missed the player: a short sad look, then joy and a nuzzle that they came back.
+                        stageEmotion = WordSiegeMascotEmotion.SAD
+                        val missLines = when {
+                            daysAway >= 7L -> WordSiegeMascotLines.missedLong
+                            daysAway >= 3L -> WordSiegeMascotLines.missed
+                            else -> WordSiegeMascotLines.missedDay
+                        }
+                        say(mind.line(missLines, currentName, number = daysAway.toInt()), 900L, explicitRequest = true)
+                        delay(2_600L)
+                        stageEmotion = WordSiegeMascotEmotion.HAPPY
+                        perform(WordSiegeMascotAction.NUZZLE)
+                        delay(2_400L)
+                        perform(WordSiegeMascotAction.HOP)
+                        say(mind.line(WordSiegeMascotLines.gladBack, currentName), 400L, explicitRequest = true)
+                        delay(2_400L)
+                        stageEmotion = null
+                        bond.add(3)
+                    }
                     meetings in MILESTONES -> {
                         perform(WordSiegeMascotAction.CHEER)
-                        say(mind.line(WordSiegeMascotLines.milestone, currentName, number = meetings), holdExtraMillis = 800L)
+                        say(mind.line(WordSiegeMascotLines.milestone, currentName, number = meetings), holdExtraMillis = 800L, explicitRequest = aloud)
                     }
                     together > 0L && together % 365L == 0L -> {
                         perform(WordSiegeMascotAction.SPARKLE)
-                        say(mind.line(WordSiegeMascotLines.anniversary, currentName), holdExtraMillis = 800L)
+                        say(mind.line(WordSiegeMascotLines.anniversary, currentName), holdExtraMillis = 800L, explicitRequest = aloud)
                     }
-                    meetings <= 1 -> say(mind.line(lines(WordSiegeMascotTopic.GREET_FIRST, WordSiegeMascotLines.greetFirst), currentName))
-                    daysAway >= 3L -> say(mind.line(WordSiegeMascotLines.missed, currentName))
+                    meetings <= 1 -> say(mind.line(lines(WordSiegeMascotTopic.GREET_FIRST, WordSiegeMascotLines.greetFirst), currentName), explicitRequest = aloud)
+                    daysAway >= 3L -> say(mind.line(WordSiegeMascotLines.missed, currentName), explicitRequest = aloud)
                     mind.chance(.7f) -> {
                         val greetLines = when {
                             hour in 5..10 && mind.chance(.6f) -> WordSiegeMascotLines.morning
@@ -961,7 +1034,8 @@ internal fun WordSiegeMascotCompanion(
                             bond.level == 1 -> WordSiegeMascotLines.greetFriend
                             else -> lines(WordSiegeMascotTopic.GREET, WordSiegeMascotLines.greet)
                         }
-                        say(mind.line(greetLines, currentName))
+                        if (aloud) perform(WordSiegeMascotAction.WAVE)
+                        say(mind.line(greetLines, currentName), explicitRequest = aloud)
                     }
                 }
             }
@@ -1769,4 +1843,28 @@ private fun WordSiegeMascotSpeechBubble(
 /** Bumped on every mascot change so all mascots on screen switch to the new choice at once. */
 internal object MascotSkinChoice {
     var version by androidx.compose.runtime.mutableIntStateOf(0)
+}
+
+/** Once per app session the home mascot greets out loud; later visits to home stay quiet. */
+internal object MascotGreetingSession {
+    @Volatile private var greeted = false
+
+    @Synchronized
+    fun claim(): Boolean {
+        if (greeted) return false
+        greeted = true
+        return true
+    }
+}
+
+/** Which mascots have already introduced themselves after their purchase (kept on this device). */
+internal object MascotIntroductions {
+    private const val PREFS = "mascot_introductions"
+
+    fun done(context: android.content.Context, skin: WordSiegeMascotSkin): Boolean =
+        context.applicationContext.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getBoolean(skin.id, false)
+
+    fun markDone(context: android.content.Context, skin: WordSiegeMascotSkin) {
+        context.applicationContext.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putBoolean(skin.id, true).apply()
+    }
 }
