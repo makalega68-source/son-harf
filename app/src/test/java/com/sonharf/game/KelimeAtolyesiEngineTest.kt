@@ -137,6 +137,16 @@ class KelimeAtolyesiEngineTest {
         assertFalse(result.state.tasks[2].done)
     }
 
+    @Test fun newSetsDoNotRepeatTheSameLettersBackToBack() {
+        val engine = KelimeAtolyesiEngine(TR_WORDS, "tr", Random(11))
+        var previous: List<Char>? = null
+        repeat(30) {
+            val letters = engine.newRound().pool.map { it.letter }.sorted()
+            assertFalse("same pool twice in a row: $letters", letters == previous)
+            previous = letters
+        }
+    }
+
     @Test fun dailyRaceGivesEveryoneTheSameStartingRound() {
         val seed = KelimeAtolyesiEngine.dailySeed("tr", "2026-09-27")
         // Two players, different engines built from the same words in a different order.

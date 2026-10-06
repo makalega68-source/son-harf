@@ -111,7 +111,12 @@ internal class KelimeAtolyesiEngine(
      */
     fun reseed(seed: Long) {
         random = Random(seed)
+        // A seeded round must not depend on what this device played before.
+        recentSeeds.clear()
     }
+
+    /** Seed words used lately, so a new set never lays the same letters again soon. */
+    private val recentSeeds = ArrayDeque<String>()
 
     fun isWord(word: String): Boolean = word in words
 
@@ -147,7 +152,8 @@ internal class KelimeAtolyesiEngine(
         val keptTiles = state.pool.filter { it.id !in state.picked }
         val open = tasks.filter { !it.done }
         var nextId = state.nextTileId
-        val refill = refillLetters(keptTiles.map { it.letter }, state.picked.size, open, used.toSet())
+        val playedLetters = state.pool.filter { it.id in state.picked }.map { it.letter }
+        val refill = refillLetters(keptTiles.map { it.letter }, state.picked.size, open, used.toSet(), playedLetters)
         val pool: List<AtelierTile>
         val fresh = mutableSetOf<Long>()
         if (refill != null) {
@@ -235,32 +241,43 @@ internal class KelimeAtolyesiEngine(
     }
 
     private fun seedLetters(): List<Char>? {
-        val seed = seeds.randomOrNull(random) ?: return null
+        // Skip seed words used lately; a 7-letter seed with no repeated letters is preferred, so a
+        // fresh pool is not three A's in a row.
+        val fresh = seeds.filter { it !in recentSeeds }.ifEmpty { seeds }
+        val varied = fresh.filter { it.toSet().size >= POOL_SIZE - 1 }.ifEmpty { fresh }
+        val seed = varied.randomOrNull(random) ?: return null
+        recentSeeds.addLast(seed)
+        while (recentSeeds.size > RECENT_SEEDS) recentSeeds.removeFirst()
         val letters = seed.toMutableList()
-        while (letters.size < POOL_SIZE) letters += weightedLetter()
+        while (letters.size < POOL_SIZE) letters += weightedLetter(counts(letters.joinToString("")))
         letters.shuffle(random)
         return letters
     }
 
-    private fun refillLetters(kept: List<Char>, need: Int, open: List<AtelierTask>, used: Set<String>): List<Char>? {
+    private fun refillLetters(kept: List<Char>, need: Int, open: List<AtelierTask>, used: Set<String>, played: List<Char> = emptyList()): List<Char>? {
         repeat(REFILL_TRIES) {
-            val fresh = guidedLetters(kept, need, open, used)
+            val fresh = guidedLetters(kept, need, open, used, played)
             if (solvable(kept + fresh, open, used)) return fresh
         }
         return null
     }
 
-    /** For each open task (random order) adds the letters one real word for it still needs, then fills by frequency. */
-    private fun guidedLetters(kept: List<Char>, need: Int, open: List<AtelierTask>, used: Set<String>): List<Char> {
+    /**
+     * For each open task (random order) adds the letters one real word for it still needs, then
+     * fills the rest by frequency. Fill letters never push a letter past [MAX_SAME] copies and
+     * avoid the letters just played, so the same letters do not keep coming back.
+     */
+    private fun guidedLetters(kept: List<Char>, need: Int, open: List<AtelierTask>, used: Set<String>, played: List<Char> = emptyList()): List<Char> {
         val result = mutableListOf<Char>()
         for (task in open.shuffled(random)) {
             val have = counts((kept + result).joinToString(""))
             val room = need - result.size
             val candidates = index.filter { (word, wc) -> word !in used && task.matches(word) && missing(wc, have) <= room }
-            val (_, wc) = candidates.randomOrNull(random) ?: continue
+            // Prefer words that need fewer of the letters that were just played.
+            val (_, wc) = candidates.shuffled(random).minByOrNull { (word, _) -> word.count { it in played } } ?: continue
             for (i in wc.indices) repeat((wc[i] - have[i]).coerceAtLeast(0)) { result += alphabet[i] }
         }
-        while (result.size < need) result += weightedLetter()
+        while (result.size < need) result += weightedLetter(counts((kept + result).joinToString("")), played)
         result.shuffle(random)
         return result
     }
@@ -273,14 +290,20 @@ internal class KelimeAtolyesiEngine(
         return null
     }
 
-    private fun weightedLetter(): Char {
-        val total = weights.sumOf { it.second }
+    /**
+     * A letter by language frequency, skipping letters already [MAX_SAME] times in the pool and,
+     * when possible, the letters just played.
+     */
+    private fun weightedLetter(have: IntArray? = null, avoid: List<Char> = emptyList()): Char {
+        val capped = weights.filter { (c, _) -> have == null || have[alphabet.indexOf(c).coerceAtLeast(0)] < MAX_SAME }
+        val choices = capped.filter { it.first !in avoid }.ifEmpty { capped }.ifEmpty { weights }
+        val total = choices.sumOf { it.second }
         var roll = random.nextDouble() * total
-        for ((letter, weight) in weights) {
+        for ((letter, weight) in choices) {
             roll -= weight
             if (roll <= 0) return letter
         }
-        return weights.last().first
+        return choices.last().first
     }
 
     private fun counts(text: String): IntArray {
@@ -305,6 +328,10 @@ internal class KelimeAtolyesiEngine(
 
     companion object {
         const val POOL_SIZE = 7
+        /** Fill letters never make a letter appear more than this many times in the pool. */
+        const val MAX_SAME = 2
+        /** How many recent seed words are kept out of the next sets. */
+        const val RECENT_SEEDS = 40
         const val MIN_WORD = 3
         const val ROUND_SECONDS = 60
         const val LONG_ROUND_SECONDS = 120

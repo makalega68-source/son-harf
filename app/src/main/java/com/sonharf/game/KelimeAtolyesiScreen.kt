@@ -1151,7 +1151,7 @@ private fun AtelierResult(
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(containerColor = AtelierUi.Green, contentColor = Color.White),
         ) {
-            Text(if (daily) sh("Sıralamayı Gör", "See the Board") else sh("Yeni Tur", "New Round"), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(if (daily) sh("Atölye Menüsü", "Workshop Menu") else sh("Yeni Tur", "New Round"), fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
         if (!daily) {
             OutlinedButton(
@@ -1161,7 +1161,7 @@ private fun AtelierResult(
                 border = BorderStroke(1.dp, AtelierUi.Gold),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = AtelierUi.Ink),
             ) {
-                Text(sh("Günlük Yarış", "Daily Race"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(sh("Atölye Menüsü", "Workshop Menu"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         OutlinedButton(

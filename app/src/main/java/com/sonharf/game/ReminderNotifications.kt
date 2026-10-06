@@ -97,8 +97,9 @@ internal object ReminderNotifications {
     }
 
     internal fun message(reminder: Reminder, streak: Int): Pair<String, String> = when (reminder) {
-        Reminder.DAILY_RACE -> sh("🏁 Günlük Yarış başladı", "🏁 The Daily Race is on") to
-            sh("Bugünün harfleri herkes için aynı. Kelime Atölyesi'nde sıralamaya gir!", "Today's letters are the same for everyone. Climb the Word Workshop board!")
+        // Kept under its old name (scheduled alarms use it); it now points to the workshop tournament.
+        Reminder.DAILY_RACE -> sh("🏆 Atölye turnuvası seni bekliyor", "🏆 The Workshop tournament awaits") to
+            sh("Kelime Atölyesi'nde \"Hazırım\" de, turnuva başlayınca kürsü için yarış!", "Tap \"I'm ready\" in the Word Workshop and race for the podium!")
         Reminder.STREAK -> sh("🔥 $streak günlük serin yanmak üzere", "🔥 Your $streak-day streak is about to break") to
             sh("Bugün bir oyun oyna, serini koru.", "Play one game today to keep it alive.")
         Reminder.MISS_YOU -> sh("Obi seni özledi 🥺", "Obi misses you 🥺") to

@@ -122,7 +122,7 @@ internal fun MainSettingsScreen(
                     SonHarfPreferences.setSystemNotificationsEnabled(context, it)
                 }
                 HorizontalDivider(color = MainUi.Border)
-                MainToggleSetting(Icons.Rounded.Alarm, sh("Hatırlatmalar", "Reminders"), sh("Günlük yarış, seri uyarısı ve Obi'nin mesajları", "Daily race, streak alerts and notes from Obi"), reminders) {
+                MainToggleSetting(Icons.Rounded.Alarm, sh("Hatırlatmalar", "Reminders"), sh("Turnuva, seri uyarısı ve Obi'nin mesajları", "Tournament, streak alerts and notes from Obi"), reminders) {
                     reminders = it
                     ReminderNotifications.setEnabled(context, it)
                 }
