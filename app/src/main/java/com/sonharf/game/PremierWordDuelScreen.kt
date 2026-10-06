@@ -2586,7 +2586,8 @@ private fun PremierPressureStrip(
                 } else {
                     Text(
                         pt(language, "KRİTİK 5 SANİYE", "CRITICAL 5 SECONDS"),
-                        color = PremierBoard.Danger.copy(alpha = if (danger) flash else 0f),
+                        Modifier.graphicsLayer { alpha = flashState?.value ?: 1f },
+                        color = PremierBoard.Danger,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.sp,
