@@ -177,22 +177,22 @@ internal fun WordSiegePracticeBoard(
     )
 
     // Zooming in folds the screen's header and score cards into a slim strip so the board gets the
-    // room (as in online matches); zooming back out restores them. Two thresholds stop flicker.
+    // room (as in online matches); zooming back out restores them. Only the player's own pinch
+    // decides this (never a layout change), and two thresholds stop flicker.
     val viewportModeCallback by rememberUpdatedState(onViewportModeChange)
-    LaunchedEffect(fitScale) {
-        var zoomedIn = mode == WordSiegeBoardViewportMode.CLOSE
-        // Before the board is measured its scale is a placeholder, not a zoom the player chose.
-        snapshotFlow { if (initialized && fitScale > 0f) closeScale / fitScale else 1f }.collect { ratio ->
-            val next = when {
-                !zoomedIn && ratio > 1.3f -> true
-                zoomedIn && ratio < 1.1f -> false
-                else -> zoomedIn
-            }
-            if (next != zoomedIn) {
-                zoomedIn = next
-                mode = if (next) WordSiegeBoardViewportMode.CLOSE else WordSiegeBoardViewportMode.FIT
-                viewportModeCallback(mode)
-            }
+    val gestureFit by rememberUpdatedState(fitScale)
+    fun reportZoom(scale: Float) {
+        val fit = gestureFit
+        if (fit <= 0f) return
+        val ratio = scale / fit
+        val next = when {
+            mode == WordSiegeBoardViewportMode.FIT && ratio > 1.3f -> WordSiegeBoardViewportMode.CLOSE
+            mode == WordSiegeBoardViewportMode.CLOSE && ratio < 1.1f -> WordSiegeBoardViewportMode.FIT
+            else -> mode
+        }
+        if (next != mode) {
+            mode = next
+            viewportModeCallback(next)
         }
     }
     WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, transform, tilePx)
@@ -210,6 +210,8 @@ internal fun WordSiegePracticeBoard(
             closePan = centerClose()
             initialized = true
         } else if (initialized) {
+            // While the whole board is shown, keep it fitted as the space around it changes.
+            if (mode == WordSiegeBoardViewportMode.FIT) closeScale = fitScale.coerceAtMost(WORD_SIEGE_PRACTICE_MAX_SCALE)
             closePan = clampClosePan(closePan)
         }
     }
@@ -246,6 +248,7 @@ internal fun WordSiegePracticeBoard(
                             val ratio = if (oldScale > 0f) newScale / oldScale else 1f
                             val candidate = centroid + (gesturePan - centroid) * ratio + pan
                             closeScale = newScale
+                            if (zoom != 1f) reportZoom(newScale)
                             closePan = clampWordSiegeSkinnedPan(
                                 candidate,
                                 gestureViewport.width.toFloat(),
