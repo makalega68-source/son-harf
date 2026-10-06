@@ -181,7 +181,8 @@ internal fun WordSiegePracticeBoard(
     val viewportModeCallback by rememberUpdatedState(onViewportModeChange)
     LaunchedEffect(fitScale) {
         var zoomedIn = mode == WordSiegeBoardViewportMode.CLOSE
-        snapshotFlow { if (fitScale > 0f) closeScale / fitScale else 1f }.collect { ratio ->
+        // Before the board is measured its scale is a placeholder, not a zoom the player chose.
+        snapshotFlow { if (initialized && fitScale > 0f) closeScale / fitScale else 1f }.collect { ratio ->
             val next = when {
                 !zoomedIn && ratio > 1.3f -> true
                 zoomedIn && ratio < 1.1f -> false
