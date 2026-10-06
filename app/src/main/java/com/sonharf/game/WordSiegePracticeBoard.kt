@@ -480,8 +480,8 @@ private fun WordSiegePracticeBoardCell(
     val regionGap = 1.25.dp
     val skinPlate = LocalWordSiegePlate.current
     val cellInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val pressed by cellInteraction.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(if (pressed) .94f else 1f, tween(if (pressed) 65 else 150), label = "practice cell press")
+    // Board squares are not buttons: no press animation (225 of them used to track touches and
+    // shrink even while the board was being panned). A tap still places a tile.
 
     Box(
         Modifier
@@ -510,7 +510,6 @@ private fun WordSiegePracticeBoardCell(
                 }
             }
             .padding(regionGap)
-            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             // Raised stones cast a short soft shadow; empty recesses cast none.
             .shadow(if (letter != null && !WordSiegeWalnutIvory.enabled) 2.dp else 0.dp, RoundedCornerShape(8.dp), clip = false)
             .clip(RoundedCornerShape(8.dp))
