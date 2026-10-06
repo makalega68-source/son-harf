@@ -84,8 +84,8 @@ class PremierDuelUxRegressionTest {
         assertFalse(screen.contains("Enter a word starting with “\$required”"))
         assertTrue(screen.contains("fontSize = if (veryCompact) 14.sp else 16.sp"))
 
-        // History chips center as a group instead of hugging the left edge.
-        assertTrue(screen.contains("Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally)"))
+        // The played-words chips were removed from the arena (unreadable on the petrol board).
+        assertFalse(screen.contains("PremierWordTrail("))
 
         // Turn and accepted-word feedback is a light sweep on the target tile, not screen-centred rings.
         assertFalse(screen.contains("PurchasedVictoryVfx("))
