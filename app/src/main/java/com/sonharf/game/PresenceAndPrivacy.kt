@@ -18,7 +18,7 @@ internal fun ProfileDto.isRecentlyOnline(now: Long = System.currentTimeMillis())
     presenceIsFresh(presenceStatus, lastSeenAt, now)
 
 internal fun presenceIsFresh(status: String, seen: String?, now: Long): Boolean {
-    val stamp = runCatching { Instant.parse(seen).toEpochMilli() }.getOrNull() ?: return false
+    val stamp = runCatching { com.sonharf.game.data.requireServerInstant(seen).toEpochMilli() }.getOrNull() ?: return false
     return status in setOf("online", "in_game") && now - stamp in -30_000L..90_000L
 }
 

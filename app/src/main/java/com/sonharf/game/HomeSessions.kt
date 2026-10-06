@@ -56,7 +56,7 @@ internal fun rememberAppForeground(): Boolean {
 }
 
 internal fun socialDate(value: String): String = runCatching {
-    DateTimeFormatter.ofPattern("dd.MM HH:mm").withZone(ZoneId.of("Europe/Istanbul")).format(Instant.parse(value))
+    DateTimeFormatter.ofPattern("dd.MM HH:mm").withZone(ZoneId.of("Europe/Istanbul")).format(com.sonharf.game.data.requireServerInstant(value))
 }.getOrDefault("—")
 
 internal data class UnifiedHomeMatch(

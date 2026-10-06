@@ -29,7 +29,7 @@ internal fun latestRivalMatches(games: List<WordSiegeGameDto>, history: List<Mat
             g.finishedAt ?: g.updatedAt, if(g.gameMode=="series") "series" else "siege",g)
     }
     return (siege + history.map { LatestRivalMatch(it.opponentId,it.displayName,it.myScore,it.theirScore,it.playedAt,it.mode) })
-        .sortedByDescending { runCatching { java.time.Instant.parse(it.date).toEpochMilli() }.getOrDefault(0L) }
+        .sortedByDescending { runCatching { com.sonharf.game.data.requireServerInstant(it.date).toEpochMilli() }.getOrDefault(0L) }
         .distinctBy { it.opponentId }
 }
 

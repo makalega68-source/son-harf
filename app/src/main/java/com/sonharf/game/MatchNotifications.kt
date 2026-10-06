@@ -53,7 +53,7 @@ internal object MatchNotifications {
     }
     internal fun eligible(event: SocialActivityDto, now: Instant): Boolean = event.readAt == null &&
         event.kind in setOf("your_turn", "challenge", "rematch", "friend_request", "friend_accepted", "match_finished") &&
-        runCatching { Instant.parse(event.createdAt).let { !it.isAfter(now) && it.isAfter(now.minusSeconds(86_400)) } }.getOrDefault(false)
+        runCatching { com.sonharf.game.data.requireServerInstant(event.createdAt).let { !it.isAfter(now) && it.isAfter(now.minusSeconds(86_400)) } }.getOrDefault(false)
 
     suspend fun deliver(context: Context, expectedUser: String): Boolean {
         if (!enabled(context) || !SupabaseProvider.configured) return true

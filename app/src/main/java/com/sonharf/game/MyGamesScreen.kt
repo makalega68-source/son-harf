@@ -45,7 +45,7 @@ internal fun matchListRows(games: List<WordSiegeGameDto>, rooms: List<GameRoomDt
     val staleBefore = System.currentTimeMillis() - 15 * 60_000L
     val last = rooms.distinctBy { it.id }.filter { me in listOf(it.hostId,it.guestId) && it.status in setOf("waiting","playing","quiz","final","sudden_death","paused","finished") }
         .filterNot { it.status == "waiting" && it.guestId == null && !it.isBot &&
-            (runCatching { java.time.Instant.parse(it.createdAt).toEpochMilli() }.getOrNull() ?: 0L) < staleBefore }
+            (runCatching { com.sonharf.game.data.requireServerInstant(it.createdAt).toEpochMilli() }.getOrNull() ?: Long.MAX_VALUE) < staleBefore }
         .map { g ->
         val host = g.hostId == me
         MatchListRow(g.id, "son_harf", if (host) g.guestId else g.hostId,

@@ -16,3 +16,7 @@ fun parseServerInstant(value: String?): Instant? {
         ?: runCatching { Instant.parse(text) }.getOrNull()
         ?: runCatching { OffsetDateTime.parse(text.replace(' ', 'T')).toInstant() }.getOrNull()
 }
+
+/** [parseServerInstant] for call sites inside runCatching: throws on a value it cannot read. */
+fun requireServerInstant(value: String?): Instant =
+    parseServerInstant(value) ?: throw IllegalArgumentException("unreadable server time: $value")
