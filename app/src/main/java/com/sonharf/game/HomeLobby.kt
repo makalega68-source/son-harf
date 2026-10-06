@@ -94,10 +94,13 @@ internal fun HomeLobbyScreen(
                 val classic = async { gameRequestResult { backend.getWordSiegeGameSummaries("classic", finishedLimit = 0) }.getOrNull() }
                 val series = async { gameRequestResult { backend.getWordSiegeGameSummaries("series", finishedLimit = 0) }.getOrNull() }
                 val rooms = async { gameRequestResult { backend.getLastLetterRooms() }.getOrNull() }
-                val inv1 = async { gameRequestResult { backend.getIncomingWordSiegeInvites().size }.getOrDefault(0) }
-                val inv2 = async { gameRequestResult { backend.getIncomingGameInvites().size }.getOrDefault(0) }
+                val inv1 = async { gameRequestResult { backend.getIncomingWordSiegeInvites().map { "si:${it.id}" } }.getOrDefault(emptyList()) }
+                val inv2 = async { gameRequestResult { backend.getIncomingGameInvites().map { "gi:${it.id}" } }.getOrDefault(emptyList()) }
                 val rows = matchListRows(classic.await().orEmpty() + series.await().orEmpty(), rooms.await().orEmpty(), me)
-                waitingForMe = rows.count { !it.finished && it.turn == HomeTurn.YOURS } + inv1.await() + inv2.await()
+                // Each waiting turn is keyed by its deadline, so a new turn in the same game counts again.
+                val waiting = rows.filter { !it.finished && it.turn == HomeTurn.YOURS }.map { "${it.kind}:${it.id}:${it.date}" } +
+                    inv1.await() + inv2.await()
+                waitingForMe = SeenBadges.report(myGamesBadgeKey(me), waiting.toSet())
             }
             delay(20_000)
         }
@@ -199,7 +202,12 @@ internal fun HomeLobbyScreen(
                 LobbyBigButton(Icons.Rounded.AddCircle, sh("Yeni Oyun", "New Game"), LobbyBrand.Play, LobbyBrand.PlayEdge,
                     Modifier.weight(1f), onClick = onNewGame)
                 LobbyBigButton(Icons.Rounded.GridView, sh("Oyunlarım", "My Games"), LobbyBrand.Games, LobbyBrand.GamesEdge,
-                    Modifier.weight(1f), badge = waitingForMe, onClick = onMyGames)
+                    Modifier.weight(1f), badge = waitingForMe, onClick = {
+                        // Opening My Games counts everything in it as seen: the badge clears at once.
+                        me?.let { SeenBadges.markSeen(myGamesBadgeKey(it)) }
+                        waitingForMe = 0
+                        onMyGames()
+                    })
             }
 
             // The other two games as twin cards of equal size: Kelime Atölyesi, then Son Harf.
@@ -266,6 +274,9 @@ private fun LobbyGameCard(icon: Int, title: String, detail: String, onClick: () 
     }
 }
 
+/** Seen-memory key for the My Games badge, per player. */
+internal fun myGamesBadgeKey(userId: String) = "my_games:$userId"
+
 /** The friends row: same size and style as the game cards, with the friends icon on a gold chip. */
 @Composable
 private fun LobbyFriendsCard(detail: String, onClick: () -> Unit) {
@@ -331,11 +342,7 @@ private fun LobbyBigButton(icon: ImageVector, label: String, color: Color, edge:
                 Text(label, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
             }
         }
-        if (badge > 0) Surface(shape = CircleShape, color = LobbyBrand.Gold, border = BorderStroke(2.dp, Color.White),
-            modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-6).dp)) {
-            Text(if (badge > 9) "9+" else "$badge", color = Color(0xFF3A2A00), fontSize = 13.sp, fontWeight = FontWeight.Black,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
-        }
+        CornerNotificationBadge(badge)
     }
 }
 

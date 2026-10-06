@@ -177,7 +177,7 @@ class MainActivity : ComponentActivity() {
         bestEffortStartup("sound effects") { SonHarfSoundFx.init(this) }
         bestEffortStartup("sound preferences") { SonHarfPreferences.syncSound(this) }
         bestEffortStartup("ui preferences") { SonHarfPreferences.syncUi(this) }
-        bestEffortStartup("cosmetics") { SonHarfCosmetics.restore(this); ThroneChampion.restore(this); WordSiegeBoardSkins.restore(this); WordSiegeBonusIcons.init(this); GameChatBadge.init(this) }
+        bestEffortStartup("cosmetics") { SonHarfCosmetics.restore(this); ThroneChampion.restore(this); WordSiegeBoardSkins.restore(this); WordSiegeBonusIcons.init(this); GameChatBadge.init(this); SeenBadges.init(this) }
         bestEffortStartup("remote experience cache") { RemoteExperience.loadCached(this) }
         // Your own profile and photo from the last session, so "you" appears on the first frame.
         bestEffortStartup("own profile") { OwnProfile.init(this); ProfilePhotoRuntime.init(this) }

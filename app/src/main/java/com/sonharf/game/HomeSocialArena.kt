@@ -46,9 +46,7 @@ internal fun HomeSocialArena(backend: OnlineGameBackend, incomingCount: Int, onS
                         else -> sh("Arkadaş ekle, maçta yeniden buluş", "Add friends, meet again in a match")
                     }, color = Hf.TextMuted, fontSize = 11.sp)
                 }
-                if (incomingCount > 0) Surface(color = Hf.Green, shape = CircleShape) {
-                    Text(if (incomingCount > 9) "9+" else "$incomingCount", Modifier.padding(7.dp), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                }
+                NotificationBadge(incomingCount)
             }
             if (available.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
                 available.take(3).forEach { friend ->
