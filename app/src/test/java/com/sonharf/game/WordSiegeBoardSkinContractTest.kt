@@ -51,7 +51,7 @@ class WordSiegeBoardSkinContractTest {
         val guidance = read("src/main/java/com/sonharf/game/WordSiegePracticeGuidance.kt")
         assertFalse(guidance.contains("WordSiegeBonusLegend("))
         assertTrue(guidance.contains("Harf bonusu: harf değeri iki veya üç kat."))
-        assertTrue(guidance.contains("Ödül bölgesi: 25 ek puan."))
+        assertTrue(guidance.contains("Ödül karesi: 25 ek puan."))
         val mark = read("src/main/java/com/sonharf/game/WordSiegeBonusMark.kt")
         listOf("2H", "3H", "2K", "3K").forEach { assertTrue(mark.contains("\"$it\" -> if (turkish)")) }
         assertTrue(mark.contains("WordSiegeBoardSpec.CenterBonus -> if (turkish) \"İlk kelime buradan geçer; puanı 4 kat.\""))
