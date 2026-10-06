@@ -1192,7 +1192,6 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val mouthBlend = 1f - kotlin.math.exp(-dt * 15f)
         for (i in 0 until 3) mouthValue[i] += (mouthTarget[i] - mouthValue[i]) * mouthBlend
         drawMouth(canvas, mouthValue[0], mouthValue[1], mouthValue[2])
-        if (king) drawKingMustache(canvas, mouthTopY(mouthValue[0], mouthValue[1]))
         if (actionKind == WordSiegeMascotAction.EAT && faceT >= 0f) drawLetterSnack(canvas, faceT)
         decor.drawFace(canvas, mouthTopY(mouthValue[0], mouthValue[1]), mouthValue[1])
         if (mood == WordSiegeMascotEmotion.TEARY) drawTears(canvas, now)
@@ -1603,32 +1602,6 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             canvas.drawOval(ovalRect, detailPaint)
             detailPaint.xfermode = null
             detailPaint.alpha = 255
-        }
-    }
-
-    private val mustachePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF6B4208.toInt() }
-    private val mustacheShine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = 7f; strokeCap = Paint.Cap.ROUND; color = 0x88FFE7A3.toInt()
-    }
-    private val mustachePath = Path()
-
-    /** A proud, curled gold-brown moustache just above the mouth (Golden King only). */
-    private fun drawKingMustache(canvas: Canvas, mouthTop: Float) {
-        val x = MOUTH_X
-        val y = mouthTop - 20f
-        for (side in floatArrayOf(-1f, 1f)) {
-            mustachePath.rewind()
-            mustachePath.moveTo(x, y - 8f)
-            mustachePath.cubicTo(x + side * 40f, y - 34f, x + side * 96f, y - 30f, x + side * 126f, y - 4f)
-            mustachePath.cubicTo(x + side * 146f, y + 12f, x + side * 156f, y - 22f, x + side * 140f, y - 42f)
-            mustachePath.cubicTo(x + side * 166f, y - 26f, x + side * 160f, y + 24f, x + side * 112f, y + 22f)
-            mustachePath.cubicTo(x + side * 70f, y + 20f, x + side * 30f, y + 10f, x, y + 12f)
-            mustachePath.close()
-            canvas.drawPath(mustachePath, mustachePaint)
-            mustachePath.rewind()
-            mustachePath.moveTo(x + side * 18f, y - 10f)
-            mustachePath.quadTo(x + side * 70f, y - 24f, x + side * 112f, y - 6f)
-            canvas.drawPath(mustachePath, mustacheShine)
         }
     }
 

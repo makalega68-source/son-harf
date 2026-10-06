@@ -91,6 +91,9 @@ private val welcomeSteps = listOf(
     ),
 )
 
+/** An account counts as new for this long after it was created. */
+private const val NEW_ACCOUNT_WINDOW_MS = 48L * 60 * 60 * 1000
+
 /** The screenshot harness turns the tour off so its captures and checks see the home screen itself. */
 internal object MascotWelcomeTourGate { var enabled = true }
 
@@ -107,12 +110,16 @@ private object MascotWelcomeTourState {
 }
 
 /**
- * The first time a player reaches the home screen, Obi welcomes them, explains the game in a few
+ * The first time a brand-new player reaches the home screen, Obi welcomes them, explains the game in a few
  * short pages and wishes them luck. Shown once per device; "Atla" ends it at any time.
  */
 @Composable
-internal fun MascotWelcomeTour(playerName: String?) {
+internal fun MascotWelcomeTour(playerName: String?, accountCreatedAt: String?) {
     if (!MascotWelcomeTourGate.enabled) return
+    // Only brand-new accounts: a returning player who reinstalls (and so lost the device flag)
+    // never sees it again. Unknown creation time means no tour.
+    val created = parseServerInstantMs(accountCreatedAt) ?: return
+    if (System.currentTimeMillis() - created > NEW_ACCOUNT_WINDOW_MS) return
     val context = LocalContext.current
     var open by remember { mutableStateOf(!MascotWelcomeTourState.seen(context)) }
     if (!open) return

@@ -9,7 +9,7 @@ import kotlinx.serialization.json.put
 @Serializable
 data class RewardCenterStatusDto(
     @SerialName("coin_ads_used") val coinAdsUsed: Int = 0,
-    @SerialName("coin_ads_limit") val coinAdsLimit: Int = 3,
+    @SerialName("coin_ads_limit") val coinAdsLimit: Int = 6,
     @SerialName("coin_per_ad") val coinPerAd: Int = 5,
     @SerialName("trial_ads_used") val trialAdsUsed: Int = 0,
     @SerialName("trial_ads_limit") val trialAdsLimit: Int = 1,

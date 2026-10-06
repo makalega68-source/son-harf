@@ -267,8 +267,8 @@ fun RewardCenterScreen() {
                     icon = "🪙",
                     title = sh("+${s?.coinPerAd ?: 10} ALTIN", "+${s?.coinPerAd ?: 10} GOLD"),
                     description = sh("Her video Altın verir.", "Each video gives Gold."),
-                    progress = sh("Bugün ${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 3}", "Today ${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 3}"),
-                    enabled = !isPro && adReady && (s?.coinAdsUsed ?: 0) < (s?.coinAdsLimit ?: 3) && busy == null,
+                    progress = sh("Bugün ${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 6}", "Today ${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 6}"),
+                    enabled = !isPro && adReady && (s?.coinAdsUsed ?: 0) < (s?.coinAdsLimit ?: 6) && busy == null,
                     busy = busy == RewardKeys.COINS,
                     onClick = { showRewarded(RewardKeys.COINS) },
                 )

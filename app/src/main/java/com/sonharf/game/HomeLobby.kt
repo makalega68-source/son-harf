@@ -221,7 +221,7 @@ internal fun HomeLobbyScreen(
             stageY = .5f, greetAloud = true,
         )
         // A brand-new player is welcomed by Obi once, with a short tour of the game.
-        MascotWelcomeTour(playerName = p?.displayName)
+        MascotWelcomeTour(playerName = p?.displayName, accountCreatedAt = p?.createdAt)
     }
 
     if (leagueInfo) AlertDialog(
