@@ -1,8 +1,9 @@
 name: Shrink large media
 
 # One-off helper: makes the app smaller without visible loss.
-#  - The two mascot result clips (green-screen, keyed in the app) are re-encoded as H.264 at a
-#    high quality (CRF 23, slow preset), at most 720 px wide; the plain green backdrop
+#  - The two mascot result clips (green-screen, keyed in the app; the masters are 1440 px 10-bit
+#    HEVC, which many phones cannot decode in hardware) are re-encoded as 8-bit H.264 at
+#    1080 px and near-transparent quality (CRF 18 or lower); the plain green backdrop
 #    compresses very well, so the keying edges stay clean.
 #  - The home brand logo is stored as a high-quality WebP (alpha kept lossless).
 # Before/after frames are uploaded for review; the result is committed back to the branch.
@@ -29,9 +30,9 @@ jobs:
             ffprobe -hide_banner "$src" 2>&1 | tail -4
             ffmpeg -hide_banner -loglevel error -ss 1.5 -i "$src" -frames:v 1 "review/${name}_before.png"
             out=/tmp/$name.mp4
-            for crf in 23 21 19; do
+            for crf in 18 16 14; do
               ffmpeg -hide_banner -loglevel error -y -i "$src" \
-                -vf "scale='min(720,iw)':-2:flags=lanczos" \
+                -vf "scale='min(1080,iw)':-2:flags=lanczos" \
                 -c:v libx264 -preset slow -crf $crf -pix_fmt yuv420p -profile:v high \
                 -c:a aac -b:a 96k -movflags +faststart "$out"
               size=$(stat -c%s "$out")
@@ -44,6 +45,7 @@ jobs:
             ffmpeg -hide_banner -loglevel error -ss 1.5 -i "$src" -frames:v 1 "review/${name}_after.png"
           done
           logo=app/src/main/res/drawable-nodpi/kelime_tahti_brand_logo
+          if [ -f "$logo.png" ]; then
           cp "$logo.png" review/logo_before.png
           cwebp -quiet -q 92 -alpha_q 100 -m 6 -metadata none "$logo.png" -o "$logo.webp"
           if [ "$(stat -c%s "$logo.webp")" -lt "$(stat -c%s "$logo.png")" ]; then
@@ -51,6 +53,7 @@ jobs:
             dwebp -quiet "$logo.webp" -o review/logo_after.png
           else
             rm -f "$logo.webp"
+          fi
           fi
           ls -la app/src/main/res/raw/mascot_*.mp4 app/src/main/res/drawable-nodpi/kelime_tahti_brand_logo.*
       - uses: actions/upload-artifact@v4
@@ -63,5 +66,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm -q .github/triggers/shrink-media.txt
           git add -A app/src/main/res
-          git commit -m "Smaller mascot clips and brand logo (high-quality re-encode)"
+          git commit -m "Smaller mascot clips: 8-bit H.264 at 1080 px (high-quality re-encode)"
           git push origin HEAD:${GITHUB_REF_NAME}
