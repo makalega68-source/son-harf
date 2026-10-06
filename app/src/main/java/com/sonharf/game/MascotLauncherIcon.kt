@@ -50,15 +50,14 @@ internal object MascotLauncherIcon {
         if (before != Mood.HAPPY) greetBack(context, before)
     }
 
-    /** App went to the background: keep the happy face and schedule only the next transition. */
+    /**
+     * App went to the background. The launcher face stays fixed: switching launcher entries made
+     * home screens drop and re-add the icon, so it jumped around. No face change is scheduled.
+     */
     fun onAppBackground(context: Context) {
         runCatching { apply(context, Mood.HAPPY) }
-
-        val lastOpen = System.currentTimeMillis()
-        prefs(context).edit().putLong(KEY_LAST_OPEN, lastOpen).apply()
-
+        prefs(context).edit().putLong(KEY_LAST_OPEN, System.currentTimeMillis()).apply()
         cancelAlarms(context)
-        scheduleNextTransition(context, lastOpen, System.currentTimeMillis())
     }
 
     /**
@@ -69,10 +68,8 @@ internal object MascotLauncherIcon {
         val lastOpen = prefs(context).getLong(KEY_LAST_OPEN, 0L)
         if (lastOpen <= 0L) return
 
-        val now = System.currentTimeMillis()
-        val awayDays = ((now - lastOpen).coerceAtLeast(0L)) / DAY_MILLIS
-        runCatching { apply(context, moodForAwayDays(awayDays)) }
-        scheduleNextTransition(context, lastOpen, now)
+        // An alarm left over from an older version only restores the fixed happy face.
+        runCatching { apply(context, Mood.HAPPY) }
     }
 
     internal fun moodForAwayDays(daysAway: Long): Mood = when (daysAway.coerceAtLeast(0L) % CYCLE_DAYS) {

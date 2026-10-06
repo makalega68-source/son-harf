@@ -307,8 +307,7 @@ internal fun LaunchSplashFrame() {
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.kelime_tahti_brand_logo),
-                "Kelime Tahtı", modifier = Modifier.size(240.dp, 140.dp))
+            // No logo here: it flashed for a split second on every launch.
             if (slow) CircularProgressIndicator(
                 modifier = Modifier.size(28.dp),
                 color = Color(0xFF9AA8B8),

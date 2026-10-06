@@ -132,7 +132,11 @@ internal object PlayerMascots {
 internal fun rememberRivalMascot(userId: String?): WordSiegeMascotSkin? {
     if (userId.isNullOrBlank()) return null
     var skin by androidx.compose.runtime.remember(userId) { androidx.compose.runtime.mutableStateOf<WordSiegeMascotSkin?>(null) }
-    androidx.compose.runtime.LaunchedEffect(userId) { skin = PlayerMascots.of(userId) }
+    androidx.compose.runtime.LaunchedEffect(userId) {
+        // A rival who holds the throne this week brings the Golden King, whatever they picked.
+        val throne = runCatching { PublicFrames.get(userId) }.getOrNull() == ProfileFrameCollection.throneFrame.id
+        skin = if (throne) WordSiegeMascotSkin.GOLD_KING else PlayerMascots.of(userId)
+    }
     return skin
 }
 
