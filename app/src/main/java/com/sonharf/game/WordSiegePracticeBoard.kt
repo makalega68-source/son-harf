@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -138,6 +139,8 @@ internal fun WordSiegePracticeBoard(
     var consumedHighlightKey by remember { mutableStateOf(moveEventKey) }
     var highlightedIndices by remember { mutableStateOf<Set<Int>>(emptySet()) }
     val highlightAlpha = remember { Animatable(0f) }
+    // True while a finger is moving the board (read only by the board's draw layer).
+    var boardMoving by remember { mutableStateOf(false) }
 
     LaunchedEffect(moveEventKey, resolvedIndices) {
         val key = moveEventKey
@@ -244,7 +247,8 @@ internal fun WordSiegePracticeBoard(
                 .pointerInput(Unit) {
                     run {
                         // The header folds only once the fingers lift, so the board never jumps mid-pinch.
-                        detectWordSiegeBoardGestures(onEnd = { reportZoom(closeScale) }) { centroid, pan, zoom ->
+                        detectWordSiegeBoardGestures(onEnd = { boardMoving = false; reportZoom(closeScale) }) { centroid, pan, zoom ->
+                            boardMoving = true
                             val oldScale = closeScale
                             val newScale = (oldScale * zoom).coerceIn(gestureMin, WORD_SIEGE_PRACTICE_MAX_SCALE)
                             val ratio = if (oldScale > 0f) newScale / oldScale else 1f
@@ -273,6 +277,8 @@ internal fun WordSiegePracticeBoard(
                         scaleX = transform.scale
                         scaleY = transform.scale
                         transformOrigin = TransformOrigin(0f, 0f)
+                        // Cached as one picture while a finger moves it (see the online board).
+                        compositingStrategy = if (boardMoving) CompositingStrategy.Offscreen else CompositingStrategy.Auto
                     }
                     // The skin's slab belongs to the board: it zooms and pans with the cells.
                     .wordSiegeBoardFrame(boardSkin, LocalWordSiegePlate.current),

@@ -115,3 +115,24 @@ internal object MascotHints {
     /** A strategy tip with no word in it (real opponents: fair play). */
     fun tip(seed: Int): String = tips[Math.floorMod(seed, tips.size)].let { (tr, en) -> sh(tr, en) }
 }
+
+/**
+ * Hints used in each online match, kept on the device. The count used to live only in the
+ * screen, so leaving a match and coming back gave all three hints again.
+ */
+internal object MatchHintLedger {
+    private const val PREFS = "match_hints_used"
+    private const val MAX_ENTRIES = 200
+
+    private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    fun used(context: Context, matchKey: String): Int = prefs(context).getInt(matchKey, 0)
+
+    fun record(context: Context, matchKey: String, used: Int) {
+        val store = prefs(context)
+        val editor = store.edit()
+        // Old matches are of no use: start afresh once the list grows long.
+        if (!store.contains(matchKey) && store.all.size >= MAX_ENTRIES) editor.clear()
+        editor.putInt(matchKey, used).apply()
+    }
+}

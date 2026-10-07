@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -29,6 +30,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -76,6 +78,7 @@ private val PanSiegeBonus3K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeW
 private val PanSiegeBonus4K get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus4K else Color(0xFFF3E8CD)
 private val PanSiegeBonusStar get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusStar else Color(0xFFFBEBB5)
 private val PanSiegeLastMove = Color(0xFFE0A82E)
+private val PanSiegeDefinitionBadge = Color(0xFF5C8299)
 private val PanSiegeBonusLabel get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusLabel else Color(0xFF3F4A5A)
 private val PanSiegeCellSize = 52.dp
 internal const val WORD_SIEGE_BOT_FALLBACK_DELAY_MS = 15_000L
@@ -126,7 +129,8 @@ internal fun WordSiegePanMatch(
     // Mascot hints: three per match (a word the rack can make, worked out off the main thread).
     val hintContext = androidx.compose.ui.platform.LocalContext.current
     val hintScope = rememberCoroutineScope()
-    var hintsUsed by androidx.compose.runtime.saveable.rememberSaveable(game.id) { mutableIntStateOf(0) }
+    val hintKey = "siege:${game.id}"
+    var hintsUsed by remember(game.id) { mutableIntStateOf(MatchHintLedger.used(hintContext, hintKey)) }
     var hintRequest by remember(game.id) { mutableStateOf<Pair<Int, String>?>(null) }
     var hintBusy by remember(game.id) { mutableStateOf(false) }
     // The hint move's cells: its tiles are placed for the player and the mascot flies there.
@@ -166,6 +170,7 @@ internal fun WordSiegePanMatch(
             // The turn moved on while it was thinking: say nothing stale.
             if (latestGame.value.second != moveKey || latestGame.value.first.board != boardSnapshot) return@launch
             hintsUsed += 1
+            MatchHintLedger.record(hintContext, hintKey, hintsUsed)
             val key = (hintRequest?.first ?: 0) + 1
             if (move != null) {
                 onPlacementsChange(move.placements)
@@ -493,6 +498,7 @@ internal fun WordSiegePanMatch(
         Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
         PanSiegeBoard(
             gameId = game.id,
+            language = game.language,
             board = game.board,
             rack = rack,
             placements = placements,
@@ -667,6 +673,7 @@ internal fun WordSiegePanMatch(
 @Composable
 private fun PanSiegeBoard(
     gameId: String,
+    language: String = "tr",
     board: List<WordSiegeCellDto>,
     rack: String,
     placements: Map<Int, Int>,
@@ -752,17 +759,26 @@ private fun PanSiegeBoard(
     // The fold waits until the fingers lift: folding mid-pinch resized the board under the fingers,
     // which made the zoom wobble and stutter.
     var pinching by remember(gameId) { mutableStateOf(false) }
-    LaunchedEffect(closeScaleState, fitScale) {
-        snapshotFlow { if (pinching) null else if (fitScale > 0f) closeScaleState.value / fitScale else 1f }.collect { ratio ->
-            if (ratio == null) return@collect
-            if (!zoomedIn && ratio > 1.3f) zoomedIn = true
-            else if (zoomedIn && ratio < 1.1f) zoomedIn = false
-        }
+    // True while a finger is moving the board (read only by the board's draw layer).
+    var boardMoving by remember(gameId) { mutableStateOf(false) }
+    // Decided only when a pinch ends, never because the layout moved. Watching the scale against
+    // the fit size let a resize decide it: a notice under the board, or the fold itself, changed
+    // the fit size, flipped the fold, resized the board again, and the screen shook up and down
+    // without end (worst on tablets).
+    fun settleFold(fit: Float) {
+        val ratio = if (fit > 0f) closeScaleState.value / fit else 1f
+        if (!zoomedIn && ratio > 1.3f) zoomedIn = true
+        else if (zoomedIn && ratio < 1.1f) zoomedIn = false
     }
     LaunchedEffect(zoomedIn) {
         val mode = if (zoomedIn) WordSiegeBoardViewportMode.CLOSE else WordSiegeBoardViewportMode.FIT
         if (mode != viewportMode) onViewportModeChange(mode)
     }
+    // The last played word gets a small "?" on its last tile: tapping it shows the word's meaning.
+    val lastWord = remember(board, lastMove?.id) {
+        lastMove?.let { move -> resolvePracticeLastWord(board, move.placedTiles.map { it.index }.toSet()) }
+    }
+    var definitionWord by remember(gameId) { mutableStateOf<String?>(null) }
     // Where the mascot should fly (a hint's answer, fresh territory). Only a new place counts as a
     // change, so the pinch moving the board under it does not recompose the mascot every frame.
     val mascotVisitState = remember(hint, hintCells, placements, lastMove, lastMoveMine, viewport, tilePx) {
@@ -932,7 +948,11 @@ private fun PanSiegeBoard(
                 .wordSiegeMascotTouchWatcher(mascotTouches)
                 // One finger pans, two fingers pinch to zoom around the fingers.
                 .pointerInput(gameId) {
-                    detectWordSiegeBoardGestures(onEnd = { pinching = false }) { centroid, pan, zoom ->
+                    detectWordSiegeBoardGestures(onEnd = {
+                        boardMoving = false
+                        if (pinching) { pinching = false; settleFold(gestureFit) }
+                    }) { centroid, pan, zoom ->
+                        boardMoving = true
                         if (zoom != 1f) pinching = true
                         val oldScale = closeScaleState.value
                         val newScale = (oldScale * zoom).coerceIn(gestureFit, gestureMax)
@@ -959,6 +979,10 @@ private fun PanSiegeBoard(
                         scaleX = transform.scale
                         scaleY = transform.scale
                         transformOrigin = TransformOrigin(0f, 0f)
+                        // While a finger moves the board it is drawn once into a cached layer and only
+                        // that picture is moved: redrawing 225 rounded, shadowed cells every frame is
+                        // what made panning and zooming stutter. It redraws sharp when the fingers lift.
+                        compositingStrategy = if (boardMoving) CompositingStrategy.Offscreen else CompositingStrategy.Auto
                     }
                     // The skin's slab belongs to the board: it zooms and pans with the cells.
                     .wordSiegeBoardFrame(boardSkin, LocalWordSiegePlate.current),
@@ -982,6 +1006,8 @@ private fun PanSiegeBoard(
                                 // Only pending tiles use the zoom-dependent outline.
                                 borderWidth = if (pending) borderWidthQuarterDp.dp else 0.dp,
                                 lastMoveHighlight = { if (index in highlightedIndices) highlightAlpha.value else 0f },
+                                showDefinitionBadge = lastWord?.badgeIndex == index && !pending,
+                                onDefinitionClick = { lastWord?.word?.let { definitionWord = it } },
                                 onClick = { onCell(index) },
                                 dropTarget = dragHover == index && boardCell.letter == null,
                                 // Keyed on the placed tile so the gesture survives the tile hiding while carried.
@@ -1064,6 +1090,9 @@ private fun PanSiegeBoard(
         }
       }
     }
+    definitionWord?.let { word ->
+        WordDefinitionDialog(word = word, language = language, onDismiss = { definitionWord = null })
+    }
 }
 
 @Composable
@@ -1101,6 +1130,8 @@ private fun PanSiegeBoardCell(
     /** Read at draw time, so the last-move glow animates without recomposing the board. */
     lastMoveHighlight: () -> Float,
     onClick: () -> Unit,
+    showDefinitionBadge: Boolean = false,
+    onDefinitionClick: () -> Unit = {},
     dropTarget: Boolean = false,
     dragSource: Modifier = Modifier,
 ) {
@@ -1232,6 +1263,17 @@ private fun PanSiegeBoardCell(
                         fontWeight = FontWeight.Black,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
                     )
+                    if (showDefinitionBadge) {
+                        Box(
+                            Modifier.align(Alignment.BottomEnd).size(20.dp)
+                                .clip(RoundedCornerShape(topStart = 10.dp, bottomEnd = 5.dp))
+                                .background(PanSiegeDefinitionBadge)
+                                .clickable(onClickLabel = sh("Kelimenin anlamı", "Word meaning"), onClick = onDefinitionClick),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("?", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
                 } else if (activeBonus != null) {
                     val label = WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)
                     WordSiegeBonusMark(activeBonus, label, overview, PanSiegeBonusLabel, WordSiegeBoardAccessibility.BoardBonus)

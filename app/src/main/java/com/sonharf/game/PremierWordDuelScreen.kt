@@ -1411,7 +1411,9 @@ private fun PremierArena(
         }
     }
     // Used, not left: ownership that loads after the match started still grants its free hints.
-    var freeHintsUsed by remember(room.id) { mutableIntStateOf(0) }
+    // Kept per match on the device, so leaving and returning does not give the hints back.
+    val hintKey = "sonharf:${room.id}"
+    var freeHintsUsed by remember(room.id) { mutableIntStateOf(MatchHintLedger.used(hintContext, hintKey)) }
     val hintsLeft = MascotHints.freeHintsLeft(realOpponent = !room.isBot, used = freeHintsUsed)
     var hintRequest by remember(room.id) { mutableStateOf<Pair<Int, String>?>(null) }
     fun showHintText(text: String) {
@@ -1436,6 +1438,7 @@ private fun PremierArena(
     fun askFreeHint() {
         if (hintsLeft <= 0 || computingHint) return
         freeHintsUsed += 1
+        MatchHintLedger.record(hintContext, hintKey, freeHintsUsed)
         computingHint = true
         hintScope.launch {
             showHintText(safeHintText())
