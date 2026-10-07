@@ -76,7 +76,8 @@ class KelimeKusatmasiMasterGddV3ContractTest {
 
         // The Kulüp tab shows a coming-soon page; the old club hub never renders for users.
         assertFalse(shell.contains("PremiumDestination.CLUB -> CompetitionHubScreen("))
-        assertTrue(shell.contains("PremiumDestination.CLUB -> ClubComingSoonScreen()"))
+        // The Kulüp page is gone; its tab is Arkadaşlar now.
+        assertFalse(shell.contains("ClubComingSoonScreen"))
         assertTrue(shell.contains("destination = PremiumDestination.HOME"))
 
         assertTrue(social.contains("\"report_player\""))

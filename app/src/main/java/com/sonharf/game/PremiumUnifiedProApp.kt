@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
 private enum class PremiumDestination {
-    HOME, MY_GAMES, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
+    HOME, MY_GAMES, GAMES, COMPETE, PROFILE, COLLECTION,
     LAST_LETTER, SIEGE, WORD_WORKSHOP,
     ACTIVITY, EVENTS, RIVALS, SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP, PRO, PRIVATE_ROOM, MASCOT_CHAT
 }
@@ -155,7 +155,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     // the back button always returns there. topLevel only decides where invitation toasts show.
     val lobbyTabs = listOf(
         PremiumDestination.SHOP, PremiumDestination.COMPETE, PremiumDestination.HOME,
-        PremiumDestination.CLUB, PremiumDestination.PROFILE,
+        PremiumDestination.SOCIAL, PremiumDestination.PROFILE,
     )
     val topLevel = destination in setOf(
         PremiumDestination.HOME, PremiumDestination.MY_GAMES, PremiumDestination.EVENTS,
@@ -235,12 +235,13 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 }
             },
             // Menu pages: the workshop countdown band, then the five-tab bar
-            // (Mağaza · Taht · Oyna · Kulüp · Profil) on the main pages.
+            // (Mağaza · Taht · Oyna · Arkadaşlar · Profil) on the main pages.
             bottomBar = {
                 val tab = lobbyTabs.indexOf(destination)
                 if (!inGame) Column {
                     WorkshopPodiumTicker()
-                    if (tab >= 0) LobbyBottomBar(selected = tab) { index ->
+                    // The Arkadaşlar tab carries the count of new friend requests and invitations.
+                    if (tab >= 0) LobbyBottomBar(selected = tab, badges = mapOf(3 to incomingSocialCount)) { index ->
                         if (index == 0) shopInitialTab = 0
                         destination = lobbyTabs[index]
                     } else Spacer(Modifier.navigationBarsPadding())
@@ -291,7 +292,6 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.COMPETE -> CompetitionHubScreen(
                         onBack = { destination = PremiumDestination.HOME },
                     )
-                    PremiumDestination.CLUB -> ClubComingSoonScreen()
                     PremiumDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE_DETAILS },

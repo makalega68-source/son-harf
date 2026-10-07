@@ -52,7 +52,7 @@ internal object LobbyBrand {
 /**
  * Lobby: brand stage on a word-board backdrop, a player card, two big letter-tile buttons
  * (Yeni Oyun / Oyunlarım) and twin cards for Kelime Atölyesi and Son Harf. Game lists live in Oyunlarım, not here;
- * the bottom bar (Mağaza, Taht, Oyna, Kulüp, Profil) is drawn by the shell.
+ * the bottom bar (Mağaza, Taht, Oyna, Arkadaşlar, Profil) is drawn by the shell.
  */
 @Composable
 internal fun HomeLobbyScreen(
@@ -137,7 +137,7 @@ internal fun HomeLobbyScreen(
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                // App language (menus and game words); the Kulüp tab replaced the old game centre that held it.
+                // App language (menus and game words); the old game centre that held it is gone.
                 Surface(onClick = { onGameLanguage(if (gameLanguage == "en") "tr" else "en") }, shape = RoundedCornerShape(50),
                     color = LobbyBrand.Chip, modifier = Modifier.padding(end = 8.dp)) {
                     Row(Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -222,12 +222,6 @@ internal fun HomeLobbyScreen(
                     sh("Kelimelerle tahtayı fethet", "Conquer the board with words"), onNewGame)
                 LobbyGameCard(R.drawable.kelime_atolyesi_game_icon, sh("Kelime Atölyesi", "Word Workshop"),
                     rememberWorkshopStatus(), onWorkshop)
-                // Friends in plain sight, not only in the menu.
-                LobbyFriendsCard(
-                    detail = sh("Arkadaş ekle, davet et, birlikte oyna", "Add friends, invite them, play together") +
-                        if (isPro) "" else " · PRO",
-                    onClick = onFriends,
-                )
             }
             Spacer(Modifier.height(96.dp))
         }
@@ -283,26 +277,6 @@ private fun LobbyGameCard(icon: Int, title: String, detail: String, onClick: () 
 /** Seen-memory key for the My Games badge, per player. */
 internal fun myGamesBadgeKey(userId: String) = "my_games:$userId"
 
-/** The friends row: same size and style as the game cards, with the friends icon on a gold chip. */
-@Composable
-private fun LobbyFriendsCard(detail: String, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth().height(76.dp), shape = RoundedCornerShape(18.dp),
-        color = LobbyBrand.Band, border = BorderStroke(1.dp, LobbyBrand.Grid)) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(LobbyBrand.Gold), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Groups, null, tint = LobbyBrand.NavBar, modifier = Modifier.size(32.dp))
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(sh("Arkadaşlar", "Friends"), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                Text(detail, color = LobbyBrand.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = .8f), modifier = Modifier.size(26.dp))
-        }
-    }
-}
-
 /** A faint word-board grid: our own backdrop, the board the game is played on. */
 @Composable
 internal fun LobbyBoardPattern(modifier: Modifier) {
@@ -352,14 +326,14 @@ private fun LobbyBigButton(icon: ImageVector, label: String, color: Color, edge:
     }
 }
 
-/** Flat five-tab bar (Mağaza · Taht · Oyna · Kulüp · Profil); Oyna is a green letter-tile. */
+/** Flat five-tab bar (Mağaza · Taht · Oyna · Arkadaşlar · Profil); Oyna is a green letter-tile. */
 @Composable
-internal fun LobbyBottomBar(selected: Int, onSelect: (Int) -> Unit) {
+internal fun LobbyBottomBar(selected: Int, badges: Map<Int, Int> = emptyMap(), onSelect: (Int) -> Unit) {
     val items = listOf(
         Icons.Rounded.ShoppingCart to sh("Mağaza", "Store"),
         Icons.Rounded.EmojiEvents to sh("Taht", "Throne"),
         Icons.Rounded.PlayArrow to sh("Oyna", "Play"),
-        Icons.Rounded.Groups to sh("Kulüp", "Club"),
+        Icons.Rounded.Groups to sh("Arkadaşlar", "Friends"),
         Icons.Rounded.Person to sh("Profil", "Profile"),
     )
     Row(Modifier.fillMaxWidth().background(LobbyBrand.NavBar).navigationBarsPadding().height(72.dp),
@@ -368,15 +342,19 @@ internal fun LobbyBottomBar(selected: Int, onSelect: (Int) -> Unit) {
             val active = selected == index
             Column(Modifier.weight(1f).fillMaxHeight().clickable(onClickLabel = label) { onSelect(index) },
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Box(Modifier.size(width = if (index == 2) 46.dp else 52.dp, height = if (index == 2) 40.dp else 30.dp)
-                    .clip(RoundedCornerShape(if (index == 2) 12.dp else 15.dp))
-                    .background(when {
-                        index == 2 -> LobbyBrand.Play
-                        active -> LobbyBrand.Gold.copy(alpha = .22f)
-                        else -> Color.Transparent
-                    }), contentAlignment = Alignment.Center) {
-                    Icon(icon, label, tint = if (active && index != 2) LobbyBrand.Gold else Color.White,
-                        modifier = Modifier.size(if (index == 2) 30.dp else 26.dp))
+                // The badge sits outside the clipped icon plate, so it is never cut off.
+                Box {
+                    Box(Modifier.size(width = if (index == 2) 46.dp else 52.dp, height = if (index == 2) 40.dp else 30.dp)
+                        .clip(RoundedCornerShape(if (index == 2) 12.dp else 15.dp))
+                        .background(when {
+                            index == 2 -> LobbyBrand.Play
+                            active -> LobbyBrand.Gold.copy(alpha = .22f)
+                            else -> Color.Transparent
+                        }), contentAlignment = Alignment.Center) {
+                        Icon(icon, label, tint = if (active && index != 2) LobbyBrand.Gold else Color.White,
+                            modifier = Modifier.size(if (index == 2) 30.dp else 26.dp))
+                    }
+                    CornerNotificationBadge(badges[index] ?: 0, small = true)
                 }
                 Spacer(Modifier.height(3.dp))
                 Text(label, color = if (active) LobbyBrand.Gold else Color.White.copy(alpha = .85f), fontSize = 12.sp,

@@ -31,8 +31,8 @@ class GameModeBrandingAndVisibleActionContractTest {
         // The fourth lobby tab is Kulüp (coming soon); the games open from the lobby cards and the
         // game centre stays authored for the three games.
         val lobby = File("src/main/java/com/sonharf/game/HomeLobby.kt").readText()
-        assertTrue(lobby.contains("Icons.Rounded.Groups to sh(\"Kulüp\", \"Club\")"))
-        assertTrue(games.contains("PremiumDestination.CLUB, PremiumDestination.PROFILE,"))
+        assertTrue(lobby.contains("Icons.Rounded.Groups to sh(\"Arkadaşlar\", \"Friends\")"))
+        assertTrue(games.contains("PremiumDestination.SOCIAL, PremiumDestination.PROFILE,"))
         assertTrue(lobby.contains("onGameLanguage(if (gameLanguage == \"en\") \"tr\" else \"en\")"))
         assertTrue(games.contains("onClick = onSiege"))
         assertTrue(games.contains("onClick = onLastLetter"))
