@@ -197,10 +197,13 @@ internal fun HomeLobbyScreen(
                 }
             }
 
-            // Two 3D tiles in the logo's green and red.
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Son Harf is the main game: its two 3D tiles (new match, my games) lead the lobby.
+            Text(sh("Son Harf", "Last Letter").uppercase(), Modifier.fillMaxWidth().padding(top = 14.dp),
+                color = LobbyBrand.Gold, fontSize = 15.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp,
+                textAlign = TextAlign.Center)
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 LobbyBigButton(Icons.Rounded.AddCircle, sh("Yeni Oyun", "New Game"), LobbyBrand.Play, LobbyBrand.PlayEdge,
-                    Modifier.weight(1f), onClick = onNewGame)
+                    Modifier.weight(1f), onClick = onLastLetter)
                 LobbyBigButton(Icons.Rounded.GridView, sh("Oyunlarım", "My Games"), LobbyBrand.Games, LobbyBrand.GamesEdge,
                     Modifier.weight(1f), badge = waitingForMe, onClick = {
                         // Opening My Games counts everything in it as seen: the badge clears at once.
@@ -210,12 +213,15 @@ internal fun HomeLobbyScreen(
                     })
             }
 
-            // The other two games as twin cards of equal size: Kelime Atölyesi, then Son Harf.
+            // The other games as cards of equal size: Kelime Kuşatması (second game), then Kelime Atölyesi.
+            Text(sh("Diğer Oyunlar", "More Games").uppercase(), Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
+                color = Color.White.copy(alpha = .75f), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp,
+                textAlign = TextAlign.Center)
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LobbyGameCard(R.drawable.kelime_tahti_game_icon, sh("Kelime Kuşatması", "Word Siege"),
+                    sh("Kelimelerle tahtayı fethet", "Conquer the board with words"), onNewGame)
                 LobbyGameCard(R.drawable.kelime_atolyesi_game_icon, sh("Kelime Atölyesi", "Word Workshop"),
                     rememberWorkshopStatus(), onWorkshop)
-                LobbyGameCard(R.drawable.son_harf_game_icon, sh("Son Harf", "Last Letter"),
-                    sh("Son harfle başla · 15 saniye", "Start with the last letter · 15 seconds"), onLastLetter)
                 // Friends in plain sight, not only in the menu.
                 LobbyFriendsCard(
                     detail = sh("Arkadaş ekle, davet et, birlikte oyna", "Add friends, invite them, play together") +

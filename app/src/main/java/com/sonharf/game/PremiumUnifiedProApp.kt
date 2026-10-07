@@ -442,25 +442,25 @@ private fun PremiumGameCenter(
         }
         item {
             PremiumGameCard(
-                icon = Icons.Rounded.GridView,
-                title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
-                artRes = R.drawable.kelime_tahti_game_icon,
-                subtitle = sh("Ana oyun • taktik alan savaşı", "Main game • tactical territory battle"),
-                language = siegeLanguage,
-                onLanguageChange = onSiegeLanguage,
+                icon = Icons.Rounded.Bolt,
+                title = sh("SON HARF", "LAST LETTER"),
+                artRes = R.drawable.son_harf_game_icon,
+                subtitle = sh("Ana oyun • hızlı kelime düellosu", "Main game • fast word duel"),
+                language = lastLetterLanguage,
+                onLanguageChange = onLastLetterLanguage,
                 primary = true,
-                onClick = onSiege,
+                onClick = onLastLetter,
             )
         }
         item {
             PremiumGameCard(
-                icon = Icons.Rounded.Bolt,
-                title = sh("SON HARF", "LAST LETTER"),
-                artRes = R.drawable.son_harf_game_icon,
-                subtitle = sh("Hızlı kelime düellosu", "Fast word duel"),
-                language = lastLetterLanguage,
-                onLanguageChange = onLastLetterLanguage,
-                onClick = onLastLetter,
+                icon = Icons.Rounded.GridView,
+                title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                artRes = R.drawable.kelime_tahti_game_icon,
+                subtitle = sh("Taktik alan savaşı", "Tactical territory battle"),
+                language = siegeLanguage,
+                onLanguageChange = onSiegeLanguage,
+                onClick = onSiege,
             )
         }
         item {

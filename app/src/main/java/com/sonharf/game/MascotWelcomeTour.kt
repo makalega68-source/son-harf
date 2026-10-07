@@ -65,19 +65,19 @@ private val welcomeSteps = listOf(
         WordSiegeMascotAction.NOD, WordSiegeMascotEmotion.CALM,
     ),
     WelcomeStep(
-        "Yeni Oyun ile Kelime Kuşatması başlar: harflerini tahtaya diz, küpleri ele geçir, rakibini geç!",
-        "New Game starts Word Siege: place your letters, capture cubes and get ahead of your rival!",
+        "Ana oyunumuz Son Harf: Yeni Oyun'a bas, rakibinin kelimesinin son harfiyle 15 saniyede yeni bir kelime bul. Hızlı ol!",
+        "Our main game is Last Letter: tap New Game and find a word from your rival's last letter in 15 seconds. Be quick!",
+        WordSiegeMascotAction.HOP, WordSiegeMascotEmotion.EXCITED,
+    ),
+    WelcomeStep(
+        "Diğer Oyunlar'da Kelime Kuşatması var: harflerini tahtaya diz, küpleri ele geçir, rakibini geç!",
+        "More Games has Word Siege: place your letters, capture cubes and get ahead of your rival!",
         WordSiegeMascotAction.POINT, WordSiegeMascotEmotion.FOCUS,
     ),
     WelcomeStep(
         "Kelime Atölyesi'nde harflerden kelime kurar, görevleri bitirirsin. Turnuvada kürsüye çıkmak senin elinde!",
         "In the Word Workshop you build words from letters and finish tasks. The tournament podium is yours to take!",
         WordSiegeMascotAction.THINK, WordSiegeMascotEmotion.FOCUS,
-    ),
-    WelcomeStep(
-        "Son Harf'te rakibinin kelimesinin son harfiyle 15 saniyede yeni bir kelime bulursun. Hızlı ol!",
-        "In Last Letter you find a new word from your rival's last letter in 15 seconds. Be quick!",
-        WordSiegeMascotAction.HOP, WordSiegeMascotEmotion.EXCITED,
     ),
     WelcomeStep(
         "Her hafta en çok puanı toplayan Taht'a oturur ve Altın Kral ona hizmet eder. 👑",

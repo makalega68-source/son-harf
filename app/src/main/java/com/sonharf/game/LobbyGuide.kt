@@ -18,15 +18,6 @@ import androidx.compose.ui.unit.sp
 internal data class LobbyGuideTopic(val id: String, val icon: ImageVector, val title: String, val paragraphs: List<String>)
 
 internal fun lobbyGuideTopics(): List<LobbyGuideTopic> = listOf(
-    LobbyGuideTopic("siege", Icons.Rounded.GridOn, sh("Kelime Tahtı (Kuşatma)", "Word Throne (Siege)"), listOf(
-        sh("Elindeki taşlarla tahtaya kelime kur ve tahtada toprak kazan.", "Build words with your tiles and win ground on the board."),
-        sh("Açılış kelimesi tahtanın ortasındaki Başlangıç Mührü'nden geçmelidir. Sonraki her kelime tek satırda ya da tek sütunda dizilir ve tahtadaki bir harfe dokunur.",
-            "The opening word must pass through the Starting Seal in the middle. Every later word sits in one row or column and touches a letter on the board."),
-        sh("Kelime puanı kalıcıdır. Ele geçirdiğin her küp +2 küp puanı yazar; rakipten kopardığın küp onun küp puanını 1 azaltır. Bonus kareler yalnız üzerine ilk taş konduğunda çalışır.",
-            "Word points are permanent. Each cube you take is worth +2 territory points; a cube pulled from your rival lowers theirs by 1. A bonus square works only for the first tile placed on it."),
-        sh("Oyun sonunda kelime ve küp puanı toplamı yüksek olan kazanır. Süresi dolan ya da pes eden oyuncu hükmen kaybeder.",
-            "Highest word plus territory total wins. A player who runs out of time or resigns loses by forfeit."),
-    )),
     LobbyGuideTopic("last_letter", Icons.Rounded.Link, sh("Son Harf", "Last Letter"), listOf(
         sh("Sırayla kelime söylenir; her yeni kelime bir önceki kelimenin son harfiyle başlamalıdır. Örnek: KALEM → MASA → ARI.",
             "Players take turns; each new word must start with the last letter of the previous one. Example: APPLE → EAGLE → EARTH."),
@@ -34,6 +25,15 @@ internal fun lobbyGuideTopics(): List<LobbyGuideTopic> = listOf(
             "You have 15 seconds per move and a game lasts 10 turns. A word already used in the game cannot be repeated."),
         sh("Sözlükte olmayan kelime kabul edilmez; süren bitmeden başka bir kelime deneyebilirsin. Süre dolarsa sıra rakibe geçer. Uzun kelimeler daha çok puan getirir.",
             "A word that is not in the dictionary is rejected; you can try another before your time ends. If time runs out, the turn passes to your rival. Longer words earn more points."),
+    )),
+    LobbyGuideTopic("siege", Icons.Rounded.GridOn, sh("Kelime Kuşatması", "Word Siege"), listOf(
+        sh("Elindeki taşlarla tahtaya kelime kur ve tahtada toprak kazan.", "Build words with your tiles and win ground on the board."),
+        sh("Açılış kelimesi tahtanın ortasındaki Başlangıç Mührü'nden geçmelidir. Sonraki her kelime tek satırda ya da tek sütunda dizilir ve tahtadaki bir harfe dokunur.",
+            "The opening word must pass through the Starting Seal in the middle. Every later word sits in one row or column and touches a letter on the board."),
+        sh("Kelime puanı kalıcıdır. Ele geçirdiğin her küp +2 küp puanı yazar; rakipten kopardığın küp onun küp puanını 1 azaltır. Bonus kareler yalnız üzerine ilk taş konduğunda çalışır.",
+            "Word points are permanent. Each cube you take is worth +2 territory points; a cube pulled from your rival lowers theirs by 1. A bonus square works only for the first tile placed on it."),
+        sh("Oyun sonunda kelime ve küp puanı toplamı yüksek olan kazanır. Süresi dolan ya da pes eden oyuncu hükmen kaybeder.",
+            "Highest word plus territory total wins. A player who runs out of time or resigns loses by forfeit."),
     )),
     LobbyGuideTopic("workshop", Icons.Rounded.Construction, sh("Kelime Atölyesi", "Word Workshop"), listOf(
         sh("Sana verilen 7 harften süre bitmeden en az 3 harfli kelimeler kur. Her harf 10 puan, tamamlanan her görev 50 puan değerindedir.",
