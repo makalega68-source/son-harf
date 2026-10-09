@@ -20,7 +20,7 @@ internal fun atelierCalendar(now: Long): List<Pair<Long, Double>> {
     return (0..1).flatMap { day ->
         ((0..22 step 2).toList() + 19).distinct().sorted().map { hour ->
             local.toLocalDate().plusDays(day.toLong()).atTime(hour, 0).atZone(zone).toInstant().toEpochMilli() to
-                if (hour == 19 || hour == 22) 3.0 else 1.5
+                if (hour in 19..21) 2.0 else 1.5
         }
     }.filter { it.first >= now }.take(8)
 }
@@ -63,6 +63,11 @@ internal fun EventsCalendarScreen(onBack: () -> Unit, onAtelier: () -> Unit, onT
     val now = if (server > 0L) server + (elapsed - loadedAt).coerceAtLeast(0L) else 0L
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { MainScreenHeader(sh("Etkinlikler", "Events"), sh("Türkiye saati", "Istanbul time"), onBack = onBack) }
+        item { ActivityTile(sh("Taht Saati", "Throne Hour")) {
+            Text(sh("Her akşam 19.00–22.00", "Every evening, 19:00–22:00"), color = LobbyPalette.Ink, fontWeight = FontWeight.Bold)
+            Text(sh("Kuşatma, Son Harf ve Atölye'de ×2 XP. Atölye bonusuyla birleşmez.", "×2 XP in Siege, Last Letter and Workshop. It does not stack with the Workshop bonus."), color = LobbyPalette.Muted)
+            Button(onClick=onThrone) { Text(sh("Tahtı aç", "Open Throne")) }
+        } }
         if (failed) item { TextButton(onClick = { retry++ }) { Text(sh("Takvim güncellenemedi · Yenile", "Calendar unavailable · Retry"), color = Hf.Red) } }
         if (tournament == null && !failed) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Green) }
         tournament?.let { event ->

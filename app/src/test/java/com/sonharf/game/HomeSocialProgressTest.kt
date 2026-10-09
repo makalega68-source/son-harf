@@ -39,16 +39,25 @@ class HomeSocialProgressTest {
         assertEquals(SiegeRecordSummary(0, 0, 0, 0, 0), siegeRecordSummary(listOf(a), null))
     }
 
-    @Test fun calendarUsesIstanbulAndIncludesBothTripleXpEventsWithoutDuplicates() {
+    @Test fun calendarUsesIstanbulAndEveningWorkshopReplacesItsBonusWithDoubleXp() {
         val now = Instant.parse("2026-10-02T15:30:00Z").toEpochMilli() // 18:30 Istanbul
         val events = atelierCalendar(now)
         val zone = ZoneId.of("Europe/Istanbul")
         assertEquals(19, Instant.ofEpochMilli(events.first().first).atZone(zone).hour)
-        assertEquals(3.0, events.first().second, 0.0)
+        assertEquals(2.0, events.first().second, 0.0)
         assertEquals(1, events.count { Instant.ofEpochMilli(it.first).atZone(zone).let { t -> t.dayOfMonth == 2 && t.hour == 22 } })
-        assertTrue(events.filter { it.second == 3.0 }.all { Instant.ofEpochMilli(it.first).atZone(zone).hour in listOf(19, 22) })
+        assertTrue(events.filter { it.second == 2.0 }.all { Instant.ofEpochMilli(it.first).atZone(zone).hour in 19..21 })
+        assertEquals(1.5, events.first { Instant.ofEpochMilli(it.first).atZone(zone).hour == 22 }.second, 0.0)
         assertTrue(events.all { it.first >= now })
         assertEquals(events.size, events.map { it.first }.distinct().size)
+    }
+
+    @Test fun throneHourUsesExactIstanbulBoundaries() {
+        fun instant(value: String) = Instant.parse(value).toEpochMilli()
+        assertFalse(throneHourActive(instant("2026-10-09T15:59:59Z")))
+        assertTrue(throneHourActive(instant("2026-10-09T16:00:00Z")))
+        assertTrue(throneHourActive(instant("2026-10-09T18:59:59Z")))
+        assertFalse(throneHourActive(instant("2026-10-09T19:00:00Z")))
     }
 
     @Test fun productAndModeNamesStayDistinctInBothLanguages() {

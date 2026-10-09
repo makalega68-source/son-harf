@@ -239,7 +239,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             bottomBar = {
                 val tab = lobbyTabs.indexOf(destination)
                 if (!inGame) Column {
-                    WorkshopPodiumTicker()
+                    if (destination == PremiumDestination.HOME) {
+                        HomeEventPanel(onOpenEvents = { destination = PremiumDestination.EVENTS }, onPlay = { destination = PremiumDestination.GAMES })
+                    } else WorkshopPodiumTicker()
                     // The Arkadaşlar tab carries the count of new friend requests and invitations.
                     if (tab >= 0) LobbyBottomBar(selected = tab, badges = mapOf(3 to incomingSocialCount)) { index ->
                         if (index == 0) shopInitialTab = 0

@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Campaign
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
 internal fun tickerLine(row: TickerFeedRow): String? = when (row.kind) {
     // Announcements reach everyone in both languages: Turkish first, then English.
@@ -174,6 +180,70 @@ internal fun WorkshopPodiumTicker(modifier: Modifier = Modifier) {
             else -> sh("Atölye turnuvası", "Workshop tournament")
         }
         TickerStrip(Icons.Rounded.EmojiEvents, text, modifier, scroll = false)
+    }
+}
+
+private val ThroneHourZone = ZoneId.of("Europe/Istanbul")
+
+internal fun throneHourActive(nowMillis: Long): Boolean {
+    if (nowMillis <= 0L) return false
+    return Instant.ofEpochMilli(nowMillis).atZone(ThroneHourZone).hour in 19..21
+}
+
+internal fun throneHourBoundary(nowMillis: Long): Long {
+    if (nowMillis <= 0L) return 0L
+    val now = Instant.ofEpochMilli(nowMillis).atZone(ThroneHourZone)
+    val target: ZonedDateTime = if (throneHourActive(nowMillis)) {
+        now.toLocalDate().atTime(22, 0).atZone(ThroneHourZone)
+    } else {
+        val today = now.toLocalDate().atTime(19, 0).atZone(ThroneHourZone)
+        if (now.isBefore(today)) today else today.plusDays(1)
+    }
+    return target.toInstant().toEpochMilli()
+}
+
+@Composable
+internal fun HomeEventPanel(onOpenEvents: () -> Unit, onPlay: () -> Unit, modifier: Modifier = Modifier) {
+    var event by remember { mutableStateOf<AtelierTournament?>(null) }
+    val foreground = rememberAppForeground()
+    LaunchedEffect(foreground) {
+        if (!foreground || !SupabaseProvider.configured) return@LaunchedEffect
+        while (true) {
+            gameRequestResult { ThroneBackend.tournament() }.onSuccess { event = it }
+            delay(30_000)
+        }
+    }
+    val now = serverNow(event?.serverTime.orEmpty(), "home-event-panel")
+    val live = throneHourActive(now)
+    val throneClock = if (now > 0L) tournamentClockText(throneHourBoundary(now), now) else "—:—:—"
+    val workshopClock = if (now > 0L) tournamentClockText(
+        tournamentTimeMillis(event?.nextStart.orEmpty()).takeIf { it > now } ?: tournamentNextRegular(now), now
+    ) else "—:—:—"
+    Surface(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp),
+        onClick = onOpenEvents,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+        color = LobbyBrand.Band,
+        border = androidx.compose.foundation.BorderStroke(1.dp, LobbyBrand.Gold.copy(alpha = .58f)),
+        shadowElevation = 5.dp,
+    ) {
+        Row(Modifier.fillMaxWidth().padding(start = 13.dp, top = 10.dp, end = 9.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(43.dp).background(Brush.radialGradient(listOf(LobbyBrand.Gold.copy(alpha = .30f), Color.Transparent)), androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Bolt, null, tint = LobbyBrand.Gold, modifier = Modifier.size(27.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(if (live) sh("TAHT SAATİ BAŞLADI", "THRONE HOUR IS LIVE") else sh("SIRADAKİ ETKİNLİK", "NEXT EVENT"), color = LobbyBrand.Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Text(if (live) sh("Tüm oyunlarda ×2 XP", "×2 XP in every game") else sh("Taht Saati · 19.00–22.00 · ×2 XP", "Throne Hour · 19:00–22:00 · ×2 XP"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text(if (live) sh("Bitmesine $throneClock", "Ends in $throneClock") else sh("$throneClock sonra  •  Atölye ×1,5: $workshopClock", "$throneClock away  •  Workshop ×1.5: $workshopClock"), color = Color.White.copy(alpha = .72f), fontSize = 10.sp, maxLines = 1)
+            }
+            Surface(onClick = onPlay, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), color = LobbyBrand.Gold) {
+                Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(sh("OYNA", "PLAY"), color = LobbyBrand.NavBar, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Icon(Icons.Rounded.ChevronRight, null, tint = LobbyBrand.NavBar, modifier = Modifier.size(15.dp))
+                }
+            }
+        }
     }
 }
 

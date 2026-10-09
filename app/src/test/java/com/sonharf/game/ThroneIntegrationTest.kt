@@ -38,4 +38,12 @@ class ThroneIntegrationTest {
   assertTrue(sql.contains("Europe/Istanbul"));assertTrue(sql.contains("source<>'mission'"))
   assertTrue(sql.contains("pg_advisory_xact_lock"));assertTrue(sql.contains("enable row level security"))
  }
+ @Test fun eveningBonusIsServerOwnedAndDoesNotStack(){
+  val sql=File("../supabase/migrations/20261009130000_evening_throne_hour_x2.sql").readText()
+  assertTrue(sql.contains("private.throne_hour_active"))
+  assertTrue(sql.contains("time '19:00'"));assertTrue(sql.contains("time '22:00'"))
+  assertTrue(sql.contains("then 200 else 150"))
+  assertTrue(sql.contains("then 2 else 1"))
+  assertFalse(sql.contains("then 300"))
+ }
 }

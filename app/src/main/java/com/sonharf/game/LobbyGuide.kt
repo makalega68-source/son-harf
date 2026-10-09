@@ -40,8 +40,8 @@ internal fun lobbyGuideTopics(): List<LobbyGuideTopic> = listOf(
             "Build words of at least 3 letters from the 7 letters you get before time runs out. Each letter is worth 10 points and each completed task 50."),
         sh("Görevler üçerli setler hâlinde gelir; bir kelime uyduğu bütün görevleri aynı anda tamamlar.",
             "Tasks come in sets of three; one word completes every task it fits at once."),
-        sh("Turnuvalar her 2 saatte bir açılır; 19:00 ve 22:00 turnuvalarında tecrübe puanı ×3 sayılır. Kürsüye girenler ana sayfada gösterilir.",
-            "Tournaments open every 2 hours; the 19:00 and 22:00 tournaments count experience ×3. Podium finishers are shown in the lobby."),
+        sh("Atölye turnuvaları her 2 saatte bir ×1,5 XP ile açılır. Her akşam 19.00–22.00 arasında tüm oyunlar ×2 XP verir; bonuslar birleşmez. Kürsüye girenler ana sayfada gösterilir.",
+            "Workshop tournaments open every 2 hours with ×1.5 XP. Every evening from 19:00–22:00 all games award ×2 XP; bonuses do not stack. Podium finishers are shown in the lobby."),
     )),
     LobbyGuideTopic("league", Icons.Rounded.WorkspacePremium, sh("Lig", "League"), listOf(
         sh("Ligin, dereceli maçlardaki puanına (RP) göre belirlenir. Kazandıkça puanın artar, kaybettikçe azalır.",

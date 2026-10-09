@@ -77,9 +77,9 @@ import kotlinx.coroutines.delay
     Text(sh("TECRÜBE","EXPERIENCE"),color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Bold)
    }
   }
-  Text(if(event?.active==true)sh("${event?.stage}. aşama başladı · Herkes katılabilir","Stage ${event?.stage} has started · Open to everyone")else sh("Her 2 saatte yarış · 19:00 ve 22:00 ×3 XP","Race every 2 hours · 19:00 and 22:00 ×3 XP"),color=Color.White.copy(alpha=.9f),fontSize=11.sp)
+  Text(if(event?.active==true)sh("${event?.stage}. aşama başladı · Herkes katılabilir","Stage ${event?.stage} has started · Open to everyone")else sh("Her 2 saatte ×1,5 · 19.00–22.00 tüm oyunlarda ×2 XP","Every 2 hours ×1.5 · 19:00–22:00 ×2 XP in every game"),color=Color.White.copy(alpha=.9f),fontSize=11.sp)
   if(event!=null && tournamentTimeMillis(event!!.nextStart)<tournamentNextRegular(now))
-   Text(sh("19:00 özel turnuva: ${tournamentClockText(tournamentTimeMillis(event!!.nextStart),now)}","19:00 special tournament: ${tournamentClockText(tournamentTimeMillis(event!!.nextStart),now)}"),fontSize=11.sp,color=EventGold)
+   Text(sh("Sıradaki özel turnuva: ${tournamentClockText(tournamentTimeMillis(event!!.nextStart),now)}","Next special tournament: ${tournamentClockText(tournamentTimeMillis(event!!.nextStart),now)}"),fontSize=11.sp,color=EventGold)
   EventAction(if(event?.active==true)sh("TURNUVAYA GİR","ENTER TOURNAMENT")else sh("ATÖLYEYE GİR","ENTER WORKSHOP"),onOpen)
   val winners=event?.winners.orEmpty()
   Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
