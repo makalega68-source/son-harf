@@ -703,7 +703,9 @@ fun PremierWordDuelScreen() {
             // clock may open the break, so a skewed phone clock never flashes it.
             val prepMs = initialRemainingMs - elapsedMs - PREMIER_TURN_SECONDS * 1000L
             // Never longer than the set break, whatever extra time the deadline carries.
-            prepSeconds = if (serverClockResolved && prepMs > 0L) ((prepMs + 999L) / 1000L).toInt().coerceAtMost(PREMIER_ROUND_BREAK_SECONDS) else 0
+            // Continue the locally anchored preparation clock while the next server refresh is
+            // in flight. Waiting for serverClockResolved here froze the visible countdown at 10.
+            prepSeconds = if (prepMs > 0L) ((prepMs + 999L) / 1000L).toInt().coerceAtMost(PREMIER_ROUND_BREAK_SECONDS) else 0
             val remaining = premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs)
             if (remaining > 0 || !serverClockResolved) {
                 turnSeconds = remaining.coerceAtLeast(1)
@@ -2155,7 +2157,7 @@ private fun PremierRoundPrep(
             if (lastRoundWon != null) {
                 Text(
                     if (lastRoundWon) pt(language, "Raundu kazandın 🏆", "You won the round 🏆") else pt(language, "Raund rakibin", "Rival took the round"),
-                    color = if (lastRoundWon) PremierBoard.Gold else PremierBoard.RivalSoft,
+                    color = if (lastRoundWon) PremierBoard.Gold else Color(0xFFFF8A80),
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Black,
                 )

@@ -250,7 +250,7 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
     }
    }
   }
-  Text(sh("Her aşama 10 dk açık · aşamalar sırayla oynanır · en çok aşama ve puan kürsüye çıkar","Each stage opens for 10 min · played in order · most stages and points take the podium"),
+  Text(sh("Aşamalar arasında yaklaşık 15 sn geçiş · aşamalar sırayla oynanır · en çok aşama ve puan kürsüye çıkar","About 15 sec between stages · played in order · most stages and points take the podium"),
    color=Color.White.copy(alpha=.75f),fontSize=10.sp,lineHeight=14.sp)
   event?.myStages?.filter{it.finished}?.forEach{Text(sh("${it.stage}. aşama: +${it.xp} XP","Stage ${it.stage}: +${it.xp} XP"),color=EventGold,fontSize=11.sp)}
   if(event?.rows?.isNotEmpty()==true) {

@@ -8,6 +8,20 @@ import org.junit.Test
 
 // Locks the real-device fixes requested for the rebuilt Premier 1v1 arena.
 class PremierDuelUxRegressionTest {
+    @Test fun workshopIntermissionAndFullscreenKeepMascotVisible() {
+        val workshop = File("src/main/java/com/sonharf/game/KelimeAtolyesiScreen.kt").readText()
+        val throne = File("src/main/java/com/sonharf/game/ThroneExperience.kt").readText()
+        val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        assertTrue(workshop.contains("tournamentTimeMillis(event?.stageEnds.orEmpty())"))
+        assertFalse(workshop.contains("stage * 600_000L"))
+        assertTrue(workshop.contains("LaunchedEffect(roundKey, mode)"))
+        assertTrue(workshop.contains("contentScroll.scrollTo(0)"))
+        assertTrue(workshop.contains(".verticalScroll(contentScroll)"))
+        assertTrue(shell.contains("if (!inGame) Column(Modifier.windowInsetsPadding(WindowInsets.statusBars))"))
+        assertTrue(throne.contains("Aşamalar arasında yaklaşık 15 sn geçiş"))
+        assertFalse(throne.contains("Her aşama 10 dk açık"))
+    }
+
     @Test fun premierArenaKeepsProfilesVisibleAndServerAuthoritativeRecovery() {
         val screen = File("src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
         val backend = File("src/main/java/com/sonharf/game/data/PremierDuelBackend.kt").readText()
@@ -72,6 +86,9 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("fetchPremierTurnClock(active.id)"))
         assertTrue(screen.contains("SystemClock.elapsedRealtime()"))
         assertTrue(screen.contains("premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs)"))
+        assertTrue(screen.contains("prepSeconds = if (prepMs > 0L)"))
+        assertFalse(screen.contains("prepSeconds = if (serverClockResolved && prepMs > 0L)"))
+        assertTrue(screen.contains("else Color(0xFFFF8A80)"))
         assertTrue(screen.contains("\"15 sn tur\""))
         assertTrue(turnClock.contains("data class PremierTurnClockDto"))
         assertTrue(turnClock.contains("\"get_premier_turn_clock_v1\""))

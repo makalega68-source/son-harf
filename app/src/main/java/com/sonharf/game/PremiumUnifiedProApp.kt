@@ -224,14 +224,14 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     ) {
         Scaffold(
             containerColor = if (inGame) SonHarfTheme.Background else if (SonHarfCosmetics.petrolMenus) LobbyBrand.NavBar else LobbyPalette.Ground,
-            // The news ticker sits above everything, games included; the ad slot only on menu pages.
-            // windowInsetsPadding consumes the status bar here, so the ad slot below adds none.
+            // Arenas own the full viewport below the system bars. Menu chrome must not shorten
+            // the workshop playfield or push its mascot out of view.
             topBar = {
-                Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
+                if (!inGame) Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
                     ThroneChampionWatcher()
                     CrashReportUploader()
                     TopNewsTicker()
-                    if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
+                    SonHarfTopAdBanner(isPremium = isPro)
                 }
             },
             // Menu pages: the workshop countdown band, then the five-tab bar

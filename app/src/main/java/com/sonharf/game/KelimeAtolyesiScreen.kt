@@ -151,6 +151,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     var loadFailed by remember(language) { mutableStateOf(false) }
     var loadNonce by remember { mutableIntStateOf(0) }
     var roundKey by remember { mutableIntStateOf(0) }
+    val contentScroll = rememberScrollState()
     // Each duration has its own daily race and personal record.
     var roundSeconds by remember { mutableIntStateOf(KelimeAtolyesiEngine.STRATEGY_ROUND_SECONDS) }
     var secondsLeft by remember { mutableIntStateOf(KelimeAtolyesiEngine.STRATEGY_ROUND_SECONDS) }
@@ -181,6 +182,11 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     // Competition: the lobby (daily race + boards), practice rounds and the one official daily run.
     val online = SupabaseProvider.configured
     var mode by remember { mutableStateOf(AtelierMode.LOBBY) }
+    // A new stage starts from the top so its mascot and heading cannot remain above the
+    // preserved scroll offset from the previous stage.
+    LaunchedEffect(roundKey, mode) {
+        contentScroll.scrollTo(0)
+    }
     var board by remember { mutableStateOf<AtelierBoardDto?>(null) }
     var weeklyBoard by remember { mutableStateOf(false) }
     var loadingBoard by remember { mutableStateOf(false) }
@@ -561,7 +567,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(contentScroll)
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -1292,7 +1298,7 @@ private fun AtelierTournamentIntermission(
 ) {
     val stage = entry?.stage ?: 1
     val now = serverNow(event?.serverTime.orEmpty(), entry?.eventStart)
-    val nextOpens = entry?.let { tournamentTimeMillis(it.eventStart) + stage * 600_000L } ?: 0L
+    val nextOpens = tournamentTimeMillis(event?.stageEnds.orEmpty())
     val rows = event?.rows.orEmpty()
     val myRank = rows.firstOrNull { it.userId == myId }?.rank
     GameEventStage {
