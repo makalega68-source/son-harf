@@ -231,7 +231,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     ThroneChampionWatcher()
                     CrashReportUploader()
                     TopNewsTicker()
-                    SonHarfTopAdBanner(isPremium = isPro)
+                    if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.WORD_WORKSHOP)) SonHarfTopAdBanner(isPremium = isPro)
                 }
             },
             // Menu pages: the workshop countdown band, then the five-tab bar
