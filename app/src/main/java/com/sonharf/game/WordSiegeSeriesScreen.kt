@@ -32,16 +32,16 @@ import kotlinx.coroutines.launch
 private const val SERIES_DEFAULT_TURN_MINUTES = 5
 
 @Composable
-internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -> Unit) {
+internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, directEntry: Boolean = false, onExit: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     val scope = rememberCoroutineScope()
-    val me = remember { backend.currentUserId() }
+    val me = backend.currentUserId()
     var entitlement by remember { mutableStateOf<VipEntitlementsDto?>(if (verifiedAccess) VipEntitlementsDto(seriesGameAccess = true) else null) }
     var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var invites by remember { mutableStateOf<List<WordSiegeSeriesInviteDto>>(emptyList()) }
     var profiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
-    var selectedGameId by remember { mutableStateOf<String?>(null) }
+    var selectedGameId by remember { mutableStateOf(WordSiegeLaunchConfig.consumeGameId("series")) }
     var currentGame by remember { mutableStateOf<WordSiegeGameDto?>(null) }
     var moves by remember { mutableStateOf<List<WordSiegeMoveDto>>(emptyList()) }
     var messages by remember { mutableStateOf<List<WordSiegeMessageDto>>(emptyList()) }
@@ -50,6 +50,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
     var busy by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var noticeIsError by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
     var showPass by remember { mutableStateOf(false) }
@@ -64,25 +65,48 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
         val missing = ids.filterNotNull().distinct().filterNot(profiles::containsKey)
         if (missing.isEmpty()) return
         val loaded = missing.mapNotNull { id ->
-            runCatching { backend.getProfile(id) }.getOrNull()?.let { id to it }
+            gameRequestResult { backend.getProfile(id) }.getOrNull()?.let { id to it }
         }.toMap()
         if (loaded.isNotEmpty()) profiles = profiles + loaded
     }
 
+    fun showError(raw: String) {
+        notice = seriesFriendlyError(raw)
+        noticeIsError = true
+    }
+
+    fun clearErrorNotice() {
+        if (noticeIsError) {
+            notice = null
+            noticeIsError = false
+        }
+    }
+
     suspend fun refreshLobby(showProgress: Boolean = false) {
+        if (backend.currentUserId() == null) {
+            loading = false
+            return
+        }
         if (showProgress) loading = true
-        val nextGames = runCatching { backend.getWordSiegeSeriesGames() }
-            .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
+        val nextGames = gameRequestResult { backend.getWordSiegeSeriesGames() }
+            .onSuccess { clearErrorNotice() }
+            .onFailure { showError(it.message.orEmpty()) }
             .getOrDefault(games)
         games = nextGames
         loadProfiles(nextGames.flatMap { listOf(it.playerOneId, it.playerTwoId) })
-        friends = runCatching { backend.getFriends() }.getOrDefault(friends)
-        invites = runCatching { backend.getIncomingWordSiegeSeriesInvites() }.getOrDefault(invites)
+        friends = gameRequestResult { backend.getFriends() }.getOrDefault(friends)
+        invites = gameRequestResult { backend.getIncomingWordSiegeSeriesInvites() }.getOrDefault(invites)
         loadProfiles(invites.map { it.senderId })
         if (showProgress) loading = false
     }
 
     fun applyGame(next: WordSiegeGameDto) {
+        if (currentGame?.id != next.id) {
+            moves = emptyList()
+            messages = emptyList()
+            showChat = false
+            GameChatBadge.select(next.id)
+        }
         currentGame = next
         selectedGameId = next.id
         placements = emptyMap()
@@ -93,59 +117,134 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
             .sortedWith(seriesGameComparator(me))
     }
 
+    fun replayFinishedGame(finished: WordSiegeGameDto) {
+        if (busy) return
+        busy = true
+        scope.launch {
+            try {
+                gameRequestResult { backend.findOrCreateWordSiegeSeriesGame(finished.language, finished.turnDurationMinutes ?: turnMinutes) }
+                    .onSuccess { next -> applyGame(next); selectedGameId = next.id }
+                    .onFailure { showError(it.message.orEmpty()) }
+            } finally { busy = false }
+        }
+    }
+
     fun runGameAction(action: suspend () -> WordSiegeGameDto) {
         if (busy) return
+        busy = true
+        val requestedGameId = selectedGameId
         scope.launch {
-            busy = true
-            runCatching { action() }
-                .onSuccess { next -> applyGame(next); notice = null; refreshLobby() }
-                .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
-            busy = false
+            try {
+            gameRequestResult { action() }
+                .onSuccess { next -> if (selectedGameId != requestedGameId) return@onSuccess; applyGame(next); notice = null; noticeIsError = false }
+                .onFailure { error ->
+                    if (selectedGameId != requestedGameId) return@onFailure
+                    val raw = error.message.orEmpty()
+                    showError(raw)
+                    val gameId = currentGame?.id
+                    if (gameId != null && ("word_siege_not_your_turn" in raw || "word_siege_not_playing" in raw)) {
+                        gameRequestResult { backend.refreshWordSiegeGame(gameId) }.getOrNull()?.let { applyGame(it) }
+                    }
+                }
+            } finally { busy = false }
         }
     }
 
     LaunchedEffect(Unit) {
-        entitlement = runCatching { backend.getVipEntitlements() }.getOrElse { entitlement ?: VipEntitlementsDto() }
+        entitlement = gameRequestResult { backend.getVipEntitlements() }.getOrElse { entitlement ?: VipEntitlementsDto() }
         if (entitlement?.seriesGameAccess == true) refreshLobby(showProgress = true) else loading = false
+    }
+
+    LaunchedEffect(selectedGameId, currentGame?.status) {
+        gameRequestResult { backend.setPresence(if (selectedGameId != null && currentGame?.status == "playing") "in_game" else "online") }
     }
 
     LaunchedEffect(entitlement?.seriesGameAccess, selectedGameId) {
         if (entitlement?.seriesGameAccess != true || selectedGameId != null) return@LaunchedEffect
         while (currentCoroutineContext().isActive) {
             refreshLobby()
-            delay(5_000)
+            val outgoing = gameRequestResult { backend.getOutgoingWordSiegeSeriesInvites() }.getOrDefault(emptyList())
+            outgoing.filter { it.status == "pending" }.forEach { WordSiegeLaunchConfig.awaitInvite(it.id) }
+            outgoing.firstOrNull { it.status == "accepted" && it.id in WordSiegeLaunchConfig.awaitedInviteIds && it.gameId != null }?.let { invite ->
+                gameRequestResult { backend.getWordSiegeGame(requireNotNull(invite.gameId)) }.getOrNull()?.let { game ->
+                    WordSiegeLaunchConfig.awaitedInviteIds.remove(invite.id)
+                    if (game.status == "playing") applyGame(game)
+                }
+            }
+            delay(if (WordSiegeLaunchConfig.awaitedInviteIds.isEmpty()) 5_000L else 2_000L)
         }
     }
 
     LaunchedEffect(selectedGameId, showChat) {
         val gameId = selectedGameId ?: return@LaunchedEffect
+        GameChatBadge.select(gameId)
+        // The clock ticks every second, but the server is read every 2 s and the board is only
+        // redrawn when something actually changed (a fresh copy of the same game used to redraw
+        // the whole board every second, which made the match stutter).
+        var tick = 0
+        var movesFor = -1
+        // Realtime wakes this loop on a move or a message; polling is only the fallback.
+        val wake = com.sonharf.game.data.LiveWake(this, listOf(
+            com.sonharf.game.data.LiveWatch("word_siege_games", "id", gameId),
+            com.sonharf.game.data.LiveWatch("word_siege_messages", "game_id", gameId),
+        ))
         while (currentCoroutineContext().isActive) {
-            runCatching { backend.refreshWordSiegeGame(gameId) }
-                .onSuccess { next ->
-                    val changed = currentGame?.moveCount != next.moveCount || currentGame?.currentPlayerId != next.currentPlayerId
-                    currentGame = next
-                    games = (games.filterNot { it.id == next.id } + next).sortedWith(seriesGameComparator(me))
-                    loadProfiles(listOf(next.playerOneId, next.playerTwoId))
-                    if (changed) {
-                        placements = emptyMap()
-                        selectedRackIndex = null
+            if (tick % 2 == 0 || wake.live.get()) {
+                val pollStartedWith = currentGame
+                gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.refreshWordSiegeGame(gameId) } }
+                    .onSuccess { next ->
+                        clearErrorNotice()
+                        val shown = currentGame
+                        val stale = busy || shown !== pollStartedWith ||
+                            (shown != null && shown.id == next.id && next.moveCount < shown.moveCount)
+                        if (!stale && next != shown) {
+                            val changed = currentGame?.moveCount != next.moveCount || currentGame?.currentPlayerId != next.currentPlayerId
+                            currentGame = next
+                            games = (games.filterNot { it.id == next.id } + next).sortedWith(seriesGameComparator(me))
+                            loadProfiles(listOf(next.playerOneId, next.playerTwoId))
+                            if (changed) {
+                                placements = emptyMap()
+                                selectedRackIndex = null
+                            }
+                        }
+                    }
+                    .onFailure { showError(it.message.orEmpty()) }
+                val moveCount = currentGame?.moveCount ?: -1
+                if (moveCount != movesFor) {
+                    gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.getWordSiegeMoves(gameId) } }.getOrNull()?.let {
+                        if (it != moves) moves = it
+                        movesFor = moveCount
                     }
                 }
-                .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
-            moves = runCatching { backend.getWordSiegeMoves(gameId) }.getOrDefault(moves)
-            if (showChat) messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
-            clockTick = System.currentTimeMillis()
-            delay(1_000)
+            }
+            // Chat is read in the background too, so the chat button can show new messages.
+            if (tick % 4 == 0 || showChat || wake.live.get()) {
+                gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.getWordSiegeMessages(gameId) } }.getOrNull()?.let { if (it != messages) messages = it }
+                if (selectedGameId == gameId) GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
+            }
+            tick += 1
+            wake.await(pollMs = 1_000, safetyMs = 5_000)
         }
     }
 
     BackHandler {
+        if (directEntry) { onExit(); return@BackHandler }
         if (selectedGameId != null) {
             selectedGameId = null
             currentGame = null
             placements = emptyMap()
             selectedRackIndex = null
+            clearErrorNotice()
         } else onExit()
+    }
+
+    // The clock ticks on its own so a slow network round-trip never freezes the countdown.
+    LaunchedEffect(selectedGameId) {
+        if (selectedGameId == null) return@LaunchedEffect
+        while (currentCoroutineContext().isActive) {
+            clockTick = System.currentTimeMillis()
+            delay(1_000)
+        }
     }
 
     Surface(Modifier.fillMaxSize(), color = SonHarfTheme.Background) {
@@ -166,12 +265,12 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                 onRefresh = { scope.launch { refreshLobby(showProgress = true) } },
                 onNewGame = {
                     if (busy) return@SeriesLobby
+                    busy = true
                     scope.launch {
-                        busy = true
-                        runCatching { backend.findOrCreateWordSiegeSeriesGame(SonHarfUiState.language, turnMinutes) }
+                        gameRequestResult { backend.findOrCreateWordSiegeSeriesGame(SonHarfUiState.language, turnMinutes) }
                             .onSuccess { next ->
                                 applyGame(next)
-                                notice = if (next.status == "waiting") sh("Seri rakibi aranıyor.", "Searching for a Series rival.") else null
+                                notice = if (next.status == "waiting") sh("Düello rakibi aranıyor.", "Searching for a duel rival.") else null
                             }
                             .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
                         busy = false
@@ -181,9 +280,9 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                 onInviteFriend = { inviteFriend = true },
                 onAcceptInvite = { invite ->
                     if (busy) return@SeriesLobby
+                    busy = true
                     scope.launch {
-                        busy = true
-                        runCatching { backend.respondWordSiegeSeriesInvite(invite.id, true) }
+                        gameRequestResult { backend.respondWordSiegeSeriesInvite(invite.id, true) }
                             .onSuccess { next ->
                                 invites = invites.filterNot { it.id == invite.id }
                                 if (next != null) applyGame(next)
@@ -194,9 +293,9 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                 },
                 onDeclineInvite = { invite ->
                     if (busy) return@SeriesLobby
+                    busy = true
                     scope.launch {
-                        busy = true
-                        runCatching { backend.respondWordSiegeSeriesInvite(invite.id, false) }
+                        gameRequestResult { backend.respondWordSiegeSeriesInvite(invite.id, false) }
                             .onSuccess { invites = invites.filterNot { it.id == invite.id } }
                             .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
                         busy = false
@@ -210,7 +309,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                 } else if (game.status == "waiting") {
                     SeriesWaiting(
                         game = game,
-                        onBack = { selectedGameId = null; currentGame = null },
+                        onBack = { if (directEntry) onExit() else { selectedGameId = null; currentGame = null } },
                         onCancel = {
                             runGameAction { backend.cancelWordSiegeWaiting(game.id) }
                             selectedGameId = null
@@ -218,11 +317,12 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                         },
                     )
                 } else {
-                    val deadlineText = seriesDeadlineText(game.turnDeadline, clockTick)
                     val myMisses = if (me == game.playerOneId) game.playerOneMissedTurns else game.playerTwoMissedTurns
                     Box(Modifier.fillMaxSize()) {
                         WordSiegePanMatch(
                             game = game,
+                    onReplay = { replayFinishedGame(game) },
+                    onContinue = { next -> applyGame(next); selectedGameId = next.id },
                             me = me,
                             profiles = profiles,
                             moves = moves,
@@ -230,10 +330,12 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                             selectedRackIndex = selectedRackIndex,
                             busy = busy,
                             notice = notice,
-                            onBack = { selectedGameId = null; currentGame = null },
+                            onBack = { if (directEntry) onExit() else { selectedGameId = null; currentGame = null } },
                             onBoardCell = { boardIndex ->
                                 if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegePanMatch
-                                if (placements.containsKey(boardIndex)) {
+                                if (placements.containsKey(boardIndex) && selectedRackIndex != null) {
+                                    selectedRackIndex = null
+                                } else if (placements.containsKey(boardIndex)) {
                                     val rackIndex = placements.getValue(boardIndex)
                                     placements = placements - boardIndex
                                     selectedRackIndex = rackIndex
@@ -243,6 +345,18 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                                         placements = placements + (boardIndex to rackIndex)
                                         selectedRackIndex = null
                                     }
+                                }
+                            },
+                            onPlacementsChange = { next ->
+                                placements = next
+                                selectedRackIndex = null
+                            },
+                            onDropPlacement = { rackIndex, fromCell, target ->
+                                val live = currentGame
+                                if (live?.id == game.id && live.status == "playing" &&
+                                    live.currentPlayerId == me && !busy && rackIndex in (if (me == live.playerOneId) live.playerOneRack else live.playerTwoRack.orEmpty()).indices) {
+                                    placements = wordSiegeDropTile(placements, live.board, rackIndex, fromCell, target, allowRackReplacement = false)
+                                    selectedRackIndex = null
                                 }
                             },
                             onRackTile = { rackIndex ->
@@ -272,13 +386,17 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                             onExchange = { exchangeSelection = emptySet(); showExchange = true },
                             onChat = {
                                 showChat = true
-                                scope.launch { messages = runCatching { backend.getWordSiegeMessages(game.id) }.getOrDefault(emptyList()) }
+                                GameChatBadge.markRead()
+                                scope.launch { messages = gameRequestResult { backend.getWordSiegeMessages(game.id) }.getOrDefault(emptyList()) }
                             },
                             onForfeit = { showForfeit = true },
                             onCancelWaiting = {},
                         )
-                        SeriesTimerPill(
-                            text = deadlineText,
+                        // The clock is read inside the pill only: a tick every second used to redraw the
+                        // whole board with it.
+                        SeriesDeadlinePill(
+                            deadline = game.turnDeadline,
+                            tick = { clockTick },
                             misses = myMisses,
                             modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 48.dp),
                         )
@@ -296,9 +414,10 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
             onInvite = { friend ->
                 scope.launch {
                     busy = true
-                    runCatching { backend.inviteFriendToWordSiegeSeries(friend.id, SonHarfUiState.language, turnMinutes) }
-                        .onSuccess {
-                            notice = sh("${friend.displayName} Seri Oyun'a davet edildi.", "${friend.displayName} was invited to Series Game.")
+                    gameRequestResult { backend.inviteFriendToWordSiegeSeries(friend.id, SonHarfUiState.language, turnMinutes) }
+                        .onSuccess { invite ->
+                            WordSiegeLaunchConfig.awaitInvite(invite.id)
+                            notice = sh("${friend.displayName} Hızlı Düello'ya davet edildi.", "${friend.displayName} was invited to Quick Duel.")
                             inviteFriend = false
                         }
                         .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
@@ -336,7 +455,7 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
             title = { Text(sh("Harf değiştir", "Exchange tiles"), fontWeight = FontWeight.Black) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(sh("Değiştireceğin harfleri seç.", "Select the tiles to exchange."))
+                    Text(sh("Torbaya geri vereceğin taşları işaretle.", "Mark the tiles to hand back to the bag."))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         rack.forEachIndexed { index, letter ->
                             FilterChip(
@@ -366,7 +485,8 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
     if (showChat && dialogGame != null) {
         AlertDialog(
             onDismissRequest = { showChat = false },
-            title = { Text(sh("Oyun sohbeti", "Game chat"), fontWeight = FontWeight.Black) },
+            properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+            title = { ChatDialogTitle(sh("Oyun sohbeti", "Game chat")) { showChat = false } },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     LazyColumn(Modifier.fillMaxWidth().heightIn(min = 80.dp, max = 260.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -397,10 +517,10 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                         val text = chatInput
                         scope.launch {
                             busy = true
-                            runCatching { backend.sendWordSiegeMessage(dialogGame.id, text) }
+                            gameRequestResult { backend.sendWordSiegeMessage(dialogGame.id, text) }
                                 .onSuccess {
                                     chatInput = ""
-                                    messages = runCatching { backend.getWordSiegeMessages(dialogGame.id) }.getOrDefault(messages)
+                                    messages = gameRequestResult { backend.getWordSiegeMessages(dialogGame.id) }.getOrDefault(messages)
                                 }
                                 .onFailure { notice = seriesFriendlyError(it.message.orEmpty()) }
                             busy = false
@@ -408,7 +528,6 @@ internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -
                     },
                 ) { Text(sh("GÖNDER", "SEND")) }
             },
-            dismissButton = { TextButton(onClick = { showChat = false }) { Text(sh("KAPAT", "CLOSE")) } },
         )
     }
 }
@@ -441,7 +560,7 @@ private fun SeriesLobby(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back")) }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("SERİ OYUN", "SERIES GAME"), color = SonHarfTheme.TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text(sh("HIZLI DÜELLO", "QUICK DUEL"), color = SonHarfTheme.TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     Text(sh("Dakikalık tur • Kaçan tur otomatik pas • 3 ardışık kaçırma = mağlubiyet", "Minute turns • Missed turn auto-passes • 3 consecutive misses = defeat"), color = SonHarfTheme.TextSecondary, fontSize = 9.sp)
                 }
                 IconButton(onClick = onRefresh, enabled = !busy) { Icon(Icons.Rounded.Refresh, sh("Yenile", "Refresh")) }
@@ -496,68 +615,6 @@ private fun SeriesLobby(
             }
         }
 
-        if (invites.isNotEmpty()) {
-            item { Text(sh("SERİ OYUN DAVETLERİ", "SERIES INVITES"), color = SonHarfTheme.PremiumGold, fontSize = 10.sp, fontWeight = FontWeight.Black) }
-            items(invites, key = { it.id }) { invite ->
-                val sender = profiles[invite.senderId]
-                Surface(shape = RoundedCornerShape(16.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
-                    Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Bolt, null, tint = SonHarfTheme.PremiumGold)
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(sender?.displayName ?: sh("Oyuncu", "Player"), color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, maxLines = 1)
-                            Text(sh("${invite.turnDurationMinutes} dk tur", "${invite.turnDurationMinutes} min turn"), color = SonHarfTheme.TextSecondary, fontSize = 9.sp)
-                        }
-                        IconButton(onClick = { onDeclineInvite(invite) }, enabled = !busy) { Icon(Icons.Rounded.Close, sh("Reddet", "Decline"), tint = SonHarfTheme.Error) }
-                        IconButton(onClick = { onAcceptInvite(invite) }, enabled = !busy) { Icon(Icons.Rounded.CheckCircle, sh("Kabul et", "Accept"), tint = SonHarfTheme.Success) }
-                    }
-                }
-            }
-        }
-
-        item { Text(sh("SERİ OYUNLARIN", "YOUR SERIES GAMES"), color = SonHarfTheme.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Black) }
-        if (games.isEmpty()) {
-            item {
-                Surface(shape = RoundedCornerShape(18.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
-                    Text(sh("Henüz Seri Oyun yok. Rakip bul veya bir arkadaşını davet et.", "No Series Game yet. Find a rival or invite a friend."), Modifier.fillMaxWidth().padding(18.dp), color = SonHarfTheme.TextSecondary, textAlign = TextAlign.Center)
-                }
-            }
-        }
-        items(games, key = { it.id }) { game ->
-            val opponentId = if (me == game.playerOneId) game.playerTwoId else game.playerOneId
-            val opponent = opponentId?.let(profiles::get)
-            val myTurn = game.status == "playing" && game.currentPlayerId == me
-            val misses = if (me == game.playerOneId) game.playerOneMissedTurns else game.playerTwoMissedTurns
-            Surface(
-                modifier = Modifier.fillMaxWidth().clickable { onOpen(game) },
-                shape = RoundedCornerShape(17.dp),
-                color = SonHarfTheme.Surface,
-                border = BorderStroke(1.dp, if (myTurn) SonHarfTheme.Primary else SonHarfTheme.Border),
-            ) {
-                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = if (myTurn) SonHarfTheme.Primary.copy(alpha = .12f) else SonHarfTheme.SurfaceSecondary) {
-                        Icon(if (myTurn) Icons.Rounded.Bolt else Icons.Rounded.Timer, null, tint = if (myTurn) SonHarfTheme.Primary else SonHarfTheme.TextSecondary, modifier = Modifier.padding(10.dp))
-                    }
-                    Spacer(Modifier.width(9.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(opponent?.displayName ?: if (game.status == "waiting") sh("Rakip aranıyor", "Finding rival") else sh("Rakip", "Rival"), color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            when {
-                                game.status == "waiting" -> sh("Eşleşme bekliyor", "Waiting for match")
-                                game.status == "finished" -> sh("Tamamlandı", "Finished")
-                                myTurn -> sh("Sıra sende • ${seriesDeadlineText(game.turnDeadline, System.currentTimeMillis())}", "Your turn • ${seriesDeadlineText(game.turnDeadline, System.currentTimeMillis())}")
-                                else -> sh("Rakipte • ${seriesDeadlineText(game.turnDeadline, System.currentTimeMillis())}", "Rival's turn • ${seriesDeadlineText(game.turnDeadline, System.currentTimeMillis())}")
-                            },
-                            color = if (myTurn) SonHarfTheme.Primary else SonHarfTheme.TextSecondary,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        if (game.status == "playing") Text(sh("Kaçırılan ardışık tur: $misses / 3", "Consecutive missed turns: $misses / 3"), color = SonHarfTheme.TextSecondary, fontSize = 8.sp)
-                    }
-                    Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary)
-                }
-            }
-        }
         item { Spacer(Modifier.height(16.dp)) }
     }
 }
@@ -605,7 +662,7 @@ private fun SeriesFriendInviteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(sh("Seri Oyun daveti", "Series Game invite"), fontWeight = FontWeight.Black) },
+        title = { Text(sh("Hızlı Düello daveti", "Quick Duel invite"), fontWeight = FontWeight.Black) },
         text = {
             if (friends.isEmpty()) {
                 Text(sh("Davet edebileceğin arkadaş bulunamadı.", "No friend is available to invite."))
@@ -641,8 +698,8 @@ private fun SeriesLocked(onExit: () -> Unit) {
     ) {
         Icon(Icons.Rounded.Lock, null, tint = SonHarfTheme.PremiumGold, modifier = Modifier.size(48.dp))
         Spacer(Modifier.height(12.dp))
-        Text(sh("Seri Oyun kilitli", "Series Game is locked"), color = SonHarfTheme.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
-        Text(sh("Seri Oyun veya PRO satın alındığında kalıcı olarak açılır.", "It unlocks permanently with Series Game or PRO."), color = SonHarfTheme.TextSecondary, textAlign = TextAlign.Center)
+        Text(sh("Hızlı Düello kilitli", "Quick Duel is locked"), color = SonHarfTheme.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
+        Text(sh("Hızlı Düello veya PRO satın alındığında kalıcı olarak açılır.", "It unlocks permanently with Quick Duel or PRO."), color = SonHarfTheme.TextSecondary, textAlign = TextAlign.Center)
         Spacer(Modifier.height(16.dp))
         Button(onClick = onExit) { Text(sh("MAĞAZAYA DÖN", "BACK TO STORE")) }
     }
@@ -667,7 +724,7 @@ private fun seriesGameComparator(me: String?): Comparator<WordSiegeGameDto> =
 
 private fun seriesDeadlineText(deadline: String?, tick: Long): String {
     if (deadline.isNullOrBlank()) return sh("Süre bekleniyor", "Waiting for timer")
-    val parsed = runCatching { Instant.parse(deadline) }.getOrNull() ?: return sh("Süre bekleniyor", "Waiting for timer")
+    val parsed = com.sonharf.game.data.parseServerInstant(deadline) ?: return sh("Süre bekleniyor", "Waiting for timer")
     val now = Instant.ofEpochMilli(if (tick > 0L) tick else System.currentTimeMillis())
     val seconds = Duration.between(now, parsed).seconds.coerceAtLeast(0L)
     val minutesPart = seconds / 60L
@@ -676,8 +733,8 @@ private fun seriesDeadlineText(deadline: String?, tick: Long): String {
 }
 
 private fun seriesFriendlyError(raw: String): String = when {
-    "series_game_required" in raw -> sh("Seri Oyun veya PRO erişimi gerekli.", "Series Game or PRO access is required.")
-    "series_game_friend_required" in raw -> sh("Davet ettiğin arkadaşın da Seri Oyun erişimi olmalı.", "Your friend also needs Series Game access.")
+    "series_game_required" in raw -> sh("Hızlı Düello veya PRO erişimi gerekli.", "Quick Duel or PRO access is required.")
+    "series_game_friend_required" in raw -> sh("Davet ettiğin arkadaşın da Hızlı Düello erişimi olmalı.", "Your friend also needs Quick Duel access.")
     "word_siege_active_limit" in raw -> sh("Aktif oyun limitine ulaştın.", "You reached your active-game limit.")
     "word_siege_invite_pending" in raw -> sh("Bu oyuncuyla zaten bekleyen bir davet var.", "There is already a pending invite with this player.")
     "word_siege_invalid_word" in raw -> sh("Kelime sözlükte bulunamadı.", "The word is not in the dictionary.")
@@ -685,4 +742,11 @@ private fun seriesFriendlyError(raw: String): String = when {
     "matchmaking_disabled" in raw -> sh("Eşleştirme geçici olarak kapalı.", "Matchmaking is temporarily disabled.")
     "maintenance_mode" in raw -> sh("Bakım modu etkin.", "Maintenance mode is active.")
     else -> sh("İşlem tamamlanamadı. Bağlantını kontrol edip tekrar dene.", "The action could not be completed. Check your connection and try again.")
+}
+
+
+/** The turn clock pill; reads the per-second tick itself so only this pill redraws each second. */
+@Composable
+private fun SeriesDeadlinePill(deadline: String?, tick: () -> Long, misses: Int, modifier: Modifier = Modifier) {
+    SeriesTimerPill(text = seriesDeadlineText(deadline, tick()), misses = misses, modifier = modifier)
 }

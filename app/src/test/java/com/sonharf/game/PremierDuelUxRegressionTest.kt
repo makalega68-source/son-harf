@@ -8,35 +8,59 @@ import org.junit.Test
 
 // Locks the real-device fixes requested for the rebuilt Premier 1v1 arena.
 class PremierDuelUxRegressionTest {
+    @Test fun workshopIntermissionAndFullscreenKeepMascotVisible() {
+        val workshop = File("src/main/java/com/sonharf/game/KelimeAtolyesiScreen.kt").readText()
+        val throne = File("src/main/java/com/sonharf/game/ThroneExperience.kt").readText()
+        val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        assertTrue(workshop.contains("tournamentTimeMillis(event?.stageEnds.orEmpty())"))
+        assertFalse(workshop.contains("stage * 600_000L"))
+        assertTrue(workshop.contains("LaunchedEffect(roundKey, mode)"))
+        assertTrue(workshop.contains("contentScroll.scrollTo(0)"))
+        assertTrue(workshop.contains(".verticalScroll(contentScroll)"))
+        assertTrue(shell.contains("if (!inGame) Column(Modifier.windowInsetsPadding(WindowInsets.statusBars))"))
+        assertTrue(throne.contains("Aşamalar arasında yaklaşık 15 sn geçiş"))
+        assertFalse(throne.contains("Her aşama 10 dk açık"))
+    }
+
     @Test fun premierArenaKeepsProfilesVisibleAndServerAuthoritativeRecovery() {
         val screen = File("src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
         val backend = File("src/main/java/com/sonharf/game/data/PremierDuelBackend.kt").readText()
         val onlineBackend = File("src/main/java/com/sonharf/game/data/OnlineGameBackend.kt").readText()
         val turnClock = File("src/main/java/com/sonharf/game/data/PremierTurnClock.kt").readText()
 
-        // Human profile photos use the rectangular runtime so purchased rectangular frames align.
+        // The arena keeps its compact wells; match-found cards use a circular well for cosmetic frames.
         assertTrue(screen.contains("ProfilePhotoAvatarRectWithGender("))
         assertTrue(screen.contains("width = 70.dp"))
         assertTrue(screen.contains("height = 54.dp"))
-        assertTrue(screen.contains("width = 84.dp"))
-        assertTrue(screen.contains("height = 64.dp"))
+        assertTrue(screen.contains("ProfilePhotoAvatarWithGender(avatar,gender,name,70.dp"))
+        assertTrue(screen.contains("botGenderForName(name)"))
         assertTrue(screen.contains("PremierBotAvatar(size = 58.dp"))
         assertTrue(screen.contains("PremierBotAvatar(size = 70.dp"))
         assertFalse(screen.contains("MageCatCompanion("))
         assertFalse(screen.contains("SyntheticBotPortrait("))
+        assertTrue(screen.contains("WordSiegeMascotCompanion("))
+        assertTrue(screen.contains("WordSiegeMascotEmotion.FOCUS"))
+        assertTrue(screen.contains("PremierKeyboard(language, input"))
+        assertTrue(screen.contains("PremierArenaSky.BackgroundTop"))
+        assertTrue(screen.contains("Color(0xFFE6ECF2)"))
 
         // Chat remains typed/realtime and now has an unread red indicator.
         assertTrue(screen.contains("Text(pt(language, \"SOHBET\", \"CHAT\")"))
         assertFalse(screen.contains("enabled = !room.isBot"))
-        assertTrue(screen.contains("var hasUnreadChat by remember { mutableStateOf(false) }"))
+        assertTrue(screen.contains("var unreadChatCount by remember { mutableIntStateOf(0) }"))
         assertTrue(screen.contains("if (latest != null && latest.id != previousId && latest.senderId != backend.currentUserId())"))
-        assertTrue(screen.contains("hasUnreadChat = !showQuickChat"))
-        assertTrue(screen.contains("unreadChat = hasUnreadChat"))
-        assertTrue(screen.contains("Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-3).dp).size(10.dp).clip(CircleShape).background(PremierUi.Red)"))
-        assertTrue(screen.contains("hasUnreadChat = false"))
+        assertTrue(screen.contains("unreadChatCount = GameChatBadge.unread"))
+        assertTrue(screen.contains("unreadChat = unreadChatCount"))
+        assertTrue(screen.contains("ChatUnreadDot(unreadChat)"))
+        assertTrue(screen.contains("GameChatBadge.markRead()"))
 
-        assertTrue(screen.contains("Alignment.CenterStart"))
-        assertTrue(screen.contains("Alignment.CenterEnd"))
+        assertTrue(screen.contains("PremierSymmetricPlayerCard("))
+        assertTrue(screen.contains("Modifier.weight(1f).height(cardHeight)"))
+        // Large in-duel portraits: the cards may only grow.
+        assertTrue(screen.contains("val cardHeight = 92.dp"))
+        assertTrue(screen.contains("width = 70.dp,\n                height = 70.dp,"))
+        assertTrue(screen.contains("PremierBotAvatar(size = 70.dp, accent = accent, name = name)"))
+        assertTrue(screen.contains("Modifier.align(Alignment.CenterEnd).size(mascotSize)"))
         assertTrue(screen.contains("turnSeconds = 1"))
         assertTrue(screen.contains("backend.claimTurnTimeout(active.id)"))
         assertTrue(screen.contains("backend.botTakeTurn(active.id)"))
@@ -46,7 +70,8 @@ class PremierDuelUxRegressionTest {
         assertFalse(screen.contains("timeoutClaimKey"))
         assertTrue(backend.contains("submitWord(roomId, word)"))
         assertTrue(backend.contains("getRoom(roomId)"))
-        assertTrue(backend.contains("botTakeTurn(roomId)"))
+        // The AI reply is requested only by the arena (after its pause / the round break).
+        assertFalse(backend.contains("runCatching { botTakeTurn(roomId) }"))
         assertFalse(backend.contains("submit_word_v4"))
 
         // Returning to a live bot room must refresh the server deadline instead of charging offline time.
@@ -61,6 +86,9 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("fetchPremierTurnClock(active.id)"))
         assertTrue(screen.contains("SystemClock.elapsedRealtime()"))
         assertTrue(screen.contains("premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs)"))
+        assertTrue(screen.contains("prepSeconds = if (prepMs > 0L)"))
+        assertFalse(screen.contains("prepSeconds = if (serverClockResolved && prepMs > 0L)"))
+        assertTrue(screen.contains("else Color(0xFFFF8A80)"))
         assertTrue(screen.contains("\"15 sn tur\""))
         assertTrue(turnClock.contains("data class PremierTurnClockDto"))
         assertTrue(turnClock.contains("\"get_premier_turn_clock_v1\""))
@@ -73,20 +101,28 @@ class PremierDuelUxRegressionTest {
         assertFalse(screen.contains("Enter a word starting with “\$required”"))
         assertTrue(screen.contains("fontSize = if (veryCompact) 14.sp else 16.sp"))
 
-        // History chips center as a group instead of hugging the left edge.
-        assertTrue(screen.contains("Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally)"))
+        // The played-words chips were removed from the arena (unreadable on the petrol board).
+        assertFalse(screen.contains("PremierWordTrail("))
 
-        // Purchased action VFX is used cosmetically on turn arrival and accepted moves.
-        assertTrue(screen.contains("PurchasedVictoryVfx("))
-        assertTrue(screen.contains("eventKey = \"turn:"))
-        assertTrue(screen.contains("eventKey = \"accepted:"))
+        // Turn and accepted-word feedback is a light sweep on the target tile, not screen-centred rings.
+        assertFalse(screen.contains("PurchasedVictoryVfx("))
+        assertTrue(screen.contains("PremierTileShine(shine.value"))
 
-        // Target card and central letter remain compact on real devices.
-        assertTrue(screen.contains("if (veryCompact) 78.dp"))
-        assertTrue(screen.contains("if (compact) 88.dp"))
-        assertTrue(screen.contains("if (tall) 118.dp"))
-        assertTrue(screen.contains("else 104.dp"))
-        assertTrue(screen.contains("if (required.length > 1) .32f else .42f"))
+        // The target tile is large, and its letter is sized in dp so it never leaves the tile.
+        assertTrue(screen.contains("val targetSize = if (veryCompact) 86.dp else if (compact) 100.dp else if (tall) 128.dp else 116.dp"))
+        assertTrue(screen.contains("val mascotSize = if (veryCompact) 64.dp"))
+        assertTrue(screen.contains("required.length > 1 -> .34f"))
+        assertTrue(screen.contains("}).toSp()"))
+        // The hint chip and notices sit under the countdown (no strip of their own above the keyboard).
+        val strip = screen.indexOf("val hintVisible = myTurn")
+        assertTrue(strip in 0 until screen.indexOf("PremierPressureStrip(\n                language = language,"))
+        assertTrue(screen.contains("below = clockLine,"))
+        assertFalse(screen.contains("Box(Modifier.fillMaxWidth().height(34.dp).padding(horizontal = 10.dp)"))
+        assertTrue(screen.contains("val keyHeight = if (veryCompact) 33.dp else if (compact) 35.dp else if (tall) 42.dp else 39.dp"))
+        assertTrue(screen.contains("PremierPressureStrip("))
+        assertTrue(screen.contains("KRİTİK 5 SANİYE"))
+        assertTrue(screen.contains("HAMLE SIRASI SENDE"))
+        assertFalse(screen.contains("SALDIR"))
         assertFalse(screen.contains("if (tall) 164.dp"))
 
         // Send consumes the visible attempt immediately, then the authoritative server result arrives.
@@ -112,7 +148,7 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("backend.sendChat(active.id, message)"))
         assertTrue(screen.contains("backend.getChat(active.id)"))
         assertTrue(screen.contains("premierBotChatReply(language, message)"))
-        assertTrue(screen.contains("Bot ile serbestçe yazış."))
+        assertTrue(screen.contains("AI ile serbestçe yazış."))
         assertFalse(screen.contains("quickMessages"))
         assertFalse(screen.contains("Hızlı reaksiyonlar"))
         assertFalse(screen.contains("Bot maçında gerçek mesajlaşma kapalıdır."))

@@ -1,0 +1,54 @@
+name: Lossless image size reduction
+
+# One-off helper: shrinks the app's images without changing a single pixel.
+#  - Every PNG is re-compressed losslessly (oxipng), keeping its name and format.
+#  - PNGs that no test refers to by file name are then stored as lossless WebP (pixel-identical,
+#    Android 4.2+), and kept as PNG whenever WebP would not be smaller.
+# Videos, sounds and launcher icons are not touched.
+on:
+  push:
+    paths:
+      - .github/triggers/lossless-images.txt
+
+permissions:
+  contents: write
+
+jobs:
+  shrink:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq webp
+          curl -sSL https://github.com/shssoichiro/oxipng/releases/download/v9.1.2/oxipng-9.1.2-x86_64-unknown-linux-musl.tar.gz | tar xz
+          sudo mv oxipng-9.1.2-x86_64-unknown-linux-musl/oxipng /usr/local/bin/
+      - name: Shrink
+        run: |
+          before=$(du -sb app/src/main/res | cut -f1)
+          for dir in app/src/main/res/drawable app/src/main/res/drawable-nodpi; do
+            for f in "$dir"/*.png; do
+              [ -e "$f" ] || continue
+              case "$f" in *.9.png) continue ;; esac
+              oxipng -q -o 4 --strip safe "$f"
+              base=$(basename "$f" .png)
+              # Files a test opens by name stay PNG.
+              if grep -rqF "$base" app/src/test; then continue; fi
+              cwebp -quiet -lossless -exact -z 9 -metadata none "$f" -o "$dir/$base.webp"
+              if [ "$(stat -c%s "$dir/$base.webp")" -lt "$(stat -c%s "$f")" ]; then
+                git rm -qf "$f"
+              else
+                rm "$dir/$base.webp"
+              fi
+            done
+          done
+          after=$(du -sb app/src/main/res | cut -f1)
+          echo "res bytes: $before -> $after"
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A app/src/main/res
+          git commit -m "Shrink images losslessly (oxipng + lossless WebP, pixel-identical)"
+          git push origin HEAD:${GITHUB_REF_NAME}

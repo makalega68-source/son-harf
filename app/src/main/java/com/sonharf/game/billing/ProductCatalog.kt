@@ -10,7 +10,7 @@ object ProductCatalog {
     const val COINS_3500 = "coins_3500"
     const val COINS_8000 = "coins_8000"
 
-    // Kelime Kuşatması permanent premium products.
+    // Kelime Tahtı permanent premium products.
     const val SERIES_GAME = "series_game"
     const val LETTER_TABLE = "letter_table"
     const val SCORE_CALCULATOR = "score_calculator"
@@ -21,7 +21,45 @@ object ProductCatalog {
     const val SCORE_CALCULATOR_FALLBACK_PRICE_TRY = "129 TL"
     const val PRO_LIFETIME_FALLBACK_PRICE_TRY = "479 TL"
 
-    /** Legacy identifiers retained only so old receipts can be recognized safely. Frames are not sold or rendered. */
+    // Mascot characters: permanent one-time products, 680 TL each (price set in Play Console).
+    const val MASCOT_KLASIK = "mascot_klasik"
+    const val MASCOT_PEMBE = "mascot_pembe"
+    const val MASCOT_MAVI_SEYTANCIK = "mascot_mavi_seytancik"
+    const val MASCOT_KIRMIZI_SEYTANCIK = "mascot_kirmizi_seytancik"
+    const val MASCOT_TEKIR = "mascot_tekir"
+    const val MASCOT_ROBOT = "mascot_robot"
+    const val MASCOT_ASTRONOT = "mascot_astronot"
+    const val MASCOT_LIST_PRICE_TRY = "680 TL"
+
+    val mascotProducts = listOf(
+        MASCOT_KLASIK,
+        MASCOT_PEMBE,
+        MASCOT_MAVI_SEYTANCIK,
+        MASCOT_KIRMIZI_SEYTANCIK,
+        MASCOT_TEKIR,
+        MASCOT_ROBOT,
+        MASCOT_ASTRONOT,
+    )
+
+    // Premium keyboards: permanent one-time products, 50 TL each (price set in Play Console). The
+    // shop item id equals the product id; Premium White stays a Son Coin keyboard.
+    const val KEYBOARD_BLACK_GOLD = "keyboard_black_gold"
+    const val KEYBOARD_CRYSTAL = "keyboard_crystal"
+    const val KEYBOARD_MIDNIGHT = "keyboard_midnight"
+    const val KEYBOARD_OBSIDIAN = "keyboard_obsidian"
+    const val KEYBOARD_LIST_PRICE_TRY = "50 TL"
+
+    val keyboardProducts = listOf(KEYBOARD_BLACK_GOLD, KEYBOARD_CRYSTAL, KEYBOARD_MIDNIGHT, KEYBOARD_OBSIDIAN)
+
+    // Premium profile frames: permanent one-time products (price set in Play Console). The shop
+    // item id equals the product id; simple frames are sold for Son Coin instead.
+    const val PROFILE_FRAME_GOLD_CREST = "profile_frame_gold_crest"
+    const val PROFILE_FRAME_EMERALD = "profile_frame_emerald"
+    const val PROFILE_FRAME_AMETHYST = "profile_frame_amethyst"
+    const val PROFILE_FRAME_SAKURA = "profile_frame_pink_blossom"
+    const val PROFILE_FRAME_SAPPHIRE = "profile_frame_blue_royal"
+
+    /** Legacy identifiers retained only so old receipts can be recognized safely. These rings are now Son Coin items. */
     @Deprecated("Profile frames were retired from the game")
     const val PROFILE_FRAME_OCEAN = "profile_frame_ocean"
     @Deprecated("Profile frames were retired from the game")

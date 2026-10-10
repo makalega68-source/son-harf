@@ -11,6 +11,7 @@ class WordSiegeBoardSpecTest {
     fun `board has 225 cells and center is gold 4K`() {
         assertEquals(15, WordSiegeBoardSpec.Size)
         assertEquals(225, WordSiegeBoardSpec.CellCount)
+        assertEquals(7, WordSiegeBoardSpec.RackSize)
         assertEquals(112, WordSiegeBoardSpec.CenterIndex)
         assertEquals(7, WordSiegeBoardSpec.row(112))
         assertEquals(7, WordSiegeBoardSpec.column(112))
@@ -29,9 +30,9 @@ class WordSiegeBoardSpecTest {
         }
         assertEquals(33, (0 until WordSiegeBoardSpec.CellCount).count { WordSiegeBoardSpec.bonusAt(it) != null })
         assertEquals("3K", WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(1, 7)))
-        assertEquals("3H", WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(2, 4)))
-        assertEquals("2K", WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(3, 6)))
-        assertEquals("2H", WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(5, 5)))
+        assertEquals("3H", WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(2, 3)))
+        assertEquals("2K", WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(4, 4)))
+        assertEquals("2H", WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(3, 7)))
         assertEquals(null, WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(0, 0)))
     }
 

@@ -19,9 +19,8 @@ class VipDialogPolishContractTest {
         assertTrue(source.contains("ProductCatalog.VIP_MONTHLY"))
         assertFalse(source.contains("rememberInfiniteTransition"))
 
-        assertTrue(source.contains("ADİL REKABET"))
-        assertTrue(source.contains("FAIR PLAY"))
-        assertTrue(source.contains("gives no score, target-letter, or word advantage"))
+        assertFalse(source.contains("ADİL REKABET"))
+        assertFalse(source.contains("FAIR PLAY"))
         assertFalse(source.contains("2x SKOR"))
         assertFalse(source.contains("2x SCORE"))
         assertFalse(source.contains("server validated and consumed atomically"))

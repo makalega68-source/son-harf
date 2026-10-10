@@ -9,6 +9,10 @@ import kotlinx.serialization.json.put
 
 @Serializable
 data class WordSiegePremiumPreviewDto(
+    // The server answers an illegal move with {valid:false, reason:...}; without these
+    // fields that looked like a legal "+0" move.
+    val valid: Boolean = true,
+    val reason: String? = null,
     @SerialName("word_score") val wordScore: Int = 0,
     @SerialName("area_score") val areaScore: Int = 0,
     @SerialName("total_score") val totalScore: Int = wordScore + areaScore,

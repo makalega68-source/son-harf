@@ -64,14 +64,14 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                         runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
                             .onSuccess {
                                 notice = when (productId) {
-                                    ProductCatalog.SERIES_GAME -> sh("Seri Oyun kalıcı olarak açıldı.", "Series Game unlocked permanently.")
-                                    ProductCatalog.LETTER_TABLE -> sh("Harf Tablosu kalıcı olarak açıldı.", "Letter Table unlocked permanently.")
-                                    ProductCatalog.SCORE_CALCULATOR -> sh("Puan Hesaplayıcı kalıcı olarak açıldı.", "Score Calculator unlocked permanently.")
-                                    ProductCatalog.PRO_LIFETIME -> sh("PRO kalıcı olarak açıldı. 100 Son Coin hesabına eklendi.", "PRO unlocked permanently. 100 Son Coins were added.")
-                                    ProductCatalog.COINS_500 -> sh("500 Son Coin hesabına eklendi.", "500 Son Coins added to your account.")
-                                    ProductCatalog.COINS_1500 -> sh("1500 Son Coin hesabına eklendi.", "1500 Son Coins added to your account.")
-                                    ProductCatalog.COINS_3500 -> sh("3500 Son Coin hesabına eklendi.", "3500 Son Coins added to your account.")
-                                    ProductCatalog.COINS_8000 -> sh("8000 Son Coin hesabına eklendi.", "8000 Son Coins added to your account.")
+                                    ProductCatalog.SERIES_GAME -> sh("Hızlı Düello kalıcı olarak açıldı.", "Quick Duel unlocked permanently.")
+                                    ProductCatalog.LETTER_TABLE -> sh("Kalan Harfler kalıcı olarak açıldı.", "Letters Left unlocked permanently.")
+                                    ProductCatalog.SCORE_CALCULATOR -> sh("Hamle Önizleme kalıcı olarak açıldı.", "Move Preview unlocked permanently.")
+                                    ProductCatalog.PRO_LIFETIME -> sh("PRO kalıcı olarak açıldı. 100 Altın hesabına eklendi.", "PRO unlocked permanently. 100 Gold was added.")
+                                    ProductCatalog.COINS_500 -> sh("500 Altın hesabına eklendi.", "500 Gold added to your account.")
+                                    ProductCatalog.COINS_1500 -> sh("1500 Altın hesabına eklendi.", "1500 Gold added to your account.")
+                                    ProductCatalog.COINS_3500 -> sh("3500 Altın hesabına eklendi.", "3500 Gold added to your account.")
+                                    ProductCatalog.COINS_8000 -> sh("8000 Altın hesabına eklendi.", "8000 Gold added to your account.")
                                     else -> sh("Satın alma doğrulandı.", "Purchase verified.")
                                 }
                                 entitlements = runCatching { backend.getVipEntitlements() }.getOrDefault(entitlements)
@@ -80,7 +80,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                             .onFailure { error ->
                                 notice = when {
                                     "google_play_not_configured" in error.message.orEmpty() -> sh("Google Play sunucu doğrulaması production hesabıyla henüz etkin değil.", "Google Play server verification is not enabled with the production account yet.")
-                                    else -> sh("Ödeme doğrulaması tamamlanamadı. Aynı satın alma tekrar ödül vermez; yeniden deneyebilirsin.", "Purchase verification failed. The same purchase cannot grant twice; you can retry.")
+                                    else -> sh("Ödeme doğrulanamadı. Yeniden dene.", "Purchase verification failed. The same purchase cannot grant twice; you can retry.")
                                 }
                             }
                         busy = null
@@ -92,7 +92,10 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
     }
 
     DisposableEffect(manager) {
-        manager.connect { manager.queryOneTimeProducts(ProductCatalog.oneTimeProducts) { products = it } }
+        manager.connect {
+            manager.queryOneTimeProducts(ProductCatalog.oneTimeProducts) { products = it }
+            manager.restorePurchases(ProductCatalog.permanentPremiumProducts)
+        }
         onDispose { manager.close() }
     }
 
@@ -118,14 +121,14 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(sh("PREMİUM ÖZELLİKLER", "PREMIUM FEATURES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 16.sp)
             Text(
-                sh("Tek ödeme ile kalıcı kullanım. PRO; tüm premium özellikleri, reklamsız kullanımı, arkadaş listesini, Son Harf kelime geçmişini, 50 aktif oyun limitini ve 100 Son Coin'i açar.", "One payment, permanent access. PRO unlocks all premium features, ad-free play, friends list, Son Harf word history, a 50 active-game limit, and 100 Son Coins."),
+                sh("Kalıcı erişim · Google Play", "Permanent access · Google Play"),
                 color = SonHarfMuted,
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
             )
 
             PremiumProductRow(
-                title = sh("Seri Oyun", "Series Game"),
+                title = sh("Hızlı Düello", "Quick Duel"),
                 subtitle = sh("3/5/10 dk tur • otomatik pas • 3 kaçırma = mağlubiyet", "3/5/10 min turns • auto-pass • 3 misses = defeat"),
                 imageRes = R.drawable.premium_series_game,
                 product = products[ProductCatalog.SERIES_GAME],
@@ -134,16 +137,16 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 onOpen = { showSeriesGame = true },
             ) { buy(ProductCatalog.SERIES_GAME) }
             PremiumProductRow(
-                title = sh("Harf Tablosu", "Letter Table"),
-                subtitle = sh("Kalan harfleri gör", "See remaining letters"),
+                title = sh("Kalan Harfler", "Letters Left"),
+                subtitle = sh("Torbada hangi harflerin kaldığını gör", "See which letters are still in the bag"),
                 imageRes = R.drawable.premium_letter_table,
                 product = products[ProductCatalog.LETTER_TABLE],
                 busy = busy != null,
                 owned = entitlements.letterTableAccess,
             ) { buy(ProductCatalog.LETTER_TABLE) }
             PremiumProductRow(
-                title = sh("Puan Hesaplayıcı", "Score Calculator"),
-                subtitle = sh("Hamle puanını önceden gör", "Preview move score"),
+                title = sh("Hamle Önizleme", "Move Preview"),
+                subtitle = sh("Hamlen onaylanmadan ne getireceğini gör", "See what a move brings before you confirm"),
                 imageRes = R.drawable.premium_score_calculator,
                 product = products[ProductCatalog.SCORE_CALCULATOR],
                 busy = busy != null,
@@ -151,7 +154,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
             ) { buy(ProductCatalog.SCORE_CALCULATOR) }
             PremiumProductRow(
                 title = "PRO",
-                subtitle = sh("Tüm premium özellikler", "All premium features"),
+                subtitle = sh("PRO ayrıcalıkları", "PRO benefits"),
                 imageRes = R.drawable.premium_pro,
                 product = products[ProductCatalog.PRO_LIFETIME],
                 busy = busy != null,
@@ -159,12 +162,10 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
             ) { buy(ProductCatalog.PRO_LIFETIME) }
 
             HorizontalDivider(color = SonHarfTheme.Border)
-            Text("SON COIN", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
-            Text(
-                sh("Coin yalnızca kozmetik ve mağaza ürünlerinde kullanılır; maç gücü satılmaz.", "Coins are only for cosmetics and store items; match power is never sold."),
-                color = SonHarfMuted,
-                fontSize = 9.sp,
-            )
+            Text(sh("ALTIN", "GOLD"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
+            TextButton(onClick = { manager.restorePurchases(ProductCatalog.permanentPremiumProducts) }, enabled = busy == null) {
+                Text(sh("SATIN ALIMLARI GERİ YÜKLE", "RESTORE PURCHASES"), color = SonHarfTheme.Primary)
+            }
 
             CoinProductRow(
                 amount = 500,
@@ -309,7 +310,7 @@ private fun CoinProductRow(
                 contentScale = ContentScale.Fit,
             )
             Column(Modifier.weight(1f)) {
-                Text("$amount Son Coin", fontWeight = FontWeight.Black, color = SonHarfText, fontSize = 14.sp)
+                Text("$amount ${goldUnit()}", fontWeight = FontWeight.Black, color = SonHarfText, fontSize = 14.sp)
                 Text(subtitle, color = SonHarfMuted, fontSize = 9.sp)
             }
             Button(

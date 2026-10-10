@@ -11,9 +11,14 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.realtime.Realtime
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -37,6 +42,8 @@ data class ProfileDto(
     val wins: Int = 0,
     val losses: Int = 0,
     val rating: Int = 1000,
+    /** When the account was created; only brand-new accounts get Obi's welcome tour. */
+    @SerialName("created_at") val createdAt: String? = null,
 )
 
 @Serializable
@@ -53,6 +60,7 @@ data class GameRoomDto(
     @SerialName("host_streak") val hostStreak: Int = 0,
     @SerialName("guest_streak") val guestStreak: Int = 0,
     @SerialName("valid_word_count") val validWordCount: Int = 0,
+    @SerialName("action_seq") val actionSeq: Long = 0,
     @SerialName("final_moves_remaining") val finalMovesRemaining: Int = 0,
     @SerialName("last_event") val lastEvent: String? = null,
     @SerialName("last_event_player_id") val lastEventPlayerId: String? = null,
@@ -63,6 +71,11 @@ data class GameRoomDto(
     @SerialName("round_word_count") val roundWordCount: Int = 0,
     @SerialName("host_rounds") val hostRounds: Int = 0,
     @SerialName("guest_rounds") val guestRounds: Int = 0,
+    // Current-round standing: the round is decided by these, not by the match totals.
+    @SerialName("host_round_score") val hostRoundScore: Int = 0,
+    @SerialName("guest_round_score") val guestRoundScore: Int = 0,
+    @SerialName("host_round_words") val hostRoundWords: Int = 0,
+    @SerialName("guest_round_words") val guestRoundWords: Int = 0,
     @SerialName("rematch_of") val rematchOf: String? = null,
     @SerialName("host_rematch") val hostRematch: Boolean = false,
     @SerialName("guest_rematch") val guestRematch: Boolean = false,
@@ -181,7 +194,13 @@ object SupabaseProvider {
     val configured: Boolean = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_KEY.isNotBlank()
     val client: SupabaseClient by lazy {
         createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY) {
-            install(Auth)
+            defaultSerializer = RowTolerantSerializer()
+            install(Auth) {
+                // Must match the app's verification/recovery links (sonharf://auth); otherwise
+                // handleDeeplinks silently ignores them and the player is left on the code screen.
+                scheme = "sonharf"
+                host = "auth"
+            }
             install(Postgrest)
             install(Realtime)
         }
@@ -202,6 +221,7 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
 
     suspend fun setPresence(status: String) {
+        if (status != "offline" && !com.sonharf.game.AppPresenceState.foreground) return
         supabase.postgrest.rpc("set_presence", buildJsonObject { put("p_status", status) })
     }
 
@@ -262,6 +282,16 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
             buildJsonObject { put("p_room_id", roomId) },
         ).decodeSingle()
 
+    /**
+     * Starts the untouched opening turn's 15 seconds now (once per match). Matchmaking and the VS
+     * screen used to eat the first turn, so it expired before the arena was even on screen.
+     */
+    suspend fun activatePremierOpeningTurn(roomId: String): GameRoomDto =
+        supabase.postgrest.rpc(
+            "activate_premier_opening_turn_v1",
+            buildJsonObject { put("p_room_id", roomId) },
+        ).decodeSingle()
+
     suspend fun botAnswerTrivia(roomId: String): GameRoomDto =
         supabase.postgrest.rpc("bot_answer_trivia", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()
 
@@ -313,22 +343,34 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
         supabase.from("friendships").select().decodeList()
 
     suspend fun getProfile(id: String): ProfileDto =
-        supabase.from("profiles").select { filter { eq("id", id) } }.decodeSingle()
+        supabase.from("profiles").select { filter { eq("id", id) } }.decodeSingle<ProfileDto>()
+            .also { com.sonharf.game.OwnProfile.remember(it) }
+
+    suspend fun getProfilesParallel(ids: List<String>): List<ProfileDto> = coroutineScope {
+        // One `id in (...)` query per 50 ids; bounded per-id batches only if that query fails.
+        ids.filter { it.isNotBlank() }.distinct().chunked(50).flatMap { chunk ->
+            com.sonharf.game.gameRequestResult {
+                supabase.from("profiles").select { filter { isIn("id", chunk) } }.decodeList<ProfileDto>()
+            }.getOrElse {
+                chunk.chunked(6).flatMap { batch ->
+                    batch.map { id -> async { com.sonharf.game.gameRequestResult { getProfile(id) }.getOrNull() } }.awaitAll().filterNotNull()
+                }
+            }
+        }
+    }
 
     suspend fun getFriends(): List<Pair<FriendshipDto, ProfileDto>> {
         val me = currentUserId() ?: return emptyList()
-        return getFriendships().filter { it.status == "accepted" }.mapNotNull { friendship ->
-            runCatching {
-                friendship to getProfile(if (friendship.userId == me) friendship.friendId else friendship.userId)
-            }.getOrNull()
-        }
+        val links = getFriendships().filter { it.status == "accepted" }
+        val profiles = getProfilesParallel(links.map { if (it.userId == me) it.friendId else it.userId }).associateBy { it.id }
+        return links.mapNotNull { link -> profiles[if (link.userId == me) link.friendId else link.userId]?.let { link to it } }
     }
 
     suspend fun getIncomingFriendRequests(): List<Pair<FriendshipDto, ProfileDto>> {
         val me = currentUserId() ?: return emptyList()
-        return getFriendships().filter { it.status == "pending" && it.requestedBy != me }.mapNotNull { friendship ->
-            runCatching { friendship to getProfile(friendship.requestedBy) }.getOrNull()
-        }
+        val links = getFriendships().filter { it.status == "pending" && it.requestedBy != me }
+        val profiles = getProfilesParallel(links.map { it.requestedBy }).associateBy { it.id }
+        return links.mapNotNull { link -> profiles[link.requestedBy]?.let { link to it } }
     }
 
     suspend fun inviteFriend(friendId: String, language: String): GameInviteDto =
@@ -368,7 +410,7 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
 
     suspend fun getChat(id: String): List<ChatMessageDto> =
         supabase.from("chat_messages")
-            .select { filter { eq("room_id", id) } }
+            .select { filter { eq("room_id", id); gte("created_at", java.time.Instant.now().minusSeconds(15L * 86400).toString()) } }
             .decodeList<ChatMessageDto>()
             .sortedBy { it.id }
 
@@ -400,7 +442,12 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     suspend fun getTriviaQuestion(id: Long): TriviaQuestionDto =
         supabase.from("trivia_questions").select { filter { eq("id", id) } }.decodeSingle()
 
-    fun observeRoom(id: String, intervalMs: Long = 700): Flow<GameRoomDto> = flow {
+    // Each screen used to poll every 0.7 s (room, words) and 0.9 s (chat): about four requests a
+    // second per player, which slows everyone down as players come online. Realtime now wakes the
+    // loop on a real change; while it is connected only a slow safety read remains (the room keeps
+    // its 4-second presence heartbeat), and if it drops the old interval takes over again.
+    fun observeRoom(id: String, intervalMs: Long = 700): Flow<GameRoomDto> = channelFlow {
+        val wake = LiveWake(this, listOf(LiveWatch("game_rooms", "id", id)))
         var previous: GameRoomDto? = null
         var lastHeartbeatAt = 0L
         while (currentCoroutineContext().isActive) {
@@ -408,54 +455,56 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
             val heartbeatDue = now - lastHeartbeatAt >= 4_000_000_000L
             val result = if (heartbeatDue) {
                 lastHeartbeatAt = now
-                runCatching { heartbeatRoom(id) }
+                com.sonharf.game.gameRequestResult { heartbeatRoom(id) }
             } else {
-                runCatching { getRoom(id) }
+                com.sonharf.game.gameRequestResult { getRoom(id) }
             }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {
-                    emit(next)
+                    send(next)
                     previous = next
                 }
-                delay(intervalMs)
+                wake.await(pollMs = intervalMs, safetyMs = 3_800)
             } else {
                 delay(1200)
             }
         }
-    }
+    }.flowOn(kotlinx.coroutines.Dispatchers.IO)
 
-    fun observeWords(id: String, intervalMs: Long = 700): Flow<List<GameWordDto>> = flow {
+    fun observeWords(id: String, intervalMs: Long = 700): Flow<List<GameWordDto>> = channelFlow {
+        val wake = LiveWake(this, listOf(LiveWatch("game_words", "room_id", id)))
         var previous = emptyList<GameWordDto>()
         while (currentCoroutineContext().isActive) {
-            val result = runCatching { getWords(id) }
+            val result = com.sonharf.game.gameRequestResult { getWords(id) }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {
-                    emit(next)
+                    send(next)
                     previous = next
                 }
-                delay(intervalMs)
+                wake.await(pollMs = intervalMs, safetyMs = 6_000)
             } else {
                 delay(1200)
             }
         }
-    }
+    }.flowOn(kotlinx.coroutines.Dispatchers.IO)
 
-    fun observeChat(id: String, intervalMs: Long = 900): Flow<List<ChatMessageDto>> = flow {
+    fun observeChat(id: String, intervalMs: Long = 900): Flow<List<ChatMessageDto>> = channelFlow {
+        val wake = LiveWake(this, listOf(LiveWatch("chat_messages", "room_id", id)))
         var previous = emptyList<ChatMessageDto>()
         while (currentCoroutineContext().isActive) {
-            val result = runCatching { getChat(id) }
+            val result = com.sonharf.game.gameRequestResult { getChat(id) }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {
-                    emit(next)
+                    send(next)
                     previous = next
                 }
-                delay(intervalMs)
+                wake.await(pollMs = intervalMs, safetyMs = 10_000)
             } else {
                 delay(1400)
             }
         }
-    }
+    }.flowOn(kotlinx.coroutines.Dispatchers.IO)
 }

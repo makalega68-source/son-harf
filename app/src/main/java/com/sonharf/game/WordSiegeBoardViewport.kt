@@ -1,11 +1,22 @@
 package com.sonharf.game
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.ui.input.pointer.positionChange
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlin.math.floor
 
 /**
  * Kuşatma board viewport policy.
- * Close mode keeps a Kelimelik-style mobile overview: more cells are visible at once while
+ * Close mode keeps a mobile overview: more cells are visible at once while
  * preserving readable letters and free 2D panning. Fit mode shows the complete 15x15 board.
  * Double-tap toggles between the two modes.
  */
@@ -15,14 +26,17 @@ internal enum class WordSiegeBoardTapAction { PLACE, TOGGLE_VIEWPORT }
 
 internal const val WORD_SIEGE_DESIRED_SCREEN_BORDER_DP = 1.3f
 internal const val WORD_SIEGE_MIN_SCREEN_BORDER_DP = 1f
-internal const val WORD_SIEGE_ONLINE_ZOOM_FACTOR = 1.85f
-internal const val WORD_SIEGE_ONLINE_MAX_CLOSE_SCALE = 1f
+internal const val WORD_SIEGE_ONLINE_ZOOM_FACTOR = 2.00f
+internal const val WORD_SIEGE_ONLINE_MAX_CLOSE_SCALE = 1.12f
 internal const val WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.68f
+internal const val WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE = 1.0f
 internal const val WORD_SIEGE_PRACTICE_MIN_SCALE = 0.62f
 internal const val WORD_SIEGE_PRACTICE_MAX_SCALE = 1.24f
 internal const val WORD_SIEGE_LAST_MOVE_ENTER_MS = 180
 internal const val WORD_SIEGE_LAST_MOVE_HOLD_MS = 1_200
 internal const val WORD_SIEGE_LAST_MOVE_EXIT_MS = 200
+/** The last word stays clearly marked after its flash, until the next move. */
+internal const val WORD_SIEGE_LAST_MOVE_REST_ALPHA = .8f
 
 internal fun WordSiegeBoardViewportMode.toggle(): WordSiegeBoardViewportMode =
     if (this == WordSiegeBoardViewportMode.CLOSE) WordSiegeBoardViewportMode.FIT
@@ -227,4 +241,38 @@ internal fun wordSiegeBoardIndexAt(
     val column = floor(boardX / cellSizePx).toInt()
     val row = floor(boardY / cellSizePx).toInt()
     return WordSiegeBoardSpec.index(row, column)
+}
+
+/**
+ * Board gestures: one finger pans (after the touch slop, so taps and tile drags still reach the
+ * cells), two fingers pinch-zoom and pan. The pinch is read before the cells see the touch, because
+ * a cell takes the second finger's press for itself, which used to cancel the pinch mid-way and
+ * left the board stuck zoomed in.
+ */
+internal suspend fun PointerInputScope.detectWordSiegeBoardGestures(
+    onEnd: () -> Unit = {},
+    onTransform: (centroid: Offset, pan: Offset, zoom: Float) -> Unit,
+) = coroutineScope {
+    launch { detectTransformGestures { centroid, pan, zoom, _ -> onTransform(centroid, pan, zoom) } }
+    launch {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                if (event.changes.none { it.pressed }) {
+                    onEnd()
+                    break
+                }
+                if (event.changes.count { it.pressed } >= 2) {
+                    val zoom = event.calculateZoom()
+                    val pan = event.calculatePan()
+                    if (zoom != 1f || pan != Offset.Zero) {
+                        onTransform(event.calculateCentroid(useCurrent = true), pan, zoom)
+                        // Taken by the pinch: the cells under the fingers must not tap or drag.
+                        event.changes.forEach { if (it.positionChange() != Offset.Zero) it.consume() }
+                    }
+                }
+            }
+        }
+    }
 }

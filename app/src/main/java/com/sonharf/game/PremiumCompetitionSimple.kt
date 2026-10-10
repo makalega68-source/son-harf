@@ -39,7 +39,7 @@ fun PremiumCompetitionScreen(
 ) {
     val language = if (SonHarfUiState.language == "en") "en" else "tr"
     val me = remember { backend.currentUserId() }
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var rows by remember { mutableStateOf<List<LeaderboardV2Row>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var failed by remember { mutableStateOf(false) }
@@ -81,7 +81,7 @@ fun PremiumCompetitionScreen(
     ) {
         item {
             Text(
-                sh("REKABET", "COMPETE"),
+                sh("TAHT", "THRONE"),
                 color = SonHarfTheme.TextPrimary,
                 fontSize = 25.sp,
                 fontWeight = FontWeight.Black,

@@ -42,7 +42,7 @@ internal fun MonsterStyleStoreScreen() {
     val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) runCatching { OnlineGameBackend() }.getOrNull() else null }
     val scope = rememberCoroutineScope()
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var catalog by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
     var equipped by remember { mutableStateOf<EquippedCosmeticsDto?>(null) }
@@ -82,7 +82,8 @@ internal fun MonsterStyleStoreScreen() {
             runCatching {
                 withTimeout(StoreTimeout) {
                     if (item.id !in owned) b.purchaseShopItem(item.id)
-                    b.equipShopItem(item.id)
+                    // Board skins are chosen on the device; everything else is equipped on the server.
+                    if (item.kind == "board_skin") WordSiegeBoardSkins.select(context, item.id) else b.equipShopItem(item.id)
                 }
             }.onSuccess {
                 notice = sh("${item.nameTr} anında uygulandı.", "${item.nameEn} was applied instantly.")
@@ -91,7 +92,7 @@ internal fun MonsterStyleStoreScreen() {
                 if (error is CancellationException && error !is TimeoutCancellationException) throw error
                 reload()
                 notice = when {
-                    "insufficient_diamonds" in error.message.orEmpty() -> sh("Yeterli Son Coin'in yok.", "You do not have enough Son Coin.")
+                    "insufficient_diamonds" in error.message.orEmpty() -> sh("Yeterli Altının yok.", "You do not have enough Gold.")
                     "vip_required" in error.message.orEmpty() -> sh("Bu görünüm PRO üyelerine özel.", "This style is exclusive to PRO members.")
                     item.id in owned -> sh("Ürün koleksiyonunda. Uygulamak için KULLAN düğmesine dokun.", "The item is in your collection. Tap EQUIP to apply it.")
                     else -> sh("İşlem doğrulanamadı. Bakiyeyi ve koleksiyonu yenileyip tekrar dene.", "The action could not be confirmed. Refresh your balance and collection before retrying.")
@@ -164,14 +165,13 @@ internal fun MonsterStyleStoreScreen() {
                     ::buyAndEquip,
                 )
             }
-            item { FairPlayCard() }
         }
     }
 }
 
 internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) {
-    "game_theme" -> id in setOf("theme_black", "theme_dark_arena")
-    "profile_frame" -> false
+    "game_theme" -> id in setOf("theme_black", "theme_dark_arena", WALNUT_IVORY_THEME_ID)
+    "profile_frame" -> id in ProfileFrameCollection.coinIds
     "name_style" -> id in setOf("name_cyan", "name_sapphire", "name_amethyst", "name_aurelia")
     "keyboard_theme" -> id in setOf(
         "keyboard_crystal",
@@ -182,6 +182,8 @@ internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) 
     )
     "victory_effect" -> id == "victory_crown"
     "emoji_pack" -> id == "emoji_vip"
+    "mascot_hat" -> id in MascotHats.ids
+    "board_skin" -> id in WordSiegeBoardSkin.productIds
     else -> false
 }
 
@@ -192,6 +194,9 @@ internal fun EquippedCosmeticsDto?.isEquipped(item: ShopItemDto): Boolean = when
     "keyboard_theme" -> this?.keyboardThemeId == item.id
     "victory_effect" -> this?.victoryEffectId == item.id
     "emoji_pack" -> this?.emojiPackId == item.id
+    "mascot_hat" -> this?.mascotHatId == item.id
+    // Board skins are chosen on this device from Profile > Collection.
+    "board_skin" -> WordSiegeBoardSkins.selectedId == item.id
     else -> false
 }
 
@@ -213,7 +218,7 @@ private fun StoreHeader(balance: Int, collected: Int, total: Int) {
                 Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Toll, null, Modifier.size(16.dp), tint = StoreGold)
                     Spacer(Modifier.width(4.dp))
-                    Text("$balance SC", color = StoreText, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                    Text("$balance ${goldUnit()}", color = StoreText, fontWeight = FontWeight.Black, fontSize = 12.sp)
                 }
             }
         }
@@ -284,7 +289,7 @@ private fun ProductInfo(item: ShopItemDto, owned: Boolean, equipped: Boolean, bu
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = RoundedCornerShape(99.dp), color = if (owned) StoreGreen.copy(.11f) else StoreGold.copy(.13f)) {
                 Text(
-                    if (equipped) sh("AKTİF", "ACTIVE") else if (owned) sh("SAHİPSİN", "OWNED") else "${item.diamondPrice} SC",
+                    if (equipped) sh("AKTİF", "ACTIVE") else if (owned) sh("SAHİPSİN", "OWNED") else "${item.diamondPrice} ${goldUnit()}",
                     Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                     color = if (owned) StoreGreen else StoreText,
                     fontWeight = FontWeight.Black,
@@ -342,16 +347,3 @@ private fun EmptyCatalogCard() {
     }
 }
 
-@Composable
-private fun FairPlayCard() {
-    Surface(shape = RoundedCornerShape(18.dp), color = StoreAlt, border = BorderStroke(1.dp, StoreBorder)) {
-        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.VerifiedUser, null, Modifier.size(24.dp), tint = StoreGreen)
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(sh("ADİL OYUN SÖZÜ", "FAIR PLAY PROMISE"), color = StoreText, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                Text(sh("Mağazadaki tüm ürünler kozmetiktir; maç gücü veya puan avantajı sağlamaz.", "Every store item is cosmetic; it provides no match power or score advantage."), color = StoreMuted, fontSize = 11.sp)
-            }
-        }
-    }
-}

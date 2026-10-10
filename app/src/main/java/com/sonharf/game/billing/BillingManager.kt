@@ -2,6 +2,11 @@ package com.sonharf.game.billing
 
 import android.app.Activity
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
@@ -18,6 +23,9 @@ class BillingManager(
     private val onPurchase: (Purchase) -> Unit = {},
     private val onMessage: (String) -> Unit = {},
 ) : PurchasesUpdatedListener {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var startingPurchase = false
 
     private val client = BillingClient.newBuilder(context.applicationContext)
         .setListener(this)
@@ -102,12 +110,30 @@ class BillingManager(
             ?.takeIf { it.isNotBlank() }
             ?.let(detailsBuilder::setOfferToken)
 
-        return client.launchBillingFlow(
-            activity,
-            BillingFlowParams.newBuilder()
-                .setProductDetailsParamsList(listOf(detailsBuilder.build()))
-                .build(),
-        )
+        if (startingPurchase) return BillingResult.newBuilder()
+            .setResponseCode(BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE)
+            .setDebugMessage("Purchase readiness check in progress").build()
+        startingPurchase = true
+        scope.launch {
+            try {
+                PlayPurchaseVerification.ensureAvailable()
+                val result = client.launchBillingFlow(
+                    activity,
+                    BillingFlowParams.newBuilder()
+                        .setProductDetailsParamsList(listOf(detailsBuilder.build()))
+                        .build(),
+                )
+                if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                    onMessage("Google Play ödeme ekranı açılamadı (${result.responseCode}).")
+                }
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                onMessage("Ödeme hizmeti şu anda kullanılamıyor. Satın alma başlatılmadı.")
+            } finally { startingPurchase = false }
+        }
+        return BillingResult.newBuilder().setResponseCode(BillingClient.BillingResponseCode.OK)
+            .setDebugMessage("Checking purchase service before billing").build()
     }
 
     override fun onPurchasesUpdated(result: BillingResult, purchases: MutableList<Purchase>?) {
@@ -142,7 +168,10 @@ class BillingManager(
         }
     }
 
-    fun close() = client.endConnection()
+    fun close() {
+        scope.cancel()
+        client.endConnection()
+    }
 
     companion object {
         fun hasPurchasableOffer(productDetails: ProductDetails?): Boolean {

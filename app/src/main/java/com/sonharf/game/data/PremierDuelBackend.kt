@@ -43,19 +43,15 @@ suspend fun OnlineGameBackend.getPremierOpponent(room: GameRoomDto): ProfileDto?
 }
 
 /**
- * Submit through the deployed v3 RPC, then collapse the transient bot_turn state before returning
- * control to the arena. The database trigger usually advances the bot immediately; getRoom observes
- * that authoritative result. botTakeTurn is only the recovery path when the transient row remains.
+ * Submit through the deployed v3 RPC and return the authoritative room. The AI's reply is NOT
+ * requested here: the arena asks for it after its "thinking" pause and, when the word ended a
+ * round, after the round break. Asking here too made the AI answer instantly at a round change
+ * and raced the arena's own request, so the last two moves arrived out of order.
  */
 suspend fun OnlineGameBackend.submitPremierWord(roomId: String, word: String): GameRoomDto {
     val submitted = submitWord(roomId, word)
     if (!submitted.isBot || !submitted.botTurn || submitted.isPremierFinished()) return submitted
-
-    val synced = runCatching { getRoom(roomId) }.getOrNull()
-    if (synced != null && (!synced.botTurn || synced.isPremierFinished())) return synced
-
-    return runCatching { botTakeTurn(roomId) }
-        .getOrElse { synced ?: submitted }
+    return runCatching { getRoom(roomId) }.getOrNull() ?: submitted
 }
 
 fun GameRoomDto.isPremierLive(): Boolean = status in setOf("playing", "quiz", "final", "sudden_death", "paused")

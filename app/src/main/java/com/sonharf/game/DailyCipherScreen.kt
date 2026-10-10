@@ -42,7 +42,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf<DailyCipherStatusDto?>(null) }
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var guess by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
@@ -86,7 +86,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                         else -> SonHarfSoundFx.scoreTick()
                     }
                     notice = when {
-                        it.won -> sh("Şifre çözüldü! +${it.rewardCoins} Son Coin", "Cipher solved! +${it.rewardCoins} Son Coin")
+                        it.won -> sh("Şifre çözüldü! +${it.rewardCoins} Altın", "Cipher solved! +${it.rewardCoins} Gold")
                         it.finished -> sh("Bugünkü hakların tamamlandı.", "Today's attempts are complete.")
                         else -> sh("İpucunu kullan ve tekrar dene.", "Use the clue and try again.")
                     }
@@ -158,7 +158,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                                     fontWeight = FontWeight.Black,
                                 )
                                 Text(s.answer.orEmpty(), color = CipherText, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                                if (s.won) Text("+${s.rewardCoins} SON COIN", color = CipherGold, fontWeight = FontWeight.Black)
+                                if (s.won) Text("+${s.rewardCoins} ${goldUnit().uppercase()}", color = CipherGold, fontWeight = FontWeight.Black)
                                 OutlinedButton(
                                     onClick = {
                                         val result = cipherShareText(s)

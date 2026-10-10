@@ -2,6 +2,9 @@ package com.sonharf.game
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,24 +31,26 @@ import com.sonharf.game.data.VipEntitlementsDto
 import com.sonharf.game.data.getVipEntitlements
 import kotlinx.coroutines.launch
 
-private val UProBg = Color(0xFF020617)
-private val UProSurface = Color(0xFF0F172A)
-private val UProBorder = Color(0xFF334155)
-private val UProText = Color(0xFFF8FAFC)
-private val UProMuted = Color(0xFF94A3B8)
-private val UProBlue = Color(0xFF3B82F6)
-private val UProGold = Color(0xFFF59E0B)
-private val UProGreen = Color(0xFF10B981)
+private val UProBg: Color get() = LobbyPalette.Ground
+private val UProSurface: Color get() = LobbyPalette.Paper
+private val UProBorder: Color get() = LobbyPalette.Line
+private val UProText: Color get() = LobbyPalette.Ink
+private val UProMuted: Color get() = LobbyPalette.Muted
+private val UProBlue: Color get() = LobbyPalette.Green
+private val UProGold: Color get() = LobbyPalette.Gold
+private val UProGreen: Color get() = LobbyPalette.Accent
 
 @Composable
 internal fun UnifiedProVipScreen(
     backend: OnlineGameBackend,
     onBack: () -> Unit = {},
     onPrivateRoom: () -> Unit = {},
+    onFriends: () -> Unit = {},
+    onQuickDuel: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var entitlements by remember { mutableStateOf<VipEntitlementsDto?>(null) }
     var loading by remember { mutableStateOf(true) }
     var entitlementError by remember { mutableStateOf(false) }
@@ -76,43 +81,45 @@ internal fun UnifiedProVipScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, null, tint = UProText) }
-                Column(Modifier.weight(1f)) {
-                    Text("KELİME KUŞATMASI PRO", color = UProText, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Premier üyelik ve fair-play ayrıcalıkları", "Premier membership and fair-play benefits"), color = UProBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-                Icon(Icons.Rounded.WorkspacePremium, null, tint = UProGold, modifier = Modifier.size(30.dp))
-            }
+            MainScreenHeader(
+                title = "KELİME TAHTI PRO",
+                subtitle = sh("Oyun keyfine daha fazlasını ekle", "More ways to enjoy your game"),
+                onBack = onBack,
+            )
         }
 
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = UProBlue, trackColor = UProBorder) }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                color = UProSurface,
-                border = BorderStroke(1.dp, if (active) UProGold else UProBorder),
-            ) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text(if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("FREE PLAN", "FREE PLAN"), color = if (active) UProGold else UProMuted, fontWeight = FontWeight.Black)
-                    Text(profile?.displayName ?: sh("Oyuncu", "Player"), color = UProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(
-                        if (active) sh("Reklamsız deneyim + PRO profil + özel oda + maç-sonu analiz", "Ad-free experience + PRO profile + private rooms + post-match analysis")
-                        else sh("PRO ile sosyal, profil ve analiz özelliklerini aç.", "Unlock social, profile, and analysis features with PRO."),
-                        color = UProMuted,
-                        fontSize = 10.sp,
-                    )
+            Surface(shape=RoundedCornerShape(28.dp),color=LobbyBrand.Band,border=BorderStroke(1.dp,Color(0xFFD8BA76))) {
+                Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(LobbyBrand.Sky,LobbyBrand.Band)))
+                    .padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Rounded.WorkspacePremium,null,tint=Color(0xFFE7C984),modifier=Modifier.size(52.dp))
+                    Text("KELİME TAHTI",color=Color.White,fontSize=15.sp,letterSpacing=2.sp,fontWeight=FontWeight.Medium)
+                    Text("PRO",color=Color(0xFFE7C984),fontSize=36.sp,letterSpacing=5.sp,fontWeight=FontWeight.Bold)
+                    HorizontalDivider(Modifier.width(56.dp),color=Color(0xFFE7C984).copy(alpha=.5f))
+                    Text(sh("Oyuna odaklan. Tarzını göster.","Focus on play. Show your style."),color=Color.White,fontSize=15.sp,textAlign=TextAlign.Center)
+                    Surface(shape=RoundedCornerShape(50),color=Color.White.copy(alpha=.1f)) {
+                        Text(if(active) sh("Üyeliğin aktif","Membership active") else sh("Deneyimini yükselt","Upgrade your experience"),
+                            Modifier.padding(horizontal=16.dp,vertical=7.dp),color=Color(0xFFE7C984),fontSize=12.sp,fontWeight=FontWeight.Bold)
+                    }
                 }
             }
         }
-
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ProAccessCard("🚫", sh("REKLAMSIZ", "AD-FREE"), active && e?.rewardedAdBypass == true, UProBlue, Modifier.weight(1f))
-                ProAccessCard("📊", sh("ANALİZ", "ANALYSIS"), active && e?.postMatchAnalysis == true, UProGreen, Modifier.weight(1f))
-                ProAccessCard("♛", sh("ÖZEL ODA", "PRIVATE ROOM"), active && e?.privateRooms == true, UProGold, Modifier.weight(1f))
+            Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    ProFeature(Icons.Rounded.Block,sh("Reklamsız","Ad-free"),sh("Menü, profil ve mağazada kesintisiz gezin.","Browse menus, profile and store without ads."),Modifier.weight(1f))
+                    ProFeature(Icons.Rounded.WorkspacePremium,sh("Özel profil","Signature profile"),sh("Altın PRO çerçevesi ve üyelik rozeti.","Gold PRO frame and membership badge."),Modifier.weight(1f))
+                }
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    ProFeature(Icons.Rounded.MeetingRoom,sh("Özel odalar","Private rooms"),sh("Davet koduyla kendi masanı kur.","Create your own table with an invite code."),Modifier.weight(1f))
+                    ProFeature(Icons.Rounded.Insights,sh("Maç analizi","Match analysis"),sh("Biten karşılaşmalarını ayrıntılı incele.","Review completed matches in detail."),Modifier.weight(1f))
+                }
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    ProFeature(Icons.Rounded.Groups,sh("Arkadaş listesi","Friend list"),sh("Arkadaşlarını gör, çevrimiçi olanı davet et.","See your friends and invite whoever is online."),Modifier.weight(1f))
+                    ProFeature(Icons.Rounded.Bolt,sh("Hızlı Düello","Quick Duel"),sh("3, 5 veya 10 dakikalık hızlı maçlar.","Fast matches with 3, 5 or 10 minute turns."),Modifier.weight(1f))
+                }
             }
         }
 
@@ -121,11 +128,9 @@ internal fun UnifiedProVipScreen(
                 Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
                     Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(sh("PRO ARAÇLARI", "PRO TOOLS"), color = UProText, fontWeight = FontWeight.Black)
-                        Text(
-                            sh("Satın aldığın özellikleri buradan doğrudan kullanabilirsin.", "Use your purchased benefits directly from here."),
-                            color = UProMuted,
-                            fontSize = 10.sp,
-                        )
+                        if (e?.seriesGameAccess == true) OutlinedButton(onClick = onQuickDuel, modifier = Modifier.fillMaxWidth()) {
+                            Text(sh("HIZLI DÜELLO", "QUICK DUEL"), color = UProGold)
+                        }
                         if (e?.postMatchAnalysis == true) {
                             PremiumAnalysisCenterLauncher(Modifier.fillMaxWidth())
                         }
@@ -134,7 +139,7 @@ internal fun UnifiedProVipScreen(
                                 onClick = onPrivateRoom,
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = UProGold, contentColor = UProBg),
+                                colors = ButtonDefaults.buttonColors(containerColor = UProGold, contentColor = if (SonHarfTheme.IsDark) Color(0xFF343D30) else Color.White),
                             ) {
                                 Icon(Icons.Rounded.MeetingRoom, null)
                                 Spacer(Modifier.width(8.dp))
@@ -158,47 +163,22 @@ internal fun UnifiedProVipScreen(
         }
 
         item {
-            Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
-                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ProLine("🚫", sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
-                    ProLine("🏷️", sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
-                    ProLine("📊", sh("Tamamlanmış maçlar için gelişmiş analiz", "Advanced analysis for completed matches"))
-                    ProLine("♛", sh("Son Harf davet kodlu özel oda", "Last Letter invite-code private room"))
-                    ProLine("👥", sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))
-                    Surface(shape = RoundedCornerShape(12.dp), color = UProGreen.copy(alpha = .10f), border = BorderStroke(1.dp, UProGreen.copy(alpha = .35f))) {
-                        Text(
-                            sh(
-                                "ADİL REKABET: PRO, dereceli maçlarda skor, hedef harf, kelime ipucu, ek süre veya rating avantajı vermez.",
-                                "FAIR PLAY: PRO gives no score, target-letter, word-hint, extra-time, or rating advantage in ranked matches.",
-                            ),
-                            Modifier.fillMaxWidth().padding(10.dp), color = UProGreen, fontSize = 9.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
-                        )
-                    }
+            LobbyCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    Text(sh("Oyun içi konfor","In-game comfort"),color=UProText,fontWeight=FontWeight.Bold)
+                    Text(sh("Hamle Önizleme ve Kalan Harfler, Kuşatma tahtasındaki araçlardan açılır.",
+                        "Open Move Preview and Letters Left from the Siege board tools."),color=UProMuted,fontSize=13.sp,lineHeight=19.sp)
                 }
             }
         }
 
         item {
-            if (active) {
-                OutlinedButton(
-                    onClick = {
-                        val url = "https://play.google.com/store/account/subscriptions?package=${BuildConfig.APPLICATION_ID}"
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, UProBlue),
-                ) {
-                    Icon(Icons.Rounded.OpenInNew, null, tint = UProBlue)
-                    Spacer(Modifier.width(7.dp))
-                    Text(sh("GOOGLE PLAY'DE YÖNET", "MANAGE ON GOOGLE PLAY"), color = UProBlue, fontWeight = FontWeight.Black)
-                }
-            } else {
+            if (!active) {
                 Button(
                     onClick = { showPurchase = true },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = UProBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = UProBlue, contentColor = Color.White),
                 ) { Text(sh("PRO PLANLARINI GÖR", "VIEW PRO PLANS"), fontWeight = FontWeight.Black) }
             }
         }
@@ -206,7 +186,7 @@ internal fun UnifiedProVipScreen(
         notice?.let { message ->
             item {
                 Surface(shape = RoundedCornerShape(14.dp), color = UProBlue.copy(alpha = .12f)) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = UProText, fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = UProText, fontSize = 13.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -224,21 +204,13 @@ internal fun UnifiedProVipScreen(
 }
 
 @Composable
-private fun ProAccessCard(icon: String, label: String, enabled: Boolean, accent: Color, modifier: Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = UProSurface, border = BorderStroke(1.dp, accent.copy(alpha = .45f))) {
-        Column(Modifier.padding(11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(icon, color = accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
-            Text(if (enabled) "✓" else "—", color = if (enabled) UProGreen else UProMuted, fontSize = 18.sp, fontWeight = FontWeight.Black)
-            Text(label, color = UProMuted, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+private fun ProFeature(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, detail: String, modifier: Modifier) {
+    // Both cards of a row share the taller one's height, keeping the 2×2 grid symmetric.
+    LobbyCard(modifier.fillMaxHeight().heightIn(min=166.dp)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(9.dp)) {
+            Icon(icon,null,tint=UProGold,modifier=Modifier.size(28.dp))
+            Text(title,color=UProText,fontWeight=FontWeight.Bold,fontSize=15.sp,textAlign=TextAlign.Center)
+            Text(detail,color=UProMuted,fontSize=12.sp,lineHeight=17.sp,textAlign=TextAlign.Center)
         }
-    }
-}
-
-@Composable
-private fun ProLine(icon: String, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(icon, fontSize = 16.sp)
-        Spacer(Modifier.width(9.dp))
-        Text(text, color = UProText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
 }

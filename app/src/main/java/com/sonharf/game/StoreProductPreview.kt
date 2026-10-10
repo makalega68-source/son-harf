@@ -2,6 +2,10 @@ package com.sonharf.game
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.Text
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -24,7 +28,8 @@ import androidx.compose.ui.unit.dp
 import com.sonharf.game.data.ShopItemDto
 
 /**
- * Product art is intentionally text-free and transparent. Product names, prices and ownership
+ * Product art is intentionally transparent, and it is the product itself: the same images drive
+ * what the player uses (Obi wears the hat PNG, keyboards and boards are styled after their art). Product names, prices and ownership
  * states remain real Compose UI text outside the artwork. The vectors mirror the approved Canva
  * product-library language while profile frames keep using their actual packaged runtime assets.
  */
@@ -40,7 +45,14 @@ internal fun StoreProductPreview(
         contentAlignment = Alignment.Center,
     ) {
         when {
+            item.kind == "name_style" -> Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                NameStyleEmblem(if(expanded) 48.dp else 32.dp, item.id)
+                Text(sh("İmzan","Signature"),style=premiumNameStyle(item.id),fontSize=if(expanded) 26.sp else 19.sp,color=LobbyPalette.Ink,maxLines=1)
+            }
             item.kind == "profile_frame" -> RealFramePreview(item.id, expanded)
+            // Painted keyboards: the working keyboard itself, not a picture of it.
+            item.kind == "keyboard_theme" && SonHarfCosmetics.keyboardPaletteFor(item.id).keyImage != null ->
+                KeyboardSkinPreview(item.id, Modifier.fillMaxSize().padding(if (expanded) 6.dp else 2.dp))
             storeArtworkRes(item.id) != null -> {
                 Image(
                     painter = painterResource(storeArtworkRes(item.id)!!),
@@ -66,9 +78,14 @@ private fun storeArtworkRes(itemId: String): Int? = when (itemId) {
     "keyboard_black_gold" -> R.drawable.store_art_keyboard_black_gold
     "keyboard_premium_white" -> R.drawable.store_art_keyboard_premium_white
     "theme_black", "theme_dark_arena" -> R.drawable.store_art_theme_black
+    WALNUT_IVORY_THEME_ID -> R.drawable.store_art_theme_walnut_ivory
+    MascotHats.BERET -> R.drawable.store_art_hat_beret
+    MascotHats.FLOWER -> R.drawable.store_art_hat_flower
+    MascotHats.WIZARD -> R.drawable.store_art_hat_wizard
+    MascotHats.TOP -> R.drawable.store_art_hat_top
     "victory_crown" -> R.drawable.store_art_victory_crown
     "emoji_vip" -> R.drawable.store_art_emoji_vip
-    else -> null
+    else -> WordSiegeBoardSkin.fromId(itemId)?.artRes
 }
 
 @Composable
@@ -92,10 +109,7 @@ private fun RealFramePreview(frameId: String, expanded: Boolean) {
                 )
             }
         }
-        PurchasedProfileFrameOverlay(
-            frameId = frameId,
-            modifier = Modifier.size(frameSize),
-        )
+        ProfileFrameArt(frameId = frameId, size = frameSize * .72f)
     }
 }
 
@@ -115,4 +129,20 @@ private fun PremiumArtworkFallback(expanded: Boolean) {
             )
         }
     }
+}
+
+/** What a product does once worn, in one short line (shown on store and collection cards). */
+internal fun storeItemEffect(item: ShopItemDto): String? = when {
+    item.id == "victory_crown" -> sh(
+        "Kazandığında Obi altın taç takar, zafer ekranına taç iner. Profil > Obi'den takılır.",
+        "When you win, Obi wears a gold crown and a crown lands on the victory screen. Wear it in Profile > Obi.",
+    )
+    item.kind == "mascot_hat" -> sh("Obi bu şapkayı her yerde takar.", "Obi wears this hat everywhere.")
+    item.kind == "keyboard_theme" -> sh("Oyunlarda yazdığın klavye bu görünümü alır.", "The in-game keyboard takes this look.")
+    item.kind == "name_style" -> sh("İsmine özel yazı karakteri, renk ve amblem ekler.", "Adds a distinct typeface, colour and emblem to your name.")
+    item.id == WALNUT_IVORY_THEME_ID -> sh("Uygulama, Kuşatma tahtası ve Son Harf ceviz-fildişi olur.", "The app, the siege board and Last Letter turn walnut and ivory.")
+    item.kind == "game_theme" -> sh("Uygulama ve oyun alanları bu temaya bürünür.", "The app and game areas take this theme.")
+    item.kind == "profile_frame" -> sh("Profil fotoğrafının çevresinde her yerde görünür.", "Shown around your photo everywhere.")
+    item.kind == "board_skin" -> sh("Kuşatma tahtan bu görünüme bürünür. Profil > Koleksiyon > Tahta'dan seçilir.", "Your siege board takes this look. Pick it in Profile > Collection > Board.")
+    else -> sh(item.descriptionTr, item.descriptionEn).takeIf { it.isNotBlank() }
 }

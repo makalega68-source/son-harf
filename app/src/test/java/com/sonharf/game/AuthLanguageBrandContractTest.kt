@@ -10,10 +10,10 @@ class AuthLanguageBrandContractTest {
     @Test fun authEntryUsesCurrentProductBrandAndBilingualFormCopy() {
         val auth = projectFile("app/src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
         val startup = projectFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
+        val confirmSignup = projectFile("supabase/templates/confirm-signup.html").readText()
 
         assertTrue(auth.contains("\"KELİME TAHTI\""))
-        assertTrue(auth.contains("\"WORD BOARD\""))
-        assertTrue(auth.contains("tactical territory battle"))
+        assertTrue(auth.contains("R.drawable.kelime_tahti_brand_logo"))
         assertFalse(auth.contains("R.drawable.son_harf_gold_teal_logo"))
         assertFalse(auth.contains("Continue the Word, Beat Your Rival"))
 
@@ -29,15 +29,30 @@ class AuthLanguageBrandContractTest {
         assertTrue(auth.contains("Verification email sent"))
 
         assertTrue(auth.contains("sh(\"E-postanı doğrula\", \"Verify your email\")"))
-        assertTrue(auth.contains("Word Siege. If the link does not work"))
-        assertTrue(auth.contains("sh(\"6 haneli doğrulama kodu\", \"6-digit verification code\")"))
+        assertTrue(auth.contains("Word Throne. If the link does not work"))
+        assertTrue(auth.contains("sh(\"Doğrulama kodu\", \"Verification code\")"))
+        assertTrue(auth.contains("private const val OTP_MIN_LENGTH = 6"))
+        assertTrue(auth.contains("private const val OTP_MAX_LENGTH = 8"))
+        assertTrue(auth.contains("otpCode.length !in OTP_MIN_LENGTH..OTP_MAX_LENGTH"))
+        assertTrue(auth.contains("it.filter(Char::isDigit).take(OTP_MAX_LENGTH)"))
+        assertTrue(auth.contains("otpCode.length in OTP_MIN_LENGTH..OTP_MAX_LENGTH"))
+        assertFalse(auth.contains("6 haneli"))
+        assertFalse(auth.contains("6-digit"))
+        assertFalse(auth.contains("take(6)"))
+        assertFalse(auth.contains("otpCode.length == 6"))
         assertTrue(auth.contains("sh(\"KODU DOĞRULA\", \"VERIFY CODE\")"))
         assertTrue(auth.contains("sh(\"KODU YENİDEN GÖNDER\", \"RESEND CODE\")"))
         assertTrue(auth.contains("sh(\"E-POSTA ADRESİNİ DEĞİŞTİR\", \"CHANGE EMAIL ADDRESS\")"))
         assertFalse(auth.contains("Son Harf otomatik açılır"))
 
-        assertTrue(startup.contains("text = \"KELİME TAHTI\""))
-        assertTrue(startup.contains("text = \"WORD BOARD\""))
+        assertTrue(confirmSignup.contains("Kelime Tahtı"))
+        assertTrue(confirmSignup.contains("KELİME TAHTI"))
+        assertTrue(confirmSignup.contains("şu doğrulama kodunu gir"))
+        assertFalse(confirmSignup.contains("Son Harf"))
+        assertFalse(confirmSignup.contains("6 haneli"))
+
+        // The first-run brand is the Kelime Tahtı logo that drops into the welcome clip.
+        assertTrue(File("src/main/java/com/sonharf/game/IntroWelcome.kt").readText().contains("R.drawable.kelime_tahti_brand_logo"))
         assertFalse(startup.contains("SonHarfOfficialLogo(modifier"))
     }
 

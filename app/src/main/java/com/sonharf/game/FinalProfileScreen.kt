@@ -23,12 +23,11 @@ fun FinalProfileScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var blocked by remember { mutableStateOf<List<ProfileDto>>(emptyList()) }
     var leaders by remember { mutableStateOf<List<LeaderboardEntry>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var sound by remember { mutableStateOf(SonHarfPreferences.soundEnabled(context)) }
-    var vibration by remember { mutableStateOf(SonHarfPreferences.vibrationEnabled(context)) }
     var notifications by remember { mutableStateOf(SonHarfPreferences.notificationsEnabled(context)) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var deleteBusy by remember { mutableStateOf(false) }
@@ -73,6 +72,8 @@ fun FinalProfileScreen() {
                 ) {
                     ProfilePhotoAvatar(
                         avatarPath = profile?.avatarPath,
+                        frameId = rememberPlayerFrame(profile?.id),
+                        gender = profile?.gender,
                         name = profile?.displayName ?: "Oyuncu",
                         size = 112.dp,
                         visible = profile?.avatarVisibility != "hidden",
@@ -110,12 +111,6 @@ fun FinalProfileScreen() {
                         if (it) SonHarfSoundFx.tap()
                     }
                     HorizontalDivider(color = MainUi.Border)
-                    SettingSwitch("Titreşim", "Kısa ve hafif dokunsal geri bildirim", vibration) {
-                        vibration = it
-                        SonHarfPreferences.setVibrationEnabled(context, it)
-                        if (it) SonHarfPreferences.hapticTap(context)
-                    }
-                    HorizontalDivider(color = MainUi.Border)
                     SettingSwitch("Bildirimler", "Oyun daveti ve eşleşme bildirimlerine izin ver", notifications) {
                         notifications = it
                         SonHarfPreferences.setNotificationsEnabled(context, it)
@@ -140,7 +135,7 @@ fun FinalProfileScreen() {
                     blocked.forEach { p ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ProfilePhotoAvatar(p.avatarPath, p.displayName, 34.dp, visible = p.avatarVisibility != "hidden", accent = SonHarfCyan)
+                                ProfilePhotoAvatar(p.avatarPath, p.displayName, 34.dp, visible = p.avatarVisibility != "hidden", accent = SonHarfCyan, gender = p.gender, frameId = rememberPlayerFrame(p.id))
                                 Text(p.displayName, fontWeight = FontWeight.SemiBold)
                             }
                             TextButton(onClick = {
@@ -169,6 +164,8 @@ fun FinalProfileScreen() {
                             Text("${index + 1}.", modifier = Modifier.width(24.dp), color = SonHarfMuted)
                             ProfilePhotoAvatar(
                                 avatarPath = row.profile.avatarPath,
+                                frameId = rememberPlayerFrame(row.profile.id),
+                                gender = row.profile.gender,
                                 name = row.profile.displayName,
                                 size = 34.dp,
                                 visible = row.profile.avatarVisibility != "hidden",

@@ -177,14 +177,6 @@ private fun PremiumCompletedMatchList(
 private fun PremiumLockedAnalysisCopy() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(sh("Maç-sonu derin analiz Premium özelliğidir.", "Deep post-match analysis is a Premium feature."), color = SonHarfText, fontWeight = FontWeight.Bold)
-        Text(
-            sh(
-                "Adil rekabet: Premium kelime önerisi, alan önizlemesi, ek süre, rating veya canlı hamle avantajı vermez.",
-                "Fair play: Premium gives no word suggestions, territory preview, extra time, rating, or live-move advantage.",
-            ),
-            color = SonHarfGreen,
-            fontSize = 10.sp,
-        )
     }
 }
 
@@ -202,7 +194,7 @@ private fun PremiumCenterAnalysisBody(analysis: VipMatchAnalysisDto) {
             Surface(shape = RoundedCornerShape(14.dp), color = SonHarfSurface2) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                     CenterMetric(sh("KELİME", "WORD"), wordScore.toString())
-                    CenterMetric(sh("BÖLGE", "TERRITORY"), areaScore.toString())
+                    CenterMetric(sh("KÜP", "CUBES"), areaScore.toString())
                     CenterMetric(sh("TOPLAM", "TOTAL"), totalScore.toString())
                 }
             }
@@ -238,7 +230,7 @@ private fun CenterLine(label: String, value: String) {
 }
 
 private fun modeLabel(mode: String): String = when (mode) {
-    "siege" -> sh("Kelime Kuşatması", "Word Siege")
+    "siege" -> sh("Kelime Tahtı", "Word Throne")
     "arena" -> sh("Kelime Düellosu", "Word Duel")
     else -> sh("Son Harf", "Last Letter")
 }

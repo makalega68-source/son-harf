@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -47,9 +45,31 @@ internal object ProfilePhotoRuntime {
     private val cache = LinkedHashMap<String, ByteArray>()
     private val genderCache = LinkedHashMap<String, String?>()
 
+    @Volatile private var diskDir: java.io.File? = null
+
+    /** Photos are also kept on disk (a new upload gets a new path), so a cold start shows them at once. */
+    fun init(context: android.content.Context) {
+        diskDir = java.io.File(context.applicationContext.cacheDir, "avatars").apply { mkdirs() }
+    }
+
+    private fun diskFile(path: String): java.io.File? = diskDir?.let { java.io.File(it, path.replace(Regex("[^A-Za-z0-9._-]"), "_").takeLast(150)) }
+
+    /** Bytes already downloaded (this session or an earlier one), so a page shows the photo on its first frame. */
+    fun cached(path: String?): ByteArray? {
+        if (path.isNullOrBlank()) return null
+        synchronized(cache) { cache[path] }?.let { return it }
+        val bytes = runCatching { diskFile(path)?.takeIf { it.isFile }?.readBytes() }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return null
+        synchronized(cache) {
+            cache[path] = bytes
+            while (cache.size > 40) cache.remove(cache.keys.first())
+        }
+        return bytes
+    }
+
     suspend fun load(path: String): ByteArray? {
         if (path.isBlank() || !SupabaseProvider.configured) return null
         synchronized(cache) { cache[path] }?.let { return it }
+        withContext(Dispatchers.IO) { cached(path) }?.let { return it }
         val session = SupabaseProvider.client.auth.currentSessionOrNull() ?: return null
         val response = runCatching {
             http.get("${BuildConfig.SUPABASE_URL}/storage/v1/object/authenticated/profile-photos/$path") {
@@ -59,9 +79,12 @@ internal object ProfilePhotoRuntime {
         }.getOrNull() ?: return null
         if (!response.status.isSuccess()) return null
         val bytes = response.bodyAsBytes()
-        if (bytes.isNotEmpty()) synchronized(cache) {
-            cache[path] = bytes
-            while (cache.size > 40) cache.remove(cache.keys.first())
+        if (bytes.isNotEmpty()) {
+            synchronized(cache) {
+                cache[path] = bytes
+                while (cache.size > 40) cache.remove(cache.keys.first())
+            }
+            withContext(Dispatchers.IO) { runCatching { diskFile(path)?.writeBytes(bytes) } }
         }
         return bytes
     }
@@ -104,60 +127,25 @@ internal object ProfilePhotoRuntime {
     }
 }
 
-private data class GenderVisual(val symbol: String, val color: Color)
-
-private fun genderVisual(gender: String?): GenderVisual? = when (gender?.trim()?.lowercase()) {
-    "kadın", "kadin", "female", "woman" -> GenderVisual("♀", Color(0xFFFF4F9A))
-    "erkek", "male", "man" -> GenderVisual("♂", Color(0xFF238BFF))
-    else -> null
+/** The same supplied portraits are used for bots, missing photos and private photos. */
+internal fun defaultProfilePortraitRes(gender: String?): Int = when (gender?.trim()?.lowercase()) {
+    "kadın", "kadin", "female", "woman" -> R.drawable.default_profile_female
+    else -> R.drawable.default_profile_male
 }
 
 @Composable
-private fun FramelessGenderSymbol(gender: String?, size: Dp) {
-    val visual = genderVisual(gender) ?: return
-    Text(
-        text = visual.symbol,
-        color = visual.color,
-        fontWeight = FontWeight.Black,
-        fontSize = (size.value * .31f).coerceAtLeast(13f).sp,
-        style = TextStyle(
-            shadow = Shadow(
-                color = visual.color.copy(alpha = .28f),
-                blurRadius = (size.value * .12f).coerceAtLeast(3f),
-            )
-        ),
+internal fun DefaultProfilePortrait(gender: String?, modifier: Modifier) {
+    Image(
+        painter = androidx.compose.ui.res.painterResource(defaultProfilePortraitRes(gender)),
+        contentDescription = null,
+        modifier = modifier,
+        contentScale = ContentScale.Crop,
     )
 }
 
 @Composable
 private fun SyntheticProfilePortrait(name: String, gender: String?, modifier: Modifier, accent: Color) {
-    val visual = genderVisual(gender)
-    Box(
-        modifier.background(
-            Brush.linearGradient(
-                listOf(
-                    accent.copy(alpha = .18f),
-                    (visual?.color ?: Color(0xFF57C7F3)).copy(alpha = .28f),
-                    Color.White,
-                )
-            )
-        ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.Face,
-            contentDescription = null,
-            tint = accent.copy(alpha = .82f),
-            modifier = Modifier.fillMaxSize().padding(7.dp),
-        )
-        Text(
-            text = name.take(1).uppercase(),
-            color = Color.White,
-            fontWeight = FontWeight.Black,
-            fontSize = 9.sp,
-            modifier = Modifier.align(Alignment.BottomEnd).background(accent, CircleShape).padding(horizontal = 4.dp, vertical = 1.dp),
-        )
-    }
+    DefaultProfilePortrait(gender, modifier)
 }
 
 internal fun botGenderForName(name: String): String = when (name.substringBefore(" BOT").trim()) {
@@ -191,28 +179,33 @@ internal fun ProfilePhotoAvatar(
     size: Dp,
     visible: Boolean = true,
     accent: Color = SonHarfCyan,
+    gender: String? = null,
+    frameId: String? = null,
 ) {
-    var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
-    var gender by remember(avatarPath) { mutableStateOf<String?>(null) }
-    LaunchedEffect(avatarPath, visible) {
+    val framed = ProfileFrameCollection.find(frameId) != null
+    var bytes by remember(avatarPath, visible) { mutableStateOf(if (visible) ProfilePhotoRuntime.cached(avatarPath) else null) }
+    // The drawn portrait only stands in once we know there is no photo; while one loads the
+    // circle stays plain, so a wrong face never flashes before the real one.
+    var photoMissing by remember(avatarPath, visible) { mutableStateOf(!visible || avatarPath.isNullOrBlank()) }
+    var resolvedGender by remember(avatarPath, gender) { mutableStateOf(gender) }
+    LaunchedEffect(avatarPath, visible, gender) {
         bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
-        gender = ProfilePhotoRuntime.genderForAvatar(avatarPath)
+        photoMissing = bytes == null
+        resolvedGender = gender ?: ProfilePhotoRuntime.genderForAvatar(avatarPath)
     }
-    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+    val bitmap = rememberProfileBitmap(bytes)
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
+            Modifier.size(if (framed) size * .72f else size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFF2C14E), accent, Color(0xFFB07F1E), Color(0xFFF2C14E)))).padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (bitmap != null) {
+            if (visible && bitmap != null) {
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-            } else {
-                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
+            } else if (photoMissing) {
+                SyntheticProfilePortrait(name, resolvedGender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, size)
-        }
+        if (framed) ProfileFrameArt(frameId, size * .72f)
     }
 }
 
@@ -225,28 +218,47 @@ internal fun ProfilePhotoAvatarWithGender(
     accent: Color = SonHarfCyan,
     visible: Boolean = true,
     showGenderBadge: Boolean = true,
+    frameId: String? = null,
+    userId: String? = null,
 ) {
-    var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(avatarPath, visible) {
-        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+    val resolvedFrame = if (userId != null) rememberPlayerFrame(userId) else frameId
+    val framed = ProfileFrameCollection.find(resolvedFrame) != null
+    var bytes by remember(avatarPath, visible, userId) {
+        mutableStateOf(
+            if (!visible) null
+            else if (userId == null) ProfilePhotoRuntime.cached(avatarPath)
+            else PlayerIdentityCache.peek(userId)?.takeIf { it.avatarVisibility != "hidden" }?.let { ProfilePhotoRuntime.cached(it.avatarPath) }
+        )
     }
-    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
-    Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
+    var resolvedGender by remember(avatarPath, gender, userId) { mutableStateOf(gender) }
+    var photoMissing by remember(avatarPath, visible, userId) {
+        mutableStateOf(
+            if (!visible) true
+            else if (userId == null) avatarPath.isNullOrBlank()
+            else PlayerIdentityCache.peek(userId)?.let { it.avatarVisibility == "hidden" || it.avatarPath.isNullOrBlank() } ?: false
+        )
+    }
+    LaunchedEffect(avatarPath, visible, gender, userId) {
+        val identity = userId?.let { runCatching { PlayerIdentityCache.get(it) }.getOrNull() }
+        resolvedGender = gender ?: identity?.gender ?: ProfilePhotoRuntime.genderForAvatar(avatarPath)
+        val path = if (userId != null) identity?.avatarPath else avatarPath
+        bytes = if (visible && (userId == null || identity?.avatarVisibility != "hidden") && !path.isNullOrBlank()) ProfilePhotoRuntime.load(path) else null
+        photoMissing = bytes == null
+    }
+    val bitmap = rememberProfileBitmap(bytes)
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
+            Modifier.size(if (framed) size * .72f else size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFF2C14E), accent, Color(0xFFB07F1E), Color(0xFFF2C14E)))).padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (bitmap != null) {
+            if (visible && bitmap != null) {
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-            } else {
-                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
+            } else if (photoMissing) {
+                SyntheticProfilePortrait(name, resolvedGender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
-        if (showGenderBadge) {
-            Box(Modifier.align(Alignment.BottomEnd)) {
-                FramelessGenderSymbol(gender, size)
-            }
-        }
+        // The player's frame is drawn around the photo wherever the avatar appears.
+        if (framed) ProfileFrameArt(resolvedFrame, size * .72f)
     }
 }
 
@@ -259,12 +271,16 @@ internal fun ProfilePhotoAvatarRectWithGender(
     height: Dp,
     accent: Color = SonHarfCyan,
     showGenderBadge: Boolean = true,
+    frameId: String? = null,
 ) {
-    var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
+    val framed = ProfileFrameCollection.find(frameId) != null
+    var bytes by remember(avatarPath) { mutableStateOf(ProfilePhotoRuntime.cached(avatarPath)) }
+    var photoMissing by remember(avatarPath) { mutableStateOf(avatarPath.isNullOrBlank()) }
     LaunchedEffect(avatarPath) {
         bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+        photoMissing = bytes == null
     }
-    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+    val bitmap = rememberProfileBitmap(bytes)
     // Historical callers supplied rectangular slots. The slot may remain rectangular, but the
     // player image itself is always circular so every social/game surface uses one avatar rule.
     val diameter = minOf(width, height)
@@ -274,11 +290,11 @@ internal fun ProfilePhotoAvatarRectWithGender(
     ) {
         Box(
             Modifier
-                .size(diameter)
+                .size(if (framed) diameter * .72f else diameter)
                 .clip(CircleShape)
                 .background(
                     Brush.sweepGradient(
-                        listOf(Color.White, accent.copy(alpha = .86f), Color(0xFF57C7F3), Color.White)
+                        listOf(Color(0xFFF2C14E), accent.copy(alpha = .86f), Color(0xFFB07F1E), Color(0xFFF2C14E))
                     )
                 )
                 .padding(3.dp),
@@ -291,14 +307,43 @@ internal fun ProfilePhotoAvatarRectWithGender(
                     Modifier.fillMaxSize().clip(CircleShape),
                     contentScale = ContentScale.Crop,
                 )
-            } else {
+            } else if (photoMissing) {
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
-        if (showGenderBadge) {
-            Box(Modifier.align(Alignment.BottomEnd)) {
-                FramelessGenderSymbol(gender, diameter)
-            }
-        }
+        if (framed) ProfileFrameArt(frameId, diameter * .72f)
+    }
+}
+
+/** Photo decoding must not block gestures or the mascot/UI render thread. */
+@Composable
+internal fun rememberProfileBitmap(bytes: ByteArray?): Bitmap? {
+    var bitmap by remember(bytes) { mutableStateOf(bytes?.let { ProfileBitmaps.cache.get(it) }) }
+    LaunchedEffect(bytes) {
+        if (bitmap == null) bitmap = withContext(Dispatchers.Default) { bytes?.let(ProfileBitmaps::decode) }
+    }
+    return bitmap
+}
+
+/**
+ * Decoded avatars, keyed by their downloaded bytes (an array is its own identity), so opening a
+ * page again shows the photo at once instead of decoding it anew. Photos are decoded near the
+ * size they are shown, never at camera resolution.
+ */
+private object ProfileBitmaps {
+    private const val MAX_SIDE_PX = 384
+    val cache = object : android.util.LruCache<ByteArray, Bitmap>(16 * 1024 * 1024) {
+        override fun sizeOf(key: ByteArray, value: Bitmap): Int = value.byteCount
+    }
+
+    fun decode(bytes: ByteArray): Bitmap? {
+        cache.get(bytes)?.let { return it }
+        return runCatching {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            var sample = 1
+            while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MAX_SIDE_PX) sample *= 2
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+        }.getOrNull()?.also { cache.put(bytes, it) }
     }
 }

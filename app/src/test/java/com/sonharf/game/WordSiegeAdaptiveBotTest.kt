@@ -12,30 +12,41 @@ class WordSiegeAdaptiveBotTest {
             playerRating = 1000,
             playerWins = 0,
             playerLosses = 0,
+            aiWonLast = null,
         )
         val strong = WordSiegePracticeEngine.botTargetPercentile(
             neutral,
             playerRating = 1500,
             playerWins = 20,
             playerLosses = 5,
+            aiWonLast = null,
         )
 
         assertTrue(beginner < strong)
-        assertTrue(beginner <= 40)
-        assertTrue(strong <= 90)
+        assertTrue(beginner <= 45)
+        assertTrue(strong <= 92)
     }
 
-    @Test fun botEasesOffWhenAheadAndPushesMoreWhenBehind() {
+    @Test fun aiKeepsTheScoreCloseEasingOffAheadAndPushingBehind() {
         val balanced = state(moveCount = 6)
         val ahead = state(moveCount = 6, playerWordScore = 0, botWordScore = 20)
         val behind = state(moveCount = 6, playerWordScore = 20, botWordScore = 0)
 
-        val base = WordSiegePracticeEngine.botTargetPercentile(balanced, 1100, 8, 8)
-        val whenAhead = WordSiegePracticeEngine.botTargetPercentile(ahead, 1100, 8, 8)
-        val whenBehind = WordSiegePracticeEngine.botTargetPercentile(behind, 1100, 8, 8)
+        val base = WordSiegePracticeEngine.botTargetPercentile(balanced, 1100, 8, 8, aiWonLast = null)
+        val whenAhead = WordSiegePracticeEngine.botTargetPercentile(ahead, 1100, 8, 8, aiWonLast = null)
+        val whenBehind = WordSiegePracticeEngine.botTargetPercentile(behind, 1100, 8, 8, aiWonLast = null)
 
         assertTrue(whenAhead < base)
         assertTrue(whenBehind > base)
+    }
+
+    @Test fun afterAnAiWinThePlayerGetsTheNextOne() {
+        val game = state(moveCount = 6)
+        val afterAiWin = WordSiegePracticeEngine.botTargetPercentile(game, 1100, 8, 8, aiWonLast = true)
+        val afterPlayerWin = WordSiegePracticeEngine.botTargetPercentile(game, 1100, 8, 8, aiWonLast = false)
+        val fresh = WordSiegePracticeEngine.botTargetPercentile(game, 1100, 8, 8, aiWonLast = null)
+        assertTrue(afterAiWin < fresh)
+        assertTrue(afterPlayerWin > fresh)
     }
 
     @Test fun adaptiveChoiceVariesInsideTheRequestedSkillBand() {

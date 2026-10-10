@@ -8,8 +8,8 @@ class WordSiegePracticeZoneExplanationTest {
         val crown = wordSiegePracticeZoneExplanation(WordSiegeBoardSpec.CenterBonus, turkish = true)
         val reward = wordSiegePracticeZoneExplanation(WordSiegeBoardSpec.StarBonus, turkish = true)
 
-        assertTrue(crown.contains("İlk kelime"))
-        assertTrue(crown.contains("4 katına"))
+        assertTrue(crown.contains("Açılış kelimesi merkezden geçer"))
+        assertTrue(crown.contains("dört kat"))
         assertTrue(reward.contains("+${WordSiegeBoardSpec.StarBonusPoints}"))
     }
 }

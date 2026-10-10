@@ -3,7 +3,7 @@ name: Android CI
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, claude/mascot-animations-behavior-31rof9 ]
     paths-ignore:
       - 'dist/**'
   pull_request:
@@ -21,12 +21,34 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
+      NO_APK: ${{ contains(github.event.head_commit.message, '[no apk]') }}
+      HAS_SIGNING_CONFIG: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 != '' && secrets.SON_HARF_RELEASE_STORE_PASSWORD != '' && secrets.SON_HARF_RELEASE_KEY_ALIAS != '' && secrets.SON_HARF_RELEASE_KEY_PASSWORD != '' }}
+      # The signed Google Play bundle (AAB) is built for main, the release-preparation branch and manual runs.
+      STORE_BUILD: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/mascot-animations-behavior-31rof9')) }}
       HAS_RELEASE_CONFIG: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 != '' && secrets.SON_HARF_RELEASE_STORE_PASSWORD != '' && secrets.SON_HARF_RELEASE_KEY_ALIAS != '' && secrets.SON_HARF_RELEASE_KEY_PASSWORD != '' && secrets.SON_HARF_ADMOB_APP_ID != '' && secrets.SON_HARF_ADMOB_REWARDED_ID != '' && secrets.SON_HARF_ADMOB_BANNER_ID != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Respect source-only request
+        shell: bash
+        run: |
+          if git log -1 --format=%B | grep -Fq '[no apk]'; then
+            echo "NO_APK=true" >> "$GITHUB_ENV"
+          else
+            echo "NO_APK=false" >> "$GITHUB_ENV"
+          fi
+      - name: Cancel superseded packaging runs
+        if: env.NO_APK == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for run_id in 37187664029 37187664037 37187664033; do
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" || true
+          done
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -61,7 +83,7 @@ jobs:
           ! grep -q 'MageCat' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.GAME -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.LETTER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'UnifiedDestination.LETTER -> KelimeAtolyesiScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.VIP -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
@@ -78,7 +100,7 @@ jobs:
         run: node --test supabase/functions/admob-ssv/ssv.test.mjs
 
       - name: Purge obsolete APK artifacts and duplicate legacy release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.NO_APK != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -92,13 +114,27 @@ jobs:
                 gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
               done
 
-      - name: Build debug APK with tests
-        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+      - name: Compile and test (package only when requested)
+        run: |
+          set -o pipefail
+          tasks=(clean :app:testDebugUnitTest)
+          if [ "$NO_APK" != "true" ]; then tasks+=(:app:assembleDebug); fi
+          if ! ./gradlew "${tasks[@]}" --stacktrace --warning-mode all 2>&1 | tee build.log; then
+            # Surface compiler errors and failing tests as annotations so they are readable without log access.
+            summary=$( { grep -E '^e: |FAILED$|Test.*> .* FAILED' build.log; \
+              for f in app/build/test-results/testDebugUnitTest/*.xml; do \
+                [ -f "$f" ] && grep -A3 '<failure' "$f" | head -8; \
+              done; } 2>/dev/null | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}' )
+            echo "::error title=Build or test failure::${summary}"
+            exit 1
+          fi
 
       - name: Prepare test APK artifact
+        if: success() && env.NO_APK != 'true'
         run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Final-Test.apk
 
       - name: Verify APK provenance and integrity
+        if: success() && env.NO_APK != 'true'
         run: |
           echo "SOURCE_SHA=$(git rev-parse HEAD)"
           echo "APK_BYTES=$(stat -c%s SonHarf-Final-Test.apk)"
@@ -107,7 +143,7 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs SonHarf-Final-Test.apk
 
       - name: Upload debug APK artifact
-        if: success()
+        if: success() && env.NO_APK != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: son-harf-debug-apk
@@ -117,8 +153,71 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Name debug APK Kelime-Tahti-Guncel.apk
+        if: success() && env.NO_APK != 'true'
+        run: cp SonHarf-Final-Test.apk Kelime-Tahti-Guncel.apk
+
+      - name: Upload Kelime-Tahti-Guncel artifact
+        if: success() && env.NO_APK != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kelime-Tahti-Guncel
+          path: Kelime-Tahti-Guncel.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      # The store build (R8 + resource shrinking) signed with the debug key, so the shrunk app is
+      # built and can be tried on a phone before the real signed upload.
+      - name: Build store-shrunk check APK
+        if: success() && env.NO_APK != 'true'
+        run: ./gradlew :app:assembleReleaseCheck --stacktrace --warning-mode all
+
+      - name: Upload store-shrunk check APK
+        if: success() && env.NO_APK != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kelime-Tahti-Yayin-Kontrol
+          path: app/build/outputs/apk/releaseCheck/app-releaseCheck.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      # The same store-shrunk APK signed with the real upload key (test ad IDs, never for the
+      # store): proves the signing secrets work and serves the Play developer-verification upload.
+      - name: Sign check APK with the upload key
+        id: upload_key_sign
+        if: success() && env.STORE_BUILD == 'true' && env.HAS_SIGNING_CONFIG == 'true' && env.NO_APK != 'true'
+        # A wrong signing secret is reported here without failing the app build itself.
+        continue-on-error: true
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 }}
+          SIGN_STORE_PASSWORD: ${{ secrets.SON_HARF_RELEASE_STORE_PASSWORD }}
+          SIGN_KEY_ALIAS: ${{ secrets.SON_HARF_RELEASE_KEY_ALIAS }}
+          SIGN_KEY_PASSWORD: ${{ secrets.SON_HARF_RELEASE_KEY_PASSWORD }}
+        run: |
+          printf '%s' "$RELEASE_KEYSTORE_B64" | tr -d ' \r\n' | base64 --decode > "$RUNNER_TEMP/upload.jks" || true
+          echo "Decoded keystore size: $(wc -c < "$RUNNER_TEMP/upload.jks") bytes (the upload key is about 2600 bytes)"
+          if ! keytool -list -keystore "$RUNNER_TEMP/upload.jks" -storepass "$SIGN_STORE_PASSWORD" -alias "$SIGN_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::warning::Upload-key secrets do not open the keystore: re-enter SON_HARF_RELEASE_KEYSTORE_B64 (the whole long line) and check the password and alias."
+            rm -f "$RUNNER_TEMP/upload.jks"; exit 1
+          fi
+          APKSIGNER="${ANDROID_HOME}/build-tools/36.0.0/apksigner"
+          "$APKSIGNER" sign --ks "$RUNNER_TEMP/upload.jks" --ks-key-alias "$SIGN_KEY_ALIAS" \
+            --ks-pass env:SIGN_STORE_PASSWORD --key-pass env:SIGN_KEY_PASSWORD \
+            --out Kelime-Tahti-Imzali-Dogrulama.apk app/build/outputs/apk/releaseCheck/app-releaseCheck.apk
+          "$APKSIGNER" verify --print-certs Kelime-Tahti-Imzali-Dogrulama.apk | grep -i "SHA-256"
+          rm -f "$RUNNER_TEMP/upload.jks"
+
+      - name: Upload upload-key signed check APK
+        if: success() && steps.upload_key_sign.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kelime-Tahti-Imzali-Dogrulama
+          path: Kelime-Tahti-Imzali-Dogrulama.apk
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Build signed release APK and AAB
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'
+        if: success() && env.STORE_BUILD == 'true' && env.HAS_RELEASE_CONFIG == 'true' && env.NO_APK != 'true'
         env:
           RELEASE_KEYSTORE_B64: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 }}
           SON_HARF_RELEASE_STORE_PASSWORD: ${{ secrets.SON_HARF_RELEASE_STORE_PASSWORD }}
@@ -139,7 +238,7 @@ jobs:
             -PSON_HARF_ADMOB_BANNER_ID="$SON_HARF_ADMOB_BANNER_ID"
 
       - name: Upload signed release artifacts
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'
+        if: success() && env.STORE_BUILD == 'true' && env.HAS_RELEASE_CONFIG == 'true' && env.NO_APK != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: son-harf-release-${{ github.run_number }}
@@ -150,11 +249,11 @@ jobs:
           retention-days: 7
 
       - name: Report missing release secrets
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG != 'true'
+        if: success() && env.STORE_BUILD == 'true' && env.HAS_RELEASE_CONFIG != 'true' && env.NO_APK != 'true'
         run: echo "::warning::Debug build passed, but signed release AAB was skipped because release signing and/or production AdMob secrets (including banner ID) are not configured."
 
       - name: Publish stable final-test release
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.NO_APK != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

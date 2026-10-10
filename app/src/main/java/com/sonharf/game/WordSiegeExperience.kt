@@ -1,10 +1,13 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,7 +20,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,27 +41,30 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 internal val SiegePurple = MainUi.Purple
-internal val SiegePurpleSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) MainUi.SurfaceSoft else Color(0xFFF0ECFF)
+internal val SiegePurpleSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) MainUi.SurfaceSoft else MainUi.SurfaceSoft
 internal val SiegeBlueSoft = MainUi.BlueSoft
-private val SiegeTile = Color(0xFFFFE3A5)
-private val SiegeTileBorder = Color(0xFFD99818)
-private val SiegeLightTileText = Color(0xFF2F2A1F)
-private val SiegeLightTileMuted = Color(0xFF5D4B20)
+private val SiegeTile get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.ivory else Color(0xFFF7E3A6)
+private val SiegeTileBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bevel else Color(0xFFC9A560)
+private val SiegeLightTileText get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.ink else Color(0xFF4A3217)
+private val SiegeLightTileMuted get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.secondaryInk else Color(0xFF6B7A8C)
 
 private enum class SiegeListSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FINISHED }
 
 @Composable
-internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
+internal fun WordSiegeExperienceScreen(directEntry: Boolean = false, onExit: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     val scope = rememberCoroutineScope()
-    val me = remember { backend.currentUserId() }
+    // Read on every recomposition: remembering it once kept a null id forever when the session loaded late.
+    val me = backend.currentUserId()
     var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
     var profiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
-    var selectedGameId by remember { mutableStateOf<String?>(null) }
+    var selectedGameId by remember { mutableStateOf(WordSiegeLaunchConfig.consumeGameId("classic")) }
     var currentGame by remember { mutableStateOf<WordSiegeGameDto?>(null) }
     var moves by remember { mutableStateOf<List<WordSiegeMoveDto>>(emptyList()) }
     var messages by remember { mutableStateOf<List<WordSiegeMessageDto>>(emptyList()) }
     var notice by remember { mutableStateOf<String?>(null) }
+    // Connection/decoding errors are cleared by the next successful refresh instead of sticking forever.
+    var noticeIsError by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
@@ -77,15 +86,38 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         val missing = ids.filterNotNull().distinct().filterNot(profiles::containsKey)
         if (missing.isEmpty()) return
         val loaded = missing.mapNotNull { id ->
-            runCatching { backend.getProfile(id) }.getOrNull()?.let { id to it }
+            gameRequestResult { backend.getProfile(id) }.getOrNull()?.let { id to it }
         }.toMap()
         if (loaded.isNotEmpty()) profiles = profiles + loaded
     }
 
+    fun showError(raw: String) {
+        notice = wordSiegeFriendlyError(raw)
+        noticeIsError = true
+    }
+
+    fun showNotice(text: String?) {
+        notice = text
+        noticeIsError = false
+    }
+
+    fun clearErrorNotice() {
+        if (noticeIsError) {
+            notice = null
+            noticeIsError = false
+        }
+    }
+
     suspend fun refreshGames(showProgress: Boolean = false) {
+        // Before the session is restored every read is rejected; wait instead of flashing an error.
+        if (backend.currentUserId() == null) {
+            loading = false
+            return
+        }
         if (showProgress) loading = true
-        runCatching { backend.getWordSiegeGames() }
+        gameRequestResult { backend.getWordSiegeGames() }
             .onSuccess { next ->
+                clearErrorNotice()
                 games = next
                 loadProfiles(next.flatMap { listOf(it.playerOneId, it.playerTwoId) })
                 selectedGameId?.let { id ->
@@ -93,14 +125,21 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                 }
             }
             .onFailure {
-                notice = if (currentGame?.status == "waiting") {
-                    sh("Bağlantı yenileniyor • rakip araması sürüyor", "Reconnecting • opponent search continues")
-                } else wordSiegeFriendlyError(it.message.orEmpty())
+                if (currentGame?.status == "waiting") {
+                    notice = sh("Bağlantı yenileniyor • rakip araması sürüyor", "Reconnecting • opponent search continues")
+                    noticeIsError = true
+                } else showError(it.message.orEmpty())
             }
         if (showProgress) loading = false
     }
 
     fun applyGame(next: WordSiegeGameDto) {
+        if (currentGame?.id != next.id) {
+            moves = emptyList()
+            messages = emptyList()
+            showChat = false
+            GameChatBadge.select(next.id)
+        }
         currentGame = next
         games = (games.filterNot { it.id == next.id } + next)
             .filterNot { it.status == "cancelled" }
@@ -110,30 +149,58 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         exchangeSelection = emptySet()
     }
 
+    fun replayFinishedGame(finished: WordSiegeGameDto) {
+        if (busy) return
+        busy = true
+        scope.launch {
+            try {
+                gameRequestResult { backend.findOrCreateWordSiegeGame(finished.language) }
+                    .onSuccess { next -> applyGame(next); selectedGameId = next.id }
+                    .onFailure { showError(it.message.orEmpty()) }
+            } finally { busy = false }
+        }
+    }
+
     fun runGameAction(
         successNotice: String? = null,
         action: suspend () -> WordSiegeGameDto,
     ) {
         if (busy) return
+        busy = true
+        val requestedGameId = selectedGameId
         scope.launch {
-            busy = true
-            runCatching { action() }
+            try {
+            gameRequestResult { action() }
                 .onSuccess { next ->
+                    if (selectedGameId != requestedGameId) return@onSuccess
                     applyGame(next)
-                    notice = successNotice
-                    refreshGames()
+                    showNotice(successNotice)
+                    // The returned room is authoritative. Unrelated lobby/profile reads must
+                    // not keep input locked after the move has already completed.
                 }
-                .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
-            busy = false
+                .onFailure { error ->
+                    if (selectedGameId != requestedGameId) return@onFailure
+                    val raw = error.message.orEmpty()
+                    showError(raw)
+                    // The server state moved on (turn passed, game ended, or the action already
+                    // landed): re-read the game at once and drop the stale placed tiles.
+                    val gameId = currentGame?.id
+                    if (gameId != null && ("word_siege_not_your_turn" in raw || "word_siege_not_playing" in raw)) {
+                        gameRequestResult { backend.refreshWordSiegeGame(gameId) }.getOrNull()?.let { applyGame(it) }
+                    }
+                }
+            } finally { busy = false }
         }
     }
 
     BackHandler {
+        if (directEntry) { onExit(); return@BackHandler }
         if (selectedGameId != null) {
             selectedGameId = null
             currentGame = null
             placements = emptyMap()
             selectedRackIndex = null
+            clearErrorNotice()
         } else {
             onExit()
         }
@@ -143,35 +210,68 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         refreshGames(showProgress = true)
         while (currentCoroutineContext().isActive) {
             delay(5_000)
-            refreshGames()
+            // The game list is not on screen during a match; refreshing it there only costs frames.
+            if (selectedGameId == null) refreshGames()
         }
+    }
+
+    LaunchedEffect(selectedGameId, currentGame?.status) {
+        gameRequestResult { backend.setPresence(if (selectedGameId != null && currentGame?.status == "playing") "in_game" else "online") }
     }
 
     LaunchedEffect(selectedGameId, showChat) {
         val gameId = selectedGameId ?: return@LaunchedEffect
+        GameChatBadge.select(gameId)
+        // Only a real change redraws the board; moves are re-read only after a new move.
+        var movesFor = -1
+        // Realtime wakes this loop on a move or a message; polling is only the fallback.
+        val wake = com.sonharf.game.data.LiveWake(this, listOf(
+            com.sonharf.game.data.LiveWatch("word_siege_games", "id", gameId),
+            com.sonharf.game.data.LiveWatch("word_siege_messages", "game_id", gameId),
+        ))
         while (currentCoroutineContext().isActive) {
-            runCatching { backend.refreshWordSiegeGame(gameId) }
+            val pollStartedWith = currentGame
+            // Network and JSON decoding stay off the main thread, so the board never waits on a poll.
+            gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.refreshWordSiegeGame(gameId) } }
                 .onSuccess { next ->
-                    val turnChanged = currentGame?.moveCount != next.moveCount ||
-                        currentGame?.currentPlayerId != next.currentPlayerId
-                    currentGame = next
-                    loadProfiles(listOf(next.playerOneId, next.playerTwoId))
-                    if (turnChanged) {
-                        placements = emptyMap()
-                        selectedRackIndex = null
+                    clearErrorNotice()
+                    val shown = currentGame
+                    // A poll that started before a submit/pass must not roll the board back.
+                    val stale = busy || shown !== pollStartedWith ||
+                        (shown != null && shown.id == next.id && next.moveCount < shown.moveCount)
+                    if (!stale && next != shown) {
+                        val turnChanged = currentGame?.moveCount != next.moveCount ||
+                            currentGame?.currentPlayerId != next.currentPlayerId
+                        currentGame = next
+                        loadProfiles(listOf(next.playerOneId, next.playerTwoId))
+                        if (turnChanged) {
+                            placements = emptyMap()
+                            selectedRackIndex = null
+                        }
                     }
                 }
-                .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
-            moves = runCatching { backend.getWordSiegeMoves(gameId) }.getOrDefault(moves)
-            if (showChat) {
-                messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
+                .onFailure { showError(it.message.orEmpty()) }
+            val moveCount = currentGame?.moveCount ?: -1
+            if (moveCount != movesFor) {
+                gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.getWordSiegeMoves(gameId) } }.getOrNull()?.let {
+                    if (it != moves) moves = it
+                    movesFor = moveCount
+                }
             }
-            delay(2_500)
+            // Chat is read in the background too, so the chat button can show new messages.
+            gameRequestResult { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.getWordSiegeMessages(gameId) } }.getOrNull()?.let { if (it != messages) messages = it }
+            if (selectedGameId == gameId) GameChatBadge.update(gameId, messages.map { it.id to (it.senderId != me) }, open = showChat)
+            wake.await(pollMs = 2_500, safetyMs = 8_000)
         }
     }
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
-        if (selectedGameId == null) {
+        if (selectedGameId == null && directEntry) {
+            Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
+                Text(notice ?: sh("Maç açılamadı. Oyunlarım'dan yeniden deneyebilirsin.", "Could not open the match. Try again from My games."), color = MainUi.Text)
+                TextButton(onClick = onExit) { Text(sh("Geri", "Back")) }
+            }
+        } else if (selectedGameId == null) {
             WordSiegeGamesList(
                 games = games,
                 profiles = profiles,
@@ -186,20 +286,22 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     if (busy) return@WordSiegeGamesList
                     busy = true
                     scope.launch {
-                        runCatching { backend.findOrCreateWordSiegeGame(if (SonHarfUiState.isEnglish) "en" else "tr") }
+                        gameRequestResult { backend.findOrCreateWordSiegeGame(if (SonHarfUiState.isEnglish) "en" else "tr") }
                             .onSuccess { next ->
                                 applyGame(next)
                                 selectedGameId = next.id
-                                notice = if (next.status == "waiting") {
-                                    sh("Rakip aranıyor. Oyun açık kalmak zorunda değil.", "Looking for a rival. You may leave this screen.")
-                                } else null
+                                showNotice(
+                                    if (next.status == "waiting") {
+                                        sh("Rakip aranıyor. Oyun açık kalmak zorunda değil.", "Looking for a rival. You may leave this screen.")
+                                    } else null,
+                                )
                             }
-                            .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
+                            .onFailure { showError(it.message.orEmpty()) }
                         busy = false
                     }
                 },
                 onOpen = { game ->
-                    currentGame = game
+                    applyGame(game)
                     selectedGameId = game.id
                     notice = null
                 },
@@ -213,6 +315,8 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             } else {
                 WordSiegePanMatch(
                     game = game,
+                    onReplay = { replayFinishedGame(game) },
+                    onContinue = { next -> applyGame(next); selectedGameId = next.id },
                     me = me,
                     profiles = profiles,
                     moves = moves,
@@ -221,12 +325,19 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     busy = busy,
                     notice = notice,
                     onBack = {
+                        if (directEntry) onExit()
                         selectedGameId = null
                         currentGame = null
+                        placements = emptyMap()
+                        selectedRackIndex = null
+                        clearErrorNotice()
                     },
                     onBoardCell = { boardIndex ->
                         if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegePanMatch
-                        if (placements.containsKey(boardIndex)) {
+                        if (placements.containsKey(boardIndex) && selectedRackIndex != null) {
+                            // An occupied pending cell must never erase another selected letter.
+                            selectedRackIndex = null
+                        } else if (placements.containsKey(boardIndex)) {
                             val rackIndex = placements.getValue(boardIndex)
                             placements = placements - boardIndex
                             selectedRackIndex = rackIndex
@@ -238,7 +349,20 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                             }
                         }
                     },
+                    onPlacementsChange = { next ->
+                        placements = next
+                        selectedRackIndex = null
+                    },
+                    onDropPlacement = { rackIndex, fromCell, target ->
+                        val live = currentGame
+                        if (live?.id == game.id && live.status == "playing" &&
+                            live.currentPlayerId == me && !busy && rackIndex in live.rackFor(me).indices) {
+                            placements = wordSiegeDropTile(placements, live.board, rackIndex, fromCell, target, allowRackReplacement = false)
+                            selectedRackIndex = null
+                        }
+                    },
                     onRackTile = { rackIndex ->
+                        if (currentGame?.currentPlayerId != me || busy) return@WordSiegePanMatch
                         val pendingCell = placements.entries.firstOrNull { it.value == rackIndex }?.key
                         if (pendingCell != null) placements = placements - pendingCell
                         selectedRackIndex = if (selectedRackIndex == rackIndex) null else rackIndex
@@ -268,8 +392,9 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     },
                     onChat = {
                         showChat = true
+                        GameChatBadge.markRead()
                         scope.launch {
-                            messages = runCatching { backend.getWordSiegeMessages(game.id) }.getOrDefault(emptyList())
+                            messages = gameRequestResult { backend.getWordSiegeMessages(game.id) }.getOrDefault(emptyList())
                         }
                     },
                     onForfeit = { showForfeit = true },
@@ -288,7 +413,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     if (showPass && currentGame != null) {
         WordSiegeConfirmDialog(
             title = sh("Turu geç?", "Pass this turn?"),
-            body = sh("Pas hakkın turunu bitirir. İki oyuncu art arda pas verirse oyun biter.", "Passing ends your turn. Two consecutive passes end the game."),
+            body = sh("Sıra rakibine geçer. İki taraf da üst üste pas geçerse maç kapanır; taş değişimi bu sayacı sıfırlar.", "Your rival takes the turn. If both sides pass back to back the match closes; a tile exchange resets that count."),
             confirm = sh("PAS VER", "PASS"),
             accent = MainUi.Gold,
             onDismiss = { showPass = false },
@@ -324,7 +449,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        sh("Değiştireceğin harfleri seç. Bu işlem turunu bitirir.", "Choose tiles to exchange. This ends your turn."),
+                        sh("Torbaya geri vereceğin taşları işaretle; yerlerine yenileri gelir ve sıra rakibine geçer.", "Mark the tiles to hand back; fresh ones replace them and your rival takes the turn."),
                         color = MainUi.Muted,
                         fontSize = 13.sp,
                     )
@@ -379,10 +504,10 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                 if (text.isBlank() || busy) return@WordSiegeChatDialog
                 busy = true
                 scope.launch {
-                    runCatching { backend.sendWordSiegeMessage(gameId, text) }
+                    gameRequestResult { backend.sendWordSiegeMessage(gameId, text) }
                         .onSuccess {
                             if (chatInput.trim() == text) chatInput = ""
-                            messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
+                            messages = gameRequestResult { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
                         }
                         .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
                     busy = false
@@ -433,12 +558,7 @@ private fun WordSiegeGamesList(
 
         item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Image(
-                    painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
-                    contentDescription = sh("Kelime Kuşatması logosu", "Word Siege logo"),
-                    modifier = Modifier.size(96.dp),
-                    contentScale = ContentScale.Fit,
-                )
+                HfGameArt(R.drawable.kelime_tahti_brand_logo, 240.dp, 120.dp, description = "Kelime Tahtı")
             }
         }
 
@@ -463,7 +583,7 @@ private fun WordSiegeGamesList(
                         loading = busy,
                     )
                     WordSiegeModeCard(
-                        title = sh("BOT İLE\nALIŞTIR", "PRACTICE\nWITH BOT"),
+                        title = sh("AI İLE\nALIŞTIR", "PRACTICE\nWITH AI"),
                         subtitle = sh("Hemen başla", "Start now"),
                         icon = Icons.Rounded.SmartToy,
                         color = MainUi.BlueSoft,
@@ -495,7 +615,7 @@ private fun WordSiegeGamesList(
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text(sh("İlk kuşatmanı kur", "Build your first siege"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
                             Text(
-                                sh("Bonuslar sadece yeni harfte çalışır; rakibin karesini kelimene katarsan alan sana geçer.", "Bonuses work on new tiles; use a rival tile in your word to capture its territory."),
+                                sh("Güç hücreleri yalnız yeni koyduğun taşta işler; rakibin taşını kelimene katarsan o küp sana geçer.", "Power cells only work under a tile you just placed; pull a rival tile into your word and that cube turns yours."),
                                 color = MainUi.Muted,
                                 fontSize = 10.sp,
                             )
@@ -545,13 +665,13 @@ private fun WordSiegeModeCard(
     ) {
         Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                val contentColor = if (color == MainUi.BlueSoft) MainUi.Blue else Color.White
+                val contentColor = if (color == MainUi.BlueSoft) MainUi.Blue else MainUi.Text
                 Icon(icon, null, tint = contentColor, modifier = Modifier.size(24.dp))
                 if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = contentColor, strokeWidth = 2.dp)
                 else Icon(Icons.Rounded.ArrowForward, null, tint = contentColor.copy(alpha = .82f), modifier = Modifier.size(18.dp))
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                val contentColor = if (color == MainUi.BlueSoft) MainUi.Text else Color.White
+                val contentColor = MainUi.Text
                 Text(title, color = contentColor, fontWeight = FontWeight.Black, fontSize = 13.sp, lineHeight = 15.sp)
                 Text(subtitle, color = contentColor.copy(alpha = .72f), fontWeight = FontWeight.SemiBold, fontSize = 9.sp)
             }
@@ -580,6 +700,7 @@ private fun WordSiegeGameCard(
         Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
             ProfilePhotoAvatarWithGender(
                 avatarPath = opponent?.avatarPath,
+                frameId = rememberPlayerFrame(opponent?.id),
                 gender = opponent?.gender,
                 name = opponent?.displayName ?: sh("Rakip", "Rival"),
                 size = 44.dp,
@@ -647,7 +768,7 @@ private fun WordSiegeMatch(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, sh("Oyunlar", "Games"), tint = MainUi.Text) }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME TAHTI", "KELİME TAHTI"), color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
                     Text(
                         if (game.status == "playing") {
                             if (myTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")
@@ -800,13 +921,13 @@ private fun WordSiegeMatch(
                         modifier = Modifier.weight(1.45f).height(46.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MainUi.Blue,
-                            contentColor = Color.White,
+                            contentColor = MainUi.Text,
                             disabledContainerColor = SonHarfTheme.DisabledBackground,
                             disabledContentColor = SonHarfTheme.DisabledContent,
                         ),
                         contentPadding = PaddingValues(horizontal = 5.dp),
                     ) {
-                        if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = MainUi.Text, strokeWidth = 2.dp)
                         else Text(sh("OYNA", "PLAY"), fontSize = 12.sp, fontWeight = FontWeight.Black)
                     }
                 }
@@ -854,6 +975,7 @@ private fun WordSiegePlayerCard(
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             ProfilePhotoAvatarWithGender(
                 avatarPath = profile?.avatarPath,
+                frameId = rememberPlayerFrame(profile?.id),
                 gender = profile?.gender,
                 name = profile?.displayName ?: fallbackName,
                 size = 36.dp,
@@ -893,9 +1015,9 @@ internal fun WordSiegeBoard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFFE7EDF5),
+        color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frame else Color(0xFFD6CFBE),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, MainUi.Border),
+        border = BorderStroke(if (WordSiegeWalnutIvory.enabled) 2.dp else 1.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameEdge else MainUi.Border),
     ) {
         BoxWithConstraints(Modifier.fillMaxWidth().padding(3.dp)) {
             val cellSize = maxWidth / 9
@@ -933,9 +1055,9 @@ private fun WordSiegeBoardCell(
 ) {
     val owner = if (pending) myOwner else cell.owner
     val territory = when {
-        owner == 0 -> MainUi.Surface
-        owner == myOwner -> Color(0xFF35C878)
-        else -> Color(0xFFFF5F57)
+        owner == 0 -> if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.board else MainUi.Surface
+        owner == myOwner -> if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF35C878)
+        else -> if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFFF5F57)
     }
     val border = when {
         pending -> SiegeTileBorder
@@ -944,25 +1066,30 @@ private fun WordSiegeBoardCell(
         else -> MainUi.Border
     }
     val letter = pendingLetter?.toString() ?: cell.letter
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) .94f else 1f, tween(if (pressed) 65 else 150), label = "classic cell press")
     Box(
         Modifier
             .size(size)
             .padding(1.dp)
+            .graphicsLayer { scaleX = if (WordSiegeWalnutIvory.enabled) pressScale else 1f; scaleY = if (WordSiegeWalnutIvory.enabled) pressScale else 1f }
             .clip(RoundedCornerShape(4.dp))
-            .background(if (letter != null) territory else MainUi.Surface)
-            .clickable(enabled = enabled && (cell.letter == null || pending), onClick = onClick),
+            .background(if (letter != null) territory else if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.board else MainUi.Surface)
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled && (cell.letter == null || pending), onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = if (pending) SiegeTile.copy(alpha = .92f) else Color.Transparent,
+            modifier = if (WordSiegeWalnutIvory.enabled) Modifier.fillMaxSize().padding(if (letter != null && owner != 0) 3.dp else .5.dp)
+                .shadow(if (letter != null) 1.5.dp else 0.dp, RoundedCornerShape(4.dp)) else Modifier.fillMaxSize(),
+            color = if (!WordSiegeWalnutIvory.enabled && pending) SiegeTile.copy(alpha = .92f) else Color.Transparent,
             shape = RoundedCornerShape(4.dp),
-            border = BorderStroke(if (pending) 1.5.dp else .7.dp, border),
+            border = BorderStroke(if (pending) 1.5.dp else .7.dp, if (WordSiegeWalnutIvory.enabled) (if (pending) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel) else border),
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Box(if (WordSiegeWalnutIvory.enabled && letter != null) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier, contentAlignment = Alignment.Center) {
                 if (letter != null) {
-                    val contentColor = if (pending) SiegeLightTileText else MainUi.Text
-                    val pointColor = if (pending) SiegeLightTileMuted else MainUi.Muted
+                    val contentColor = if (WordSiegeWalnutIvory.enabled || pending) SiegeLightTileText else MainUi.Text
+                    val pointColor = if (WordSiegeWalnutIvory.enabled || pending) SiegeLightTileMuted else MainUi.Muted
                     Text(letter, color = contentColor, fontSize = 14.sp, fontWeight = FontWeight.Black)
                     Text(
                         wordSiegeLetterValue(letter),
@@ -1000,7 +1127,7 @@ internal fun WordSiegeRackTile(
         color = when {
             used -> MainUi.SurfaceSoft
             selected -> SiegeTile
-            else -> Color(0xFFFFF1C9)
+            else -> Color(0xFFE3D6B0)
         },
         shape = RoundedCornerShape(9.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MainUi.Blue else SiegeTileBorder.copy(alpha = .7f)),
@@ -1037,7 +1164,7 @@ private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
         ) {
             Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
+                    when { draw -> sh("BERABERE", "DRAW"); won -> sh("TAHT SENİN!", "THE THRONE IS YOURS!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
                     color = accent,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Black,
@@ -1101,7 +1228,8 @@ private fun WordSiegeChatDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(sh("SOHBET", "CHAT"), fontWeight = FontWeight.Black) },
+        properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+            title = { ChatDialogTitle(sh("SOHBET", "CHAT"), onDismiss) },
         text = {
             Column(Modifier.heightIn(min = 220.dp, max = 430.dp)) {
                 if (messages.isEmpty()) {
@@ -1109,14 +1237,22 @@ private fun WordSiegeChatDialog(
                         Text(sh("Henüz mesaj yok.", "No messages yet."), color = MainUi.Muted, fontSize = 12.sp)
                     }
                 } else {
-                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(messages.takeLast(40), key = { it.id }) { message ->
+                    // Newest at the bottom above the input and follows new messages; older ones move up.
+                    val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
+                    LaunchedEffect(messages.size) { chatListState.animateScrollToItem(0) }
+                    LazyColumn(
+                        Modifier.weight(1f),
+                        state = chatListState,
+                        reverseLayout = true,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        items(messages.takeLast(40).asReversed(), key = { it.id }) { message ->
                             Row(
                                 Modifier.fillMaxWidth(),
                                 horizontalArrangement = if (message.senderId == me) Arrangement.End else Arrangement.Start,
                             ) {
                                 Surface(
-                                    color = if (message.senderId == me) SiegeBlueSoft else SiegePurpleSoft,
+                                    color = if (message.senderId == me) WordSiegeGameUi.Blue.copy(alpha = .15f) else WordSiegeGameUi.Red.copy(alpha = .13f),
                                     shape = RoundedCornerShape(12.dp),
                                 ) {
                                     Text(message.body, Modifier.padding(9.dp), color = MainUi.Text, fontSize = 11.sp)
@@ -1126,6 +1262,16 @@ private fun WordSiegeChatDialog(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    listOf(sh("Bol şans!", "Good luck!"), sh("Güzel hamle!", "Nice move!"), sh("Tebrikler!", "Well played!")).forEach { reaction ->
+                        OutlinedButton(onClick = { onSend(reaction) }, enabled = !busy,
+                            modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 3.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(12.dp)) {
+                            Text(reaction, fontSize = 9.sp, maxLines = 1)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(5.dp))
                 if (SonHarfCosmetics.emojiPackId == "emoji_vip") {
                     Text(sh("VIP TEPKİLER", "VIP REACTIONS"), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(5.dp))
@@ -1153,7 +1299,8 @@ private fun WordSiegeChatDialog(
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(sh("KAPAT", "CLOSE")) } },
+        // Closed with the X in the top-left corner.
+        confirmButton = {},
     )
 }
 
@@ -1181,7 +1328,7 @@ private fun WordSiegeGameDto.listSection(me: String?): SiegeListSection = when {
 
 private fun WordSiegeGameDto.isSleeping(): Boolean {
     val stamp = lastMoveAt ?: createdAt
-    return runCatching { Duration.between(Instant.parse(stamp), Instant.now()).toDays() >= 7 }.getOrDefault(false)
+    return runCatching { Duration.between(requireNotNull(com.sonharf.game.data.parseServerInstant(stamp)), Instant.now()).toDays() >= 7 }.getOrDefault(false)
 }
 
 @Composable
@@ -1240,13 +1387,13 @@ internal fun wordSiegeFriendlyError(raw: String): String {
         invalidWord.isNotBlank() -> sh("$invalidWord sözlükte bulunamadı.", "$invalidWord is not in the dictionary.")
         "word_siege_active_limit" in raw -> sh("Aynı anda en fazla 10 devam eden oyunun olabilir.", "You can have at most 10 ongoing games.")
         "word_siege_not_your_turn" in raw -> sh("Şu anda sıra rakibinde.", "It is your rival's turn.")
-        "word_siege_first_word_must_cover_center" in raw -> sh("İlk kelime ortadaki 2K karesinden geçmeli.", "The first word must cover the center 2W cell.")
+        "word_siege_first_word_must_cover_center" in raw -> sh("Açılış kelimesi Başlangıç Mührü'nden geçmeli.", "The opening word must pass through the Starting Seal.")
         "word_siege_move_must_connect" in raw -> sh("Yeni kelime tahtadaki harflerden birine bağlanmalı.", "The new word must connect to the board.")
-        "word_siege_gap_between_tiles" in raw -> sh("Harflerin arasında boş kare bırakamazsın.", "You cannot leave a gap between tiles.")
+        "word_siege_gap_between_tiles" in raw -> sh("Taşların arasında boş hücre kalmamalı.", "Leave no empty cell between your tiles.")
         "word_siege_not_in_one_row" in raw -> sh("Harfleri aynı yatay sıraya yerleştir.", "Place tiles in one horizontal row.")
         "word_siege_not_in_one_column" in raw -> sh("Harfleri aynı dikey sütuna yerleştir.", "Place tiles in one vertical column.")
         "word_siege_cell_occupied" in raw -> sh("Bu karede zaten bir harf var.", "That cell already has a tile.")
-        "word_siege_not_enough_tiles" in raw -> sh("Torbada bu değişim için yeterli harf yok.", "The bag does not have enough tiles for this exchange.")
+        "word_siege_not_enough_tiles" in raw -> sh("Torbada bu kadar taşı yenilemeye yetecek harf kalmadı.", "The bag no longer holds enough tiles to refresh that many.")
         "word_siege_word_required" in raw -> sh("En az iki harfli geçerli bir kelime oluşturmalısın.", "You must form a valid word of at least two letters.")
         "word_siege_not_playing" in raw -> sh("Bu oyun artık aktif değil.", "This game is no longer active.")
         "chat" in raw.lowercase() && "suspend" in raw.lowercase() -> sh("Sohbet erişimin geçici olarak kapalı.", "Your chat access is temporarily suspended.")

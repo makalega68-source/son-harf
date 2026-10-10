@@ -31,36 +31,36 @@ internal object WordSiegePracticeTutorialPrefs {
 
 internal fun wordSiegePracticeZoneExplanation(code: String, turkish: Boolean): String = when (code) {
     "2H" -> if (turkish) {
-        "HARF ×2 • Bu hücreye koyduğun harfin puanını 2 katına çıkarır."
+        "HARF GÜCÜ • Bu hücreye yerleşen taşın değeri iki kat sayılır."
     } else {
-        "LETTER ×2 • Doubles the letter score placed on this cell."
+        "LETTER BOOST • The tile placed here counts at double value."
     }
     "3H" -> if (turkish) {
-        "HARF ×3 • Bu hücreye koyduğun harfin puanını 3 katına çıkarır."
+        "HARF GÜCÜ+ • Bu hücreye yerleşen taşın değeri üç kat sayılır."
     } else {
-        "LETTER ×3 • Triples the letter score placed on this cell."
+        "LETTER BOOST+ • The tile placed here counts at triple value."
     }
     "2K" -> if (turkish) {
-        "KELİME ×2 • Bu hücreden geçen kelimenin puanını 2 katına çıkarır."
+        "KELİME AKIMI • Bu hücreye uzanan kelimenin toplamı iki kat yazılır."
     } else {
-        "WORD ×2 • Doubles the score of the word using this cell."
+        "WORD SURGE • A word reaching this cell scores double in total."
     }
     "3K" -> if (turkish) {
-        "KELİME ×3 • bu hücreden geçen kelimenin puanını 3 katına çıkarır."
+        "KELİME AKIMI+ • Bu hücreye uzanan kelimenin toplamı üç kat yazılır."
     } else {
-        "WORD ×3 • Triples the score of the word using this cell."
+        "WORD SURGE+ • A word reaching this cell scores triple in total."
     }
     WordSiegeBoardSpec.CenterBonus -> if (turkish) {
-        "BAŞLANGIÇ • İlk kelime bu bölgeden geçmelidir. Buradan geçen kelimenin puanını 4 katına çıkarır."
+        "MERKEZ • Açılış kelimesi merkezden geçer ve toplamı dört kat yazılır."
     } else {
-        "START • The first word must cross this zone. It multiplies that word score by 4."
+        "STARTING SEAL • The opening word passes through the seal and scores four times its total."
     }
     WordSiegeBoardSpec.StarBonus -> if (turkish) {
-        "ÖDÜL • Bu sürpriz bölge hamlene +${WordSiegeBoardSpec.StarBonusPoints} puan ekler."
+        "ÖDÜL • Bu sürpriz kare hamlene +${WordSiegeBoardSpec.StarBonusPoints} puan ekler."
     } else {
         "REWARD • This surprise zone adds +${WordSiegeBoardSpec.StarBonusPoints} points to the move."
     }
-    else -> if (turkish) "Stratejik bölge." else "Strategic zone."
+    else -> if (turkish) "Stratejik kare." else "Strategic zone."
 }
 
 @Composable
@@ -78,10 +78,14 @@ internal fun WordSiegePracticeZoneInfoDialog(
             )
         },
         text = {
-            Text(
-                wordSiegePracticeZoneExplanation(code, turkish),
-                color = MainUi.Text,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    wordSiegePracticeZoneExplanation(code, turkish),
+                    color = MainUi.Text,
+                )
+                // All bonuses side by side, as they look on the board.
+                Text(if (turkish) "Bonus yalnız hücreye ilk taş yerleştiğinde işler." else "A bonus applies only to the first tile placed in that cell.")
+            }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
@@ -101,37 +105,37 @@ internal fun WordSiegePracticeTutorialCard(
 ) {
     val turkish = !SonHarfUiState.isEnglish
     val title = when (step) {
-        0 -> if (turkish) "KELİME TAHTI NASIL OYNANIR?" else "HOW TO PLAY WORD THRONE"
-        1 -> if (turkish) "1/4 • BİR HARF SEÇ" else "1/4 • PICK A TILE"
-        2 -> if (turkish) "2/4 • TAHTAYA YERLEŞTİR" else "2/4 • PLACE IT"
-        3 -> if (turkish) "3/4 • KELİMEYİ TAMAMLA" else "3/4 • COMPLETE THE WORD"
-        else -> if (turkish) "4/4 • SIRA RAKİBİNDE" else "4/4 • YOUR RIVAL PLAYS"
+        0 -> if (turkish) "KELİME TAHTI • KISA TUR" else "WORD THRONE • QUICK TOUR"
+        1 -> if (turkish) "1/4 • TAŞINI AL" else "1/4 • TAKE A TILE"
+        2 -> if (turkish) "2/4 • MERKEZDEN BAŞLA" else "2/4 • OPEN THE SEAL"
+        3 -> if (turkish) "3/4 • KELİMEYİ KİLİTLE" else "3/4 • LOCK IN THE WORD"
+        else -> if (turkish) "4/4 • KÜPLER VE BONUSLAR" else "4/4 • CUBES AND BONUSES"
     }
     val body = when (step) {
         0 -> if (turkish) {
-            "Harf seç, tahtaya yerleştir ve kelimeni onayla. Sonraki kelimeler tahtadaki harflere yatay veya dikey bağlanır. En yüksek toplam puan kazanır."
+            "Taşlarınla kelime kur, tahtada küp kazan. Her yeni kelime tahtadaki bir harfe satır ya da sütun boyunca dokunmalı. Maç sonunda kelime ve küp puanı toplamı yüksek olan kazanır."
         } else {
-            "Pick tiles, place your word and confirm. Connect later words horizontally or vertically to letters on the board. Highest total score wins."
+            "Build words with your tiles and win ground on the board. Every new word must touch a letter already on the board along a row or column. Highest word plus territory total wins."
         }
         1 -> if (turkish) {
-            "Alttaki raftan bir harfe dokun. Seçilen harf belirginleşecek."
+            "Elinden bir harf seç."
         } else {
-            "Tap a tile in the rack below. The selected tile will highlight."
+            "Select a tile from your rack."
         }
         2 -> if (turkish) {
-            "Şimdi boş bir hücreye dokun. İlk kelimen merkezden geçmeli."
+            "Açılış kelimesini tahta merkezinden geçecek şekilde yerleştir."
         } else {
-            "Now tap an empty cell. Your first word must cross the center."
+            "Now tap an empty cell. Your opening word must pass through the Starting Seal."
         }
         3 -> if (turkish) {
-            "Harfleri aynı satır veya sütunda kelime olacak şekilde tamamla; sonra HAMLEYİ ONAYLA."
+            "Taşları tek satırda ya da tek sütunda kelime olacak şekilde diz, sonra HAMLEYİ ONAYLA."
         } else {
-            "Complete a word in one row or column, then tap CONFIRM MOVE."
+            "Line the tiles up as a word in a single row or column, then tap CONFIRM MOVE."
         }
         else -> if (turkish) {
-            "Harf bonusu yalnız harfi, kelime bonusu tüm kelimeyi çarpar. +25 ödülü hamlene eklenir. Skordaki bölge puanı mevcut maç kuralıdır: sahip olduğun hücre başına 2 puan; kelime puanı kalıcıdır."
+            "Ele geçirdiğin her küp sana +2 Küp Puanı yazar; rakipten kopardığın küp onun Küp Puanını 1 azaltır. Kelime puanı kalıcıdır. Bonuslar yalnız üstüne ilk taş konunca çalışır:"
         } else {
-            "Letter bonuses multiply one letter; word bonuses multiply the word. +25 adds to the move. Existing matches also award 2 points per owned cell; word points are permanent."
+            "Each cube you take writes +2 Territory Points for you; a cube pulled from your rival lowers their Territory Points by 1. Word points are permanent. A bonus works only for the first tile placed on it:"
         }
     }
 
@@ -159,6 +163,12 @@ internal fun WordSiegePracticeTutorialCard(
                 color = Color(0xFF3F554A),
                 fontSize = if (compact) 9.sp else 10.sp,
                 lineHeight = if (compact) 12.sp else 14.sp,
+            )
+            // The last step shows every bonus as it looks on the board, with one short line each.
+            if (step >= 4) Text(
+                if (turkish) "Harf bonusu: harf değeri iki veya üç kat. Kelime bonusu: kelime toplamı iki veya üç kat. Açılış: kelime toplamı dört kat. Ödül karesi: 25 ek puan."
+                else "Letter bonus: double or triple tile value. Word bonus: double or triple word total. Opening: quadruple word total. Reward cell: 25 extra points.",
+                color = Color(0xFF3F554A), fontSize = if (compact) 9.sp else 10.sp,
             )
             Row(
                 Modifier.fillMaxWidth(),

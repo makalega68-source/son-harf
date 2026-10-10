@@ -2,6 +2,11 @@ package com.sonharf.game.data
 
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
@@ -10,6 +15,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 @Serializable
+@androidx.compose.runtime.Immutable
 data class WordSiegeCellDto(
     val letter: String? = null,
     val owner: Int = 0,
@@ -127,6 +133,38 @@ private data class WordSiegeMessageWrite(
     val body: String,
 )
 
+/**
+ * Short-lived launch preference used by the active Compose entry screen.
+ * It is intentionally not persisted: each fresh visit defaults to the standard 12-hour pool.
+ */
+object WordSiegeLaunchConfig {
+    var pendingGameId: String? = null
+    var pendingGameMode: String = "classic"
+    val awaitedInviteIds = mutableSetOf<String>()
+    var awaitedInviteRevision by mutableIntStateOf(0)
+        private set
+
+    fun awaitInvite(id: String) {
+        if (awaitedInviteIds.add(id)) awaitedInviteRevision++
+    }
+
+    fun open(game: WordSiegeGameDto) {
+        pendingGameId = game.id
+        pendingGameMode = game.gameMode
+        classicTurnHours = game.turnDurationHours
+    }
+
+    fun consumeGameId(mode: String): String? {
+        if (pendingGameMode != mode) return null
+        return pendingGameId.also { pendingGameId = null }
+    }
+
+    var classicTurnHours: Int = 12
+        set(value) {
+            field = if (value == 24) 24 else 12
+        }
+}
+
 suspend fun OnlineGameBackend.getWordSiegeGames(): List<WordSiegeGameDto> =
     SupabaseProvider.client.from("word_siege_games")
         .select { filter { eq("game_mode", "classic") } }
@@ -150,10 +188,49 @@ suspend fun OnlineGameBackend.getWordSiegeSeriesGames(): List<WordSiegeGameDto> 
             }.thenBy { it.turnDeadline ?: "9999" }.thenByDescending { it.updatedAt.ifBlank { it.createdAt } },
         )
 
+/** List columns only: board, bag and racks stay on the server until a game is opened. */
+private val wordSiegeSummaryColumns = Columns.list(
+    "id", "player_one_id", "player_two_id", "status", "language", "current_player_id", "winner_id", "loser_id",
+    "player_one_word_score", "player_two_word_score", "player_one_area_score", "player_two_area_score",
+    "player_one_area", "player_two_area", "consecutive_passes", "move_count", "last_action", "last_action_player_id",
+    "last_move_at", "finish_reason", "game_mode", "turn_duration_hours", "turn_duration_minutes", "turn_started_at",
+    "turn_deadline", "player_one_missed_turns", "player_two_missed_turns", "created_at", "updated_at", "finished_at",
+)
+
+/**
+ * Lightweight rows for menus (My Games, home summary, rivals, records): every open game plus the
+ * most recent finished ones. Screens that render a board keep using [getWordSiegeGames]/[getWordSiegeGame].
+ */
+suspend fun OnlineGameBackend.getWordSiegeGameSummaries(mode: String, finishedLimit: Long = 40): List<WordSiegeGameDto> {
+    val open = SupabaseProvider.client.from("word_siege_games").select(wordSiegeSummaryColumns) {
+        filter { eq("game_mode", mode); isIn("status", listOf("waiting", "playing")) }
+    }.decodeList<WordSiegeGameDto>()
+    if (finishedLimit <= 0) return open.sortedByDescending { it.updatedAt.ifBlank { it.createdAt } }
+    val finished = SupabaseProvider.client.from("word_siege_games").select(wordSiegeSummaryColumns) {
+        filter { eq("game_mode", mode); eq("status", "finished") }
+        order("updated_at", Order.DESCENDING)
+        limit(finishedLimit)
+    }.decodeList<WordSiegeGameDto>()
+    return (open + finished).distinctBy { it.id }.sortedByDescending { it.updatedAt.ifBlank { it.createdAt } }
+}
+
 suspend fun OnlineGameBackend.getWordSiegeGame(gameId: String): WordSiegeGameDto =
     SupabaseProvider.client.from("word_siege_games")
         .select { filter { eq("id", gameId) } }
         .decodeSingle()
+
+/** Only the sender's invitations; participant RLS still applies. */
+suspend fun OnlineGameBackend.getOutgoingWordSiegeInvites(): List<WordSiegeInviteDto> {
+    val me = currentUserId() ?: return emptyList()
+    return SupabaseProvider.client.from("word_siege_invites")
+        .select { filter { eq("sender_id", me) } }.decodeList()
+}
+
+suspend fun OnlineGameBackend.getOutgoingWordSiegeSeriesInvites(): List<WordSiegeSeriesInviteDto> {
+    val me = currentUserId() ?: return emptyList()
+    return SupabaseProvider.client.from("word_siege_series_invites")
+        .select { filter { eq("sender_id", me) } }.decodeList()
+}
 
 suspend fun OnlineGameBackend.refreshWordSiegeGame(gameId: String): WordSiegeGameDto =
     SupabaseProvider.client.postgrest.rpc(
@@ -162,10 +239,21 @@ suspend fun OnlineGameBackend.refreshWordSiegeGame(gameId: String): WordSiegeGam
     ).decodeSingle()
 
 suspend fun OnlineGameBackend.findOrCreateWordSiegeGame(language: String): WordSiegeGameDto =
-    SupabaseProvider.client.postgrest.rpc(
-        "find_or_create_word_siege_game_v1",
-        buildJsonObject { put("p_language", if (language.lowercase() == "en") "en" else "tr") },
+    findOrCreateWordSiegeGame(language, WordSiegeLaunchConfig.classicTurnHours)
+
+suspend fun OnlineGameBackend.findOrCreateWordSiegeGame(
+    language: String,
+    turnDurationHours: Int,
+): WordSiegeGameDto {
+    require(turnDurationHours == 12 || turnDurationHours == 24) { "word_siege_invalid_turn_duration" }
+    return SupabaseProvider.client.postgrest.rpc(
+        "find_or_create_word_siege_game_v2",
+        buildJsonObject {
+            put("p_language", if (language.lowercase() == "en") "en" else "tr")
+            put("p_turn_duration_hours", turnDurationHours)
+        },
     ).decodeSingle()
+}
 
 suspend fun OnlineGameBackend.findOrCreateWordSiegeSeriesGame(
     language: String,
@@ -319,7 +407,7 @@ suspend fun OnlineGameBackend.getWordSiegeMoves(gameId: String): List<WordSiegeM
 
 suspend fun OnlineGameBackend.getWordSiegeMessages(gameId: String): List<WordSiegeMessageDto> =
     SupabaseProvider.client.from("word_siege_messages")
-        .select { filter { eq("game_id", gameId) } }
+        .select { filter { eq("game_id", gameId); gte("created_at", java.time.Instant.now().minusSeconds(15L * 86400).toString()) } }
         .decodeList<WordSiegeMessageDto>()
         .sortedBy { it.id }
 

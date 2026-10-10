@@ -15,9 +15,11 @@ class ShopButtonStateContractTest {
         assertTrue(source.contains("if (b == null || busy != null) return@VerifiedStoreProductCard"))
         assertTrue(source.contains("busy = item.id"))
         assertTrue(source.contains("busy = null"))
-        assertTrue(source.contains("enabled = !busy && !equipped && !lockedByPro"))
-        assertTrue(source.contains("equipped -> sh(\"AKTİF\", \"ACTIVE\")"))
-        assertTrue(source.contains("owned -> sh(\"SAHİPSİN\", \"OWNED\")"))
+        // Owned cards open the collection; they must never launch another purchase or equip silently.
+        assertTrue(source.contains("enabled = !busy && !lockedByPro"))
+        assertTrue(source.contains("if (owned || equipped) onCollection() else onAction()"))
+        assertTrue(source.contains("sh(\"SATIN ALINDI\", \"PURCHASED\")"))
+        assertTrue(!source.contains("b.equipShopItem(item.id)"))
     }
 
     private fun projectFile(path: String): File {

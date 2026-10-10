@@ -24,10 +24,18 @@ class StoreCanvaArtworkContractTest {
             "store_art_emoji_vip.xml",
         )
 
+        // Painted artwork ships as transparent PNG in drawable-nodpi; the two remaining vectors stay text-free.
         drawables.forEach { fileName ->
-            val vector = repoFile("app/src/main/res/drawable/$fileName").readText()
-            assertTrue("Missing vector root for $fileName", vector.contains("<vector"))
-            assertFalse("Decorative store artwork must not bake text: $fileName", vector.contains("<text"))
+            val base = fileName.removeSuffix(".xml")
+            val vector = sequenceOf(File("app/src/main/res/drawable/$fileName"), File("src/main/res/drawable/$fileName")).firstOrNull { it.exists() }
+            val png = sequenceOf(File("app/src/main/res/drawable-nodpi/$base.png"), File("src/main/res/drawable-nodpi/$base.png")).firstOrNull { it.exists() }
+            assertTrue("Missing artwork for $base", vector != null || png != null)
+            assertFalse("Artwork $base must exist once", vector != null && png != null)
+            vector?.readText()?.let { xml ->
+                assertTrue("Missing vector root for $fileName", xml.contains("<vector"))
+                assertFalse("Decorative store artwork must not bake text: $fileName", xml.contains("<text"))
+            }
+            png?.let { assertTrue("PNG must be transparent: $base", isPngWithAlpha(it)) }
         }
 
         listOf(
@@ -91,6 +99,12 @@ class StoreCanvaArtworkContractTest {
         assertTrue(siege.contains("SonHarfCosmetics.emojiPackId == \"emoji_vip\""))
         assertTrue(siege.contains("VipEmojiReactionRow("))
         assertTrue(effects.contains("R.drawable.store_art_victory_crown"))
+    }
+
+    private fun isPngWithAlpha(file: File): Boolean {
+        val bytes = file.readBytes()
+        // IHDR colour type 6 = RGBA
+        return bytes.size > 26 && bytes[1] == 'P'.code.toByte() && bytes[25].toInt() == 6
     }
 
     private fun repoFile(path: String): File = sequenceOf(File(path), File("../$path"))

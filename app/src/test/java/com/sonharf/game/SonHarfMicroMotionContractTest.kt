@@ -30,9 +30,9 @@ class SonHarfMicroMotionContractTest {
         // Premium home keeps restrained press deltas on its primary interactive surfaces.
         assertTrue(home.contains("sonHarfPressScale(pressedScale = 0.985f)"))
 
-        // Core product structure remains intact after Kelime Kuşatması becomes the primary game.
+        // Core product structure remains intact after Kelime Tahtı becomes the primary game.
         assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(home.contains("KELİME KUŞATMASI"))
+        assertTrue(home.contains("KELİME TAHTI"))
         assertTrue(home.contains("SAVAŞA GİR"))
         assertFalse(home.contains("players = weeklyTop"))
         assertTrue(home.contains("DailyObjectiveCard(onClick = onTasks)"))

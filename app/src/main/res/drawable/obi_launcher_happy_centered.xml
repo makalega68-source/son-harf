@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Obi fills the launcher shape on its dark tile. The happy bitmap's orb sits 6 px above the
+     centre of its 256 px canvas, so it is drawn 2 dp lower (top 8dp, bottom 4dp) to centre it;
+     the 6dp side inset keeps both eyes and brows inside the 66dp safe zone of every mask. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:left="6dp" android:top="8dp" android:right="6dp" android:bottom="4dp">
+        <bitmap android:src="@drawable/obi_launcher_happy" android:gravity="fill" android:filter="true" />
+    </item>
+</layer-list>
