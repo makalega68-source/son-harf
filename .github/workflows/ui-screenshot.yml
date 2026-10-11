@@ -43,7 +43,25 @@ jobs:
         with:
           validate-wrappers: false
       - name: Unit tests and debug APK
-        run: ./gradlew --no-daemon -Pkotlin.compiler.execution.strategy=in-process clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon -Pkotlin.compiler.execution.strategy=in-process clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all 2>&1 | tee gradle-build.log
+      # Raw logs are not always reachable from review tooling; surface the cause as annotations.
+      - name: Report compile and test failures
+        if: failure()
+        run: |
+          grep -E '^e: ' gradle-build.log | head -20 | sed 's/^/::error::/' || true
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          n = 0
+          for f in glob.glob('app/build/test-results/**/*.xml', recursive=True):
+              for case in ET.parse(f).getroot().iter('testcase'):
+                  for bad in list(case.findall('failure')) + list(case.findall('error')):
+                      msg = (bad.get('message') or '').replace('\n', ' ')[:300]
+                      if n < 20:
+                          print(f"::error::{case.get('classname')}.{case.get('name')}: {msg}")
+                      n += 1
+          PY
       - name: Prepare APK
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk Kelime-Tahti-Guncel.apk
