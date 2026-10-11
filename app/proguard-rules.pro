@@ -16,3 +16,8 @@
 -dontwarn io.ktor.**
 -dontwarn kotlinx.serialization.**
 -keep class io.github.jan.supabase.** { *; }
+
+# Eve (3D home friend): Filament and SceneView reach their classes from native code.
+-keep class com.google.android.filament.** { *; }
+-keep class io.github.sceneview.** { *; }
+-dontwarn io.github.sceneview.**

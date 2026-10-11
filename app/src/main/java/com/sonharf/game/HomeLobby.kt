@@ -223,11 +223,17 @@ internal fun HomeLobbyScreen(
                 LobbyGameCard(R.drawable.kelime_atolyesi_game_icon, sh("Kelime Atölyesi", "Word Workshop"),
                     rememberWorkshopStatus(), onWorkshop)
             }
-            Spacer(Modifier.height(96.dp))
+            // Room to scroll the last card clear of Eve in the bottom corner.
+            Spacer(Modifier.height(140.dp))
         }
-        // Owned mascots keep floating over the lobby; they take no row.
+        // Eve, the 3D forest friend, lives in the bottom-left corner of the lobby for everyone.
+        EveHomeFriend(
+            playerName = p?.displayName,
+            modifier = Modifier.align(Alignment.BottomStart).padding(start = 2.dp, bottom = 2.dp),
+        )
+        // Owned mascots keep floating over the lobby on the right; they take no row.
         WordSiegeMascotCompanion(
-            anchors = listOf(Offset(.88f, .92f), Offset(.12f, .92f)),
+            anchors = listOf(Offset(.88f, .92f), Offset(.88f, .62f)),
             mascotSize = 83.dp, positionKey = "home",
             moveId = null, lastMoveMine = false, playerTurn = false,
             modifier = Modifier.matchParentSize(),

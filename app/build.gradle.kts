@@ -97,10 +97,17 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    // Eve's 3D model is read straight from the APK by Filament; keep it uncompressed.
+    androidResources {
+        noCompress += "glb"
+    }
 }
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.08.00"))
+    // Real-time 3D (Filament via SceneView) for Eve, the home screen friend.
+    implementation("io.github.sceneview:sceneview:4.31.0")
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
