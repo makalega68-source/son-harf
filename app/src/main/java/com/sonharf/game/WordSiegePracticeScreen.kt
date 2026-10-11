@@ -413,7 +413,13 @@ private fun WordSiegePracticeContent(
                     )
                 }
             } else {
-                val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements)
+                // The plan was made on a snapshot; if the board moved on meanwhile, pass instead of crashing.
+                val applied = runCatching { WordSiegePracticeEngine.applyMove(state, 2, planned.placements) }.getOrNull()
+                if (applied == null) {
+                    state = WordSiegePracticeEngine.pass(state, 2)
+                    return@LaunchedEffect
+                }
+                val (next, move) = applied
                 enqueueCapture(state, next, 2)
                 state = next
                 lastMove = move

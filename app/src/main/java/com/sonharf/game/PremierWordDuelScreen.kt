@@ -679,6 +679,8 @@ fun PremierWordDuelScreen() {
             .coerceIn(1_000L, (PREMIER_TURN_SECONDS + PREMIER_ROUND_BREAK_SECONDS) * 1000L)
         var countdownAnchor = SystemClock.elapsedRealtime()
         var serverClockResolved = false
+        var serverClockEverResolved = false
+        val roundStartEvent = active.lastEvent == "round_started" || active.lastEvent == "sudden_death_started"
         fun syncTurnClock() {
             serverClockResolved = false
             launch {
@@ -691,6 +693,7 @@ fun PremierWordDuelScreen() {
                     countdownAnchor = SystemClock.elapsedRealtime()
                 }
                 serverClockResolved = true
+                serverClockEverResolved = true
             }
         }
         syncTurnClock()
@@ -705,7 +708,10 @@ fun PremierWordDuelScreen() {
             // Never longer than the set break, whatever extra time the deadline carries.
             // Continue the locally anchored preparation clock while the next server refresh is
             // in flight. Waiting for serverClockResolved here froze the visible countdown at 10.
-            prepSeconds = if (prepMs > 0L) ((prepMs + 999L) / 1000L).toInt().coerceAtMost(PREMIER_ROUND_BREAK_SECONDS) else 0
+            // Before the very first server answer only a round start may open it, so a phone clock
+            // running behind never flashes a break over an ordinary turn.
+            val breakAllowed = serverClockEverResolved || roundStartEvent
+            prepSeconds = if (prepMs > 0L && breakAllowed) ((prepMs + 999L) / 1000L).toInt().coerceAtMost(PREMIER_ROUND_BREAK_SECONDS) else 0
             val remaining = premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs)
             if (remaining > 0 || !serverClockResolved) {
                 turnSeconds = remaining.coerceAtLeast(1)
