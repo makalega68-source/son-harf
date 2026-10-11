@@ -53,6 +53,18 @@ internal enum class WordSiegeMascotAction {
     CLAP,
     NUZZLE, SWAY, GROOM, FOOD_LOOK, EAT, DOZE, SPACE_FLIGHT, KISS,
     KNOCK, BURP, WINK, HIDE_FACE, SNEEZE, BALANCE, CHASE_RUN,
+    /** Giggles with a hand over the mouth, shaking with small bounces. */
+    GIGGLE,
+    /** Hugs itself and shivers ("brr!"). */
+    SHIVER,
+    /** Hands on cheeks, eyes closed, a burst of hearts. */
+    LOVE,
+    /** Chest out, hands on hips, chin up. */
+    PROUD_POSE,
+    /** Three quick happy hops in a row. */
+    BOUNCE,
+    /** Looks down and away, blushing, fingers together. */
+    SHY,
 }
 
 /** One clock shared by the rig and room scenes; never cut a move short with a second duration table. */
@@ -88,6 +100,12 @@ internal fun mascotActionMillis(action: WordSiegeMascotAction): Long = when (act
     WordSiegeMascotAction.SNEEZE -> 3_200L
     WordSiegeMascotAction.BALANCE -> 4_800L
     WordSiegeMascotAction.CHASE_RUN -> 4_800L
+    WordSiegeMascotAction.GIGGLE -> 2_600L
+    WordSiegeMascotAction.SHIVER -> 2_400L
+    WordSiegeMascotAction.LOVE -> 3_000L
+    WordSiegeMascotAction.PROUD_POSE -> 2_800L
+    WordSiegeMascotAction.BOUNCE -> 2_400L
+    WordSiegeMascotAction.SHY -> 3_000L
 }
 
 /** Three contacts, separated by withdrawal of the fist; zero outside the knocking beat. */
@@ -668,9 +686,14 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             WordSiegeMascotAction.SPARKLE -> WordSiegeMascotEmotion.PROUD
             WordSiegeMascotAction.CHEER -> WordSiegeMascotEmotion.EXCITED
             WordSiegeMascotAction.FLINCH -> WordSiegeMascotEmotion.SURPRISED
+            WordSiegeMascotAction.GIGGLE -> WordSiegeMascotEmotion.LAUGH
+            WordSiegeMascotAction.SHIVER -> WordSiegeMascotEmotion.STRESSED
+            WordSiegeMascotAction.LOVE, WordSiegeMascotAction.SHY, WordSiegeMascotAction.BOUNCE -> WordSiegeMascotEmotion.HAPPY
+            WordSiegeMascotAction.PROUD_POSE -> WordSiegeMascotEmotion.PROUD
             else -> null
         }
         if (action == WordSiegeMascotAction.NUZZLE) heartsStartedAt = now + 1_000L
+        if (action == WordSiegeMascotAction.LOVE) heartsStartedAt = now + 600L
         if (action == WordSiegeMascotAction.FLINCH && blinkStartedAt < 0L) nextBlinkAt = now
         if (face != null && now >= reactionUntil) {
             reaction = face
@@ -678,7 +701,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             reactionUntil = now + duration
         }
         if (action == WordSiegeMascotAction.DANCE || action == WordSiegeMascotAction.SPARKLE ||
-            action == WordSiegeMascotAction.CHEER || action == WordSiegeMascotAction.STRETCH
+            action == WordSiegeMascotAction.CHEER || action == WordSiegeMascotAction.STRETCH ||
+            action == WordSiegeMascotAction.PROUD_POSE || action == WordSiegeMascotAction.BOUNCE
         ) sparklesStartedAt = now
         invalidate()
     }
@@ -865,6 +889,28 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
                 pose[P_SMILE] = .5f
                 pose[P_CHEEK] = 1f
             }
+            WordSiegeMascotAction.LOVE -> {
+                pose[P_LID] = .9f * envelope
+                pose[P_SMILE] = .9f
+                pose[P_CHEEK] = 1f
+            }
+            WordSiegeMascotAction.SHY -> {
+                pose[P_LID] = .45f * envelope
+                pose[P_SMILE] = .35f
+                pose[P_WIDTH] = .5f
+                pose[P_CHEEK] = envelope
+            }
+            WordSiegeMascotAction.GIGGLE -> {
+                pose[P_LID] = .7f * envelope
+                pose[P_SMILE] = 1f
+                pose[P_OPEN] = .25f + .15f * abs(sin(faceT * 10f * PI.toFloat()))
+                pose[P_CHEEK] = .9f * envelope
+            }
+            WordSiegeMascotAction.SHIVER -> {
+                pose[P_OPEN] = .18f
+                pose[P_WIDTH] = .8f
+                pose[P_LID] = .3f * envelope
+            }
             else -> Unit
         }
         val slow = mood.isSorrow()
@@ -956,6 +1002,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             WordSiegeMascotAction.WAVE, WordSiegeMascotAction.KNOCK -> { targetX = 0f; targetY = .05f }
             WordSiegeMascotAction.CHASE_RUN -> { targetX = if (flightDirection < 0f) -.98f else .98f; targetY = .05f }
             WordSiegeMascotAction.BALANCE -> { targetX = sin(faceT * 4f * PI.toFloat()) * .8f; targetY = .35f }
+            WordSiegeMascotAction.SHY -> { targetX = -.55f; targetY = .6f }
+            WordSiegeMascotAction.PROUD_POSE -> { targetX = .25f; targetY = -.45f }
             else -> Unit
         }
         targetY = max(targetY, bow * .95f)
@@ -1564,6 +1612,39 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
                 motion[4] = headX * 2f * actionEnvelope(t)
                 motion[1] = -3f * actionEnvelope(t)
             }
+            WordSiegeMascotAction.GIGGLE -> {
+                val shake = abs(sin(t * 10f * pi)) * actionEnvelope(t)
+                motion[1] = -7f * shake
+                motion[4] = 2.5f * sin(t * 6f * pi) * actionEnvelope(t)
+                motion[3] = 1f - .03f * shake
+            }
+            WordSiegeMascotAction.SHIVER -> {
+                val env = actionEnvelope(t)
+                motion[0] = 3.5f * sin(t * 44f * pi) * env
+                motion[3] = 1f - .05f * env
+                motion[1] = 5f * env
+            }
+            WordSiegeMascotAction.LOVE -> {
+                val melt = actionEnvelope(t)
+                motion[1] = -8f * melt
+                motion[4] = 4f * sin(t * 3f * pi) * melt
+                motion[3] = 1f + .03f * melt
+            }
+            WordSiegeMascotAction.PROUD_POSE -> {
+                // Anticipation dip, then puffs up and leans back with the chin raised.
+                val dip = if (t < .15f) sin(t / .15f * pi) else 0f
+                val puff = if (t < .15f) 0f else actionEnvelope(t)
+                motion[1] = 6f * dip - 14f * puff
+                motion[3] = 1f - .04f * dip + .07f * puff
+                motion[4] = -4f * puff
+            }
+            WordSiegeMascotAction.BOUNCE -> jump((t * 3f) % 1f, height = 30f, crouch = .07f, tilt = 0f)
+            WordSiegeMascotAction.SHY -> {
+                val env = actionEnvelope(t)
+                motion[4] = -5f * env + 1.5f * sin(t * 4f * pi) * env
+                motion[1] = 7f * env
+                motion[3] = 1f - .03f * env
+            }
         }
         val blend = actionEnvelope(t)
         motion[0] *= blend; motion[1] *= blend; motion[4] *= blend
@@ -2065,6 +2146,25 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
                 handTarget[2] = ORB_CX + 430f
                 handTarget[1] = 250f
                 handTarget[3] = 250f
+            }
+            WordSiegeMascotAction.GIGGLE -> {
+                handTarget[2] = MOUTH_X + 35f; handTarget[3] = MOUTH_Y + 55f + sin(now / 60f) * 8f
+            }
+            WordSiegeMascotAction.SHIVER -> {
+                handTarget[0] = ORB_CX - 260f + sin(now / 30f) * 6f; handTarget[2] = ORB_CX + 260f - sin(now / 30f) * 6f
+                handTarget[1] = 800f; handTarget[3] = 800f
+            }
+            WordSiegeMascotAction.LOVE -> {
+                handTarget[0] = LEFT_EYE_X - 60f; handTarget[2] = RIGHT_EYE_X + 60f
+                handTarget[1] = MOUTH_Y; handTarget[3] = MOUTH_Y
+            }
+            WordSiegeMascotAction.PROUD_POSE -> {
+                handTarget[0] = ORB_CX - 520f; handTarget[2] = ORB_CX + 520f
+                handTarget[1] = 860f; handTarget[3] = 860f
+            }
+            WordSiegeMascotAction.SHY -> {
+                handTarget[0] = ORB_CX - 70f + sin(now / 140f) * 12f; handTarget[2] = ORB_CX + 70f - sin(now / 140f) * 12f
+                handTarget[1] = 900f; handTarget[3] = 900f
             }
             else -> Unit
         }

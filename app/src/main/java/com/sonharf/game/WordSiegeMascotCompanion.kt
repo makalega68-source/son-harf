@@ -328,24 +328,32 @@ internal object WordSiegeMascotLines {
         "Harika gidiyorsun!" to "You're doing great!",
         "İşte bu!" to "That's it!",
         "Tam isabet!" to "Spot on!",
+        "Helal olsun!" to "Nailed it!",
+        "Aferin sana!" to "Well played!",
+        "Bravo! 👏" to "Bravo! 👏",
     )
     val bigPraise = listOf(
         "Vay canına, muhteşem!" to "Wow, magnificent!",
         "Bu kelime efsane! ✨" to "That word is legendary! ✨",
         "Rakip şokta!" to "The rival is in shock!",
         "Sen bir dâhisin %s!" to "You're a genius, %s!",
+        "Oha! Bu ne kelime böyle! 🤯" to "Whoa! What a word! 🤯",
+        "Eline sağlık %s, döktürdün! ✨" to "Brilliant work, %s! ✨",
     )
     val comfort = listOf(
         "Olsun, bir sonrakinde!" to "No worries, next one!",
         "Sorun yok, yeniden dene." to "It's okay, try again.",
         "Hata yapmak da oyunun parçası." to "Mistakes are part of the game.",
         "Derin bir nefes… sen yaparsın." to "Deep breath… you've got this.",
+        "Canın sağ olsun, sıradakine bakalım." to "Never mind, on to the next one.",
+        "Düşe kalka öğrenilir 💪" to "Every pro was once a beginner 💪",
     )
     val critical = listOf(
         "Hızlı ol, yapabilirsin!" to "Quick, you can do it!",
         "Son saniyeler, odaklan!" to "Last seconds, focus!",
         "Kısa bir kelime de iş görür!" to "A short word works too!",
         "Sakin ol, aklına gelecek!" to "Stay calm, it'll come to you!",
+        "Hadi hadi hadi! ⏳" to "Come on, come on! ⏳",
     )
     val behind = listOf(
         "Daha bitmedi, geri döneriz!" to "It's not over, we'll come back!",
@@ -395,22 +403,26 @@ internal object WordSiegeMascotLines {
         "Şampiyon sensin %s!" to "You're the champion, %s!",
         "Bu zafer ikimizin! ✨" to "This victory is ours! ✨",
         "Muhteşem bir maçtı!" to "What a match!",
+        "Helal olsun bize, kazandık! 🏆" to "Way to go, team! We won! 🏆",
     )
     val loss = listOf(
         "Üzülme… bir dahaki sefere biz kazanacağız." to "Don't be sad… we'll win next time.",
         "İyi mücadeleydi, seninle gurur duyuyorum." to "Good fight, I'm proud of you.",
         "Yanındayım, rövanşı alırız!" to "I'm with you, we'll get our revenge!",
+        "Bu sefer olmadı, kısmet bir dahakine 💛" to "Not this time, but the next one's ours 💛",
     )
     val morning = listOf(
         "Günaydın %s! ☀️ Güne bir zaferle başlayalım." to "Good morning, %s! ☀️ Let's start the day with a win.",
         "Günaydın! Kahveni aldıysan başlayalım ☕" to "Good morning! Got your coffee? Let's go ☕",
+        "Hayırlı sabahlar %s! Çayını demledin mi? 🫖" to "Morning, %s! Tea's brewing? Let's play 🫖",
     )
     val night = listOf(
         "Geç oldu… bir maç daha, sonra uyu 🌙" to "It's late… one more match, then sleep 🌙",
         "Gece kuşu %s! Ben de uykusuzum 🦉" to "Night owl %s! I can't sleep either 🦉",
+        "İyi geceler demeden bir el daha? 🌙" to "One more round before bed? 🌙",
     )
     val milestone = listOf(
-        "Bu bizim %n. buluşmamız! 🎉" to "This is our meeting number %n! 🎉",
+        "Bu bizim %n. buluşmamız! 🎉" to "We've met up %n times now! 🎉",
         "%n kez birlikte oynadık, harikasın! ✨" to "We've played together %n times, you're amazing! ✨",
     )
     val anniversary = listOf(
@@ -455,6 +467,62 @@ internal object WordSiegeMascotLines {
         "Şuradaki güç hücresine bir bak 👀" to "Take a look at this power cell 👀",
         "Burası puanı katlayabilir…" to "This spot could multiply your points…",
     )
+    /** Little jokes and tongue twisters while giggling. */
+    val giggle = listOf(
+        "Hihi, aklıma komik bir kelime geldi: gıdıklamak! 🤭" to "Hehe, a funny word popped into my head: tickle! 🤭",
+        "Ğ harfi neden hiç kelimeye başlamaz? Çünkü çok utangaç! 🤭" to "Why is Q always followed by U? It hates going out alone! 🤭",
+        "Tekerleme zamanı: Şu köşe yaz köşesi, şu köşe kış köşesi… 😄" to "Tongue twister time: she sells seashells by the seashore! 😄",
+        "Bir berber bir berbere… hihi, dilim dolandı! 😆" to "Red lorry, yellow lorry… oops, tongue-tied! 😆",
+        "Kelimeler de gıdıklanır mı? Bence “kıkır” gıdıklanır 🤭" to "Do words get ticklish? I bet “giggle” does 🤭",
+    )
+    val shiver = listOf(
+        "Brr… hava mı soğudu, ben mi üşüdüm? 🥶" to "Brr… is it cold or is it just me? 🥶",
+        "Şimdi bir sıcak çay olsa ne güzel olurdu ☕" to "I could really go for a hot cocoa right now ☕",
+        "Üşüdüm! Isınmak için bir el oynayalım mı? 🔥" to "I'm freezing! A quick round to warm up? 🔥",
+    )
+    val love = listOf(
+        "Seni seviyorum oyun arkadaşım! 💛" to "Love you, game buddy! 💛",
+        "İyi ki varsın %s! 💛" to "So glad you're here, %s! 💛",
+        "Nazar değmesin bize, harika takımız 🧿" to "Knock on wood, we're the best team 🍀",
+    )
+    val proud = listOf(
+        "Bu tahtanın en havalı maskotu kim? Benim tabii! 😎" to "Who's the coolest mascot here? Me, obviously! 😎",
+        "Helal olsun bize! 💪" to "Go team us! 💪",
+        "Bugün kendimi bir harika hissediyorum ✨" to "Feeling fabulous today ✨",
+    )
+    val shy = listOf(
+        "Öyle bakınca utanıyorum ama… ☺️" to "When you look at me like that, I get shy… ☺️",
+        "Bir şey söyleyecektim… yok, boş ver ☺️" to "I wanted to say something… never mind ☺️",
+    )
+    val bounce = listOf(
+        "Hop hop hop! Enerjim tavan! ⚡" to "Boing boing boing! I'm full of energy! ⚡",
+        "Yerimde duramıyorum, hadi oynayalım! 🎈" to "I can't sit still, let's play! 🎈",
+    )
+    /** After a sneeze: the Turkish "çok yaşa" custom. */
+    val sneeze = listOf(
+        "Hapşu! Çok yaşa bana! 😄" to "Achoo! Bless me! 😄",
+        "Hapşu! Biri beni mi andı? 🤧" to "Achoo! Is someone talking about me? 🤧",
+    )
+    /** Word culture: proverbs, idioms and language trivia. */
+    val wordFacts = listOf(
+        "Biliyor muydun? Türkçede Ğ ile başlayan kelime yok." to "Did you know? “Strengths” has nine letters and just one vowel.",
+        "Damlaya damlaya göl olur. Puanlar da öyle! 💧" to "Slow and steady wins the race. Points too! 🐢",
+        "Söz gümüşse sükût altındır… ama burada kelime altın! ✨" to "Silence is golden… but here, words are gold! ✨",
+        "Ayağını yorganına göre uzat, kelimeni de harflerine göre 😉" to "Cut your coat to fit your cloth, and your word to fit your letters 😉",
+        "Pijamalı hasta yağız şoföre çabucak güvendi: tüm harfler tek cümlede!" to "The quick brown fox jumps over the lazy dog: every letter in one sentence!",
+        "Bir lisan bir insan, iki lisan iki insan derler 🌍" to "They say a new language is a new way of seeing the world 🌍",
+        "Türkçe eklemeli bir dil: tek kelimeyle koca cümle kurulur! 🧩" to "English borrows words from everywhere, even “yogurt” is Turkish! 🧩",
+        "Az olsun, öz olsun: kısa kelime de puan getirir." to "Short and sweet: small words score points too.",
+    )
+    val monday = listOf(
+        "Pazartesi sendromu mu? Bir kelime iyi gelir 😅" to "Case of the Mondays? A word game helps 😅",
+    )
+    val friday = listOf(
+        "Cuma geldi, hafta sonu kokusu var! 🎉" to "It's Friday! I can smell the weekend! 🎉",
+    )
+    val weekend = listOf(
+        "Hafta sonu keyfi: bol kelime, bol kahkaha ☀️" to "Weekend mode: lots of words, lots of laughs ☀️",
+    )
     val chaseCatch = listOf(
         "Yakaladım! ✨" to "Got it! ✨",
         "Hop! Bir harf daha bizim." to "Whee! Another letter for us.",
@@ -480,6 +548,8 @@ internal enum class WordSiegeMascotIdle {
     WATCH, LOOK_AROUND, NOD, HOP, SPARKLE, DANCE, STRETCH, CHAT, WANDER, PEEK, CHASE, THINK, WAVE,
     /** Cute idles of their own: rocks side to side, winks, balances, claps, peekaboo, blows a kiss, sneezes, nuzzles. */
     SWAY, WINK, BALANCE, CLAP, PEEKABOO, KISS, SNEEZE, NUZZLE,
+    /** Livelier habits: giggles, shivers, hearts, a proud pose, triple hops and shyness. */
+    GIGGLE, SHIVER, LOVE, PROUD, BOUNCE, SHY,
 }
 
 /**
@@ -500,7 +570,7 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
 
     fun chance(probability: Float): Boolean = random.nextFloat() < probability
 
-    fun nextIdleDelay(): Long = 8_000L + random.nextLong(10_000L)
+    fun nextIdleDelay(): Long = 6_000L + random.nextLong(8_000L)
 
     fun pickIdle(
         now: Long,
@@ -516,7 +586,7 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
             listOf(WordSiegeMascotIdle.WATCH to 8f, WordSiegeMascotIdle.NOD to .5f)
         } else {
             listOf(
-                WordSiegeMascotIdle.WATCH to 6f,
+                WordSiegeMascotIdle.WATCH to 4.5f,
                 WordSiegeMascotIdle.LOOK_AROUND to 1.5f,
                 WordSiegeMascotIdle.NOD to .7f,
                 WordSiegeMascotIdle.HOP to .8f * playfulness,
@@ -538,6 +608,12 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
                 WordSiegeMascotIdle.KISS to .3f * playfulness,
                 WordSiegeMascotIdle.SNEEZE to .2f,
                 WordSiegeMascotIdle.NUZZLE to .45f,
+                WordSiegeMascotIdle.GIGGLE to .45f * playfulness,
+                WordSiegeMascotIdle.SHIVER to (if (coldSeason()) .35f else .06f),
+                WordSiegeMascotIdle.LOVE to (.25f + .12f * bondLevel),
+                WordSiegeMascotIdle.PROUD to .35f,
+                WordSiegeMascotIdle.BOUNCE to .4f * playfulness,
+                WordSiegeMascotIdle.SHY to .3f,
             )
         }
         val weighted = options.map { (idle, baseWeight) ->
@@ -588,6 +664,12 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
         WordSiegeMascotIdle.KISS -> 300_000L
         WordSiegeMascotIdle.SNEEZE -> 400_000L
         WordSiegeMascotIdle.NUZZLE -> 120_000L
+        WordSiegeMascotIdle.GIGGLE -> 100_000L
+        WordSiegeMascotIdle.SHIVER -> 300_000L
+        WordSiegeMascotIdle.LOVE -> 240_000L
+        WordSiegeMascotIdle.PROUD -> 150_000L
+        WordSiegeMascotIdle.BOUNCE -> 90_000L
+        WordSiegeMascotIdle.SHY -> 200_000L
     }
 
     /** Picks a line it has not said recently. */
@@ -600,6 +682,14 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
         val text = sh(chosen.first, chosen.second)
         return text.replace("%s", name ?: "").replace("%n", number.toString()).replace("%w", word)
             .replace(" !", "!").replace(" ,", ",").trim()
+    }
+
+    /** Winter months (and late nights) make shivering believable. */
+    private fun coldSeason(): Boolean {
+        val calendar = java.util.Calendar.getInstance()
+        val month = calendar.get(java.util.Calendar.MONTH)
+        val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+        return month in setOf(java.util.Calendar.DECEMBER, java.util.Calendar.JANUARY, java.util.Calendar.FEBRUARY) || hour < 5
     }
 
     private companion object {
@@ -976,6 +1066,7 @@ internal fun WordSiegeMascotCompanion(
                 val (meetings, daysAway) = bond.meet()
                 delay(350L)
                 val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val weekday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
                 val together = bond.daysTogether()
                 // Only the home screen greets with a bubble, and only once per app session.
                 val aloud = greetAloud && MascotGreetingSession.claim()
@@ -1030,6 +1121,9 @@ internal fun WordSiegeMascotCompanion(
                         val greetLines = when {
                             hour in 5..10 && mind.chance(.6f) -> WordSiegeMascotLines.morning
                             (hour >= 23 || hour < 5) && mind.chance(.7f) -> WordSiegeMascotLines.night
+                            mind.chance(.35f) && weekday == java.util.Calendar.MONDAY -> WordSiegeMascotLines.monday
+                            mind.chance(.35f) && weekday == java.util.Calendar.FRIDAY -> WordSiegeMascotLines.friday
+                            mind.chance(.35f) && (weekday == java.util.Calendar.SATURDAY || weekday == java.util.Calendar.SUNDAY) -> WordSiegeMascotLines.weekend
                             bond.level >= 2 -> WordSiegeMascotLines.greetBest
                             bond.level == 1 -> WordSiegeMascotLines.greetFriend
                             else -> lines(WordSiegeMascotTopic.GREET, WordSiegeMascotLines.greet)
@@ -1072,7 +1166,7 @@ internal fun WordSiegeMascotCompanion(
                             flyTo(homeIndex, 900)
                         }.join()
                     } else {
-                        val story = ambientSceneIndex++ % 8
+                        val story = ambientSceneIndex++ % 12
                         startTrip {
                             busy = true
                             watching = false
@@ -1132,6 +1226,36 @@ internal fun WordSiegeMascotCompanion(
                                             stageEmotion = WordSiegeMascotEmotion.HAPPY
                                             perform(WordSiegeMascotAction.WINK)
                                             delay(1_000L)
+                                        }
+                                    }
+                                    8 -> {
+                                        perform(WordSiegeMascotAction.GIGGLE)
+                                        say(mind.line(WordSiegeMascotLines.giggle, currentName), 600L)
+                                        delay(mascotActionMillis(WordSiegeMascotAction.GIGGLE) + 600L)
+                                        perform(WordSiegeMascotAction.BOUNCE)
+                                        delay(mascotActionMillis(WordSiegeMascotAction.BOUNCE))
+                                    }
+                                    9 -> {
+                                        perform(WordSiegeMascotAction.THINK)
+                                        delay(1_400L)
+                                        perform(WordSiegeMascotAction.POINT)
+                                        say(mind.line(WordSiegeMascotLines.wordFacts, currentName), 1_200L)
+                                        delay(3_200L)
+                                    }
+                                    10 -> {
+                                        perform(WordSiegeMascotAction.SHY)
+                                        delay(mascotActionMillis(WordSiegeMascotAction.SHY))
+                                        perform(WordSiegeMascotAction.LOVE)
+                                        say(mind.line(WordSiegeMascotLines.love, currentName), 600L)
+                                        delay(mascotActionMillis(WordSiegeMascotAction.LOVE))
+                                    }
+                                    11 -> {
+                                        perform(WordSiegeMascotAction.PROUD_POSE)
+                                        say(mind.line(WordSiegeMascotLines.proud, currentName), 400L)
+                                        delay(mascotActionMillis(WordSiegeMascotAction.PROUD_POSE))
+                                        if (mind.chance(.5f)) {
+                                            perform(WordSiegeMascotAction.SHIVER)
+                                            delay(mascotActionMillis(WordSiegeMascotAction.SHIVER))
                                         }
                                     }
                                     else -> {
@@ -1208,7 +1332,11 @@ internal fun WordSiegeMascotCompanion(
                     }
                     WordSiegeMascotIdle.CHAT -> {
                         val memory = if (mind.chance(.35f)) memoryLine() else null
-                        val chatLines = if (bond.level >= 1 && mind.chance(.4f)) WordSiegeMascotLines.chatFriend else lines(WordSiegeMascotTopic.CHAT, WordSiegeMascotLines.chat)
+                        val chatLines = when {
+                            mind.chance(.3f) -> WordSiegeMascotLines.wordFacts
+                            bond.level >= 1 && mind.chance(.4f) -> WordSiegeMascotLines.chatFriend
+                            else -> lines(WordSiegeMascotTopic.CHAT, WordSiegeMascotLines.chat)
+                        }
                         say(memory ?: mind.line(chatLines, currentName))
                     }
                     WordSiegeMascotIdle.WANDER -> {
@@ -1228,8 +1356,41 @@ internal fun WordSiegeMascotCompanion(
                     WordSiegeMascotIdle.CLAP -> perform(WordSiegeMascotAction.CLAP)
                     WordSiegeMascotIdle.PEEKABOO -> perform(WordSiegeMascotAction.HIDE_FACE)
                     WordSiegeMascotIdle.KISS -> perform(WordSiegeMascotAction.KISS)
-                    WordSiegeMascotIdle.SNEEZE -> perform(WordSiegeMascotAction.SNEEZE)
+                    WordSiegeMascotIdle.SNEEZE -> {
+                        perform(WordSiegeMascotAction.SNEEZE)
+                        if (mind.chance(.5f)) {
+                            delay(1_700L)
+                            say(mind.line(WordSiegeMascotLines.sneeze, currentName))
+                        }
+                    }
                     WordSiegeMascotIdle.NUZZLE -> perform(WordSiegeMascotAction.NUZZLE)
+                    WordSiegeMascotIdle.GIGGLE -> {
+                        perform(WordSiegeMascotAction.GIGGLE)
+                        if (mind.chance(.45f)) say(mind.line(WordSiegeMascotLines.giggle, currentName))
+                    }
+                    WordSiegeMascotIdle.SHIVER -> {
+                        perform(WordSiegeMascotAction.SHIVER)
+                        if (mind.chance(.5f)) say(mind.line(WordSiegeMascotLines.shiver, currentName))
+                    }
+                    WordSiegeMascotIdle.LOVE -> {
+                        perform(WordSiegeMascotAction.LOVE)
+                        if (mind.chance(.4f)) say(mind.line(WordSiegeMascotLines.love, currentName))
+                    }
+                    WordSiegeMascotIdle.PROUD -> {
+                        watching = false
+                        perform(WordSiegeMascotAction.PROUD_POSE)
+                        if (mind.chance(.35f)) say(mind.line(WordSiegeMascotLines.proud, currentName))
+                    }
+                    WordSiegeMascotIdle.BOUNCE -> {
+                        watching = false
+                        perform(WordSiegeMascotAction.BOUNCE)
+                        if (mind.chance(.25f)) say(mind.line(WordSiegeMascotLines.bounce, currentName))
+                    }
+                    WordSiegeMascotIdle.SHY -> {
+                        watching = false
+                        perform(WordSiegeMascotAction.SHY)
+                        if (mind.chance(.35f)) say(mind.line(WordSiegeMascotLines.shy, currentName))
+                    }
                     WordSiegeMascotIdle.CHASE -> {
                         // A glowing letter drifts by; it follows it with its eyes, then catches it.
                         watching = false
