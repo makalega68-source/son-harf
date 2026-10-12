@@ -147,6 +147,17 @@ jobs:
             adb pull /sdcard/preview-open.xml Preview-open.xml
             grep -q 'SATIN AL' Preview-open.xml
             timeout 60s adb exec-out screencap -p > Review-preview-dark-Android.png
+      - name: Report emulator crashes
+        if: failure()
+        run: |
+          for f in *-runtime.log; do
+            [ -f "$f" ] || continue
+            if grep -q "FATAL EXCEPTION" "$f"; then
+              echo "::error::crash in $f"
+              grep -A 25 "FATAL EXCEPTION" "$f" | head -30 | sed 's/^/::error::/'
+            fi
+          done
+          ls -1 *.png 2>/dev/null | tail -3 | sed 's/^/::notice::last frame /' || true
       - name: Validate frame and APK were produced by this checkout
         run: |
           test -s Ceviz-Fildisi-Android.png
