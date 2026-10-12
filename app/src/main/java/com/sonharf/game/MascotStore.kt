@@ -148,6 +148,7 @@ private fun WordSiegeMascotSkin.pitch(): String = when (this) {
     WordSiegeMascotSkin.CAT -> sh("Tembel, cilveli ve biraz kibirli. Uçan harfleri kovalar, kazanınca mırlar.", "Lazy, sassy and a bit proud. Chases flying letters, purrs when you win.")
     WordSiegeMascotSkin.ROBOT -> sh("Her şeyi hesaplar, istatistikle konuşur. Mutluluk modülü sende aşırı yüklenir.", "Calculates everything, speaks in stats. Its joy module overloads for you.")
     WordSiegeMascotSkin.ASTRONAUT -> sh("Hayalperest bir kâşif. Sıfır yerçekiminde takla atar, seni yıldızlara taşır.", "A dreamy explorer. Flips in zero gravity and takes you to the stars.")
+    WordSiegeMascotSkin.BIRD -> sh("Cıvıl cıvıl bir muhabbet kuşu. Kanat çırpıp uçar, iyi kelimelerde şakır, duygusunu kocaman gözleriyle söyler.", "A chirpy budgie. Flaps and flies, sings on good words and says how it feels with its big eyes.")
     WordSiegeMascotSkin.GOLD_KING -> sh("Maskotların kralı. Yalnızca taht sahibine bir hafta hizmet eder.", "King of mascots. Serves only the throne owner, for one week.")
 }
 
@@ -251,7 +252,7 @@ internal fun MascotStoreSection() {
             Text(notice, color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             }
         }
-        items(WordSiegeMascotSkin.entries.filter { it.listed }, key = { it.id }) { skin ->
+        items(WordSiegeMascotSkin.entries.filter { it.listed }.sortedByDescending { it.onSale }, key = { it.id }) { skin ->
             val owned = skin in WordSiegeMascotOwnership.owned
             MascotStoreCard(
                 skin = skin,
@@ -308,7 +309,7 @@ private fun MascotStoreHero() {
             Spacer(Modifier.height(12.dp))
             // Obi in front and sharp; the coming-soon friends stay misted beside him.
             Box(Modifier.fillMaxWidth().height(156.dp)) {
-                listOf(WordSiegeMascotSkin.PINK, WordSiegeMascotSkin.CAT, WordSiegeMascotSkin.ORB).forEach { skin ->
+                listOf(WordSiegeMascotSkin.PINK, WordSiegeMascotSkin.BIRD, WordSiegeMascotSkin.ORB).forEach { skin ->
                     if (!skin.onSale) {
                         Icon(Icons.Rounded.Pets, null, tint = MascotShop.Faint.copy(alpha = .4f),
                             modifier = Modifier.align(if (skin == WordSiegeMascotSkin.PINK) Alignment.CenterStart else Alignment.CenterEnd).size(84.dp))
@@ -322,7 +323,7 @@ private fun MascotStoreHero() {
                             WordSiegeMascotSkin.ORB -> Alignment.Center
                             WordSiegeMascotSkin.PINK -> Alignment.CenterStart
                             else -> Alignment.CenterEnd
-                        }).size(if (skin.onSale) 150.8.dp else 111.8.dp)
+                        }).size(if (skin == WordSiegeMascotSkin.ORB) 150.8.dp else if (skin.onSale) 122.dp else 111.8.dp)
                             .then(if (skin.onSale) Modifier else Modifier.mascotMist(8.dp)),
                         skin = skin,
                     )

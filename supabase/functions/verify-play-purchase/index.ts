@@ -6,7 +6,7 @@ const jsonHeaders = { "Content-Type": "application/json", "Cache-Control": "no-s
 const subscriptionProducts = new Set(["vip_monthly", "vip_yearly", "season_pass", "season_pass_monthly"]);
 const mascotProducts = [
   "mascot_klasik", "mascot_pembe", "mascot_mavi_seytancik", "mascot_kirmizi_seytancik",
-  "mascot_tekir", "mascot_robot", "mascot_astronot",
+  "mascot_tekir", "mascot_robot", "mascot_astronot", "mascot_cikcik",
 ];
 // Premium profile frames: permanent one-time products; the grant puts the frame in the inventory.
 const frameProducts = [

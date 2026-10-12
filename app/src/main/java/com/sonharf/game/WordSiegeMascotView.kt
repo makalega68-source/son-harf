@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
@@ -1151,7 +1152,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
         canvas.concat(bodyMatrix)
 
-        if (wing > .01f) drawWings(canvas, now)
+        if (wing > .01f && skin != WordSiegeMascotSkin.BIRD) drawWings(canvas, now)
         decor.drawBehind(canvas)
         drawLayer(canvas, "orb_face_base")
         val sparkling = actionKind == WordSiegeMascotAction.SPARKLE && now < actionUntil
@@ -1239,19 +1240,24 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         // Raw mouth targets avoid stacking two filters: ~95% response in 200 ms, including speech/yawns.
         val mouthBlend = 1f - kotlin.math.exp(-dt * 15f)
         for (i in 0 until 3) mouthValue[i] += (mouthTarget[i] - mouthValue[i]) * mouthBlend
-        drawMouth(canvas, mouthValue[0], mouthValue[1], mouthValue[2])
+        if (skin == WordSiegeMascotSkin.BIRD) drawBeak(canvas, mouthValue[1]) else drawMouth(canvas, mouthValue[0], mouthValue[1], mouthValue[2])
         if (actionKind == WordSiegeMascotAction.EAT && faceT >= 0f) drawLetterSnack(canvas, faceT)
         decor.drawFace(canvas, mouthTopY(mouthValue[0], mouthValue[1]), mouthValue[1])
         if (mood == WordSiegeMascotEmotion.TEARY) drawTears(canvas, now)
         canvas.restore()
 
         if (mood == WordSiegeMascotEmotion.STRESSED || urgency > .45f) drawSweat(canvas, now)
-        canvas.save()
-        canvas.concat(bodyInverse)
-        setBodyMatrix(followMatrix, followValue)
-        canvas.concat(followMatrix)
-        drawHands(canvas, now, mood, dt)
-        canvas.restore()
+        if (skin == WordSiegeMascotSkin.BIRD) {
+            // A bird has wings instead of floating hands: they carry its gestures.
+            drawBirdWings(canvas, now, mood, dt)
+        } else {
+            canvas.save()
+            canvas.concat(bodyInverse)
+            setBodyMatrix(followMatrix, followValue)
+            canvas.concat(followMatrix)
+            drawHands(canvas, now, mood, dt)
+            canvas.restore()
+        }
         // The tuft is attached at the crown. Only its own small pivot sway may lag;
         // its root must share the body's exact transform on every frame.
         decor.drawFront(canvas)
@@ -1994,6 +2000,124 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             canvas.drawPath(path, detailPaint)
         }
         detailPaint.alpha = 255
+    }
+
+    // ---- Cikcik the budgie: feathered wings and a beak --------------------------------------------
+    private val birdWingPath = Path().apply {
+        moveTo(0f, 0f)
+        cubicTo(70f, -30f, 170f, 10f, 205f, 120f)
+        quadTo(195f, 200f, 152f, 232f)
+        quadTo(140f, 196f, 112f, 204f)
+        quadTo(106f, 252f, 70f, 254f)
+        quadTo(66f, 210f, 38f, 208f)
+        quadTo(18f, 236f, -8f, 206f)
+        cubicTo(-40f, 140f, -30f, 50f, 0f, 0f)
+        close()
+    }
+    private val birdWingFeatherPath = Path().apply {
+        moveTo(34f, 62f); quadTo(96f, 96f, 150f, 206f)
+        moveTo(12f, 94f); quadTo(58f, 140f, 76f, 232f)
+        moveTo(74f, 30f); quadTo(150f, 72f, 188f, 156f)
+    }
+    private val birdWingFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = LinearGradient(0f, 0f, 140f, 250f, intArrayOf(0xFFB6E64E.toInt(), 0xFF5FA01C.toInt(), 0xFF2E6A0C.toInt()),
+            floatArrayOf(0f, .55f, 1f), Shader.TileMode.CLAMP)
+        setShadowLayer(18f, 0f, 8f, 0x520C061E)
+    }
+    private val birdWingLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 7f
+        strokeCap = Paint.Cap.ROUND
+        color = 0xC01E4A06.toInt()
+    }
+    private val birdFeatherLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+        strokeCap = Paint.Cap.ROUND
+        color = 0x8CF4FFD0.toInt()
+    }
+    private val beakFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = LinearGradient(0f, MOUTH_Y - 80f, 0f, MOUTH_Y + 40f, intArrayOf(0xFFFFD27A.toInt(), 0xFFFF9A3C.toInt(), 0xFFD9601A.toInt()),
+            floatArrayOf(0f, .5f, 1f), Shader.TileMode.CLAMP)
+        setShadowLayer(10f, 0f, 5f, 0x520C061E)
+    }
+    private val beakLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 6f
+        strokeJoin = Paint.Join.ROUND
+        color = 0xC07A2E06.toInt()
+    }
+    private val beakInside = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF5A1414.toInt() }
+    private val beakUpper = Path()
+    private val beakLower = Path()
+    private var birdBase = 0f
+    private var birdAmp = 0f
+
+    /** Folded wings at the sides that ruffle at rest, flap with joy and beat fast in flight. */
+    private fun drawBirdWings(canvas: Canvas, now: Long, mood: WordSiegeMascotEmotion, dt: Float) {
+        val acting = actionKind?.takeIf { now < actionUntil }
+        val flying = wing > .01f
+        val cheering = acting == WordSiegeMascotAction.WAVE || acting == WordSiegeMascotAction.CLAP ||
+            acting == WordSiegeMascotAction.CHEER || acting == WordSiegeMascotAction.DANCE ||
+            acting == WordSiegeMascotAction.HOP || acting == WordSiegeMascotAction.BOUNCE ||
+            acting == WordSiegeMascotAction.SPARKLE || acting == WordSiegeMascotAction.PROUD_POSE
+        val joyful = mood == WordSiegeMascotEmotion.HAPPY || mood == WordSiegeMascotEmotion.LAUGH ||
+            mood == WordSiegeMascotEmotion.EXCITED || mood == WordSiegeMascotEmotion.JUMP
+        val (base, amp, period) = when {
+            flying -> Triple(46f * min(1f, wing), 42f, 52f)
+            cheering -> Triple(30f, 30f, 68f)
+            joyful -> Triple(10f, 9f, 120f)
+            mood.isSorrow() -> Triple(-10f, 0f, 400f)
+            acting == WordSiegeMascotAction.SHIVER -> Triple(-4f, 3f, 25f)
+            acting == WordSiegeMascotAction.LOVE || acting == WordSiegeMascotAction.SHY -> Triple(-6f, 0f, 400f)
+            else -> Triple(2f, 2.5f, 700f)
+        }
+        val k = 1f - kotlin.math.exp(-dt * 9f)
+        birdBase += (base - birdBase) * k
+        birdAmp += (amp - birdAmp) * k
+        val angle = birdBase + birdAmp * sin(now / period)
+        var side = -1
+        while (side <= 1) {
+            canvas.save()
+            canvas.translate(ORB_CX + side * 300f, 690f)
+            canvas.scale(side.toFloat(), 1f)
+            // Thinking raises one wing to the chin like a hand; pointing stretches the other out.
+            val extra = when (acting) {
+                WordSiegeMascotAction.THINK -> if (side == 1) 38f else 0f
+                WordSiegeMascotAction.POINT -> if (side == 1) 58f else 0f
+                else -> 0f
+            }
+            canvas.rotate(-(angle + extra))
+            canvas.drawPath(birdWingPath, birdWingFill)
+            canvas.drawPath(birdWingPath, birdWingLine)
+            canvas.drawPath(birdWingFeatherPath, birdFeatherLine)
+            canvas.restore()
+            side += 2
+        }
+    }
+
+    /** The beak replaces the mouth: the lower half drops open while talking or surprised. */
+    private fun drawBeak(canvas: Canvas, open: Float) {
+        val cx = MOUTH_X
+        val top = MOUTH_Y - 70f
+        val o = open.coerceIn(0f, 1f) * 40f
+        if (o > 3f) canvas.drawOval(cx - 30f, top + 36f, cx + 30f, top + 62f + o, beakInside)
+        beakLower.rewind()
+        beakLower.moveTo(cx - 34f, top + 44f + o)
+        beakLower.quadTo(cx, top + 34f + o, cx + 34f, top + 44f + o)
+        beakLower.quadTo(cx + 16f, top + 80f + o, cx, top + 96f + o)
+        beakLower.quadTo(cx - 16f, top + 80f + o, cx - 34f, top + 44f + o)
+        beakLower.close()
+        canvas.drawPath(beakLower, beakFill)
+        canvas.drawPath(beakLower, beakLine)
+        beakUpper.rewind()
+        beakUpper.moveTo(cx - 54f, top + 4f)
+        beakUpper.quadTo(cx, top - 24f, cx + 54f, top + 4f)
+        beakUpper.quadTo(cx + 30f, top + 52f, cx, top + 90f)
+        beakUpper.quadTo(cx - 30f, top + 52f, cx - 54f, top + 4f)
+        beakUpper.close()
+        canvas.drawPath(beakUpper, beakFill)
+        canvas.drawPath(beakUpper, beakLine)
     }
 
     private fun drawWings(canvas: Canvas, now: Long) {

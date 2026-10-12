@@ -29,6 +29,7 @@ object ProductCatalog {
     const val MASCOT_TEKIR = "mascot_tekir"
     const val MASCOT_ROBOT = "mascot_robot"
     const val MASCOT_ASTRONOT = "mascot_astronot"
+    const val MASCOT_CIKCIK = "mascot_cikcik"
     const val MASCOT_LIST_PRICE_TRY = "680 TL"
 
     val mascotProducts = listOf(
@@ -39,6 +40,7 @@ object ProductCatalog {
         MASCOT_TEKIR,
         MASCOT_ROBOT,
         MASCOT_ASTRONOT,
+        MASCOT_CIKCIK,
     )
 
     // Premium keyboards: permanent one-time products, 50 TL each (price set in Play Console). The

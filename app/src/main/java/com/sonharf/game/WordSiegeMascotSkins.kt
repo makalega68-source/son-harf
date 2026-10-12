@@ -30,12 +30,14 @@ internal enum class WordSiegeMascotSkin(
     CAT("tekir", "Mino", "Mino", "Tekir kedi", "Tabby cat"),
     ROBOT("robot", "Bibo", "Bibo", "Robot", "Robot"),
     ASTRONAUT("astronot", "Novi", "Novi", "Astronot", "Astronaut"),
+    /** A chirpy budgie: feather crest, beak, flapping wings, tail and little feet. */
+    BIRD("cikcik", "Cikcik", "Cikcik", "Muhabbet kuşu", "Budgie"),
     /** The throne owner's weekly reward; never sold and never listed in the store. */
     GOLD_KING("altin_kral", "Altın Kral", "Golden King", "Maskotların kralı", "King of mascots"),
     ;
 
-    /** Only Obi is sold for now; the others come later ("Yakında"). */
-    val onSale: Boolean get() = this == ORB
+    /** Obi and Cikcik are sold; the others come later ("Yakında"). */
+    val onSale: Boolean get() = this == ORB || this == BIRD
 
     /** Store and collection characters; the Golden King only comes with the throne. */
     val listed: Boolean get() = this != GOLD_KING
@@ -100,6 +102,8 @@ internal class WordSiegeMascotPalette(private val stops: FloatArray, private val
             WordSiegeMascotSkin.DEVIL_RED -> of(.1f, 0f to 0xFF12020A, .3f to 0xFF5C0718, .55f to 0xFFE0283A, .78f to 0xFFFF8D5E, 1f to 0xFFFFF0DE)
             WordSiegeMascotSkin.CAT -> of(.1f, 0f to 0xFF150802, .3f to 0xFF652806, .55f to 0xFFEA7A1C, .78f to 0xFFFFC46A, 1f to 0xFFFFFAF0)
             WordSiegeMascotSkin.ROBOT -> of(.35f, 0f to 0xFF05070C, .3f to 0xFF263140, .55f to 0xFF7A8CA4, .78f to 0xFFCFDBE8, 1f to 0xFFFFFFFF)
+            // Fresh spring green with a sunny highlight, like a budgie in the light.
+            WordSiegeMascotSkin.BIRD -> of(.1f, 0f to 0xFF0C2604, .3f to 0xFF3C7A10, .55f to 0xFF86C82A, .78f to 0xFFD2EE70, 1f to 0xFFFFFFE8)
             // Bright liquid gold even in the orb's dark glass: the darkest tones map to warm amber, not brown-black.
             WordSiegeMascotSkin.GOLD_KING -> of(.06f, 0f to 0xFF8A5A0C, .22f to 0xFFC98A1E, .45f to 0xFFF2BE3E, .7f to 0xFFFFE07A, 1f to 0xFFFFFCEB)
         }
@@ -135,6 +139,7 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
         WordSiegeMascotSkin.CAT -> intArrayOf(0xFFFFF6E8.toInt(), 0xFFE0B27A.toInt())
         WordSiegeMascotSkin.ROBOT -> intArrayOf(0xFFF4F7FB.toInt(), 0xFF6D7A8C.toInt())
         WordSiegeMascotSkin.ASTRONAUT -> intArrayOf(0xFFFFFFFF.toInt(), 0xFFB8C6D8.toInt())
+        WordSiegeMascotSkin.BIRD -> intArrayOf(0xFFD8F28A.toInt(), 0xFF4E9A18.toInt())
         WordSiegeMascotSkin.GOLD_KING -> intArrayOf(0xFFFFF3C4.toInt(), 0xFFC8962F.toInt())
     }
     val pawPads = skin == WordSiegeMascotSkin.CAT
@@ -194,6 +199,13 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
                 wingColors = intArrayOf(0xE6A8F4FF.toInt(), 0xB39A7CFF.toInt())
                 target = tuft; magicTuft(0xFF56B8F7, 0xFFFFFFFF, 0xF2A0E6FF, 0xFF16305A)
                 target = front; helmet()
+            }
+            WordSiegeMascotSkin.BIRD -> {
+                ringColors = intArrayOf(0xFFE8FF9A.toInt(), 0xFF9BD83A.toInt(), 0xFF3C7A10.toInt(), 0xFFFFB45A.toInt(), 0xFFE8FF9A.toInt())
+                wingColors = intArrayOf(0xF286C82A.toInt(), 0xE63C7A10.toInt())
+                target = behind; birdTail()
+                target = tuft; birdCrest()
+                target = front; birdFeet()
             }
             WordSiegeMascotSkin.GOLD_KING -> {
                 ringColors = intArrayOf(0xFFFFF3C4.toInt(), 0xFFFFD86A.toInt(), 0xFFC8962F.toInt(), 0xFFFFE7A3.toInt(), 0xFFFFF3C4.toInt())
@@ -357,6 +369,37 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
         glint(836f, 56f, 20f, .95f, glow)
         glint(610f, 110f, 13f, .9f, glow)
         glint(850f, 120f, 9f, .85f, glow)
+    }
+
+    /** Three soft feathers springing up from the crown, swaying with the tuft. */
+    private fun birdCrest() {
+        resetMatrix()
+        val g = { lin(700f, 220f, 760f, 60f, 0f to 0xFF3C7A10, .55f to 0xFF8CCB2E, 1f to 0xFFE6FF9C) }
+        add(taper(floatArrayOf(690f, 236f, 650f, 170f, 600f, 150f, 572f, 176f), 58f, 6f), fill(g(), shadow = true), line(0xFF1E4A06, 8f))
+        add(taper(floatArrayOf(730f, 236f, 780f, 176f, 830f, 168f, 852f, 198f), 52f, 6f), fill(g(), shadow = true), line(0xFF1E4A06, 8f))
+        add(taper(floatArrayOf(706f, 240f, 690f, 150f, 726f, 72f, 790f, 70f), 80f, 8f), fill(g(), shadow = true), line(0xFF1E4A06, 8f))
+        streak(floatArrayOf(700f, 210f, 698f, 150f, 716f, 104f, 748f, 84f), 9f, .7f)
+    }
+
+    /** A fan of long tail feathers behind the body, lower right. */
+    private fun birdTail() {
+        resetMatrix()
+        val g = { lin(980f, 900f, 1210f, 760f, 0f to 0xFF2E6A0C, .6f to 0xFF7DBE26, 1f to 0xFFC8EC66) }
+        add(taper(floatArrayOf(960f, 930f, 1060f, 900f, 1150f, 840f, 1230f, 720f), 70f, 14f), fill(g(), shadow = true), line(0xFF1E4A06, 8f))
+        add(taper(floatArrayOf(960f, 960f, 1070f, 950f, 1170f, 920f, 1240f, 840f), 62f, 12f), fill(g(), shadow = true), line(0xFF1E4A06, 8f))
+        add(taper(floatArrayOf(950f, 990f, 1060f, 1000f, 1150f, 990f, 1215f, 950f), 52f, 10f), fill(g()), line(0xFF1E4A06, 7f))
+    }
+
+    /** Two little orange feet with three toes each, peeking out under the body. */
+    private fun birdFeet() {
+        resetMatrix()
+        val orange = { lin(0f, 1010f, 0f, 1080f, 0f to 0xFFFFB04A, 1f to 0xFFE0661C) }
+        for (cx in floatArrayOf(560f, 780f)) {
+            for (dx in floatArrayOf(-38f, 0f, 38f)) {
+                add(taper(floatArrayOf(cx, 1020f, cx + dx * .3f, 1040f, cx + dx * .8f, 1062f, cx + dx, 1078f), 26f, 12f),
+                    fill(orange(), shadow = true), line(0xFF7A2E06, 6f))
+            }
+        }
     }
 
     private fun horn(side: Float, c0: Long, c1: Long, c2: Long) {

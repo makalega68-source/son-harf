@@ -31,8 +31,78 @@ internal class WordSiegeMascotPersonality(
             WordSiegeMascotSkin.CAT -> MIRNAV
             WordSiegeMascotSkin.ROBOT -> BIPBOP
             WordSiegeMascotSkin.ASTRONAUT -> NOVA
+            WordSiegeMascotSkin.BIRD -> CIKCIK
             WordSiegeMascotSkin.GOLD_KING -> KING
         }
+
+        /** Cikcik: a chirpy, curious budgie who loves to flutter about and sing out good words. */
+        private val CIKCIK = WordSiegeMascotPersonality(
+            chattiness = 1.2f,
+            playfulness = 1.3f,
+            idleBias = mapOf(
+                WordSiegeMascotIdle.HOP to 2.2f,
+                WordSiegeMascotIdle.BOUNCE to 2f,
+                WordSiegeMascotIdle.WANDER to 1.8f,
+                WordSiegeMascotIdle.LOOK_AROUND to 1.6f,
+                WordSiegeMascotIdle.DANCE to 1.4f,
+                WordSiegeMascotIdle.GIGGLE to 1.4f,
+            ),
+            lines = mapOf(
+                WordSiegeMascotTopic.GREET_FIRST to listOf(
+                    "Cik cik! Ben Cikcik, kanatlarım seninle! 🐦" to "Tweet tweet! I'm Cikcik, my wings are with you! 🐦",
+                    "Selam %s! Cikcik uçtu geldi, hadi oynayalım! 🪶" to "Hi %s! Cikcik flew right in, let's play! 🪶",
+                ),
+                WordSiegeMascotTopic.GREET to listOf(
+                    "Cik cik! Yine geldin! 🐦" to "Tweet tweet! You're back! 🐦",
+                    "Tüylerimi taradım, hazırım! 🪶" to "Feathers preened, I'm ready! 🪶",
+                    "Bugün kelimeler cıvıl cıvıl! 🎶" to "Words are chirping today! 🎶",
+                ),
+                WordSiegeMascotTopic.HELLO to listOf(
+                    "Cikcik konduuu! 🐦" to "Cikcik has landed! 🐦",
+                    "Kanat çırp, kelime kap! 🪶" to "Flap a wing, grab a word! 🪶",
+                ),
+                WordSiegeMascotTopic.PRAISE to listOf(
+                    "Cik cik, süper hamle! 🎶" to "Tweet, super move! 🎶",
+                    "Tüylerim diken diken! 🪶" to "That gave me goosebumps! 🪶",
+                    "Kuş gibi hafif, ok gibi isabetli! 🎯" to "Light as a feather, sharp as an arrow! 🎯",
+                ),
+                WordSiegeMascotTopic.BIG_PRAISE to listOf(
+                    "Gökyüzü kadar büyük bir kelime! ☁️✨" to "A word as big as the sky! ☁️✨",
+                    "Şakımaya başlıyorum, muhteşem! 🎶🎉" to "I'm bursting into song, magnificent! 🎶🎉",
+                ),
+                WordSiegeMascotTopic.RARE_WORD to listOf(
+                    "%w mi? Bunu ağacın tepesinden bile görmedim! 😲" to "%w? I've never seen that even from the treetops! 😲",
+                ),
+                WordSiegeMascotTopic.COMFORT to listOf(
+                    "Olsun, kanadını silkele, yeniden! 🪶" to "Never mind, shake your feathers and try again! 🪶",
+                    "Her kuş ilk uçuşta düşer biraz. 💚" to "Every bird wobbles on its first flight. 💚",
+                ),
+                WordSiegeMascotTopic.CRITICAL to listOf(
+                    "Çabuk çabuk, cik cik! ⏳" to "Quick quick, tweet tweet! ⏳",
+                    "Kanat çırp, bir kelime yakala! 🪶" to "Flap fast, catch a word! 🪶",
+                ),
+                WordSiegeMascotTopic.BEHIND to listOf(
+                    "Rüzgâr tersine esiyor ama biz uçarız! 🌬️" to "The wind's against us, but we can fly! 🌬️",
+                ),
+                WordSiegeMascotTopic.AHEAD to listOf(
+                    "Bulutların üstündeyiz! ☁️" to "We're above the clouds! ☁️",
+                ),
+                WordSiegeMascotTopic.TAP to listOf(
+                    "Cik! Gıdıklandım! 🐦" to "Tweet! That tickles! 🐦",
+                    "Tüylerimi karıştırma ama, hihi! 🪶" to "Don't ruffle my feathers, hehe! 🪶",
+                ),
+                WordSiegeMascotTopic.DANCE to listOf(
+                    "Cik cik dansı! 🎶" to "The tweet-tweet dance! 🎶",
+                ),
+                WordSiegeMascotTopic.WIN to listOf(
+                    "Zafer şarkısı söylüyorum! 🎶🏆" to "I'm singing a victory song! 🎶🏆",
+                    "Gökyüzünün kralı biziz! 🐦👑" to "We rule the sky! 🐦👑",
+                ),
+                WordSiegeMascotTopic.LOSS to listOf(
+                    "Kanatlarım biraz düştü… ama yarın yine uçarız. 💚" to "My wings drooped a bit… but tomorrow we fly again. 💚",
+                ),
+            ),
+        )
 
         /** Altın Kral: the throne owner's regal, generous companion for one week. */
         private val KING = WordSiegeMascotPersonality(
