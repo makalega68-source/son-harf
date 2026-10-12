@@ -226,8 +226,9 @@ internal fun HomeLobbyScreen(
             // Room to scroll the last card clear of Eve in the bottom corner.
             Spacer(Modifier.height(140.dp))
         }
-        // Eve, the 3D forest friend, lives in the bottom-left corner of the lobby for everyone.
-        EveHomeFriend(
+        // Eve, the 3D forest friend, lives in the bottom-left corner of the lobby for everyone. Her
+        // 3D view is released whenever the app is in the background (no GPU or battery use there).
+        if (foreground) EveHomeFriend(
             playerName = p?.displayName,
             modifier = Modifier.align(Alignment.BottomStart).padding(start = 2.dp, bottom = 2.dp),
         )
