@@ -259,3 +259,15 @@ jobs:
         run: |
           gh release view final-test >/dev/null 2>&1 || gh release create final-test --title "Son Harf Final Test" --notes "Son Harf Android final test build."
           gh release upload final-test SonHarf-Final-Test.apk --clobber
+
+      # Phones cannot always open GitHub's artifact ZIPs: the branch's test APK is also published
+      # as a plain .apk download on a pre-release.
+      - name: Publish branch test APK as a direct download
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/claude/mascot-animations-behavior-31rof9' && env.NO_APK != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp SonHarf-Final-Test.apk Kelime-Tahti-Test.apk
+          gh release view branch-test >/dev/null 2>&1 || gh release create branch-test --prerelease --target "$GITHUB_SHA" --title "Kelime Tahtı test APK" --notes "Kelime Tahtı test sürümü (doğrudan kurulabilir APK)."
+          gh release edit branch-test --notes "Kelime Tahtı test sürümü, commit ${GITHUB_SHA::8}. Doğrudan kurulabilir APK."
+          gh release upload branch-test Kelime-Tahti-Test.apk --clobber
