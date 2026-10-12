@@ -469,7 +469,8 @@ private fun EveLiveModel(
     expression: () -> EveExpression,
 ) {
     // The body turns smoothly towards where she is heading (0 = facing the player).
-    val turn = remember { FloatArray(2) }
+    val turn = remember { FloatArray(1) }
+    val lastFrame = remember { LongArray(1) }
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, EveAsset.MODEL) ?: return
@@ -494,17 +495,18 @@ private fun EveLiveModel(
         onFrame = { frameTimeNanos ->
             nodeProvider()?.let { live ->
                 runCatching {
-                    val dt = if (turn[1] == 0f) 0f else ((frameTimeNanos / 1e9f) - turn[1]).coerceIn(0f, .1f)
-                    turn[1] = frameTimeNanos / 1e9f
+                    val dt = if (lastFrame[0] == 0L) 0f else ((frameTimeNanos - lastFrame[0]) / 1e9f).coerceIn(0f, .1f)
+                    lastFrame[0] = frameTimeNanos
                     var delta = bodyYaw() - turn[0]
                     while (delta > 180f) delta -= 360f
                     while (delta < -180f) delta += 360f
                     turn[0] += delta * (1f - kotlin.math.exp(-dt * 8f))
-                    live.rotation = Rotation(y = turn[0])
                     // Rest pose first so the procedural layer never accumulates on bones a clip leaves alone.
                     rig?.restore()
                     mixer.apply(live.animator, frameTimeNanos)
                     if (mixer.uses(live.animator, EveClip.WALK.clipName) || mixer.uses(live.animator, EveClip.RUN.clipName)) rig?.pinRoot()
+                    // She turns on her own skeleton (root bone); the scene node itself is never moved.
+                    rig?.face(turn[0])
                     rig?.express(expression(), frameTimeNanos)
                     live.animator.updateBoneMatrices()
                 }
@@ -606,10 +608,31 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
         tm.setTransform(instance, m)
     }
 
+    /**
+     * Turns her whole body by [yaw] degrees (0 = facing the player) about a vertical axis through
+     * her root bone. The armature is Z-up, so the world's vertical is the root's parent z axis.
+     */
+    fun face(yaw: Float) {
+        val instance = root ?: return
+        if (kotlin.math.abs(yaw) < .01f) return
+        tm.getTransform(instance, m)
+        val a = Math.toRadians(yaw.toDouble())
+        val c = kotlin.math.cos(a).toFloat()
+        val s = kotlin.math.sin(a).toFloat()
+        for (col in 0 until 3) {
+            val x = m[col * 4]
+            val y = m[col * 4 + 1]
+            m[col * 4] = c * x - s * y
+            m[col * 4 + 1] = s * x + c * y
+        }
+        tm.setTransform(instance, m)
+    }
+
     fun express(expression: EveExpression, now: Long) {
         val dt = if (lastFrame == 0L) 0f else ((now - lastFrame) / 1e9f).coerceIn(0f, .1f)
         lastFrame = now
-        val t = now / 1e9f
+        // Seconds within the hour: a Float of raw uptime nanoseconds would step in ~30 ms jumps.
+        val t = ((now / 1_000_000L) % 3_600_000L) / 1_000f
         // Slow glances and the odd ear twitch keep her alive between feelings.
         if (now > nextGlanceAt) {
             // Mostly she looks right at the player; now and then a calm glance aside.
