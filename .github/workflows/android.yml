@@ -271,3 +271,14 @@ jobs:
           gh release view branch-test >/dev/null 2>&1 || gh release create branch-test --prerelease --target "$GITHUB_SHA" --title "Kelime Tahtı test APK" --notes "Kelime Tahtı test sürümü (doğrudan kurulabilir APK)."
           gh release edit branch-test --notes "Kelime Tahtı test sürümü, commit ${GITHUB_SHA::8}. Doğrudan kurulabilir APK."
           gh release upload branch-test Kelime-Tahti-Test.apk --clobber
+          # A small phone build too: the store-shrunk APK with only the arm64 native libraries,
+          # re-signed with the same debug key so it installs over the test build.
+          BT="$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 -type d | sort -V | tail -1)"
+          cp app/build/outputs/apk/releaseCheck/app-releaseCheck.apk lite-unsigned.apk
+          zip -q -d lite-unsigned.apk 'lib/x86/*' 'lib/x86_64/*' 'lib/armeabi-v7a/*' 'META-INF/*.SF' 'META-INF/*.RSA' 'META-INF/*.MF' || true
+          "$BT/zipalign" -f -p 4 lite-unsigned.apk lite-aligned.apk
+          "$BT/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --out Kelime-Tahti-Lite.apk lite-aligned.apk
+          "$BT/apksigner" verify --print-certs Kelime-Tahti-Lite.apk | head -3
+          "$BT/apksigner" verify --print-certs Kelime-Tahti-Test.apk | head -3
+          echo "LITE_APK_BYTES=$(stat -c%s Kelime-Tahti-Lite.apk)"
+          gh release upload branch-test Kelime-Tahti-Lite.apk --clobber
