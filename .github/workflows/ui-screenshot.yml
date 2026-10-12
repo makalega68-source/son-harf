@@ -157,7 +157,8 @@ jobs:
               grep -A 25 "FATAL EXCEPTION" "$f" | head -30 | sed 's/^/::error::/'
             fi
           done
-          ls -1 *.png 2>/dev/null | tail -3 | sed 's/^/::notice::last frame /' || true
+          ls -1t *.png *.xml *.txt 2>/dev/null | head -8 | sed 's/^/::notice::newest file /' || true
+          [ -f Mascot-drag-logcat.txt ] && grep -E "FATAL|AndroidRuntime|Filament|sceneview|libc  " Mascot-drag-logcat.txt | tail -25 | sed 's/^/::error::/' || true
       - name: Validate frame and APK were produced by this checkout
         run: |
           test -s Ceviz-Fildisi-Android.png
