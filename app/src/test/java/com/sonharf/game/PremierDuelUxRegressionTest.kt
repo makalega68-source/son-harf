@@ -18,7 +18,7 @@ class PremierDuelUxRegressionTest {
         assertTrue(workshop.contains("contentScroll.scrollTo(0)"))
         assertTrue(workshop.contains(".verticalScroll(contentScroll)"))
         assertTrue(shell.contains("if (!inGame) Column(Modifier.windowInsetsPadding(WindowInsets.statusBars))"))
-        assertTrue(throne.contains("Aşamalar arasında yaklaşık 15 sn geçiş"))
+        assertTrue(throne.contains("Her aşamaya 1 dk içinde katıl"))
         assertFalse(throne.contains("Her aşama 10 dk açık"))
     }
 
