@@ -272,13 +272,33 @@ jobs:
           gh release edit branch-test --notes "Kelime Tahtı test sürümü, commit ${GITHUB_SHA::8}. Doğrudan kurulabilir APK."
           gh release upload branch-test Kelime-Tahti-Test.apk --clobber
           # A small phone build too: the store-shrunk APK with only the arm64 native libraries,
-          # re-signed with the same debug key so it installs over the test build.
-          BT="$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 -type d | sort -V | tail -1)"
-          cp app/build/outputs/apk/releaseCheck/app-releaseCheck.apk lite-unsigned.apk
-          zip -q -d lite-unsigned.apk 'lib/x86/*' 'lib/x86_64/*' 'lib/armeabi-v7a/*' 'META-INF/*.SF' 'META-INF/*.RSA' 'META-INF/*.MF' || true
-          "$BT/zipalign" -f -p 4 lite-unsigned.apk lite-aligned.apk
-          "$BT/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --out Kelime-Tahti-Lite.apk lite-aligned.apk
-          "$BT/apksigner" verify --print-certs Kelime-Tahti-Lite.apk | head -3
-          "$BT/apksigner" verify --print-certs Kelime-Tahti-Test.apk | head -3
-          echo "LITE_APK_BYTES=$(stat -c%s Kelime-Tahti-Lite.apk)"
-          gh release upload branch-test Kelime-Tahti-Lite.apk --clobber
+          # re-signed with the same debug key so it installs over the test build. Best effort:
+          # a problem here is reported but never fails the job (the full APK is already up).
+          set +e
+          lite() {
+            BT="$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 -type d | sort -V | tail -1)"
+            KS="$(find "$HOME/.android" "$HOME/.config/.android" -name debug.keystore 2>/dev/null | head -1)"
+            echo "build-tools=$BT keystore=$KS"
+            [ -n "$KS" ] || { echo "::warning::Lite APK: no debug keystore found"; return 1; }
+            python3 - <<'PY' || { echo "::warning::Lite APK: stripping native libs failed"; return 1; }
+          import zipfile
+          src = zipfile.ZipFile("app/build/outputs/apk/releaseCheck/app-releaseCheck.apk")
+          with zipfile.ZipFile("lite-unsigned.apk", "w") as out:
+              for item in src.infolist():
+                  name = item.filename
+                  if name.startswith(("lib/x86/", "lib/x86_64/", "lib/armeabi-v7a/")):
+                      continue
+                  if name.startswith("META-INF/") and name.endswith((".SF", ".RSA", ".EC", ".MF")):
+                      continue
+                  out.writestr(item, src.read(name))
+          PY
+            "$BT/zipalign" -f -p 4 lite-unsigned.apk lite-aligned.apk || { echo "::warning::Lite APK: zipalign failed"; return 1; }
+            "$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --out Kelime-Tahti-Lite.apk lite-aligned.apk || { echo "::warning::Lite APK: signing failed"; return 1; }
+            LITE=$("$BT/apksigner" verify --print-certs Kelime-Tahti-Lite.apk | grep -m1 SHA-256)
+            FULL=$("$BT/apksigner" verify --print-certs Kelime-Tahti-Test.apk | grep -m1 SHA-256)
+            [ "$LITE" = "$FULL" ] || { echo "::warning::Lite APK: signing key differs from the test APK ($LITE vs $FULL)"; return 1; }
+            echo "::notice::Lite APK bytes=$(stat -c%s Kelime-Tahti-Lite.apk) $LITE"
+            gh release upload branch-test Kelime-Tahti-Lite.apk --clobber || { echo "::warning::Lite APK: upload failed"; return 1; }
+          }
+          lite
+          set -e
