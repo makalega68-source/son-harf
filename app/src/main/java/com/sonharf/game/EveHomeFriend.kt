@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -12,7 +13,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,6 +38,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
@@ -53,9 +56,13 @@ import io.github.sceneview.rememberFillLightNode
 import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.atan2
+import kotlin.math.hypot
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /** Eve's skeletal clips that stay in place (the walk/run/combat clips move the root and are not used). */
@@ -67,7 +74,12 @@ internal enum class EveClip(val clipName: String, val loop: Boolean) {
     LIE_DOWN("GoToRest", false),
     REST("Rest", true),
     STAND_UP("RestToGoBackUp", false),
+    /** Walks in place: the clip's forward root motion is pinned (EveRig.pinRoot), the screen moves her. */
+    WALK("Walk", true),
 }
+
+/** Her walking pace on screen, matched to the Walk clip's stride so the paws do not slide. */
+private const val EVE_WALK_DP_PER_SEC = 46f
 
 internal object EveAsset {
     const val MODEL = "models/eve/eve.glb"
@@ -98,9 +110,10 @@ internal object EveLines {
 }
 
 /**
- * Eve: the home screen's 3D forest friend. She breathes, looks around, nibbles leaves and lies
- * down for a nap when left alone; a tap gets a little hop, a turn of the head and a speech
- * bubble (never voice audio). Clip changes are skeletal cross-fades, not image swaps. If the
+ * Eve: the home screen's 3D forest friend. She strolls around the bottom of the screen, breathes,
+ * looks around, nibbles leaves, wags her tail, waves a paw, stretches and lies down for a nap when
+ * left alone; a tap gets a little hop, a turn of the head and a speech bubble (never voice audio).
+ * [modifier] is the area she may roam in (the lobby passes its whole size). Clip changes are skeletal cross-fades, not image swaps. If the
  * model cannot be read the friend simply stays hidden, so the home screen never breaks.
  */
 @Composable
@@ -130,6 +143,12 @@ internal fun EveHomeFriend(
     var gesture by remember { mutableStateOf(EveGesture.NONE) }
     var gestureKey by remember { mutableIntStateOf(0) }
     val hop = remember { Animatable(0f) }
+    // Where she stands (dp from the bottom-left corner) and which way her body faces (0 = the player).
+    val posX = remember { Animatable(0f) }
+    val posY = remember { Animatable(0f) }
+    var bodyYaw by remember { mutableStateOf(0f) }
+    var walking by remember { mutableStateOf(false) }
+    val roam = remember { FloatArray(1) }
     val scope = rememberCoroutineScope()
     val firstName = playerName?.trim()?.split(' ')?.firstOrNull()?.takeIf { it.isNotBlank() && it.length <= 14 }
 
@@ -153,6 +172,29 @@ internal fun EveHomeFriend(
     fun doGesture(next: EveGesture) {
         gesture = next
         gestureKey++
+    }
+    // A stroll: turn towards the spot, walk there at the clip's pace, then face the player again.
+    suspend fun walkTo(tx: Float, ty: Float) {
+        val dx = tx - posX.value
+        val dy = ty - posY.value
+        val distance = hypot(dx, dy)
+        if (distance < 14f) return
+        // Facing the player is 0 degrees; walking down the screen comes towards the player.
+        bodyYaw = Math.toDegrees(atan2(dx.toDouble(), (-dy).toDouble())).toFloat()
+        walking = true
+        play(EveClip.WALK)
+        try {
+            delay(320L)
+            val millis = (distance / EVE_WALK_DP_PER_SEC * 1_000f).roundToInt()
+            coroutineScope {
+                launch { posX.animateTo(tx, tween(millis, easing = LinearEasing)) }
+                posY.animateTo(ty, tween(millis, easing = LinearEasing))
+            }
+        } finally {
+            walking = false
+            bodyYaw = 0f
+            play(EveClip.BREATHE)
+        }
     }
 
     // A feeling shows for a few seconds, then she settles back to her calm look (or stays sleepy).
@@ -197,7 +239,7 @@ internal fun EveHomeFriend(
             }
             // A varied little life: never the same act twice in a row.
             var act: Int
-            do { act = Random.nextInt(9) } while (act == lastAct)
+            do { act = Random.nextInt(15) } while (act == lastAct || (!live3d && act >= 13))
             lastAct = act
             when (act) {
                 0 -> doGesture(EveGesture.TILT)
@@ -215,7 +257,18 @@ internal fun EveHomeFriend(
                     doGesture(EveGesture.NOD)
                     if (Random.nextInt(2) == 0) say(line(EveLines.idle))
                 }
-                else -> doGesture(EveGesture.SHAKE)
+                8 -> doGesture(EveGesture.SHAKE)
+                9 -> doGesture(EveGesture.WAG)
+                10 -> doGesture(EveGesture.PAW_WAVE)
+                11 -> doGesture(EveGesture.STRETCH)
+                12 -> doGesture(EveGesture.WIGGLE)
+                else -> {
+                    // A walk to somewhere else along the bottom of the screen, then a look around.
+                    val far = (roam[0] - EVE_BOX_WIDTH_DP).coerceAtLeast(0f)
+                    walkTo(Random.nextFloat() * far, Random.nextFloat() * 70f)
+                    delay(400L)
+                    doGesture(if (Random.nextBoolean()) EveGesture.SNIFF else EveGesture.LOOK_UP)
+                }
             }
         }
     }
@@ -225,9 +278,20 @@ internal fun EveHomeFriend(
         runCatching { mixer.transition(live.animator, clip.clipName, clip.loop) }
     }
 
-    // The bubble floats above her in its own slot, so showing it never shifts Eve sideways.
-    Box(modifier) {
-        Box(Modifier.align(Alignment.BottomStart).padding(bottom = 122.dp).widthIn(max = 220.dp)) {
+    // She roams the whole area; the bubble floats above her and follows, kept on screen.
+    BoxWithConstraints(modifier) {
+        roam[0] = maxWidth.value
+        val bubbleMax = 220f
+        Box(
+            Modifier
+                .align(Alignment.BottomStart)
+                .offset {
+                    val x = (posX.value + EVE_BOX_WIDTH_DP / 2f - bubbleMax / 2f)
+                        .coerceIn(4f, (maxWidth.value - bubbleMax - 4f).coerceAtLeast(4f))
+                    IntOffset(x.dp.roundToPx(), -(posY.value + 122f).dp.roundToPx())
+                }
+                .widthIn(max = bubbleMax.dp),
+        ) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = speech != null,
                 enter = fadeIn(tween(180)) + scaleIn(initialScale = .8f),
@@ -251,10 +315,12 @@ internal fun EveHomeFriend(
                 }
             }
         }
+        // Wide enough for her side view while she walks; the tap target stays on her body.
         Box(
             Modifier
                 .align(Alignment.BottomStart)
-                .size(width = 118.dp, height = 128.dp)
+                .offset { IntOffset(posX.value.dp.roundToPx(), -posY.value.dp.roundToPx()) }
+                .size(width = EVE_BOX_WIDTH_DP.dp, height = 128.dp)
                 .graphicsLayer { translationY = -hop.value * 26.dp.toPx() },
         ) {
             if (live3d) {
@@ -262,7 +328,8 @@ internal fun EveHomeFriend(
                     mixer,
                     onNode = { node = it },
                     nodeProvider = { node },
-                    expression = { EveExpression(mood, talking = speech != null, gesture = gesture, gestureKey = gestureKey) },
+                    bodyYaw = { bodyYaw },
+                    expression = { EveExpression(mood, talking = speech != null, gesture = gesture, gestureKey = gestureKey, walking = walking) },
                 )
             } else {
                 Image(
@@ -274,13 +341,15 @@ internal fun EveHomeFriend(
             // Taps land on this layer above the 3D view, which would otherwise keep the touches.
             Box(
                 Modifier
-                    .fillMaxSize()
+                    .align(Alignment.Center)
+                    .size(width = 112.dp, height = 128.dp)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClickLabel = sh("Eve ile oyna", "Play with Eve"),
                     ) {
                         lastTouch = System.currentTimeMillis()
+                        // Restarts her little life, which also stops a walk where she is.
                         tapKey++
                         scope.launch {
                             hop.snapTo(0f)
@@ -299,7 +368,7 @@ internal fun EveHomeFriend(
                         } else {
                             play(EveClip.BREATHE)
                             feel(listOf(EveMood.HAPPY, EveMood.HAPPY, EveMood.CURIOUS, EveMood.SHY).random())
-                            doGesture(listOf(EveGesture.EAR_PLAY, EveGesture.NOD, EveGesture.TILT).random())
+                            doGesture(listOf(EveGesture.EAR_PLAY, EveGesture.NOD, EveGesture.TILT, EveGesture.WAG, EveGesture.PAW_WAVE).random())
                             say(line(EveLines.tap))
                         }
                     },
@@ -308,14 +377,19 @@ internal fun EveHomeFriend(
     }
 }
 
+private const val EVE_BOX_WIDTH_DP = 150f
+
 /** The live 3D view: Filament through SceneView on a transparent texture surface. */
 @Composable
 private fun EveLiveModel(
     mixer: EveClipMixer,
     onNode: (io.github.sceneview.node.ModelNode) -> Unit,
     nodeProvider: () -> io.github.sceneview.node.ModelNode?,
+    bodyYaw: () -> Float,
     expression: () -> EveExpression,
 ) {
+    // The body turns smoothly towards where she is heading (0 = facing the player).
+    val turn = remember { FloatArray(2) }
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, EveAsset.MODEL) ?: return
@@ -340,9 +414,17 @@ private fun EveLiveModel(
         onFrame = { frameTimeNanos ->
             nodeProvider()?.let { live ->
                 runCatching {
+                    val dt = if (turn[1] == 0f) 0f else ((frameTimeNanos / 1e9f) - turn[1]).coerceIn(0f, .1f)
+                    turn[1] = frameTimeNanos / 1e9f
+                    var delta = bodyYaw() - turn[0]
+                    while (delta > 180f) delta -= 360f
+                    while (delta < -180f) delta += 360f
+                    turn[0] += delta * (1f - kotlin.math.exp(-dt * 6f))
+                    live.rotation = Rotation(y = turn[0])
                     // Rest pose first so the procedural layer never accumulates on bones a clip leaves alone.
                     rig?.restore()
                     mixer.apply(live.animator, frameTimeNanos)
+                    if (mixer.uses(live.animator, EveClip.WALK.clipName)) rig?.pinRoot()
                     rig?.express(expression(), frameTimeNanos)
                     live.animator.updateBoneMatrices()
                 }
@@ -378,8 +460,10 @@ internal object EveDevice {
 internal enum class EveMood { NEUTRAL, HAPPY, CURIOUS, SHY, SAD, SLEEPY }
 
 /** Short head and ear moves layered over the feeling. */
+/** Short moves layered over the feeling: head and ears, and the body, tail and paws. Unhurried. */
 internal enum class EveGesture(val millis: Long) {
-    NONE(0L), NOD(1_300L), SHAKE(1_300L), TILT(1_800L), EAR_PLAY(1_600L), SNIFF(1_300L), LISTEN(2_200L), LOOK_UP(1_800L),
+    NONE(0L), NOD(2_000L), SHAKE(2_000L), TILT(2_400L), EAR_PLAY(2_600L), SNIFF(1_800L), LISTEN(2_800L), LOOK_UP(2_200L),
+    WAG(2_600L), PAW_WAVE(2_600L), STRETCH(3_000L), WIGGLE(2_200L),
 }
 
 internal data class EveExpression(
@@ -387,35 +471,43 @@ internal data class EveExpression(
     val talking: Boolean,
     val gesture: EveGesture = EveGesture.NONE,
     val gestureKey: Int = 0,
+    val walking: Boolean = false,
 )
 
 /**
  * Eve's face is painted into her texture, so her feelings live in the skeleton: head turn, nod
- * and tilt, and her big ears (perked, flattened, drooping, twitching). Angles were checked on a
- * skinned render of the model: head x = nod down, y = turn to the viewer's right, z = tilt; ear
- * x+ = perk, x- = flatten back, z (left +, right -) = droop outwards. All on top of the clip.
+ * and tilt, her big ears (perked, flattened, drooping, twitching), and her body: tail wag and
+ * lift, a raised front paw, a stretch and a wiggle of the chest. Axes were checked on a skinned
+ * render of the model: head x = nod down, y = turn to the viewer's right, z = tilt; ear x+ = perk,
+ * x- = flatten back, z (left +, right -) = droop outwards; tail x+ = lower, z = wag; front leg
+ * x- = lift forward; chest (bone_5) x+ = dip forward, z = sway. All layered on top of the clip.
  */
 private class EveRig(engine: com.google.android.filament.Engine, asset: com.google.android.filament.gltfio.FilamentAsset) {
     private val tm = engine.transformManager
+    private val root = bone(asset, "bone_0")
     private val head = bone(asset, "bone_10")
     private val earLeft = bone(asset, "bone_15")
     private val earRight = bone(asset, "bone_17")
     private val muzzle = bone(asset, "bone_11")
-    private val controlled = listOfNotNull(head, earLeft, earRight, muzzle)
+    private val tail = listOfNotNull(bone(asset, "bone_1"), bone(asset, "bone_2"), bone(asset, "bone_3"))
+    private val chest = bone(asset, "bone_5")
+    private val pawLeft = bone(asset, "bone_22")
+    private val pawRight = bone(asset, "bone_26")
+    private val controlled = listOfNotNull(head, earLeft, earRight, muzzle, chest, pawLeft, pawRight) + tail
     private val rest = controlled.associateWith { tm.getTransform(it, FloatArray(16)) }
     private val m = FloatArray(16)
-    // Smoothed pose: yaw, pitch, roll, perk, droop.
-    private val value = FloatArray(5)
+    // Smoothed pose: yaw, pitch, roll, perk, droop, tail lift, tail wag amount.
+    private val value = FloatArray(7)
     private var lastFrame = 0L
     private var glanceYaw = 0f
     private var glancePitch = 0f
     private var nextGlanceAt = 0L
-    private var twitchUntil = 0L
+    private var twitchAt = 0L
     private var twitchLeft = true
     private var nextTwitchAt = 0L
     private var seenGestureKey = -1
     private var gestureStartedAt = 0L
-    private var tiltSide = 1f
+    private var side = 1f
 
     private fun bone(asset: com.google.android.filament.gltfio.FilamentAsset, name: String): Int? {
         val entity = asset.getFirstEntityByName(name)
@@ -427,64 +519,104 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
         rest.forEach { (instance, transform) -> tm.setTransform(instance, transform) }
     }
 
+    /** The Walk clip carries her forward; the screen does that instead, so the stride stays in place. */
+    fun pinRoot() {
+        val instance = root ?: return
+        tm.getTransform(instance, m)
+        m[13] = WALK_ROOT_Y
+        tm.setTransform(instance, m)
+    }
+
     fun express(expression: EveExpression, now: Long) {
         val dt = if (lastFrame == 0L) 0f else ((now - lastFrame) / 1e9f).coerceIn(0f, .1f)
         lastFrame = now
         val t = now / 1e9f
-        // Little glances around the screen and quick ear twitches keep her alive between feelings.
+        // Slow glances and the odd ear twitch keep her alive between feelings.
         if (now > nextGlanceAt) {
-            // Mostly she looks right at the player; now and then a short glance aside.
-            val looking = Random.nextInt(3) == 0
+            // Mostly she looks right at the player; now and then a calm glance aside.
+            val looking = !expression.walking && Random.nextInt(3) == 0
             glanceYaw = if (looking) Random.nextFloat() * 20f - 10f else 0f
             glancePitch = if (looking) Random.nextFloat() * 6f - 3f else 0f
-            nextGlanceAt = now + (if (looking) 900L + Random.nextLong(900L) else 2_500L + Random.nextLong(3_000L)) * 1_000_000L
+            nextGlanceAt = now + (if (looking) 1_400L + Random.nextLong(1_200L) else 3_000L + Random.nextLong(3_500L)) * 1_000_000L
         }
         if (now > nextTwitchAt) {
             twitchLeft = Random.nextBoolean()
-            twitchUntil = now + 170_000_000L
-            nextTwitchAt = now + (3_500L + Random.nextLong(6_000L)) * 1_000_000L
+            twitchAt = now
+            nextTwitchAt = now + (4_500L + Random.nextLong(7_000L)) * 1_000_000L
         }
-        // Targets per feeling: yaw, pitch, roll, perk, droop. Neutral looks towards the screen centre.
+        // Targets per feeling: yaw, pitch, roll, perk, droop, tail lift (- = up), tail wag amount.
         val target = when (expression.mood) {
-            EveMood.NEUTRAL -> floatArrayOf(glanceYaw, -4f + glancePitch, 0f, 4f, 0f)
-            EveMood.HAPPY -> floatArrayOf(0f, -8f, -9f, 16f, 0f)
-            EveMood.CURIOUS -> floatArrayOf(4f, -6f, 15f, 22f, 0f)
-            EveMood.SHY -> floatArrayOf(-8f, 8f, 7f, -18f, 8f)
-            EveMood.SAD -> floatArrayOf(0f, 14f, 0f, -6f, 30f)
-            EveMood.SLEEPY -> floatArrayOf(0f, 10f, 0f, -10f, 18f)
+            EveMood.NEUTRAL -> floatArrayOf(glanceYaw, -4f + glancePitch, 0f, 4f, 0f, 0f, 5f)
+            EveMood.HAPPY -> floatArrayOf(0f, -8f, -9f, 16f, 0f, -16f, 20f)
+            EveMood.CURIOUS -> floatArrayOf(4f, -6f, 15f, 22f, 0f, -8f, 8f)
+            EveMood.SHY -> floatArrayOf(-8f, 8f, 7f, -18f, 8f, 10f, 4f)
+            EveMood.SAD -> floatArrayOf(0f, 14f, 0f, -6f, 30f, 20f, 0f)
+            EveMood.SLEEPY -> floatArrayOf(0f, 10f, 0f, -10f, 18f, 10f, 2f)
         }
-        val k = 1f - kotlin.math.exp(-dt * 7f)
+        if (expression.walking) { target[0] = 0f; target[1] = -2f; target[6] = maxOf(target[6], 9f) }
+        // Unhurried easing: feelings settle over about half a second.
+        val k = 1f - kotlin.math.exp(-dt * 4f)
         for (i in value.indices) value[i] += (target[i] - value[i]) * k
-        val bob = if (expression.talking) 2.2f * kotlin.math.sin(t * 11f) else 0f
-        val happyWiggle = if (expression.mood == EveMood.HAPPY) 5f * kotlin.math.sin(t * 9f) else 0f
-        val twitch = if (now < twitchUntil) 16f else 0f
+        val bob = if (expression.talking) 1.8f * kotlin.math.sin(t * 5.5f) else 0f
+        val happyWiggle = if (expression.mood == EveMood.HAPPY) 6f * kotlin.math.sin(t * 3.2f) else 0f
+        // An ear twitch rises and settles over ~0.45 s instead of snapping.
+        val tw = ((now - twitchAt) / 450_000_000f).coerceIn(0f, 1f)
+        val twitch = if (tw < 1f) 12f * kotlin.math.sin(tw * PI_F) else 0f
 
         // The current gesture, eased in and out over its length.
         if (expression.gestureKey != seenGestureKey) {
             seenGestureKey = expression.gestureKey
             gestureStartedAt = now
-            tiltSide = if (Random.nextBoolean()) 1f else -1f
+            side = if (Random.nextBoolean()) 1f else -1f
         }
         val g = expression.gesture
         val u = if (g == EveGesture.NONE) 1f else ((now - gestureStartedAt) / (g.millis * 1e6f)).coerceIn(0f, 1f)
         val env = if (u >= 1f) 0f else kotlin.math.sin(u * PI_F)
         var gPitch = 0f; var gYaw = 0f; var gRoll = 0f; var gEarL = 0f; var gEarR = 0f; var gSniff = 0f
+        var gWag = 0f; var gLift = 0f; var gChestX = 0f; var gChestZ = 0f; var gPawL = 0f; var gPawR = 0f
         when (g) {
-            EveGesture.NOD -> gPitch = 9f * kotlin.math.sin(u * 4f * PI_F) * env
-            EveGesture.SHAKE -> gYaw = 13f * kotlin.math.sin(u * 4f * PI_F) * env
-            EveGesture.TILT -> { gRoll = 18f * tiltSide * env; gEarL = 10f * env; gEarR = 10f * env }
-            EveGesture.EAR_PLAY -> { gEarL = 22f * kotlin.math.sin(u * 6f * PI_F) * env; gEarR = -22f * kotlin.math.sin(u * 6f * PI_F) * env }
-            EveGesture.SNIFF -> { gSniff = 5f * kotlin.math.abs(kotlin.math.sin(u * 10f * PI_F)) * env; gPitch = -6f * env }
-            EveGesture.LISTEN -> { gRoll = 10f * tiltSide * env; gYaw = 8f * tiltSide * env; gEarL = (if (tiltSide > 0) 24f else -14f) * env; gEarR = (if (tiltSide > 0) -14f else 24f) * env }
+            EveGesture.NOD -> gPitch = 8f * kotlin.math.sin(u * 4f * PI_F) * env
+            EveGesture.SHAKE -> gYaw = 12f * kotlin.math.sin(u * 4f * PI_F) * env
+            EveGesture.TILT -> { gRoll = 18f * side * env; gEarL = 10f * env; gEarR = 10f * env }
+            EveGesture.EAR_PLAY -> { gEarL = 20f * kotlin.math.sin(u * 3f * PI_F) * env; gEarR = -20f * kotlin.math.sin(u * 3f * PI_F) * env }
+            EveGesture.SNIFF -> { gSniff = 4f * kotlin.math.abs(kotlin.math.sin(u * 6f * PI_F)) * env; gPitch = -6f * env }
+            EveGesture.LISTEN -> { gRoll = 10f * side * env; gYaw = 8f * side * env; gEarL = (if (side > 0) 24f else -14f) * env; gEarR = (if (side > 0) -14f else 24f) * env }
             EveGesture.LOOK_UP -> { gPitch = -16f * env; gEarL = 8f * env; gEarR = 8f * env }
+            EveGesture.WAG -> { gWag = 24f * kotlin.math.sin(u * 7f * PI_F) * env; gLift = -18f * env; gEarL = 8f * env; gEarR = 8f * env; gRoll = -6f * side * env }
+            EveGesture.PAW_WAVE -> {
+                // One front paw comes up and waves hello; the head tilts towards it.
+                val wave = (-48f + 10f * kotlin.math.sin(u * 5f * PI_F)) * env
+                if (side > 0) gPawR = wave else gPawL = wave
+                gRoll = 9f * side * env; gChestZ = -4f * side * env; gEarL = 10f * env; gEarR = 10f * env
+            }
+            EveGesture.STRETCH -> {
+                // A play bow: chest dips, front paws reach forward, tail goes up, she looks up at you.
+                gChestX = 14f * env; gPawL = -16f * env; gPawR = -16f * env; gLift = -22f * env; gPitch = -10f * env
+                gEarL = -10f * env; gEarR = -10f * env
+            }
+            EveGesture.WIGGLE -> {
+                val w = kotlin.math.sin(u * 5f * PI_F) * env
+                gChestZ = 7f * w; gWag = -16f * w; gEarL = 12f * w; gEarR = -12f * w
+            }
             EveGesture.NONE -> Unit
         }
 
         rotate(head, value[1] + bob + gPitch, value[0] + gYaw, value[2] + gRoll)
         rotate(earLeft, value[3] + happyWiggle + gEarL + if (twitchLeft) twitch else 0f, 0f, value[4])
         rotate(earRight, value[3] - happyWiggle + gEarR + if (!twitchLeft) twitch else 0f, 0f, -value[4])
-        val talk = if (expression.talking) 4f * kotlin.math.abs(kotlin.math.sin(t * 13f)) else 0f
+        // Talking: the muzzle opens and closes gently (~1 per second), not a flutter.
+        val talk = if (expression.talking) 3f * (.5f - .5f * kotlin.math.cos(t * 6.5f)) else 0f
         if (talk + gSniff != 0f) rotate(muzzle, talk + gSniff, 0f, 0f)
+        if (gChestX != 0f || gChestZ != 0f) rotate(chest, gChestX, 0f, gChestZ)
+        if (gPawL != 0f) rotate(pawLeft, gPawL, 0f, 0f)
+        if (gPawR != 0f) rotate(pawRight, gPawR, 0f, 0f)
+        // The tail sways with her mood (and her stride while walking); each segment trails the last.
+        val pace = if (expression.walking) 6.1f else if (expression.mood == EveMood.HAPPY) 4.6f else 1.7f
+        tail.forEachIndexed { index, segment ->
+            val lag = index * .55f
+            val wag = value[6] * kotlin.math.sin(t * pace - lag) * (1f - index * .25f) + gWag * (1f - index * .2f)
+            rotate(segment, (value[5] + gLift) * (if (index == 0) 1f else .35f), 0f, wag)
+        }
     }
 
     private fun rotate(instance: Int?, x: Float, y: Float, z: Float) {
@@ -494,6 +626,11 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
         if (y != 0f) android.opengl.Matrix.rotateM(m, 0, y, 0f, 1f, 0f)
         if (z != 0f) android.opengl.Matrix.rotateM(m, 0, z, 0f, 0f, 1f)
         tm.setTransform(instance, m)
+    }
+
+    private companion object {
+        /** The root's forward offset in her idle clips, where the in-place stride is pinned. */
+        const val WALK_ROOT_Y = 18.34f
     }
 }
 
@@ -527,6 +664,10 @@ private class EveClipMixer(private val blendNanos: Long) {
         current = Track(index, now, loop)
         blendStartedAt = now
     }
+
+    /** Whether [name] is playing or still fading out. */
+    fun uses(animator: Animator, name: String): Boolean =
+        listOfNotNull(current, previous).any { animator.getAnimationName(it.index) == name }
 
     fun apply(animator: Animator, frameTimeNanos: Long) {
         val active = current ?: return
