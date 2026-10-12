@@ -112,7 +112,8 @@ jobs:
             adb exec-out screencap -p > Fallback-before-Android.png
             sleep 6
             # The AI match starts on the production fallback timer; poll for it instead of a single dump.
-            for i in 1 2 3 4; do adb shell uiautomator dump /sdcard/fallback-ai.xml && adb pull /sdcard/fallback-ai.xml Fallback-ai.xml && grep -q 'AI MAÇI' Fallback-ai.xml && break; echo "AI match not shown yet ($i)"; sleep 2; done
+            # A slow emulator can pop a system "isn't responding" dialog over the app: answer "Wait".
+            for i in 1 2 3 4; do adb shell uiautomator dump /sdcard/fallback-ai.xml && adb pull /sdcard/fallback-ai.xml Fallback-ai.xml && grep -q 'AI MAÇI' Fallback-ai.xml && break; if grep -q "isn't responding" Fallback-ai.xml; then python3 -c 'import xml.etree.ElementTree as E,re,subprocess; n=next(n for n in E.parse("Fallback-ai.xml").iter("node") if n.get("text")=="Wait"); x1,y1,x2,y2=map(int,re.findall(r"[0-9]+",n.get("bounds"))); subprocess.run(["adb","shell","input","tap",str((x1+x2)//2),str((y1+y2)//2)],check=True)' || true; fi; echo "AI match not shown yet ($i)"; sleep 2; done
             grep -q 'AI MAÇI' Fallback-ai.xml || { echo "---- fallback texts ----"; grep -o 'text="[^"]*"' Fallback-ai.xml | head -40; echo "::error::AI match never appeared; texts: $(grep -o 'text="[^"]*"' Fallback-ai.xml | head -25 | tr '\n' ' ')"; adb logcat -d -s AndroidRuntime:E | tail -40; exit 1; }
             adb exec-out screencap -p > Fallback-ai-Android.png
             sleep 10
