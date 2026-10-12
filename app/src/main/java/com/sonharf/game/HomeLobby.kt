@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -81,6 +82,13 @@ internal fun HomeLobbyScreen(
     // The admin list loads once; the menu entry appears only for admins.
     LaunchedEffect(Unit) { AdminRoster.refresh() }
     val foreground = rememberAppForeground()
+    // Eve (earned on the throne podium, automatic for admins) replaces the floating mascot on
+    // the home screen while she is switched on: never two mascots at once.
+    val lobbyContext = LocalContext.current
+    remember { EveOwnership.restore(lobbyContext) }
+    LaunchedEffect(me, foreground) { if (foreground) EveOwnership.refresh(lobbyContext, me) }
+    val eveHere = EveOwnership.showOnHome(me)
+    val workshopStatus = rememberWorkshopStatus()
 
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
@@ -221,19 +229,21 @@ internal fun HomeLobbyScreen(
                 LobbyGameCard(R.drawable.kelime_tahti_game_icon, sh("Kelime Kuşatması", "Word Siege"),
                     sh("Kelimelerle tahtayı fethet", "Conquer the board with words"), onNewGame)
                 LobbyGameCard(R.drawable.kelime_atolyesi_game_icon, sh("Kelime Atölyesi", "Word Workshop"),
-                    rememberWorkshopStatus(), onWorkshop)
+                    workshopStatus, onWorkshop)
             }
-            // Room to scroll the last card clear of Eve in the bottom corner.
-            Spacer(Modifier.height(140.dp))
+            // Room to scroll the last card clear of the home friend at the bottom.
+            Spacer(Modifier.height(if (eveHere) 140.dp else 96.dp))
         }
-        // Eve, the 3D forest friend, strolls along the bottom of the lobby for everyone. Her 3D
-        // view is released whenever the app is in the background (no GPU or battery use there).
-        if (foreground) EveHomeFriend(
+        // Eve, the 3D forest friend, roams the lobby for her owners. Her 3D view is released
+        // whenever the app is in the background (no GPU or battery use there).
+        if (eveHere && foreground) EveHomeFriend(
             playerName = p?.displayName,
             modifier = Modifier.matchParentSize().padding(start = 2.dp, bottom = 2.dp),
+            throneRank = EveOwnership.status?.currentRank ?: -1,
+            tournamentLive = workshopStatus.startsWith("Turnuva açık") || workshopStatus.startsWith("Tournament live"),
         )
-        // Owned mascots keep floating over the lobby on the right; they take no row.
-        WordSiegeMascotCompanion(
+        // Otherwise owned mascots keep floating over the lobby on the right; they take no row.
+        if (!eveHere) WordSiegeMascotCompanion(
             anchors = listOf(Offset(.88f, .92f), Offset(.88f, .62f)),
             mascotSize = 83.dp, positionKey = "home",
             moveId = null, lastMoveMine = false, playerTurn = false,

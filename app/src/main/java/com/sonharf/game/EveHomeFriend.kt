@@ -1,7 +1,8 @@
 package com.sonharf.game
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -31,6 +32,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,57 +100,22 @@ internal object EveAsset {
     const val MODEL = "models/eve/eve.glb"
 }
 
-/** Eve's lines: a calm forest friend who loves words. */
-internal object EveLines {
-    val hello = listOf(
-        "Merhaba %s! Ben Eve, ormandan geldim 🌿" to "Hi %s! I'm Eve, I came from the forest 🌿",
-        "Selam %s! Yapraklarım seni görünce hışırdadı 🍃" to "Hey %s! My leaves rustle when I see you 🍃",
-    )
-    val tap = listOf(
-        "Hihi, kulaklarım gıdıklandı! 🌱" to "Hehe, that tickles my ears! 🌱",
-        "Bir maç yapalım mı? Ben buradan izlerim 👀" to "Shall we play a match? I'll watch from here 👀",
-        "Ormanda kelimeler ağaçlarda yetişir, biliyor muydun? 🌳" to "In the forest, words grow on trees, did you know? 🌳",
-        "Sen oyna, ben şans getireyim 🍀" to "You play, I'll bring the luck 🍀",
-        "Yapraklarımı okşadın, ne güzel! 💚" to "You petted my leaves, how nice! 💚",
-    )
-    val wake = listOf(
-        "Hıı? Uyuyakalmışım… buradayım! 😊" to "Hm? I dozed off… I'm here! 😊",
-        "Esneyerek günaydın! 🌞" to "A big yawn and good morning! 🌞",
-    )
-    val flee = listOf(
-        "Yakalayamazsın! 😄" to "Can't catch me! 😄",
-        "Hihi, kaçtım! 🍃" to "Hehe, got away! 🍃",
-        "Ebelemece mi oynuyoruz? 🌿" to "Are we playing tag? 🌿",
-        "Buradayım, buradaa! 😊" to "Over here, over heeere! 😊",
-    )
-    val pounce = listOf(
-        "Hop! Yakaladım! 🍃" to "Pounce! Got it! 🍃",
-        "Bir yaprak gördüm sandım 😄" to "I thought I saw a leaf 😄",
-        "Kelime avındayım! 🌿" to "I'm hunting for words! 🌿",
-    )
-    val moved = listOf(
-        "Vay, uçtum! Burası da güzelmiş 🌿" to "Whee, I flew! Nice spot 🌿",
-        "Yeni yerimi beğendim 😊" to "I like my new spot 😊",
-        "Hop! Buraya mı koydun beni? 🍃" to "Hop! You put me here? 🍃",
-    )
-    val idle = listOf(
-        "Şu yapraklar çok lezzetli 🌿" to "These leaves are delicious 🌿",
-        "Bugün hangi kelimeyi bulacaksın acaba? 🤔" to "I wonder which word you'll find today 🤔",
-        "Orman sessiz, tam oyun havası 🍃" to "The forest is quiet, perfect for a game 🍃",
-    )
-}
-
 /**
- * Eve: the home screen's 3D forest friend. She strolls around the bottom of the screen, breathes,
- * looks around, nibbles leaves, wags her tail, waves a paw, stretches and lies down for a nap when
- * left alone; a tap gets a little hop, a turn of the head and a speech bubble (never voice audio).
- * [modifier] is the area she may roam in (the lobby passes its whole size). Clip changes are skeletal cross-fades, not image swaps. If the
- * model cannot be read the friend simply stays hidden, so the home screen never breaks.
+ * Eve: the home screen's 3D forest friend, earned on the throne podium. She roams the screen,
+ * breathes, looks around, nibbles leaves, wags her tail, waves a paw, stretches and naps when left
+ * alone; a tap startles her into a playful dash, a drag carries her somewhere new. She talks in
+ * speech bubbles only (never voice audio), and [EveMind] decides what: she knows the time of day,
+ * the week's throne race, a live Workshop tournament and the player's recent games, grows a
+ * friendship with the player and does not repeat herself. [modifier] is the area she may roam in.
+ * Clip changes are skeletal cross-fades; if the model cannot be read she stays hidden.
  */
 @Composable
 internal fun EveHomeFriend(
     playerName: String?,
     modifier: Modifier = Modifier,
+    /** This week's throne rank (0 = not played yet, -1 = unknown). */
+    throneRank: Int = -1,
+    tournamentLive: Boolean = false,
 ) {
     val context = LocalContext.current
     val available = remember { runCatching { context.assets.open(EveAsset.MODEL).use { } }.isSuccess }
@@ -156,7 +123,10 @@ internal fun EveHomeFriend(
 
     // Emulators (software GPU) cannot keep a live Filament view stable: they get Eve as a still.
     val live3d = remember { !EveDevice.isEmulator }
-    val mixer = remember { EveClipMixer(blendNanos = 320_000_000L) }
+    val mixer = remember { EveClipMixer(blendNanos = 450_000_000L) }
+    val mind = remember { EveMind(PrefsEveMemory(context)) }
+    // The in-game mascot records wins, streaks and the longest word; Eve reads the same memory.
+    val games = remember { WordSiegeMascotBond(context) }
     var node by remember { mutableStateOf<io.github.sceneview.node.ModelNode?>(null) }
     val ready = node != null || !live3d
     var clip by remember { mutableStateOf(EveClip.BREATHE) }
@@ -182,14 +152,13 @@ internal fun EveHomeFriend(
     // Roaming bounds in dp: furthest x and y her box may reach. A tap sets fleeNext for her life loop.
     val roam = remember { FloatArray(2) }
     val fleeNext = remember { BooleanArray(1) }
+    // Recent tap times: three quick taps tickle her instead of chasing her off.
+    val taps = remember { LongArray(3) }
     val scope = rememberCoroutineScope()
     val firstName = playerName?.trim()?.split(' ')?.firstOrNull()?.takeIf { it.isNotBlank() && it.length <= 14 }
+    val rank = rememberUpdatedState(throneRank)
+    val tournament = rememberUpdatedState(tournamentLive)
 
-    fun line(options: List<Pair<String, String>>): String {
-        val usable = options.filter { firstName != null || !it.first.contains("%s") }.ifEmpty { options }
-        val chosen = usable[Random.nextInt(usable.size)]
-        return sh(chosen.first, chosen.second).replace("%s", firstName.orEmpty()).replace(" !", "!").trim()
-    }
     fun play(next: EveClip) {
         clip = next
         clipKey++
@@ -198,6 +167,10 @@ internal fun EveHomeFriend(
         speech = text
         speechKey++
     }
+    fun talk(topic: EveTopic, number: Int = 0, word: String = "") {
+        val (tr, en) = mind.line(topic, firstName, number, word)
+        say(sh(tr, en))
+    }
     fun feel(next: EveMood) {
         mood = next
         moodKey++
@@ -205,6 +178,37 @@ internal fun EveHomeFriend(
     fun doGesture(next: EveGesture) {
         gesture = next
         gestureKey++
+    }
+    fun situation(): EveSituation {
+        val now = java.util.Calendar.getInstance()
+        val day = now.get(java.util.Calendar.DAY_OF_WEEK) // Sunday = 1 … Saturday = 7
+        return EveSituation(
+            hour = now.get(java.util.Calendar.HOUR_OF_DAY),
+            dayOfWeek = if (day == java.util.Calendar.SUNDAY) 7 else day - 1,
+            throneRank = rank.value.coerceAtLeast(-1).let { if (it < 0) 99 else it },
+            tournamentLive = tournament.value,
+            winStreak = games.winStreak,
+            longestWord = games.longestWord,
+        )
+    }
+    // Says a topic with a fitting look and body move.
+    fun express(topic: EveTopic) {
+        val s = situation()
+        when (topic) {
+            EveTopic.WIN_SEEN, EveTopic.STREAK -> { feel(EveMood.HAPPY); doGesture(EveGesture.WAG) }
+            EveTopic.LOSS_SEEN -> { feel(EveMood.SAD); doGesture(EveGesture.TILT) }
+            EveTopic.THRONE_TOP, EveTopic.THRONE_HOUR, EveTopic.TOURNAMENT_LIVE -> { feel(EveMood.HAPPY); doGesture(EveGesture.PAW_WAVE) }
+            EveTopic.WORD_FACT, EveTopic.TIP, EveTopic.LONGEST -> { feel(EveMood.CURIOUS); doGesture(EveGesture.LISTEN) }
+            EveTopic.NIGHT, EveTopic.LATE -> { feel(EveMood.SLEEPY); doGesture(EveGesture.NOD) }
+            EveTopic.OWNED_STORY, EveTopic.BOND_FRIEND, EveTopic.BOND_BEST -> { feel(EveMood.SHY); doGesture(EveGesture.WIGGLE) }
+            else -> { feel(if (Random.nextBoolean()) EveMood.HAPPY else EveMood.CURIOUS); doGesture(EveGesture.NOD) }
+        }
+        when (topic) {
+            EveTopic.STREAK -> talk(topic, number = s.winStreak)
+            EveTopic.LONGEST -> talk(topic, word = s.longestWord)
+            EveTopic.THRONE_TOP, EveTopic.THRONE_CLOSE -> talk(topic, number = s.throneRank)
+            else -> talk(topic)
+        }
     }
     // A stroll or a dash: turn towards the spot, move there at the clip's pace, then face the player.
     suspend fun walkTo(tx: Float, ty: Float, run: Boolean = false, graze: Boolean = false) {
@@ -225,9 +229,11 @@ internal fun EveHomeFriend(
             delay(if (run) 160L else 120L)
             val speed = if (run) EVE_RUN_DP_PER_SEC else EVE_WALK_DP_PER_SEC
             val millis = (distance / speed * 1_000f).roundToInt()
+            // A gentle start and stop: she accelerates into her stride and slows before halting.
+            val easing = if (run) FastOutSlowInEasing else LinearOutSlowInEasing
             coroutineScope {
-                launch { posX.animateTo(tx, tween(millis, easing = LinearEasing)) }
-                posY.animateTo(ty, tween(millis, easing = LinearEasing))
+                launch { posX.animateTo(tx, tween(millis, easing = easing)) }
+                posY.animateTo(ty, tween(millis, easing = easing))
             }
         } finally {
             walking = false
@@ -250,7 +256,8 @@ internal fun EveHomeFriend(
         delay(250L)
         feel(EveMood.HAPPY)
         doGesture(listOf(EveGesture.TILT, EveGesture.WAG, EveGesture.LOOK_UP).random())
-        say(line(EveLines.flee))
+        // Now and then the friendship (not just the chase) speaks.
+        if (mind.level >= 1 && Random.nextInt(3) == 0) talk(mind.tapTopic()) else talk(EveTopic.FLEE)
     }
 
     // A feeling shows for a few seconds, then she settles back to her calm look (or stays sleepy).
@@ -263,30 +270,53 @@ internal fun EveHomeFriend(
     // The speech bubble stays long enough to read, then hides.
     LaunchedEffect(speechKey) {
         if (speech == null) return@LaunchedEffect
-        delay((2_200L + (speech?.length ?: 0) * 45L).coerceAtMost(6_000L))
+        delay((2_400L + (speech?.length ?: 0) * 50L).coerceAtMost(6_500L))
         speech = null
     }
 
-    // Hello once per app session, after she has appeared.
+    // Hello once per app session; on every return to the lobby she reacts to the games played.
     LaunchedEffect(ready) {
-        if (!ready || !EveSession.claimHello()) return@LaunchedEffect
+        if (!ready) return@LaunchedEffect
         delay(1_200L)
-        feel(EveMood.CURIOUS)
-        delay(900L)
-        feel(EveMood.HAPPY)
-        say(line(EveLines.hello))
+        val news = mind.gameNews(games.wins, games.winStreak)
+        if (EveSession.claimHello()) {
+            val meeting = mind.meet(System.currentTimeMillis() / 86_400_000L)
+            feel(EveMood.CURIOUS)
+            delay(900L)
+            feel(EveMood.HAPPY)
+            doGesture(if (meeting.levelUp != null) EveGesture.WIGGLE else EveGesture.PAW_WAVE)
+            val hello = mind.helloTopic(meeting)
+            if (hello == EveTopic.MISSED) talk(hello, number = meeting.daysAway.toInt()) else talk(hello)
+            if (news != null) {
+                delay(5_500L)
+                express(news)
+            }
+        } else if (news != null) {
+            express(news)
+        }
     }
 
-    // Her own little life: mostly breathing, sometimes looking around or grazing; a nap when alone.
+    // Her own little life: varied acts (never the last few again), chats that fit the moment,
+    // strolls across the screen, and a nap when left alone for a while.
     LaunchedEffect(ready, tapKey) {
         if (!ready) return@LaunchedEffect
         if (fleeNext[0]) {
             fleeNext[0] = false
             flee()
         }
-        var lastAct = -1
+        // Weights of her acts; strolls (13–16) only for the live 3D Eve.
+        val weights = floatArrayOf(
+            1f, .8f, 1f, .8f, .9f, // 0 tilt, 1 ears, 2 sniff, 3 listen, 4 look up
+            1.4f, 1f, .8f, // 5 chat, 6 graze, 7 shake off
+            1f, .9f, .7f, .8f, // 8 wag, 9 paw wave, 10 stretch, 11 wiggle
+            if (live3d) .8f else 0f, // 12 look around
+            if (live3d) .6f else 0f, // 13 pounce
+            if (live3d) .8f else 0f, // 14 grazing amble
+            if (live3d) 2.2f else 0f, // 15 stroll
+            if (live3d) 1.2f else 0f, // 16 stroll and look back
+        )
         while (true) {
-            delay(3_500L + Random.nextLong(4_000L))
+            delay(3_200L + Random.nextLong(4_600L))
             val idleFor = System.currentTimeMillis() - lastTouch
             if (resting || dragging) continue
             if (idleFor > 120_000L) {
@@ -297,54 +327,53 @@ internal fun EveHomeFriend(
                 play(EveClip.REST)
                 continue
             }
-            // A varied little life: never the same act twice in a row.
-            var act: Int
-            // About a third of her acts are strolls, so she really wanders the screen.
-            do { act = Random.nextInt(22) } while (act == lastAct || (!live3d && act >= 13))
-            lastAct = act
-            when (act) {
+            when (mind.pickAct(weights)) {
                 0 -> doGesture(EveGesture.TILT)
                 1 -> doGesture(EveGesture.EAR_PLAY)
                 2 -> doGesture(EveGesture.SNIFF)
                 3 -> doGesture(EveGesture.LISTEN)
                 4 -> doGesture(EveGesture.LOOK_UP)
-                5 -> feel(if (Random.nextBoolean()) EveMood.CURIOUS else EveMood.HAPPY)
+                5 -> express(mind.idleTopic(situation()))
                 6 -> {
                     play(EveClip.GRAZE_ONCE)
                     delay(3_000L)
                     play(EveClip.BREATHE)
                 }
-                7 -> {
-                    doGesture(EveGesture.NOD)
-                    if (Random.nextInt(2) == 0) say(line(EveLines.idle))
-                }
-                8 -> doGesture(EveGesture.SHAKE)
-                9 -> doGesture(EveGesture.WAG)
-                10 -> doGesture(EveGesture.PAW_WAVE)
-                11 -> doGesture(EveGesture.STRETCH)
-                12 -> doGesture(EveGesture.WIGGLE)
-                13 -> {
+                7 -> doGesture(EveGesture.SHAKE)
+                8 -> doGesture(EveGesture.WAG)
+                9 -> doGesture(EveGesture.PAW_WAVE)
+                10 -> doGesture(EveGesture.STRETCH)
+                11 -> doGesture(EveGesture.WIGGLE)
+                12 -> {
                     play(EveClip.LOOK_AROUND)
                     delay(7_600L)
                     play(EveClip.BREATHE)
                 }
-                14 -> {
+                13 -> {
                     feel(EveMood.HAPPY)
                     play(EveClip.POUNCE)
                     delay(1_050L)
                     play(EveClip.BREATHE)
-                    if (Random.nextBoolean()) say(line(EveLines.pounce))
+                    if (Random.nextBoolean()) talk(EveTopic.POUNCE)
                 }
-                15 -> {
+                14 -> {
                     // A short amble with her nose in the grass.
-                    val step = (40f + Random.nextFloat() * 60f) * if (Random.nextBoolean()) 1f else -1f
+                    val step = (50f + Random.nextFloat() * 60f) * if (Random.nextBoolean()) 1f else -1f
                     walkTo((posX.value + step).coerceIn(0f, roam[0]), posY.value, graze = true)
                 }
-                else -> {
-                    // A stroll to somewhere else on the screen, then a look around.
-                    walkTo(Random.nextFloat() * roam[0], (posY.value + Random.nextFloat() * 120f - 60f).coerceIn(0f, roam[1]))
+                15 -> {
+                    // A stroll somewhere clearly elsewhere on the screen.
+                    var tx = Random.nextFloat() * roam[0]
+                    if (kotlin.math.abs(tx - posX.value) < 70f) tx = if (posX.value > roam[0] / 2f) tx * .4f else roam[0] - tx * .4f
+                    walkTo(tx.coerceIn(0f, roam[0]), (posY.value + Random.nextFloat() * 120f - 60f).coerceIn(0f, roam[1]))
                     delay(400L)
                     doGesture(if (Random.nextBoolean()) EveGesture.SNIFF else EveGesture.LOOK_UP)
+                }
+                else -> {
+                    // A stroll, then she turns back to the player and says something.
+                    walkTo(Random.nextFloat() * roam[0], (posY.value + Random.nextFloat() * 100f - 50f).coerceIn(0f, roam[1]))
+                    delay(500L)
+                    if (Random.nextBoolean()) express(mind.idleTopic(situation())) else doGesture(EveGesture.TILT)
                 }
             }
         }
@@ -442,7 +471,7 @@ internal fun EveHomeFriend(
                                 scope.launch { hop.animateTo(0f, spring(dampingRatio = .45f, stiffness = Spring.StiffnessMediumLow)) }
                                 feel(EveMood.HAPPY)
                                 doGesture(EveGesture.WIGGLE)
-                                say(line(EveLines.moved))
+                                talk(EveTopic.MOVED)
                             },
                             onDragCancel = {
                                 dragging = false
@@ -463,7 +492,12 @@ internal fun EveHomeFriend(
                         indication = null,
                         onClickLabel = sh("Eve ile oyna", "Play with Eve"),
                     ) {
-                        lastTouch = System.currentTimeMillis()
+                        val tapAt = System.currentTimeMillis()
+                        lastTouch = tapAt
+                        // A tap is affection: it grows the friendship (a few times a day).
+                        val bondUp = mind.pet()
+                        taps[0] = taps[1]; taps[1] = taps[2]; taps[2] = tapAt
+                        val tickled = taps[0] > 0L && tapAt - taps[0] < 4_000L
                         scope.launch {
                             hop.snapTo(0f)
                             hop.animateTo(1f, tween(170))
@@ -474,21 +508,29 @@ internal fun EveHomeFriend(
                             tapKey++
                             play(EveClip.STAND_UP)
                             feel(EveMood.SHY)
-                            say(line(EveLines.wake))
+                            talk(EveTopic.WAKE)
                             scope.launch {
                                 delay(1_400L)
                                 play(EveClip.BREATHE)
                             }
-                        } else if (live3d) {
+                        } else if (bondUp != null || tickled || !live3d) {
+                            // A new friendship level, a flurry of taps (she giggles instead of
+                            // running) or the still image: she stays and answers.
+                            tapKey++
+                            taps.fill(0L)
+                            feel(if (bondUp != null) EveMood.SHY else EveMood.HAPPY)
+                            doGesture(if (tickled) EveGesture.WIGGLE else listOf(EveGesture.NOD, EveGesture.TILT, EveGesture.WAG).random())
+                            talk(when {
+                                bondUp == 2 -> EveTopic.BOND_BEST
+                                bondUp == 1 -> EveTopic.BOND_FRIEND
+                                tickled -> EveTopic.TICKLE
+                                else -> mind.tapTopic()
+                            })
+                        } else {
                             // Startled and playful: her life loop restarts with a dash away.
                             feel(EveMood.CURIOUS)
                             fleeNext[0] = true
                             tapKey++
-                        } else {
-                            tapKey++
-                            feel(EveMood.HAPPY)
-                            doGesture(listOf(EveGesture.NOD, EveGesture.TILT, EveGesture.WAG).random())
-                            say(line(EveLines.tap))
                         }
                     },
             )

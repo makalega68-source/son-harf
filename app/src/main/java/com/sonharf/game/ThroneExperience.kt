@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.delay
 
 @Composable internal fun serverNow(server:String,key:Any?):Long {
@@ -101,6 +102,7 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
  var error by remember{mutableStateOf(false)}
  var section by remember{mutableIntStateOf(0)}
  val foreground=rememberAppForeground()
+ val myId=remember{runCatching{SupabaseProvider.client.auth.currentUserOrNull()?.id}.getOrNull()}
  LaunchedEffect(foreground){if(!foreground)return@LaunchedEffect;if(!SupabaseProvider.configured){error=true;return@LaunchedEffect};while(true){gameRequestResult{ThroneBackend.week()}.onSuccess{week=it;error=false}.onFailure{error=true};delay(20_000)}}
  val now=serverNow(week?.serverTime.orEmpty(),Unit)
  LazyColumn(Modifier.fillMaxSize().menuGround(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -118,6 +120,8 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
   item { LobbyTabs(listOf(sh("Özet","Overview"),sh("Görevler","Missions"),sh("Sıralama","Ranking")),section,{section=it}) }
   if(section==0) {
   item { ThroneOwnerStage(week?.previousOwner?.let { ThroneRow(rank=1,userId=it.userId,name=it.name,xp=it.xp,avatarPath=it.avatarPath,gender=it.gender,avatarVisibility=it.avatarVisibility) },tournamentTimeMillis(week?.resetAt.orEmpty()),now) }
+  // Eve is earned only here, from the weekly podium: her introduction and the player's shards.
+  item { EveThroneCard(myId) }
   item { GameEventStage {
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
     Column { Text(sh("SENİN YARIŞIN","YOUR RACE"),color=EventGold,fontSize=11.sp,fontWeight=FontWeight.Black);Text("${week?.me?.xp?:0} XP",color=Color.White,fontSize=26.sp,fontWeight=FontWeight.Black) }
@@ -287,6 +291,7 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
     }
    }
   }
+  Text(sh("Kürsü ödülü: 3 · 2 · 1 Eve parçası (12 parça = Eve)","Podium reward: 3 · 2 · 1 Eve shards (12 shards = Eve)"),color=Color.White.copy(alpha=.8f),fontSize=10.sp)
   Text(sh("TAHTI ELE GEÇİR  ›","CLAIM THE THRONE  ›"),Modifier.align(Alignment.End),color=EventGold,fontSize=11.sp,fontWeight=FontWeight.Black)
  }
 }
@@ -307,7 +312,7 @@ GameEventStage(gold=true) {
     Text(owner?.name?:sh("İlk şampiyon bekleniyor","Awaiting the first champion"),color=EventInk,fontSize=28.sp,fontWeight=FontWeight.Black,maxLines=1,overflow=TextOverflow.Ellipsis)
     Text("${owner?.xp?:0} XP",color=EventInk,fontSize=21.sp,fontWeight=FontWeight.Black)
     Text(sh("Ödül süresi: ","Reward expires in: ")+(if(now==0L)"—"else tournamentClockText(resetAt,now)),color=EventInk,fontSize=11.sp)
-    Text(sh("Altın çerçeve · 1 rozeti · 7 gün","Gold frame · No. 1 badge · 7 days"),color=EventInk,fontSize=11.sp,fontWeight=FontWeight.Bold)
+    Text(sh("Altın çerçeve · 1 rozeti · 7 gün · 3 Eve parçası","Gold frame · No. 1 badge · 7 days · 3 Eve shards"),color=EventInk,fontSize=11.sp,fontWeight=FontWeight.Bold)
     previousOwner?.let{Text(sh("Geçen haftanın sahibi: ${it.name}","Last week's owner: ${it.name}"),color=EventInk.copy(alpha=.75f),fontSize=10.sp)}
    }
   }

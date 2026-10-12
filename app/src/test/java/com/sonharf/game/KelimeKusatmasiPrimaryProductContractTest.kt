@@ -76,7 +76,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         val lobby = File("src/main/java/com/sonharf/game/HomeLobby.kt").readText()
         listOf("sh(\"Yeni Oyun\", \"New Game\")", "sh(\"Oyunlarım\", \"My Games\")", "R.drawable.kelime_tahti_brand_logo",
             "sh(\"Mağaza\", \"Store\")", "sh(\"Taht\", \"Throne\")", "sh(\"Oyna\", \"Play\")", "sh(\"Arkadaşlar\", \"Friends\")",
-            "sh(\"Profil\", \"Profile\")", "rememberWorkshopStatus(), onWorkshop)", "sh(\"Son Harf\", \"Last Letter\")").forEach { assertTrue(it, lobby.contains(it)) }
+            "sh(\"Profil\", \"Profile\")", "val workshopStatus = rememberWorkshopStatus()", "workshopStatus, onWorkshop)", "sh(\"Son Harf\", \"Last Letter\")").forEach { assertTrue(it, lobby.contains(it)) }
         // Game lists live in Oyunlarım, not on the lobby.
         assertFalse(lobby.contains("SIRA SENDE"))
         assertFalse(shell.contains("PremiumDestination.TASKS"))

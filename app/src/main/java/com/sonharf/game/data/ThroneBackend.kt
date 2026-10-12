@@ -36,7 +36,17 @@ import kotlinx.serialization.json.put
  @SerialName("server_time") val serverTime:String="",@SerialName("event_start") val eventStart:String?=null,val live:Boolean=false,
  @SerialName("next_start") val nextStart:String="",val rows:List<TournamentBoardRow> = emptyList(),val me:TournamentBoardMe?=null,val total:Int=0,
 )
+/** One completed throne week that gave Eve shards: final rank and shards earned. */
+@Serializable internal data class EveShardWeek(@SerialName("week_start") val weekStart:String="",val rank:Int=0,val shards:Int=0)
+/** Eve, earned from the weekly throne podium: 1st = 3, 2nd = 2, 3rd = 1 shard; 12 shards make Eve. */
+@Serializable internal data class EveStatus(
+ val shards:Int=0,val required:Int=12,val owned:Boolean=false,val admin:Boolean=false,
+ val weeks:List<EveShardWeek> = emptyList(),
+ @SerialName("current_rank") val currentRank:Int=0,@SerialName("week_resets_at") val weekResetsAt:String="",
+)
+
 internal object ThroneBackend {
+ suspend fun eveStatus():EveStatus=SupabaseProvider.client.postgrest.rpc("get_eve_status_v1").decodeAs()
  suspend fun tournament():AtelierTournament=SupabaseProvider.client.postgrest.rpc("get_atelier_tournament_v1").decodeAs()
  /** Top 100 of the live tournament, or of the latest one until the next starts (every 2 hours). */
  suspend fun tournamentBoard():TournamentBoard=SupabaseProvider.client.postgrest.rpc("get_atelier_tournament_board_v1").decodeAs()
