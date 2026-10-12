@@ -629,9 +629,9 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
             EveMood.NEUTRAL -> floatArrayOf(glanceYaw, -4f + glancePitch, 0f, 1.5f, 0f, 0f, 5f)
             EveMood.HAPPY -> floatArrayOf(0f, -7f, -7f, 5f, 0f, -16f, 18f)
             EveMood.CURIOUS -> floatArrayOf(4f, -5f, 11f, 7f, 0f, -8f, 8f)
-            EveMood.SHY -> floatArrayOf(-7f, 7f, 5f, -6f, 3f, 10f, 4f)
-            EveMood.SAD -> floatArrayOf(0f, 12f, 0f, -3f, 10f, 20f, 0f)
-            EveMood.SLEEPY -> floatArrayOf(0f, 9f, 0f, -4f, 7f, 10f, 2f)
+            EveMood.SHY -> floatArrayOf(-7f, 7f, 5f, -2f, 2f, 10f, 4f)
+            EveMood.SAD -> floatArrayOf(0f, 12f, 0f, -1.5f, 5f, 20f, 0f)
+            EveMood.SLEEPY -> floatArrayOf(0f, 9f, 0f, -1.5f, 4f, 10f, 2f)
         }
         if (expression.walking) { target[0] = 0f; target[1] = -2f; target[6] = maxOf(target[6], 9f) }
         // Unhurried easing: feelings settle over about half a second.
@@ -641,7 +641,7 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
         val bob = if (expression.talking) 1.2f * kotlin.math.sin(t * 3.6f) else 0f
         // A small ear flick that rises and settles over ~0.4 s.
         val tw = ((now - twitchAt) / 400_000_000f).coerceIn(0f, 1f)
-        val twitch = if (tw < 1f) 4f * kotlin.math.sin(tw * PI_F) else 0f
+        val twitch = if (tw < 1f) 3f * kotlin.math.sin(tw * PI_F) else 0f
 
         // The current gesture, eased in and out over its length.
         if (expression.gestureKey != seenGestureKey) {
@@ -711,7 +711,7 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
     private companion object {
         /** The root's forward offset in her idle clips, where the in-place stride is pinned. */
         const val WALK_ROOT_Y = 18.34f
-        const val EAR_GESTURE_SCALE = .35f
+        const val EAR_GESTURE_SCALE = .25f
     }
 }
 
