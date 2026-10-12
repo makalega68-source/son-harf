@@ -157,7 +157,12 @@ jobs:
             fi
           done
           ls -1t *.png *.xml *.txt 2>/dev/null | head -8 | sed 's/^/::notice::newest file /' || true
-          [ -f Mascot-drag-logcat.txt ] && grep -E "FATAL|AndroidRuntime|Filament|sceneview|libc  " Mascot-drag-logcat.txt | tail -25 | sed 's/^/::error::/' || true
+          [ -f Mascot-drag-logcat.txt ] && grep -E "FATAL|AndroidRuntime|Filament|sceneview|libc  |ANR|lowmemory|Fatal signal|DEBUG  " Mascot-drag-logcat.txt | tail -25 | sed 's/^/::error::/' || true
+          [ -f Mascot-drag-logcat.txt ] && tail -n 12 Mascot-drag-logcat.txt | sed 's/^/::warning::logcat tail /' || true
+          echo "::warning::adb devices: $(timeout 20 adb devices 2>&1 | tr '\n' ' ')"
+          echo "::warning::emulator processes: $(pgrep -af 'qemu|emulator' | cut -c1-120 | tr '\n' ' ')"
+          sudo dmesg 2>/dev/null | grep -iE "killed process|out of memory|oom|segfault|qemu" | tail -n 8 | sed 's/^/::warning::dmesg /' || true
+          echo "::warning::host memory: $(free -m | tr '\n' ' ')"
       - name: Validate frame and APK were produced by this checkout
         run: |
           test -s Ceviz-Fildisi-Android.png
