@@ -294,8 +294,9 @@ jobs:
           PY
             "$BT/zipalign" -f -p 4 lite-unsigned.apk lite-aligned.apk || { echo "::warning::Lite APK: zipalign failed"; return 1; }
             "$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --out Kelime-Tahti-Lite.apk lite-aligned.apk || { echo "::warning::Lite APK: signing failed"; return 1; }
-            LITE=$("$BT/apksigner" verify --print-certs Kelime-Tahti-Lite.apk | grep -m1 SHA-256)
-            FULL=$("$BT/apksigner" verify --print-certs Kelime-Tahti-Test.apk | grep -m1 SHA-256)
+            # Compare only the certificate digest (the line's "V2/V3 Signer" label differs by scheme).
+            LITE=$("$BT/apksigner" verify --print-certs Kelime-Tahti-Lite.apk | grep -m1 'SHA-256 digest' | awk '{print $NF}')
+            FULL=$("$BT/apksigner" verify --print-certs Kelime-Tahti-Test.apk | grep -m1 'SHA-256 digest' | awk '{print $NF}')
             [ "$LITE" = "$FULL" ] || { echo "::warning::Lite APK: signing key differs from the test APK ($LITE vs $FULL)"; return 1; }
             echo "::notice::Lite APK bytes=$(stat -c%s Kelime-Tahti-Lite.apk) $LITE"
             gh release upload branch-test Kelime-Tahti-Lite.apk --clobber || { echo "::warning::Lite APK: upload failed"; return 1; }
