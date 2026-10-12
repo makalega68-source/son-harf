@@ -1,6 +1,5 @@
 package com.sonharf.game
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -205,7 +204,7 @@ internal fun EveHomeFriend(
 
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.widthIn(max = 200.dp), contentAlignment = Alignment.BottomCenter) {
-            AnimatedVisibility(
+            androidx.compose.animation.AnimatedVisibility(
                 visible = speech != null,
                 enter = fadeIn(tween(180)) + scaleIn(initialScale = .8f),
                 exit = fadeOut(tween(220)) + scaleOut(targetScale = .9f),
