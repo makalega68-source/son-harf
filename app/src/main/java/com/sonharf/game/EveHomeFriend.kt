@@ -68,7 +68,7 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /** Eve's skeletal clips that stay in place (the walk/run/combat clips move the root and are not used). */
-internal enum class EveClip(val clipName: String, val loop: Boolean) {
+internal enum class EveClip(val clipName: String, val loop: Boolean, val moves: Boolean = false) {
     BREATHE("IdleBreathe", true),
     LOOK_AROUND("IdleLookAround", false),
     GRAZE("IdleGraze", true),
@@ -77,8 +77,17 @@ internal enum class EveClip(val clipName: String, val loop: Boolean) {
     REST("Rest", true),
     STAND_UP("RestToGoBackUp", false),
     /** Walk and run in place: the clips' forward root motion is pinned (EveRig.pinRoot), the screen moves her. */
-    WALK("Walk", true),
-    RUN("Run", true),
+    WALK("Walk", true, moves = true),
+    RUN("Run", true, moves = true),
+    /** Nibbling grass while ambling along, at walking pace. */
+    WALK_GRAZE("WalkGraze", true, moves = true),
+    /** Stepping round to the left/right before a walk; the clip's own body turn is undone (EveRig.resetArmature). */
+    TURN_LEFT("WalkTurnL", false, moves = true),
+    TURN_RIGHT("WalkTurnR", false, moves = true),
+    /** A startled flinch when tapped, just before she dashes off. */
+    STARTLE("GetHit", false),
+    /** A playful pounce on an imaginary leaf. */
+    POUNCE("Attack", false),
 }
 
 /** Her pace on screen, matched to each clip's stride (Run covers ~4.4x the Walk) so the paws do not slide. */
@@ -111,6 +120,11 @@ internal object EveLines {
         "Hihi, kaçtım! 🍃" to "Hehe, got away! 🍃",
         "Ebelemece mi oynuyoruz? 🌿" to "Are we playing tag? 🌿",
         "Buradayım, buradaa! 😊" to "Over here, over heeere! 😊",
+    )
+    val pounce = listOf(
+        "Hop! Yakaladım! 🍃" to "Pounce! Got it! 🍃",
+        "Bir yaprak gördüm sandım 😄" to "I thought I saw a leaf 😄",
+        "Kelime avındayım! 🌿" to "I'm hunting for words! 🌿",
     )
     val moved = listOf(
         "Vay, uçtum! Burası da güzelmiş 🌿" to "Whee, I flew! Nice spot 🌿",
@@ -193,7 +207,7 @@ internal fun EveHomeFriend(
         gestureKey++
     }
     // A stroll or a dash: turn towards the spot, move there at the clip's pace, then face the player.
-    suspend fun walkTo(tx: Float, ty: Float, run: Boolean = false) {
+    suspend fun walkTo(tx: Float, ty: Float, run: Boolean = false, graze: Boolean = false) {
         val dx = tx - posX.value
         val dy = ty - posY.value
         val distance = hypot(dx, dy)
@@ -201,9 +215,14 @@ internal fun EveHomeFriend(
         // Facing the player is 0 degrees; walking down the screen comes towards the player.
         bodyYaw = Math.toDegrees(atan2(dx.toDouble(), (-dy).toDouble())).toFloat()
         walking = true
-        play(if (run) EveClip.RUN else EveClip.WALK)
         try {
-            delay(if (run) 160L else 340L)
+            if (!run && kotlin.math.abs(bodyYaw) > 25f) {
+                // She steps round on the spot first (her own turning clip), then sets off.
+                play(if (bodyYaw > 0f) EveClip.TURN_LEFT else EveClip.TURN_RIGHT)
+                delay(520L)
+            }
+            play(if (run) EveClip.RUN else if (graze) EveClip.WALK_GRAZE else EveClip.WALK)
+            delay(if (run) 160L else 120L)
             val speed = if (run) EVE_RUN_DP_PER_SEC else EVE_WALK_DP_PER_SEC
             val millis = (distance / speed * 1_000f).roundToInt()
             coroutineScope {
@@ -220,6 +239,9 @@ internal fun EveHomeFriend(
     }
     // A tap startles her: she runs (or trots) off to the side, then turns and peeks back at you.
     suspend fun flee() {
+        // A quick flinch first, then off she goes.
+        play(EveClip.STARTLE)
+        delay(380L)
         val goRight = posX.value < roam[0] / 2f
         val distance = 120f + Random.nextFloat() * 130f
         val tx = (posX.value + if (goRight) distance else -distance).coerceIn(0f, roam[0])
@@ -278,7 +300,7 @@ internal fun EveHomeFriend(
             // A varied little life: never the same act twice in a row.
             var act: Int
             // About a third of her acts are strolls, so she really wanders the screen.
-            do { act = Random.nextInt(19) } while (act == lastAct || (!live3d && act >= 13))
+            do { act = Random.nextInt(22) } while (act == lastAct || (!live3d && act >= 13))
             lastAct = act
             when (act) {
                 0 -> doGesture(EveGesture.TILT)
@@ -301,6 +323,23 @@ internal fun EveHomeFriend(
                 10 -> doGesture(EveGesture.PAW_WAVE)
                 11 -> doGesture(EveGesture.STRETCH)
                 12 -> doGesture(EveGesture.WIGGLE)
+                13 -> {
+                    play(EveClip.LOOK_AROUND)
+                    delay(7_600L)
+                    play(EveClip.BREATHE)
+                }
+                14 -> {
+                    feel(EveMood.HAPPY)
+                    play(EveClip.POUNCE)
+                    delay(1_050L)
+                    play(EveClip.BREATHE)
+                    if (Random.nextBoolean()) say(line(EveLines.pounce))
+                }
+                15 -> {
+                    // A short amble with her nose in the grass.
+                    val step = (40f + Random.nextFloat() * 60f) * if (Random.nextBoolean()) 1f else -1f
+                    walkTo((posX.value + step).coerceIn(0f, roam[0]), posY.value, graze = true)
+                }
                 else -> {
                     // A stroll to somewhere else on the screen, then a look around.
                     walkTo(Random.nextFloat() * roam[0], (posY.value + Random.nextFloat() * 120f - 60f).coerceIn(0f, roam[1]))
@@ -458,6 +497,7 @@ internal fun EveHomeFriend(
 }
 
 private const val EVE_BOX_WIDTH_DP = 150f
+private val EVE_MOVING_CLIPS = EveClip.entries.filter { it.moves }.map { it.clipName }
 
 /** The live 3D view: Filament through SceneView on a transparent texture surface. */
 @Composable
@@ -504,7 +544,8 @@ private fun EveLiveModel(
                     // Rest pose first so the procedural layer never accumulates on bones a clip leaves alone.
                     rig?.restore()
                     mixer.apply(live.animator, frameTimeNanos)
-                    if (mixer.uses(live.animator, EveClip.WALK.clipName) || mixer.uses(live.animator, EveClip.RUN.clipName)) rig?.pinRoot()
+                    if (EVE_MOVING_CLIPS.any { mixer.uses(live.animator, it) }) rig?.pinRoot()
+                    rig?.resetArmature()
                     // She turns on her own skeleton (root bone); the scene node itself is never moved.
                     rig?.face(turn[0])
                     rig?.express(expression(), frameTimeNanos)
@@ -567,6 +608,9 @@ internal data class EveExpression(
 private class EveRig(engine: com.google.android.filament.Engine, asset: com.google.android.filament.gltfio.FilamentAsset) {
     private val tm = engine.transformManager
     private val root = bone(asset, "bone_0")
+    // The armature node: only the turning clips rotate it, and that turn is undone every frame.
+    private val armature = bone(asset, "Armature_001")
+    private val armatureRest = armature?.let { tm.getTransform(it, FloatArray(16)) }
     private val head = bone(asset, "bone_10")
     private val earLeft = bone(asset, "bone_15")
     private val earRight = bone(asset, "bone_17")
@@ -598,6 +642,11 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
 
     fun restore() {
         rest.forEach { (instance, transform) -> tm.setTransform(instance, transform) }
+    }
+
+    fun resetArmature() {
+        val instance = armature ?: return
+        tm.setTransform(instance, armatureRest ?: return)
     }
 
     /** The Walk clip carries her forward; the screen does that instead, so the stride stays in place. */
