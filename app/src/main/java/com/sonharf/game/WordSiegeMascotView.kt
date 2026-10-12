@@ -1240,9 +1240,15 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         // Raw mouth targets avoid stacking two filters: ~95% response in 200 ms, including speech/yawns.
         val mouthBlend = 1f - kotlin.math.exp(-dt * 15f)
         for (i in 0 until 3) mouthValue[i] += (mouthTarget[i] - mouthValue[i]) * mouthBlend
-        if (skin == WordSiegeMascotSkin.BIRD) drawBeak(canvas, mouthValue[1]) else drawMouth(canvas, mouthValue[0], mouthValue[1], mouthValue[2])
+        if (skin == WordSiegeMascotSkin.BIRD) {
+            // The yellow face mask sits under the beak.
+            decor.drawFace(canvas, mouthTopY(mouthValue[0], mouthValue[1]), mouthValue[1])
+            drawBeak(canvas, mouthValue[1])
+        } else {
+            drawMouth(canvas, mouthValue[0], mouthValue[1], mouthValue[2])
+        }
         if (actionKind == WordSiegeMascotAction.EAT && faceT >= 0f) drawLetterSnack(canvas, faceT)
-        decor.drawFace(canvas, mouthTopY(mouthValue[0], mouthValue[1]), mouthValue[1])
+        if (skin != WordSiegeMascotSkin.BIRD) decor.drawFace(canvas, mouthTopY(mouthValue[0], mouthValue[1]), mouthValue[1])
         if (mood == WordSiegeMascotEmotion.TEARY) drawTears(canvas, now)
         canvas.restore()
 
@@ -2003,38 +2009,57 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     }
 
     // ---- Çiçi the budgie: feathered wings and a beak --------------------------------------------
+    // Rounded wing with four primary feather tips along the trailing edge.
     private val birdWingPath = Path().apply {
         moveTo(0f, 0f)
-        cubicTo(70f, -30f, 170f, 10f, 205f, 120f)
-        quadTo(195f, 200f, 152f, 232f)
-        quadTo(140f, 196f, 112f, 204f)
-        quadTo(106f, 252f, 70f, 254f)
-        quadTo(66f, 210f, 38f, 208f)
-        quadTo(18f, 236f, -8f, 206f)
-        cubicTo(-40f, 140f, -30f, 50f, 0f, 0f)
+        cubicTo(80f, -26f, 178f, 18f, 206f, 118f)
+        quadTo(214f, 170f, 186f, 226f); quadTo(170f, 250f, 150f, 236f)
+        quadTo(146f, 262f, 118f, 262f); quadTo(96f, 262f, 92f, 240f)
+        quadTo(80f, 262f, 56f, 254f); quadTo(36f, 246f, 38f, 222f)
+        quadTo(14f, 226f, 0f, 204f)
+        cubicTo(-30f, 150f, -28f, 52f, 0f, 0f)
         close()
     }
+    // Budgie barring: rows of dark scallops across the coverts.
+    private val birdWingBars = Path().apply {
+        for (row in 0 until 4) {
+            val y = 26f + row * 34f
+            for (col in -1 until 5) {
+                val cx = col * 44f + (row % 2) * 22f + 10f + row * 6f
+                addArc(RectF(cx - 22f, y - 22f, cx + 22f, y + 22f), 27f, 126f)
+            }
+        }
+    }
+    // Light shafts between the dark flight feathers.
     private val birdWingFeatherPath = Path().apply {
-        moveTo(34f, 62f); quadTo(96f, 96f, 150f, 206f)
-        moveTo(12f, 94f); quadTo(58f, 140f, 76f, 232f)
-        moveTo(74f, 30f); quadTo(150f, 72f, 188f, 156f)
+        moveTo(178f, 150f); lineTo(170f, 224f)
+        moveTo(150f, 160f); lineTo(124f, 250f)
+        moveTo(110f, 166f); lineTo(76f, 244f)
+        moveTo(70f, 168f); lineTo(30f, 214f)
     }
     private val birdWingFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        shader = LinearGradient(0f, 0f, 140f, 250f, intArrayOf(0xFFB6E64E.toInt(), 0xFF5FA01C.toInt(), 0xFF2E6A0C.toInt()),
-            floatArrayOf(0f, .55f, 1f), Shader.TileMode.CLAMP)
+        shader = LinearGradient(0f, 0f, 120f, 262f,
+            intArrayOf(0xFFF4F27C.toInt(), 0xFFB6DC4A.toInt(), 0xFF4F9A2A.toInt(), 0xFF1E4A3A.toInt()),
+            floatArrayOf(0f, .45f, .72f, 1f), Shader.TileMode.CLAMP)
         setShadowLayer(18f, 0f, 8f, 0x520C061E)
     }
     private val birdWingLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 7f
+        strokeJoin = Paint.Join.ROUND
+        color = 0xC0183A10.toInt()
+    }
+    private val birdBarLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 9f
         strokeCap = Paint.Cap.ROUND
-        color = 0xC01E4A06.toInt()
+        color = 0xC7141C08.toInt()
     }
     private val birdFeatherLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 5f
         strokeCap = Paint.Cap.ROUND
-        color = 0x8CF4FFD0.toInt()
+        color = 0x8CE6FFC8.toInt()
     }
     private val beakFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         shader = LinearGradient(0f, MOUTH_Y - 80f, 0f, MOUTH_Y + 40f, intArrayOf(0xFFFFD27A.toInt(), 0xFFFF9A3C.toInt(), 0xFFD9601A.toInt()),
@@ -2089,8 +2114,12 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             }
             canvas.rotate(-(angle + extra))
             canvas.drawPath(birdWingPath, birdWingFill)
-            canvas.drawPath(birdWingPath, birdWingLine)
+            canvas.save()
+            canvas.clipPath(birdWingPath)
+            canvas.drawPath(birdWingBars, birdBarLine)
             canvas.drawPath(birdWingFeatherPath, birdFeatherLine)
+            canvas.restore()
+            canvas.drawPath(birdWingPath, birdWingLine)
             canvas.restore()
             side += 2
         }

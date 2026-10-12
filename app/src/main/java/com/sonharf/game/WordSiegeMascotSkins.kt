@@ -102,8 +102,8 @@ internal class WordSiegeMascotPalette(private val stops: FloatArray, private val
             WordSiegeMascotSkin.DEVIL_RED -> of(.1f, 0f to 0xFF12020A, .3f to 0xFF5C0718, .55f to 0xFFE0283A, .78f to 0xFFFF8D5E, 1f to 0xFFFFF0DE)
             WordSiegeMascotSkin.CAT -> of(.1f, 0f to 0xFF150802, .3f to 0xFF652806, .55f to 0xFFEA7A1C, .78f to 0xFFFFC46A, 1f to 0xFFFFFAF0)
             WordSiegeMascotSkin.ROBOT -> of(.35f, 0f to 0xFF05070C, .3f to 0xFF263140, .55f to 0xFF7A8CA4, .78f to 0xFFCFDBE8, 1f to 0xFFFFFFFF)
-            // Fresh spring green with a sunny highlight, like a budgie in the light.
-            WordSiegeMascotSkin.BIRD -> of(.1f, 0f to 0xFF0C2604, .3f to 0xFF3C7A10, .55f to 0xFF86C82A, .78f to 0xFFD2EE70, 1f to 0xFFFFFFE8)
+            // Budgie green that turns sunny yellow in the light.
+            WordSiegeMascotSkin.BIRD -> of(.06f, 0f to 0xFF12320C, .3f to 0xFF3E9420, .55f to 0xFF94D834, .78f to 0xFFEFF266, 1f to 0xFFFFFFE8)
             // Bright liquid gold even in the orb's dark glass: the darkest tones map to warm amber, not brown-black.
             WordSiegeMascotSkin.GOLD_KING -> of(.06f, 0f to 0xFF8A5A0C, .22f to 0xFFC98A1E, .45f to 0xFFF2BE3E, .7f to 0xFFFFE07A, 1f to 0xFFFFFCEB)
         }
@@ -205,6 +205,7 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
                 wingColors = intArrayOf(0xF286C82A.toInt(), 0xE63C7A10.toInt())
                 target = behind; birdTail()
                 target = tuft; birdCrest()
+                target = face; birdFace()
                 target = front; birdFeet()
             }
             WordSiegeMascotSkin.GOLD_KING -> {
@@ -372,22 +373,43 @@ internal class WordSiegeMascotDecor private constructor(val skin: WordSiegeMasco
     }
 
     /** Three soft feathers springing up from the crown, swaying with the tuft. */
+    /** Three slim curled forehead feathers, sunny yellow: a budgie's crest, not a leaf. */
     private fun birdCrest() {
         resetMatrix()
-        val g = { lin(700f, 220f, 760f, 60f, 0f to 0xFF3C7A10, .55f to 0xFF8CCB2E, 1f to 0xFFE6FF9C) }
-        add(taper(floatArrayOf(690f, 236f, 650f, 170f, 600f, 150f, 572f, 176f), 58f, 6f), fill(g(), shadow = true), line(0xFF1E4A06, 8f))
-        add(taper(floatArrayOf(730f, 236f, 780f, 176f, 830f, 168f, 852f, 198f), 52f, 6f), fill(g(), shadow = true), line(0xFF1E4A06, 8f))
-        add(taper(floatArrayOf(706f, 240f, 690f, 150f, 726f, 72f, 790f, 70f), 80f, 8f), fill(g(), shadow = true), line(0xFF1E4A06, 8f))
-        streak(floatArrayOf(700f, 210f, 698f, 150f, 716f, 104f, 748f, 84f), 9f, .7f)
+        val g = { lin(700f, 250f, 740f, 60f, 0f to 0xFFF0B81C, .55f to 0xFFFFE04A, 1f to 0xFFFFF6B8) }
+        add(taper(floatArrayOf(684f, 246f, 660f, 190f, 622f, 160f, 598f, 170f), 34f, 8f), fill(g(), shadow = true), line(0xFF7A4A04, 7f))
+        add(taper(floatArrayOf(734f, 246f, 770f, 196f, 812f, 176f, 834f, 190f), 32f, 8f), fill(g(), shadow = true), line(0xFF7A4A04, 7f))
+        add(taper(floatArrayOf(708f, 250f, 700f, 170f, 724f, 96f, 786f, 84f), 44f, 10f), fill(g(), shadow = true), line(0xFF7A4A04, 7f))
+        streak(floatArrayOf(704f, 220f, 700f, 170f, 712f, 128f, 740f, 104f), 6f, .7f)
     }
 
-    /** A fan of long tail feathers behind the body, lower right. */
+    /** Two long cobalt tail feathers behind the body, lower right, as on a real budgie. */
     private fun birdTail() {
         resetMatrix()
-        val g = { lin(980f, 900f, 1210f, 760f, 0f to 0xFF2E6A0C, .6f to 0xFF7DBE26, 1f to 0xFFC8EC66) }
-        add(taper(floatArrayOf(960f, 930f, 1060f, 900f, 1150f, 840f, 1230f, 720f), 70f, 14f), fill(g(), shadow = true), line(0xFF1E4A06, 8f))
-        add(taper(floatArrayOf(960f, 960f, 1070f, 950f, 1170f, 920f, 1240f, 840f), 62f, 12f), fill(g(), shadow = true), line(0xFF1E4A06, 8f))
-        add(taper(floatArrayOf(950f, 990f, 1060f, 1000f, 1150f, 990f, 1215f, 950f), 52f, 10f), fill(g()), line(0xFF1E4A06, 7f))
+        val g = { lin(960f, 960f, 1230f, 800f, 0f to 0xFF1A3C9A, .65f to 0xFF2F6FE0, 1f to 0xFF8FD2FF) }
+        add(taper(floatArrayOf(950f, 940f, 1060f, 900f, 1150f, 850f, 1236f, 780f), 58f, 22f), fill(g(), shadow = true), line(0xFF0E1E52, 8f))
+        add(taper(floatArrayOf(950f, 980f, 1070f, 960f, 1160f, 930f, 1244f, 880f), 52f, 20f), fill(g(), shadow = true), line(0xFF0E1E52, 8f))
+        streak(floatArrayOf(980f, 938f, 1060f, 906f, 1150f, 856f, 1222f, 790f), 5f, .45f)
+    }
+
+    /** A budgie's face: a sunny yellow mask round the beak, violet cheek patches and throat spots. */
+    private fun birdFace() {
+        resetMatrix()
+        m.preTranslate(708f, 872f)
+        m.preScale(1f, .66f)
+        add(Path().apply { addCircle(0f, 0f, 250f, Path.Direction.CW) },
+            fill(rad(0f, 0f, 250f, 0f to 0xF2FFEC6E, .62f to 0xD9FFE250, 1f to 0x00FFDC3C)), null)
+        for (cx in floatArrayOf(500f, 916f)) {
+            resetMatrix()
+            m.preTranslate(cx, 872f)
+            m.preScale(1f, .78f)
+            add(Path().apply { addCircle(0f, 0f, 42f, Path.Direction.CW) },
+                fill(rad(-10f, -12f, 48f, 0f to 0xFFC4B0FF, .7f to 0xFF6E52E6, 1f to 0xFF4A34B8)), null)
+        }
+        resetMatrix()
+        for ((x, y) in listOf(656f to 930f, 708f to 944f, 760f to 930f)) {
+            add(Path().apply { addCircle(x, y, 15f, Path.Direction.CW) }, fill(color = 0xFF14180C), null)
+        }
     }
 
     /** Two little orange feet with three toes each, peeking out under the body. */
