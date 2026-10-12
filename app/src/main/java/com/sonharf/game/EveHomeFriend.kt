@@ -127,6 +127,8 @@ internal fun EveHomeFriend(
     // Her face lives in body language: head turn/tilt/nod and ears, driven per frame by EveRig.
     var mood by remember { mutableStateOf(EveMood.NEUTRAL) }
     var moodKey by remember { mutableIntStateOf(0) }
+    var gesture by remember { mutableStateOf(EveGesture.NONE) }
+    var gestureKey by remember { mutableIntStateOf(0) }
     val hop = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val firstName = playerName?.trim()?.split(' ')?.firstOrNull()?.takeIf { it.isNotBlank() && it.length <= 14 }
@@ -147,6 +149,10 @@ internal fun EveHomeFriend(
     fun feel(next: EveMood) {
         mood = next
         moodKey++
+    }
+    fun doGesture(next: EveGesture) {
+        gesture = next
+        gestureKey++
     }
 
     // A feeling shows for a few seconds, then she settles back to her calm look (or stays sleepy).
@@ -176,8 +182,9 @@ internal fun EveHomeFriend(
     // Her own little life: mostly breathing, sometimes looking around or grazing; a nap when alone.
     LaunchedEffect(ready, tapKey) {
         if (!ready) return@LaunchedEffect
+        var lastAct = -1
         while (true) {
-            delay(7_000L + Random.nextLong(7_000L))
+            delay(4_500L + Random.nextLong(5_000L))
             val idleFor = System.currentTimeMillis() - lastTouch
             if (resting) continue
             if (idleFor > 75_000L) {
@@ -188,25 +195,27 @@ internal fun EveHomeFriend(
                 play(EveClip.REST)
                 continue
             }
-            when (Random.nextInt(10)) {
-                0 -> {
-                    play(EveClip.LOOK_AROUND)
-                    delay(7_600L)
-                    play(EveClip.BREATHE)
-                }
-                1, 2 -> feel(if (Random.nextBoolean()) EveMood.CURIOUS else EveMood.HAPPY)
-                3, 4 -> {
+            // A varied little life: never the same act twice in a row.
+            var act: Int
+            do { act = Random.nextInt(9) } while (act == lastAct)
+            lastAct = act
+            when (act) {
+                0 -> doGesture(EveGesture.TILT)
+                1 -> doGesture(EveGesture.EAR_PLAY)
+                2 -> doGesture(EveGesture.SNIFF)
+                3 -> doGesture(EveGesture.LISTEN)
+                4 -> doGesture(EveGesture.LOOK_UP)
+                5 -> feel(if (Random.nextBoolean()) EveMood.CURIOUS else EveMood.HAPPY)
+                6 -> {
                     play(EveClip.GRAZE_ONCE)
                     delay(3_000L)
                     play(EveClip.BREATHE)
                 }
-                5 -> {
-                    play(EveClip.GRAZE)
-                    if (Random.nextInt(3) == 0) say(line(EveLines.idle))
-                    delay(5_000L)
-                    play(EveClip.BREATHE)
+                7 -> {
+                    doGesture(EveGesture.NOD)
+                    if (Random.nextInt(2) == 0) say(line(EveLines.idle))
                 }
-                else -> Unit
+                else -> doGesture(EveGesture.SHAKE)
             }
         }
     }
@@ -216,8 +225,9 @@ internal fun EveHomeFriend(
         runCatching { mixer.transition(live.animator, clip.clipName, clip.loop) }
     }
 
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.widthIn(max = 200.dp), contentAlignment = Alignment.BottomCenter) {
+    // The bubble floats above her in its own slot, so showing it never shifts Eve sideways.
+    Box(modifier) {
+        Box(Modifier.align(Alignment.BottomStart).padding(bottom = 122.dp).widthIn(max = 220.dp)) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = speech != null,
                 enter = fadeIn(tween(180)) + scaleIn(initialScale = .8f),
@@ -243,6 +253,7 @@ internal fun EveHomeFriend(
         }
         Box(
             Modifier
+                .align(Alignment.BottomStart)
                 .size(width = 118.dp, height = 128.dp)
                 .graphicsLayer { translationY = -hop.value * 26.dp.toPx() },
         ) {
@@ -251,7 +262,7 @@ internal fun EveHomeFriend(
                     mixer,
                     onNode = { node = it },
                     nodeProvider = { node },
-                    expression = { EveExpression(mood, talking = speech != null) },
+                    expression = { EveExpression(mood, talking = speech != null, gesture = gesture, gestureKey = gestureKey) },
                 )
             } else {
                 Image(
@@ -288,6 +299,7 @@ internal fun EveHomeFriend(
                         } else {
                             play(EveClip.BREATHE)
                             feel(listOf(EveMood.HAPPY, EveMood.HAPPY, EveMood.CURIOUS, EveMood.SHY).random())
+                            doGesture(listOf(EveGesture.EAR_PLAY, EveGesture.NOD, EveGesture.TILT).random())
                             say(line(EveLines.tap))
                         }
                     },
@@ -365,7 +377,17 @@ internal object EveDevice {
 
 internal enum class EveMood { NEUTRAL, HAPPY, CURIOUS, SHY, SAD, SLEEPY }
 
-internal data class EveExpression(val mood: EveMood, val talking: Boolean)
+/** Short head and ear moves layered over the feeling. */
+internal enum class EveGesture(val millis: Long) {
+    NONE(0L), NOD(1_300L), SHAKE(1_300L), TILT(1_800L), EAR_PLAY(1_600L), SNIFF(1_300L), LISTEN(2_200L), LOOK_UP(1_800L),
+}
+
+internal data class EveExpression(
+    val mood: EveMood,
+    val talking: Boolean,
+    val gesture: EveGesture = EveGesture.NONE,
+    val gestureKey: Int = 0,
+)
 
 /**
  * Eve's face is painted into her texture, so her feelings live in the skeleton: head turn, nod
@@ -391,6 +413,9 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
     private var twitchUntil = 0L
     private var twitchLeft = true
     private var nextTwitchAt = 0L
+    private var seenGestureKey = -1
+    private var gestureStartedAt = 0L
+    private var tiltSide = 1f
 
     private fun bone(asset: com.google.android.filament.gltfio.FilamentAsset, name: String): Int? {
         val entity = asset.getFirstEntityByName(name)
@@ -408,10 +433,11 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
         val t = now / 1e9f
         // Little glances around the screen and quick ear twitches keep her alive between feelings.
         if (now > nextGlanceAt) {
-            val looking = Random.nextInt(3) != 0
-            glanceYaw = if (looking) Random.nextFloat() * 30f - 12f else 0f
-            glancePitch = if (looking) Random.nextFloat() * 8f - 4f else 0f
-            nextGlanceAt = now + (1_400L + Random.nextLong(3_200L)) * 1_000_000L
+            // Mostly she looks right at the player; now and then a short glance aside.
+            val looking = Random.nextInt(3) == 0
+            glanceYaw = if (looking) Random.nextFloat() * 20f - 10f else 0f
+            glancePitch = if (looking) Random.nextFloat() * 6f - 3f else 0f
+            nextGlanceAt = now + (if (looking) 900L + Random.nextLong(900L) else 2_500L + Random.nextLong(3_000L)) * 1_000_000L
         }
         if (now > nextTwitchAt) {
             twitchLeft = Random.nextBoolean()
@@ -420,11 +446,11 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
         }
         // Targets per feeling: yaw, pitch, roll, perk, droop. Neutral looks towards the screen centre.
         val target = when (expression.mood) {
-            EveMood.NEUTRAL -> floatArrayOf(10f + glanceYaw, -6f + glancePitch, 0f, 4f, 0f)
-            EveMood.HAPPY -> floatArrayOf(4f, -10f, -9f, 16f, 0f)
-            EveMood.CURIOUS -> floatArrayOf(12f, -8f, 15f, 22f, 0f)
-            EveMood.SHY -> floatArrayOf(-12f, 9f, 7f, -18f, 8f)
-            EveMood.SAD -> floatArrayOf(4f, 14f, 0f, -6f, 30f)
+            EveMood.NEUTRAL -> floatArrayOf(glanceYaw, -4f + glancePitch, 0f, 4f, 0f)
+            EveMood.HAPPY -> floatArrayOf(0f, -8f, -9f, 16f, 0f)
+            EveMood.CURIOUS -> floatArrayOf(4f, -6f, 15f, 22f, 0f)
+            EveMood.SHY -> floatArrayOf(-8f, 8f, 7f, -18f, 8f)
+            EveMood.SAD -> floatArrayOf(0f, 14f, 0f, -6f, 30f)
             EveMood.SLEEPY -> floatArrayOf(0f, 10f, 0f, -10f, 18f)
         }
         val k = 1f - kotlin.math.exp(-dt * 7f)
@@ -433,10 +459,32 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
         val happyWiggle = if (expression.mood == EveMood.HAPPY) 5f * kotlin.math.sin(t * 9f) else 0f
         val twitch = if (now < twitchUntil) 16f else 0f
 
-        rotate(head, value[1] + bob, value[0], value[2])
-        rotate(earLeft, value[3] + happyWiggle + if (twitchLeft) twitch else 0f, 0f, value[4])
-        rotate(earRight, value[3] - happyWiggle + if (!twitchLeft) twitch else 0f, 0f, -value[4])
-        if (expression.talking) rotate(muzzle, 4f * kotlin.math.abs(kotlin.math.sin(t * 13f)), 0f, 0f)
+        // The current gesture, eased in and out over its length.
+        if (expression.gestureKey != seenGestureKey) {
+            seenGestureKey = expression.gestureKey
+            gestureStartedAt = now
+            tiltSide = if (Random.nextBoolean()) 1f else -1f
+        }
+        val g = expression.gesture
+        val u = if (g == EveGesture.NONE) 1f else ((now - gestureStartedAt) / (g.millis * 1e6f)).coerceIn(0f, 1f)
+        val env = if (u >= 1f) 0f else kotlin.math.sin(u * PI_F)
+        var gPitch = 0f; var gYaw = 0f; var gRoll = 0f; var gEarL = 0f; var gEarR = 0f; var gSniff = 0f
+        when (g) {
+            EveGesture.NOD -> gPitch = 9f * kotlin.math.sin(u * 4f * PI_F) * env
+            EveGesture.SHAKE -> gYaw = 13f * kotlin.math.sin(u * 4f * PI_F) * env
+            EveGesture.TILT -> { gRoll = 18f * tiltSide * env; gEarL = 10f * env; gEarR = 10f * env }
+            EveGesture.EAR_PLAY -> { gEarL = 22f * kotlin.math.sin(u * 6f * PI_F) * env; gEarR = -22f * kotlin.math.sin(u * 6f * PI_F) * env }
+            EveGesture.SNIFF -> { gSniff = 5f * kotlin.math.abs(kotlin.math.sin(u * 10f * PI_F)) * env; gPitch = -6f * env }
+            EveGesture.LISTEN -> { gRoll = 10f * tiltSide * env; gYaw = 8f * tiltSide * env; gEarL = (if (tiltSide > 0) 24f else -14f) * env; gEarR = (if (tiltSide > 0) -14f else 24f) * env }
+            EveGesture.LOOK_UP -> { gPitch = -16f * env; gEarL = 8f * env; gEarR = 8f * env }
+            EveGesture.NONE -> Unit
+        }
+
+        rotate(head, value[1] + bob + gPitch, value[0] + gYaw, value[2] + gRoll)
+        rotate(earLeft, value[3] + happyWiggle + gEarL + if (twitchLeft) twitch else 0f, 0f, value[4])
+        rotate(earRight, value[3] - happyWiggle + gEarR + if (!twitchLeft) twitch else 0f, 0f, -value[4])
+        val talk = if (expression.talking) 4f * kotlin.math.abs(kotlin.math.sin(t * 13f)) else 0f
+        if (talk + gSniff != 0f) rotate(muzzle, talk + gSniff, 0f, 0f)
     }
 
     private fun rotate(instance: Int?, x: Float, y: Float, z: Float) {
@@ -448,6 +496,8 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
         tm.setTransform(instance, m)
     }
 }
+
+private const val PI_F = 3.1415927f
 
 /** One hello per app session (the home screen can be re-entered many times). */
 internal object EveSession {
