@@ -38,6 +38,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import android.os.Build
 import com.google.android.filament.gltfio.Animator
 import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
@@ -108,19 +112,11 @@ internal fun EveHomeFriend(
     val available = remember { runCatching { context.assets.open(EveAsset.MODEL).use { } }.isSuccess }
     if (!available) return
 
-    val engine = rememberEngine()
-    val modelLoader = rememberModelLoader(engine)
-    val modelInstance = rememberModelInstance(modelLoader, EveAsset.MODEL)
-    val mainLight = rememberMainLightNode(engine) {
-        intensity = 9_000f
-        lightDirection = Direction(-0.45f, -0.75f, -0.48f)
-    }
-    val fillLight = rememberFillLightNode(engine) {
-        intensity = 3_000f
-        lightDirection = Direction(0.68f, -0.47f, 0.56f)
-    }
+    // Emulators (software GPU) cannot keep a live Filament view stable: they get Eve as a still.
+    val live3d = remember { !EveDevice.isEmulator }
     val mixer = remember { EveClipMixer(blendNanos = 320_000_000L) }
-    var node by remember(modelInstance) { mutableStateOf<io.github.sceneview.node.ModelNode?>(null) }
+    var node by remember { mutableStateOf<io.github.sceneview.node.ModelNode?>(null) }
+    val ready = node != null || !live3d
     var clip by remember { mutableStateOf(EveClip.BREATHE) }
     var clipKey by remember { mutableIntStateOf(0) }
     var speech by remember { mutableStateOf<String?>(null) }
@@ -154,16 +150,16 @@ internal fun EveHomeFriend(
     }
 
     // Hello once per app session, after she has appeared.
-    LaunchedEffect(node) {
-        if (node == null || !EveSession.claimHello()) return@LaunchedEffect
+    LaunchedEffect(ready) {
+        if (!ready || !EveSession.claimHello()) return@LaunchedEffect
         delay(1_200L)
         play(EveClip.LOOK_AROUND)
         say(line(EveLines.hello))
     }
 
     // Her own little life: mostly breathing, sometimes looking around or grazing; a nap when alone.
-    LaunchedEffect(node, tapKey) {
-        if (node == null) return@LaunchedEffect
+    LaunchedEffect(ready, tapKey) {
+        if (!ready) return@LaunchedEffect
         while (true) {
             delay(7_000L + Random.nextLong(7_000L))
             val idleFor = System.currentTimeMillis() - lastTouch
@@ -232,33 +228,14 @@ internal fun EveHomeFriend(
                 .size(width = 118.dp, height = 128.dp)
                 .graphicsLayer { translationY = -hop.value * 26.dp.toPx() },
         ) {
-            if (modelInstance != null) {
-                SceneView(
+            if (live3d) {
+                EveLiveModel(mixer, onNode = { node = it }, nodeProvider = { node })
+            } else {
+                Image(
+                    painterResource(R.drawable.eve_still), sh("Eve", "Eve"),
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize(),
-                    surfaceType = SurfaceType.TextureSurface,
-                    isOpaque = false,
-                    engine = engine,
-                    modelLoader = modelLoader,
-                    mainLightNode = mainLight,
-                    fillLightNode = fillLight,
-                    cameraManipulator = null,
-                    onFrame = { frameTimeNanos ->
-                        node?.let { live -> runCatching { mixer.apply(live.animator, frameTimeNanos) } }
-                    },
-                ) {
-                    ModelNode(
-                        modelInstance = modelInstance,
-                        scaleToUnits = 2.05f,
-                        centerOrigin = Position(0f, -1.0f, 0f),
-                        autoAnimate = false,
-                        animationName = null,
-                        animationLoop = true,
-                        position = Position(0f, -0.28f, 0f),
-                        // A slight three-quarter turn towards the middle of the screen.
-                        rotation = Rotation(y = 22f),
-                        apply = { node = this },
-                    )
-                }
+                )
             }
             // Taps land on this layer above the 3D view, which would otherwise keep the touches.
             Box(
@@ -295,6 +272,63 @@ internal fun EveHomeFriend(
                     },
             )
         }
+    }
+}
+
+/** The live 3D view: Filament through SceneView on a transparent texture surface. */
+@Composable
+private fun EveLiveModel(
+    mixer: EveClipMixer,
+    onNode: (io.github.sceneview.node.ModelNode) -> Unit,
+    nodeProvider: () -> io.github.sceneview.node.ModelNode?,
+) {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val modelInstance = rememberModelInstance(modelLoader, EveAsset.MODEL) ?: return
+    val mainLight = rememberMainLightNode(engine) {
+        intensity = 9_000f
+        lightDirection = Direction(-0.45f, -0.75f, -0.48f)
+    }
+    val fillLight = rememberFillLightNode(engine) {
+        intensity = 3_000f
+        lightDirection = Direction(0.68f, -0.47f, 0.56f)
+    }
+    SceneView(
+        modifier = Modifier.fillMaxSize(),
+        surfaceType = SurfaceType.TextureSurface,
+        isOpaque = false,
+        engine = engine,
+        modelLoader = modelLoader,
+        mainLightNode = mainLight,
+        fillLightNode = fillLight,
+        cameraManipulator = null,
+        onFrame = { frameTimeNanos ->
+            nodeProvider()?.let { live -> runCatching { mixer.apply(live.animator, frameTimeNanos) } }
+        },
+    ) {
+        ModelNode(
+            modelInstance = modelInstance,
+            scaleToUnits = 2.05f,
+            centerOrigin = Position(0f, -1.0f, 0f),
+            autoAnimate = false,
+            animationName = null,
+            animationLoop = true,
+            position = Position(0f, -0.28f, 0f),
+            // A slight three-quarter turn towards the middle of the screen.
+            rotation = Rotation(y = 22f),
+            apply = { onNode(this) },
+        )
+    }
+}
+
+internal object EveDevice {
+    /** True on Android emulators (goldfish/ranchu), whose software GPU stalls under Filament. */
+    val isEmulator: Boolean by lazy {
+        val fingerprint = Build.FINGERPRINT.orEmpty()
+        val hardware = Build.HARDWARE.orEmpty()
+        fingerprint.startsWith("generic") || fingerprint.contains("emulator") ||
+            hardware.contains("goldfish") || hardware.contains("ranchu") ||
+            Build.MODEL.orEmpty().contains("Android SDK built for") || Build.PRODUCT.orEmpty().startsWith("sdk")
     }
 }
 
