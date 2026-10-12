@@ -11,6 +11,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -35,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -74,12 +76,14 @@ internal enum class EveClip(val clipName: String, val loop: Boolean) {
     LIE_DOWN("GoToRest", false),
     REST("Rest", true),
     STAND_UP("RestToGoBackUp", false),
-    /** Walks in place: the clip's forward root motion is pinned (EveRig.pinRoot), the screen moves her. */
+    /** Walk and run in place: the clips' forward root motion is pinned (EveRig.pinRoot), the screen moves her. */
     WALK("Walk", true),
+    RUN("Run", true),
 }
 
-/** Her walking pace on screen, matched to the Walk clip's stride so the paws do not slide. */
+/** Her pace on screen, matched to each clip's stride (Run covers ~4.4x the Walk) so the paws do not slide. */
 private const val EVE_WALK_DP_PER_SEC = 46f
+private const val EVE_RUN_DP_PER_SEC = 200f
 
 internal object EveAsset {
     const val MODEL = "models/eve/eve.glb"
@@ -101,6 +105,17 @@ internal object EveLines {
     val wake = listOf(
         "Hıı? Uyuyakalmışım… buradayım! 😊" to "Hm? I dozed off… I'm here! 😊",
         "Esneyerek günaydın! 🌞" to "A big yawn and good morning! 🌞",
+    )
+    val flee = listOf(
+        "Yakalayamazsın! 😄" to "Can't catch me! 😄",
+        "Hihi, kaçtım! 🍃" to "Hehe, got away! 🍃",
+        "Ebelemece mi oynuyoruz? 🌿" to "Are we playing tag? 🌿",
+        "Buradayım, buradaa! 😊" to "Over here, over heeere! 😊",
+    )
+    val moved = listOf(
+        "Vay, uçtum! Burası da güzelmiş 🌿" to "Whee, I flew! Nice spot 🌿",
+        "Yeni yerimi beğendim 😊" to "I like my new spot 😊",
+        "Hop! Buraya mı koydun beni? 🍃" to "Hop! You put me here? 🍃",
     )
     val idle = listOf(
         "Şu yapraklar çok lezzetli 🌿" to "These leaves are delicious 🌿",
@@ -144,11 +159,15 @@ internal fun EveHomeFriend(
     var gestureKey by remember { mutableIntStateOf(0) }
     val hop = remember { Animatable(0f) }
     // Where she stands (dp from the bottom-left corner) and which way her body faces (0 = the player).
-    val posX = remember { Animatable(0f) }
-    val posY = remember { Animatable(0f) }
+    // She keeps her spot while the app is open (re-entering the lobby does not reset her).
+    val posX = remember { Animatable(EveSession.x) }
+    val posY = remember { Animatable(EveSession.y) }
     var bodyYaw by remember { mutableStateOf(0f) }
     var walking by remember { mutableStateOf(false) }
-    val roam = remember { FloatArray(1) }
+    var dragging by remember { mutableStateOf(false) }
+    // Roaming bounds in dp: furthest x and y her box may reach. A tap sets fleeNext for her life loop.
+    val roam = remember { FloatArray(2) }
+    val fleeNext = remember { BooleanArray(1) }
     val scope = rememberCoroutineScope()
     val firstName = playerName?.trim()?.split(' ')?.firstOrNull()?.takeIf { it.isNotBlank() && it.length <= 14 }
 
@@ -173,8 +192,8 @@ internal fun EveHomeFriend(
         gesture = next
         gestureKey++
     }
-    // A stroll: turn towards the spot, walk there at the clip's pace, then face the player again.
-    suspend fun walkTo(tx: Float, ty: Float) {
+    // A stroll or a dash: turn towards the spot, move there at the clip's pace, then face the player.
+    suspend fun walkTo(tx: Float, ty: Float, run: Boolean = false) {
         val dx = tx - posX.value
         val dy = ty - posY.value
         val distance = hypot(dx, dy)
@@ -182,10 +201,11 @@ internal fun EveHomeFriend(
         // Facing the player is 0 degrees; walking down the screen comes towards the player.
         bodyYaw = Math.toDegrees(atan2(dx.toDouble(), (-dy).toDouble())).toFloat()
         walking = true
-        play(EveClip.WALK)
+        play(if (run) EveClip.RUN else EveClip.WALK)
         try {
-            delay(320L)
-            val millis = (distance / EVE_WALK_DP_PER_SEC * 1_000f).roundToInt()
+            delay(if (run) 160L else 340L)
+            val speed = if (run) EVE_RUN_DP_PER_SEC else EVE_WALK_DP_PER_SEC
+            val millis = (distance / speed * 1_000f).roundToInt()
             coroutineScope {
                 launch { posX.animateTo(tx, tween(millis, easing = LinearEasing)) }
                 posY.animateTo(ty, tween(millis, easing = LinearEasing))
@@ -193,8 +213,22 @@ internal fun EveHomeFriend(
         } finally {
             walking = false
             bodyYaw = 0f
+            EveSession.x = posX.value
+            EveSession.y = posY.value
             play(EveClip.BREATHE)
         }
+    }
+    // A tap startles her: she runs (or trots) off to the side, then turns and peeks back at you.
+    suspend fun flee() {
+        val goRight = posX.value < roam[0] / 2f
+        val distance = 120f + Random.nextFloat() * 130f
+        val tx = (posX.value + if (goRight) distance else -distance).coerceIn(0f, roam[0])
+        val ty = (posY.value + Random.nextFloat() * 80f - 40f).coerceIn(0f, roam[1])
+        walkTo(tx, ty, run = Random.nextInt(3) != 0)
+        delay(250L)
+        feel(EveMood.HAPPY)
+        doGesture(listOf(EveGesture.TILT, EveGesture.WAG, EveGesture.LOOK_UP).random())
+        say(line(EveLines.flee))
     }
 
     // A feeling shows for a few seconds, then she settles back to her calm look (or stays sleepy).
@@ -224,12 +258,16 @@ internal fun EveHomeFriend(
     // Her own little life: mostly breathing, sometimes looking around or grazing; a nap when alone.
     LaunchedEffect(ready, tapKey) {
         if (!ready) return@LaunchedEffect
+        if (fleeNext[0]) {
+            fleeNext[0] = false
+            flee()
+        }
         var lastAct = -1
         while (true) {
-            delay(4_500L + Random.nextLong(5_000L))
+            delay(3_500L + Random.nextLong(4_000L))
             val idleFor = System.currentTimeMillis() - lastTouch
-            if (resting) continue
-            if (idleFor > 75_000L) {
+            if (resting || dragging) continue
+            if (idleFor > 120_000L) {
                 resting = true
                 mood = EveMood.SLEEPY
                 play(EveClip.LIE_DOWN)
@@ -239,7 +277,8 @@ internal fun EveHomeFriend(
             }
             // A varied little life: never the same act twice in a row.
             var act: Int
-            do { act = Random.nextInt(15) } while (act == lastAct || (!live3d && act >= 13))
+            // About a third of her acts are strolls, so she really wanders the screen.
+            do { act = Random.nextInt(19) } while (act == lastAct || (!live3d && act >= 13))
             lastAct = act
             when (act) {
                 0 -> doGesture(EveGesture.TILT)
@@ -263,9 +302,8 @@ internal fun EveHomeFriend(
                 11 -> doGesture(EveGesture.STRETCH)
                 12 -> doGesture(EveGesture.WIGGLE)
                 else -> {
-                    // A walk to somewhere else along the bottom of the screen, then a look around.
-                    val far = (roam[0] - EVE_BOX_WIDTH_DP).coerceAtLeast(0f)
-                    walkTo(Random.nextFloat() * far, Random.nextFloat() * 70f)
+                    // A stroll to somewhere else on the screen, then a look around.
+                    walkTo(Random.nextFloat() * roam[0], (posY.value + Random.nextFloat() * 120f - 60f).coerceIn(0f, roam[1]))
                     delay(400L)
                     doGesture(if (Random.nextBoolean()) EveGesture.SNIFF else EveGesture.LOOK_UP)
                 }
@@ -280,7 +318,9 @@ internal fun EveHomeFriend(
 
     // She roams the whole area; the bubble floats above her and follows, kept on screen.
     BoxWithConstraints(modifier) {
-        roam[0] = maxWidth.value
+        // Room for her box, and for her bubble above her near the top.
+        roam[0] = (maxWidth.value - EVE_BOX_WIDTH_DP).coerceAtLeast(0f)
+        roam[1] = (maxHeight.value - 128f - 110f).coerceAtLeast(0f)
         val bubbleMax = 220f
         Box(
             Modifier
@@ -338,19 +378,53 @@ internal fun EveHomeFriend(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            // Taps land on this layer above the 3D view, which would otherwise keep the touches.
+            // Touches land on this layer above the 3D view, which would otherwise keep them.
+            // A tap makes her run off; dragging picks her up and puts her somewhere else.
             Box(
                 Modifier
                     .align(Alignment.Center)
                     .size(width = 112.dp, height = 128.dp)
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = {
+                                lastTouch = System.currentTimeMillis()
+                                dragging = true
+                                resting = false
+                                tapKey++
+                                bodyYaw = 0f
+                                play(EveClip.BREATHE)
+                                feel(EveMood.CURIOUS)
+                                scope.launch { hop.animateTo(.55f, tween(160)) }
+                            },
+                            onDragEnd = {
+                                dragging = false
+                                EveSession.x = posX.value
+                                EveSession.y = posY.value
+                                scope.launch { hop.animateTo(0f, spring(dampingRatio = .45f, stiffness = Spring.StiffnessMediumLow)) }
+                                feel(EveMood.HAPPY)
+                                doGesture(EveGesture.WIGGLE)
+                                say(line(EveLines.moved))
+                            },
+                            onDragCancel = {
+                                dragging = false
+                                scope.launch { hop.animateTo(0f, spring(dampingRatio = .45f, stiffness = Spring.StiffnessMediumLow)) }
+                            },
+                        ) { change, amount ->
+                            change.consume()
+                            val nx = (posX.value + amount.x.toDp().value).coerceIn(0f, roam[0])
+                            val ny = (posY.value - amount.y.toDp().value).coerceIn(0f, roam[1])
+                            scope.launch {
+                                posX.snapTo(nx)
+                                posY.snapTo(ny)
+                            }
+                        }
+                    }
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClickLabel = sh("Eve ile oyna", "Play with Eve"),
                     ) {
                         lastTouch = System.currentTimeMillis()
-                        // Restarts her little life, which also stops a walk where she is.
-                        tapKey++
                         scope.launch {
                             hop.snapTo(0f)
                             hop.animateTo(1f, tween(170))
@@ -358,6 +432,7 @@ internal fun EveHomeFriend(
                         }
                         if (resting) {
                             resting = false
+                            tapKey++
                             play(EveClip.STAND_UP)
                             feel(EveMood.SHY)
                             say(line(EveLines.wake))
@@ -365,10 +440,15 @@ internal fun EveHomeFriend(
                                 delay(1_400L)
                                 play(EveClip.BREATHE)
                             }
+                        } else if (live3d) {
+                            // Startled and playful: her life loop restarts with a dash away.
+                            feel(EveMood.CURIOUS)
+                            fleeNext[0] = true
+                            tapKey++
                         } else {
-                            play(EveClip.BREATHE)
-                            feel(listOf(EveMood.HAPPY, EveMood.HAPPY, EveMood.CURIOUS, EveMood.SHY).random())
-                            doGesture(listOf(EveGesture.EAR_PLAY, EveGesture.NOD, EveGesture.TILT, EveGesture.WAG, EveGesture.PAW_WAVE).random())
+                            tapKey++
+                            feel(EveMood.HAPPY)
+                            doGesture(listOf(EveGesture.NOD, EveGesture.TILT, EveGesture.WAG).random())
                             say(line(EveLines.tap))
                         }
                     },
@@ -419,12 +499,12 @@ private fun EveLiveModel(
                     var delta = bodyYaw() - turn[0]
                     while (delta > 180f) delta -= 360f
                     while (delta < -180f) delta += 360f
-                    turn[0] += delta * (1f - kotlin.math.exp(-dt * 6f))
+                    turn[0] += delta * (1f - kotlin.math.exp(-dt * 8f))
                     live.rotation = Rotation(y = turn[0])
                     // Rest pose first so the procedural layer never accumulates on bones a clip leaves alone.
                     rig?.restore()
                     mixer.apply(live.animator, frameTimeNanos)
-                    if (mixer.uses(live.animator, EveClip.WALK.clipName)) rig?.pinRoot()
+                    if (mixer.uses(live.animator, EveClip.WALK.clipName) || mixer.uses(live.animator, EveClip.RUN.clipName)) rig?.pinRoot()
                     rig?.express(expression(), frameTimeNanos)
                     live.animator.updateBoneMatrices()
                 }
@@ -488,12 +568,11 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
     private val head = bone(asset, "bone_10")
     private val earLeft = bone(asset, "bone_15")
     private val earRight = bone(asset, "bone_17")
-    private val muzzle = bone(asset, "bone_11")
     private val tail = listOfNotNull(bone(asset, "bone_1"), bone(asset, "bone_2"), bone(asset, "bone_3"))
     private val chest = bone(asset, "bone_5")
     private val pawLeft = bone(asset, "bone_22")
     private val pawRight = bone(asset, "bone_26")
-    private val controlled = listOfNotNull(head, earLeft, earRight, muzzle, chest, pawLeft, pawRight) + tail
+    private val controlled = listOfNotNull(head, earLeft, earRight, chest, pawLeft, pawRight) + tail
     private val rest = controlled.associateWith { tm.getTransform(it, FloatArray(16)) }
     private val m = FloatArray(16)
     // Smoothed pose: yaw, pitch, roll, perk, droop, tail lift, tail wag amount.
@@ -546,22 +625,23 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
         }
         // Targets per feeling: yaw, pitch, roll, perk, droop, tail lift (- = up), tail wag amount.
         val target = when (expression.mood) {
-            EveMood.NEUTRAL -> floatArrayOf(glanceYaw, -4f + glancePitch, 0f, 4f, 0f, 0f, 5f)
-            EveMood.HAPPY -> floatArrayOf(0f, -8f, -9f, 16f, 0f, -16f, 20f)
-            EveMood.CURIOUS -> floatArrayOf(4f, -6f, 15f, 22f, 0f, -8f, 8f)
-            EveMood.SHY -> floatArrayOf(-8f, 8f, 7f, -18f, 8f, 10f, 4f)
-            EveMood.SAD -> floatArrayOf(0f, 14f, 0f, -6f, 30f, 20f, 0f)
-            EveMood.SLEEPY -> floatArrayOf(0f, 10f, 0f, -10f, 18f, 10f, 2f)
+            // Ears move only a little: a real animal's ears shift a few degrees, not swing.
+            EveMood.NEUTRAL -> floatArrayOf(glanceYaw, -4f + glancePitch, 0f, 1.5f, 0f, 0f, 5f)
+            EveMood.HAPPY -> floatArrayOf(0f, -7f, -7f, 5f, 0f, -16f, 18f)
+            EveMood.CURIOUS -> floatArrayOf(4f, -5f, 11f, 7f, 0f, -8f, 8f)
+            EveMood.SHY -> floatArrayOf(-7f, 7f, 5f, -6f, 3f, 10f, 4f)
+            EveMood.SAD -> floatArrayOf(0f, 12f, 0f, -3f, 10f, 20f, 0f)
+            EveMood.SLEEPY -> floatArrayOf(0f, 9f, 0f, -4f, 7f, 10f, 2f)
         }
         if (expression.walking) { target[0] = 0f; target[1] = -2f; target[6] = maxOf(target[6], 9f) }
         // Unhurried easing: feelings settle over about half a second.
         val k = 1f - kotlin.math.exp(-dt * 4f)
         for (i in value.indices) value[i] += (target[i] - value[i]) * k
-        val bob = if (expression.talking) 1.8f * kotlin.math.sin(t * 5.5f) else 0f
-        val happyWiggle = if (expression.mood == EveMood.HAPPY) 6f * kotlin.math.sin(t * 3.2f) else 0f
-        // An ear twitch rises and settles over ~0.45 s instead of snapping.
-        val tw = ((now - twitchAt) / 450_000_000f).coerceIn(0f, 1f)
-        val twitch = if (tw < 1f) 12f * kotlin.math.sin(tw * PI_F) else 0f
+        // Talking shows as a slow, small nod of the head; her painted mouth itself stays still.
+        val bob = if (expression.talking) 1.2f * kotlin.math.sin(t * 3.6f) else 0f
+        // A small ear flick that rises and settles over ~0.4 s.
+        val tw = ((now - twitchAt) / 400_000_000f).coerceIn(0f, 1f)
+        val twitch = if (tw < 1f) 4f * kotlin.math.sin(tw * PI_F) else 0f
 
         // The current gesture, eased in and out over its length.
         if (expression.gestureKey != seenGestureKey) {
@@ -578,7 +658,7 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
             EveGesture.NOD -> gPitch = 8f * kotlin.math.sin(u * 4f * PI_F) * env
             EveGesture.SHAKE -> gYaw = 12f * kotlin.math.sin(u * 4f * PI_F) * env
             EveGesture.TILT -> { gRoll = 18f * side * env; gEarL = 10f * env; gEarR = 10f * env }
-            EveGesture.EAR_PLAY -> { gEarL = 20f * kotlin.math.sin(u * 3f * PI_F) * env; gEarR = -20f * kotlin.math.sin(u * 3f * PI_F) * env }
+            EveGesture.EAR_PLAY -> { gEarL = 14f * kotlin.math.sin(u * 2f * PI_F) * env; gEarR = -14f * kotlin.math.sin(u * 2f * PI_F) * env }
             EveGesture.SNIFF -> { gSniff = 4f * kotlin.math.abs(kotlin.math.sin(u * 6f * PI_F)) * env; gPitch = -6f * env }
             EveGesture.LISTEN -> { gRoll = 10f * side * env; gYaw = 8f * side * env; gEarL = (if (side > 0) 24f else -14f) * env; gEarR = (if (side > 0) -14f else 24f) * env }
             EveGesture.LOOK_UP -> { gPitch = -16f * env; gEarL = 8f * env; gEarR = 8f * env }
@@ -602,11 +682,11 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
         }
 
         rotate(head, value[1] + bob + gPitch, value[0] + gYaw, value[2] + gRoll)
-        rotate(earLeft, value[3] + happyWiggle + gEarL + if (twitchLeft) twitch else 0f, 0f, value[4])
-        rotate(earRight, value[3] - happyWiggle + gEarR + if (!twitchLeft) twitch else 0f, 0f, -value[4])
-        // Talking: the muzzle opens and closes gently (~1 per second), not a flutter.
-        val talk = if (expression.talking) 3f * (.5f - .5f * kotlin.math.cos(t * 6.5f)) else 0f
-        if (talk + gSniff != 0f) rotate(muzzle, talk + gSniff, 0f, 0f)
+        // Gesture ear moves are kept to a third: small, natural shifts.
+        rotate(earLeft, value[3] + gEarL * EAR_GESTURE_SCALE + if (twitchLeft) twitch else 0f, 0f, value[4])
+        rotate(earRight, value[3] + gEarR * EAR_GESTURE_SCALE + if (!twitchLeft) twitch else 0f, 0f, -value[4])
+        // Sniffing is a few small dips of the head (the muzzle bone warps her painted face).
+        if (gSniff != 0f) rotate(head, gSniff * .6f, 0f, 0f)
         if (gChestX != 0f || gChestZ != 0f) rotate(chest, gChestX, 0f, gChestZ)
         if (gPawL != 0f) rotate(pawLeft, gPawL, 0f, 0f)
         if (gPawR != 0f) rotate(pawRight, gPawR, 0f, 0f)
@@ -631,6 +711,7 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
     private companion object {
         /** The root's forward offset in her idle clips, where the in-place stride is pinned. */
         const val WALK_ROOT_Y = 18.34f
+        const val EAR_GESTURE_SCALE = .35f
     }
 }
 
@@ -639,6 +720,9 @@ private const val PI_F = 3.1415927f
 /** One hello per app session (the home screen can be re-entered many times). */
 internal object EveSession {
     private var greeted = false
+    /** Where she stands in the lobby (dp from the bottom-left corner), kept while the app runs. */
+    var x = 0f
+    var y = 0f
     fun claimHello(): Boolean {
         if (greeted) return false
         greeted = true
