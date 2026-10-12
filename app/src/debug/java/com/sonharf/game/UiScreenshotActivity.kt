@@ -119,10 +119,11 @@ private fun WalnutIvoryScreenshotFixture() {
 }
 
 
-/** Real production fallback timer; only rival arrival is seeded at 25 seconds. No account writes. */
+/** Real production fallback timer; only rival arrival is seeded at 32 seconds. No account writes. */
 @Composable private fun FallbackRuntimeFixture() {
     var rivalArrived by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(25_000); rivalArrived=true }
+    // The AI match shows from 15 s until the rival arrives; a wide window keeps slow emulator dumps inside it.
+    LaunchedEffect(Unit) { delay(32_000); rivalArrived=true }
     val game=WordSiegeGameDto("00000000-0000-0000-0000-000000000123","preview-1",
         playerTwoId=if(rivalArrived) "preview-2" else null,status=if(rivalArrived) "playing" else "waiting",
         currentPlayerId="preview-1",board=List(225) { WordSiegeCellDto() },playerOneRack="KALEMİR")
