@@ -35,7 +35,7 @@ internal class WordSiegeMascotPersonality(
             WordSiegeMascotSkin.GOLD_KING -> KING
         }
 
-        /** Cikcik: a chirpy, curious budgie who loves to flutter about and sing out good words. */
+        /** Çiçi: a chirpy, curious budgie who loves to flutter about and sing out good words. */
         private val CIKCIK = WordSiegeMascotPersonality(
             chattiness = 1.2f,
             playfulness = 1.3f,
@@ -49,8 +49,8 @@ internal class WordSiegeMascotPersonality(
             ),
             lines = mapOf(
                 WordSiegeMascotTopic.GREET_FIRST to listOf(
-                    "Cik cik! Ben Cikcik, kanatlarım seninle! 🐦" to "Tweet tweet! I'm Cikcik, my wings are with you! 🐦",
-                    "Selam %s! Cikcik uçtu geldi, hadi oynayalım! 🪶" to "Hi %s! Cikcik flew right in, let's play! 🪶",
+                    "Cik cik! Ben Çiçi, kanatlarım seninle! 🐦" to "Tweet tweet! I'm Chichi, my wings are with you! 🐦",
+                    "Selam %s! Çiçi uçtu geldi, hadi oynayalım! 🪶" to "Hi %s! Chichi flew right in, let's play! 🪶",
                 ),
                 WordSiegeMascotTopic.GREET to listOf(
                     "Cik cik! Yine geldin! 🐦" to "Tweet tweet! You're back! 🐦",
@@ -58,7 +58,7 @@ internal class WordSiegeMascotPersonality(
                     "Bugün kelimeler cıvıl cıvıl! 🎶" to "Words are chirping today! 🎶",
                 ),
                 WordSiegeMascotTopic.HELLO to listOf(
-                    "Cikcik konduuu! 🐦" to "Cikcik has landed! 🐦",
+                    "Çiçi konduuu! 🐦" to "Chichi has landed! 🐦",
                     "Kanat çırp, kelime kap! 🪶" to "Flap a wing, grab a word! 🪶",
                 ),
                 WordSiegeMascotTopic.PRAISE to listOf(

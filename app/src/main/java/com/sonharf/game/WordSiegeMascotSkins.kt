@@ -31,12 +31,12 @@ internal enum class WordSiegeMascotSkin(
     ROBOT("robot", "Bibo", "Bibo", "Robot", "Robot"),
     ASTRONAUT("astronot", "Novi", "Novi", "Astronot", "Astronaut"),
     /** A chirpy budgie: feather crest, beak, flapping wings, tail and little feet. */
-    BIRD("cikcik", "Cikcik", "Cikcik", "Muhabbet kuşu", "Budgie"),
+    BIRD("cikcik", "Çiçi", "Chichi", "Muhabbet kuşu", "Budgie"),
     /** The throne owner's weekly reward; never sold and never listed in the store. */
     GOLD_KING("altin_kral", "Altın Kral", "Golden King", "Maskotların kralı", "King of mascots"),
     ;
 
-    /** Obi and Cikcik are sold; the others come later ("Yakında"). */
+    /** Obi and Çiçi are sold; the others come later ("Yakında"). */
     val onSale: Boolean get() = this == ORB || this == BIRD
 
     /** Store and collection characters; the Golden King only comes with the throne. */

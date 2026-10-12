@@ -2002,7 +2002,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         detailPaint.alpha = 255
     }
 
-    // ---- Cikcik the budgie: feathered wings and a beak --------------------------------------------
+    // ---- Çiçi the budgie: feathered wings and a beak --------------------------------------------
     private val birdWingPath = Path().apply {
         moveTo(0f, 0f)
         cubicTo(70f, -30f, 170f, 10f, 205f, 120f)
