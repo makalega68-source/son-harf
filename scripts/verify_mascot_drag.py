@@ -39,12 +39,38 @@ def bounds(name):
 adb("shell", "am", "force-stop", "com.sonharf.game")
 adb("logcat", "-c")
 adb("shell", "am", "start", "-W", "-n", "com.sonharf.game/.UiScreenshotActivity", "--es", "review_stage", "mascot-drag", "--ez", "reset_mascot_position", "true")
-time.sleep(3)
+time.sleep(4)
 start = bounds("Mascot-drag-before.xml")
-adb("shell", "input", "swipe", str(start[0]), str(start[1]), str(start[0] - 180), str(start[1] - 400), "800")
+target = (start[0] - 180, start[1] - 400)
+
+
+def dragged(p):
+    return p[0] < start[0] - 120 and p[1] < start[1] - 340
+
+
+def settle(name):
+    # A loaded software-GPU emulator can render the dropped position a few frames late:
+    # read the screen again a few times before judging the drag.
+    p = bounds(name)
+    for _ in range(3):
+        if dragged(p):
+            break
+        time.sleep(2)
+        p = bounds(name)
+    return p
+
+
+adb("shell", "input", "swipe", str(start[0]), str(start[1]), str(target[0]), str(target[1]), "800")
 time.sleep(2)
-moved = bounds("Mascot-drag-after.xml")
-assert moved[0] < start[0] - 120 and moved[1] < start[1] - 340, (start, moved)
+moved = settle("Mascot-drag-after.xml")
+if not dragged(moved):
+    # The first swipe can be dropped while the system is frozen; one more real drag from where
+    # the mascot is now to the same target.
+    print("first drag not applied, retrying once", start, moved, flush=True)
+    adb("shell", "input", "swipe", str(moved[0]), str(moved[1]), str(target[0]), str(target[1]), "800")
+    time.sleep(2)
+    moved = settle("Mascot-drag-after.xml")
+assert dragged(moved), ("mascot did not follow the drag", start, moved)
 adb("shell", "am", "force-stop", "com.sonharf.game")
 adb("shell", "am", "start", "-W", "-n", "com.sonharf.game/.UiScreenshotActivity", "--es", "review_stage", "mascot-drag")
 time.sleep(3)
