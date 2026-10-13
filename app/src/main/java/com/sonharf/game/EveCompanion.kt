@@ -132,7 +132,7 @@ internal fun EveThroneCard(userId: String?) {
     LaunchedEffect(userId) { EveOwnership.refresh(context, userId, force = true) }
     val status = EveOwnership.status
     val owned = EveOwnership.owns(userId)
-    val shards = if (owned) 12 else (status?.shards ?: 0).coerceIn(0, 12)
+    val shards = (status?.shards ?: 0).coerceIn(0, 12)
     Surface(
         shape = RoundedCornerShape(22.dp),
         color = Color(0xFF173D2E),
@@ -151,8 +151,8 @@ internal fun EveThroneCard(userId: String?) {
                     Text(sh("TAHT ÖDÜLÜ · MAĞAZADA YOK", "THRONE REWARD · EXCLUSIVE"), color = EveLeaf, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     Text(sh("Eve · Orman Dostu", "Eve · Forest Friend"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
-                        sh("Ana ekranda ve oyun alanında sana eşlik eder; hamlelerine göre konuşur, galibiyetlerini hatırlar. Her maçta 3 ücretsiz ipucu sunar.",
-                            "Eve joins you at home and in games, responds to your moves, and remembers your wins. She gives you 3 free hints each match."),
+                        sh("Ana ekranda ve oyun alanında sana eşlik eder; hamlelerine göre konuşur, galibiyetlerini hatırlar. Kuşatma antrenmanı ve Son Harf maçlarında 3 ücretsiz ipucu sunar.",
+                            "Eve joins you at home and in games, responds to your moves, and remembers your wins. She gives you 3 free hints in Word Siege practice and Last Letter matches."),
                         color = EveCream.copy(alpha = .85f), fontSize = 12.sp, lineHeight = 16.sp,
                     )
                 }
@@ -186,8 +186,8 @@ internal fun EveThroneCard(userId: String?) {
                 }
             }
             Text(
-                if (owned && status?.admin == true && (status.shards < 12))
-                    sh("Eve açık · yönetici erişimi", "Eve unlocked · admin access")
+                if (owned && status?.admin == true && shards < 12)
+                    sh("Eve açık · yönetici erişimi · $shards/12 parça", "Eve unlocked · admin access · $shards/12 shards")
                 else if (owned) sh("Eve açıldı · 12/12 parça tamam", "Eve unlocked · 12/12 shards")
                 else sh("Eve ilerlemen · $shards/12 parça", "Eve progress · $shards/12 shards"),
                 color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black,
