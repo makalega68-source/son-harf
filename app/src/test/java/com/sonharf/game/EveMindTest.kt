@@ -85,6 +85,25 @@ class EveMindTest {
         assertNull(mind.gameNews(wins = 6, winStreak = 0))
     }
 
+    @Test fun announcementsRespectCurrentCompetitionStateAndCoolDown() {
+        val memory = MapMemory()
+        val mind = EveMind(memory, Random(11))
+        val outsideHour = EveSituation(hour = 20, dayOfWeek = 3, throneHourActive = false)
+        repeat(30) { assertNotEquals(EveTopic.THRONE_HOUR, mind.idleTopic(outsideHour, 1_000_000L)) }
+
+        val live = outsideHour.copy(throneHourActive = true, throneRank = 2, tournamentLive = true)
+        val topics = (1..60).map { mind.idleTopic(live, 2_000_000L) }
+        assertTrue(topics.count { it == EveTopic.THRONE_HOUR } <= 1)
+        assertTrue(topics.count { it == EveTopic.THRONE_TOP } <= 1)
+        assertTrue(topics.count { it == EveTopic.TOURNAMENT_LIVE } <= 1)
+
+        val reopened = EveMind(memory, Random(12))
+        repeat(30) {
+            val topic = reopened.idleTopic(live, 2_001_000L)
+            assertFalse(topic in setOf(EveTopic.THRONE_HOUR, EveTopic.THRONE_TOP, EveTopic.TOURNAMENT_LIVE))
+        }
+    }
+
     @Test fun idleTalkAndActsVaryWithoutRepeating() {
         val mind = EveMind(MapMemory(), Random(3))
         val situation = EveSituation(hour = 20, dayOfWeek = 7, throneRank = 2, tournamentLive = true, winStreak = 3, longestWord = "kelebek")

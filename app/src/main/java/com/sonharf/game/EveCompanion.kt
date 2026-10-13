@@ -134,11 +134,11 @@ internal fun EveThroneCard(userId: String?) {
                     )
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(sh("TAHT ÖDÜLÜ · SATILMAZ", "THRONE REWARD · NOT FOR SALE"), color = EveLeaf, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(sh("TAHT ÖDÜLÜ · MAĞAZADA YOK", "THRONE REWARD · EXCLUSIVE"), color = EveLeaf, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     Text(sh("Eve · Orman Dostu", "Eve · Forest Friend"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
-                        sh("Ana ekranında gezen, dokununca kaçan, seni tanıyıp bağ kuran 3B arkadaş.",
-                            "A 3D friend who roams your home screen, runs off when tapped and bonds with you."),
+                        sh("Taht yarışında kazandığın özel yol arkadaşın. Ana ekranda sana eşlik eder; oyunlarına ve günün akışına göre yeni şeyler söyler.",
+                            "A special companion earned in the Throne race. Eve joins you on the home screen and responds to your games and the moment."),
                         color = EveCream.copy(alpha = .85f), fontSize = 12.sp, lineHeight = 16.sp,
                     )
                 }
@@ -153,25 +153,27 @@ internal fun EveThroneCard(userId: String?) {
                 }
             }
             Text(
-                if (owned) sh("Eve senin! 12/12 parça tamam 💚", "Eve is yours! 12/12 shards 💚")
-                else sh("Eve parçaların: $shards/12", "Your Eve shards: $shards/12"),
+                if (owned) sh("Eve açıldı · 12/12 parça tamam", "Eve unlocked · 12/12 shards")
+                else sh("Eve ilerlemen · $shards/12 parça", "Eve progress · $shards/12 shards"),
                 color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black,
             )
-            Text(
-                sh("Her hafta taht yarışını bitirenler parça kazanır: 1. → 3 parça · 2. → 2 parça · 3. → 1 parça. 12 parçayı tamamlayan Eve'ye sahip olur (örneğin 4 kez taht sahibi olmak).",
-                    "Each week the throne podium earns shards: 1st → 3 · 2nd → 2 · 3rd → 1. Collect 12 to own Eve (for example, win the throne 4 times)."),
-                color = EveCream.copy(alpha = .8f), fontSize = 11.sp, lineHeight = 15.sp,
-            )
+            if (!owned) {
+                Text(
+                    sh("Haftalık Taht sıralamasında 1. olan 3, 2. olan 2, 3. olan 1 parça kazanır. 12 parçayı tamamladığında Eve açılır.",
+                        "Each week's Throne podium awards Eve shards: 1st gets 3, 2nd gets 2, and 3rd gets 1. Collect 12 shards to unlock Eve."),
+                    color = EveCream.copy(alpha = .8f), fontSize = 11.sp, lineHeight = 15.sp,
+                )
+            }
             val rank = status?.currentRank ?: 0
             if (!owned && rank in 1..3) {
                 Text(
-                    sh("Bu hafta $rank. sıradasın: hafta böyle biterse +${4 - rank} parça!", "You're $rank. this week: finish like this for +${4 - rank} shards!"),
+                    sh("Şu an $rank. sıradasın. Haftayı burada bitirirsen +${4 - rank} parça kazanırsın.", "You're currently #$rank. Finish the week here to earn +${4 - rank} shards."),
                     color = EveLeaf, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                 )
             }
             if (owned) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(sh("Ana ekranda Eve gezsin", "Eve roams the home screen"), Modifier.weight(1f), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(sh("Eve ana ekranda görünsün", "Show Eve on the home screen"), Modifier.weight(1f), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Switch(
                         checked = EveOwnership.homeEnabled,
                         onCheckedChange = { EveOwnership.setHomeEnabled(context, it) },
@@ -179,8 +181,8 @@ internal fun EveThroneCard(userId: String?) {
                     )
                 }
                 Text(
-                    sh("Eve açıkken ana ekranda tek arkadaş o olur; kapatırsan maskotun geri gelir.",
-                        "While Eve is on she is your only home friend; switch her off to bring your mascot back."),
+                    sh("Bu seçimi kapatırsan ana ekranda mevcut maskotun görünür.",
+                        "Turn this off to show your current mascot on the home screen."),
                     color = EveCream.copy(alpha = .7f), fontSize = 10.sp,
                 )
             }

@@ -34,6 +34,8 @@ internal data class EveSituation(
     /** This week's throne rank, 0 when the player has not played yet. */
     val throneRank: Int = 0,
     val tournamentLive: Boolean = false,
+    /** Server competition time is Europe/Istanbul, regardless of the device clock zone. */
+    val throneHourActive: Boolean = false,
     val winStreak: Int = 0,
     val longestWord: String = "",
 )
@@ -112,11 +114,11 @@ internal class EveMind(private val memory: EveMemory, private val random: Random
         else -> EveTopic.TAP_NEW
     }
 
-    /** Picks something fitting to talk about, never a topic she used in her last few lines. */
-    fun idleTopic(s: EveSituation): EveTopic {
+    /** Picks a timely topic and limits repeated announcements, including across app restarts. */
+    fun idleTopic(s: EveSituation, nowMillis: Long = System.currentTimeMillis()): EveTopic {
         val options = buildList {
             add(timeTopic(s.hour) to 1f)
-            if (s.hour in 19..21) add(EveTopic.THRONE_HOUR to 1.6f)
+            if (s.throneHourActive) add(EveTopic.THRONE_HOUR to 1.6f)
             if (s.dayOfWeek == 7) add(EveTopic.SUNDAY to 1.3f)
             if (s.dayOfWeek == 1) add(EveTopic.MONDAY to 1f)
             when {
@@ -132,10 +134,16 @@ internal class EveMind(private val memory: EveMemory, private val random: Random
             add(EveTopic.IDLE to 1.2f)
             add(EveTopic.OWNED_STORY to .35f + .2f * level)
         }
-        val fresh = options.filter { it.first !in recentTopics }.ifEmpty { options }
+        val eligible = options.filter { (topic, _) ->
+            topic !in ANNOUNCEMENT_TOPICS ||
+                nowMillis - memory.getLong("topic_at_${topic.name}", Long.MIN_VALUE / 2) >= ANNOUNCEMENT_COOLDOWN_MS
+        }.ifEmpty { options.filter { it.first !in ANNOUNCEMENT_TOPICS } }
+        val fresh = eligible.filter { it.first !in recentTopics }.ifEmpty { eligible }
         val chosen = weighted(fresh)
+        if (chosen in ANNOUNCEMENT_TOPICS) memory.putLong("topic_at_${chosen.name}", nowMillis)
         recentTopics.addLast(chosen)
         while (recentTopics.size > RECENT_TOPICS) recentTopics.removeFirst()
+        memory.putString(KEY_RECENT_TOPICS, recentTopics.joinToString("|") { it.name })
         return chosen
     }
 
@@ -171,7 +179,11 @@ internal class EveMind(private val memory: EveMemory, private val random: Random
         return chosen
     }
 
-    private val recentTopics = ArrayDeque<EveTopic>()
+    private val recentTopics = ArrayDeque(
+        memory.getString(KEY_RECENT_TOPICS, "").split('|').mapNotNull { value ->
+            EveTopic.entries.firstOrNull { it.name == value }
+        }.takeLast(RECENT_TOPICS)
+    )
     private val recentActs = ArrayDeque<Int>()
 
     private fun <T> weighted(options: List<Pair<T, Float>>): T {
@@ -198,6 +210,12 @@ internal class EveMind(private val memory: EveMemory, private val random: Random
         private const val RECENT_LINES = 40
         private const val RECENT_TOPICS = 4
         private const val RECENT_ACTS = 3
+        private const val ANNOUNCEMENT_COOLDOWN_MS = 45 * 60 * 1_000L
+        private val ANNOUNCEMENT_TOPICS = setOf(
+            EveTopic.THRONE_HOUR, EveTopic.SUNDAY, EveTopic.MONDAY,
+            EveTopic.THRONE_TOP, EveTopic.THRONE_CLOSE, EveTopic.THRONE_NONE,
+            EveTopic.TOURNAMENT_LIVE, EveTopic.STREAK, EveTopic.LONGEST,
+        )
         private const val KEY_POINTS = "bond_points"
         private const val KEY_MEETINGS = "meetings"
         private const val KEY_LAST_DAY = "last_day"
@@ -205,6 +223,7 @@ internal class EveMind(private val memory: EveMemory, private val random: Random
         private const val KEY_SEEN_WINS = "seen_wins"
         private const val KEY_SEEN_STREAK = "seen_streak"
         private const val KEY_RECENT_LINES = "recent_lines"
+        private const val KEY_RECENT_TOPICS = "recent_topics"
 
         fun levelOf(points: Int): Int = when {
             points >= 120 -> 2
@@ -239,24 +258,24 @@ internal object EveLinesBook {
             "Merhaba! Taht kürsüsünden buraya kadar yürüdüm, yorgunum ama mutluyum 🌿" to "Hello! I walked all the way from the throne podium, tired but happy 🌿",
         )
         EveTopic.HELLO_FRIEND -> listOf(
-            "Yine geldin, %s! Seni bekliyordum 🌿" to "You're back, %s! I was waiting for you 🌿",
+            "Yine geldin, %s! Seni görmek güzel 🌿" to "You're back, %s! Good to see you 🌿",
             "Selam %s! Bugün hangi kelimeyi avlıyoruz? 🍃" to "Hi %s! Which word are we hunting today? 🍃",
-            "Oo, %s! Tam da seni düşünüyordum 😊" to "Oh, %s! I was just thinking about you 😊",
+            "Oo, %s! Birlikte yeni kelimeler bulalım mı? 😊" to "Oh, %s! Shall we find some new words together? 😊",
             "Hoş geldin! Yapraklarım seni görünce hışırdadı 🍃" to "Welcome! My leaves rustled when I saw you 🍃",
-            "Merhaba %s! Bugün enerjin harika görünüyor ✨" to "Hi %s! Your energy looks great today ✨",
+            "Merhaba %s! Bir kelime macerasına hazır mısın? ✨" to "Hi %s! Ready for a word adventure? ✨",
             "Gel bakalım %s, bugün neler yapıyoruz? 🌿" to "Come on %s, what are we up to today? 🌿",
         )
         EveTopic.HELLO_BEST -> listOf(
-            "Can dostum %s! Sensiz orman çok sessiz kalıyor 💚" to "My dear friend %s! The forest is so quiet without you 💚",
-            "En sevdiğim oyuncu geldi! Merhaba %s 💚" to "My favourite player is here! Hi %s 💚",
+            "Can dostum %s! Yine yan yana olmak güzel 💚" to "My dear friend %s! It's lovely to be together again 💚",
+            "Oyun arkadaşım geldi! Merhaba %s 💚" to "My game partner is here! Hi %s 💚",
             "%s, kuyruğumu sallamadan duramıyorum, hoş geldin! 🌿" to "%s, I can't stop wagging my tail, welcome! 🌿",
             "Seni görünce içim ısındı, %s. Hadi bir maç yapalım! 💚" to "Seeing you warms my heart, %s. Let's play a match! 💚",
             "Geldin mi? Oh be, şimdi her şey yerli yerinde 😊" to "You're here? Phew, now everything's just right 😊",
         )
         EveTopic.MISSED -> listOf(
-            "%d gündür yoktun, %s! Seni çok özledim 🥺" to "You've been away %d days, %s! I missed you so much 🥺",
-            "Neredeydin? Tam %d gün oldu… Gel, biraz kelime avlayalım 🌿" to "Where were you? It's been %d days… Come, let's hunt some words 🌿",
-            "Uzun zaman oldu, %s! Sana yeni kelimeler sakladım 🍃" to "It's been a while, %s! I saved some new words for you 🍃",
+            "Yeniden hoş geldin, %s! Kaldığımız yerden devam edelim mi? 🌿" to "Welcome back, %s! Shall we pick up where we left off? 🌿",
+            "Bir süredir görüşemedik. Seni görmek güzel, %s 🍃" to "It's been a little while. Good to see you, %s 🍃",
+            "Uzun zaman oldu, %s! Yeni kelimeler bulmaya hazırım 🍃" to "It's been a while, %s! I'm ready to find new words 🍃",
         )
         EveTopic.BOND_FRIEND -> listOf(
             "Artık resmen arkadaşız, %s! 💚" to "We're officially friends now, %s! 💚",
@@ -268,12 +287,12 @@ internal object EveLinesBook {
         )
         EveTopic.MORNING -> listOf(
             "Günaydın %s! Kahvaltıdan önce küçük bir kelime ısınması? ☀️" to "Good morning %s! A little word warm-up before breakfast? ☀️",
-            "Günaydın! Sabahları zihin kelime bulmakta pek keskin olur ☀️" to "Good morning! The mind is sharp for words in the morning ☀️",
+            "Günaydın! Yeni bir gün, yeni kelimeler ☀️" to "Good morning! New day, new words ☀️",
             "Sabahın tazeliği tam oyun havası, %s 🌤️" to "Fresh morning air, perfect for a game, %s 🌤️",
         )
         EveTopic.NOON -> listOf(
             "İyi öğlenler %s! Kısa bir mola, tek bir maç? 🍃" to "Good afternoon %s! A short break, just one match? 🍃",
-            "Öğleden sonra rehaveti mi? Bir kelime oyunu iyi gelir 😊" to "Afternoon slump? A word game will help 😊",
+            "Öğleden sonra rehaveti mi? Kısa bir kelime molası verebiliriz 😊" to "Afternoon slump? We could take a quick word break 😊",
             "Güneş tepede, ben de keyifteyim 🌞" to "The sun is high and I'm in a good mood 🌞",
         )
         EveTopic.EVENING -> listOf(
@@ -284,15 +303,15 @@ internal object EveLinesBook {
         EveTopic.NIGHT -> listOf(
             "Geç oldu %s, son bir maç, sonra uyku? 🌙" to "It's late %s, one last match and then sleep? 🌙",
             "Gece kelimeleri daha gizemli olur, değil mi? ✨" to "Words feel more mysterious at night, don't they? ✨",
-            "Yıldızlar çıktı. Sen de bir yıldız gibi parladın bugün ⭐" to "The stars are out. You shone like one today ⭐",
+            "Yıldızlar çıktı. Bugün aklında kalan bir kelime var mı? ⭐" to "The stars are out. Is there a word from today that stuck with you? ⭐",
         )
         EveTopic.LATE -> listOf(
             "Bu saatte uyanık mısın? Ben de uyuyamadım 🦉" to "Awake at this hour? I couldn't sleep either 🦉",
             "Gece kuşları gibiyiz, %s 🌙 Ama uykunu da ihmal etme" to "We're like night owls, %s 🌙 But don't skip your sleep",
         )
         EveTopic.THRONE_HOUR -> listOf(
-            "Taht Saati başladı! 22.00'ye kadar her oyunda ×2 XP var ⚡" to "Throne Hour is on! ×2 XP in every game until 22:00 ⚡",
-            "Akşamın en güzel saati: ×2 XP! Kaçırma %s ⚡" to "The best hour of the evening: ×2 XP! Don't miss it %s ⚡",
+            "Taht Saati devam ediyor: uygun maç ve Atölye oyunlarında XP iki katına çıkıyor ⚡" to "Throne Hour is on: XP doubles for eligible matches and Workshop games ⚡",
+            "İstanbul saatiyle 22.00'ye kadar Taht Saati sürüyor, %s ⚡" to "Throne Hour runs until 22:00 Istanbul time, %s ⚡",
         )
         EveTopic.TAP_NEW -> listOf(
             "Hı! Biraz ürktüm 😳" to "Oh! You startled me a little 😳",
@@ -303,7 +322,7 @@ internal object EveLinesBook {
             "Hihi, yine mi sen? 😄" to "Hehe, you again? 😄",
             "Oyun oynamak mı istiyorsun? Hadi bakalım! 🍃" to "Want to play? Let's go! 🍃",
             "Bak, patimi sallıyorum 🐾" to "Look, I'm waving my paw 🐾",
-            "Seninle olmak güzel 💚" to "It's nice being with you 💚",
+            "Bugün hangi oyundan başlayalım? 🌿" to "Which game shall we start with today? 🌿",
             "Ne var ne yok, %s? 😊" to "What's up, %s? 😊",
         )
         EveTopic.TAP_BEST -> listOf(
@@ -315,17 +334,17 @@ internal object EveLinesBook {
         EveTopic.TICKLE -> listOf(
             "Hahaha, dur, gıdıklanıyorum! 🤭" to "Hahaha, stop, that tickles! 🤭",
             "Tamam tamam, pes ediyorum! 😆" to "Okay okay, I give up! 😆",
-            "Bu kadar sevgi fazla, kalbim pır pır 💚" to "That's so much love, my heart's fluttering 💚",
+            "Biraz soluklanayım, sonra yine oynarız 🍃" to "Let me catch my breath, then we can play again 🍃",
         )
         EveTopic.FLEE -> listOf(
-            "Yakalayamazsın! 😄" to "Can't catch me! 😄",
-            "Hihi, kaçtım! 🍃" to "Hehe, got away! 🍃",
-            "Ebelemece mi oynuyoruz? Ebe sensin! 🌿" to "Are we playing tag? You're it! 🌿",
-            "Buradayım, buradaa! 😊" to "Over here, over heeere! 😊",
-            "Hop! Bana yetişemezsin 🌿" to "Hop! You can't keep up with me 🌿",
+            "Biraz gezip geri geldim! 🍃" to "I took a little stroll and came back! 🍃",
+            "Şuraya da bir bakayım dedim 🍃" to "I thought I'd take a look over here 🍃",
+            "Hareket etmeyi seviyorum; sen neler yapıyorsun? 🌿" to "I like moving around; what are you up to? 🌿",
+            "Buradayım, merak etme 😊" to "I'm right here, don't worry 😊",
+            "Küçük bir tur attım, yine yanındayım 🌿" to "I took a little loop; I'm back beside you 🌿",
         )
         EveTopic.MOVED -> listOf(
-            "Vay, uçtum! Burası da güzelmiş 🌿" to "Whee, I flew! Nice spot 🌿",
+            "Buradan manzara güzelmiş 🌿" to "This is a lovely spot 🌿",
             "Yeni yerimi beğendim 😊" to "I like my new spot 😊",
             "Hop! Beni buraya mı koydun? 🍃" to "Hop! You put me here? 🍃",
             "Manzara buradan daha güzel, haklısın 😊" to "The view is nicer from here, you're right 😊",
@@ -341,19 +360,19 @@ internal object EveLinesBook {
             "Kelime avındayım! 🌿" to "I'm hunting for words! 🌿",
         )
         EveTopic.TIP -> listOf(
-            "İpucu: Uzun kelimeler genelde daha çok puan getirir 💡" to "Tip: longer words usually score more 💡",
+            "Kuşatma'da kelimeni bonus hücresinden geçirmek puanını artırabilir 💡" to "In Word Siege, routing a word through a bonus square can raise its score 💡",
             "Son Harf'te kelimeni zor bir harfle bitirirsen rakibin zorlanır 😉" to "In Last Letter, ending on a tricky letter makes it hard for your rival 😉",
             "Kelime Kuşatması'nda bonus hücrelerini kaçırma, puanı katlıyorlar 💡" to "In Word Siege, don't miss the bonus cells, they multiply your score 💡",
             "Atölye turnuvası her 2 saatte bir açılıyor, ilk üçe girmeyi dene 🏆" to "The Workshop tournament opens every 2 hours, try for the top three 🏆",
-            "Haftalık görevler taht yarışında sana ekstra XP kazandırır 🎯" to "Weekly missions earn you extra XP in the throne race 🎯",
-            "Her galibiyet taht yarışında +85 XP daha getiriyor ⚡" to "Every win brings +85 more XP in the throne race ⚡",
+            "Taht yarışında sıralamanı görmek için Taht ekranına bakabilirsin 👑" to "Check the Throne screen to see your place in the weekly race 👑",
+            "Geçerli maçlardaki galibiyetler Taht XP'sine katkı sağlar ⚡" to "Wins in eligible matches add to your Throne XP ⚡",
         )
         EveTopic.WORD_FACT -> listOf(
             "Biliyor muydun? 'Kelime' sözcüğü Arapçadan dilimize geçmiş 📚" to "Did you know? The Turkish word 'kelime' comes from Arabic 📚",
             "Türkçede Ğ harfiyle başlayan hiçbir kelime yok 🤓" to "No Turkish word starts with the letter Ğ 🤓",
             "Türkçe eklemeli bir dil; bir köke art arda pek çok ek gelebilir 📚" to "Turkish is agglutinative: many suffixes can stack on one root 📚",
             "Ünlü uyumu sayesinde Türkçe kelimeler kulağa akıcı gelir 🎶" to "Vowel harmony makes Turkish words flow so nicely 🎶",
-            "'Yaprak' öz Türkçe bir kelime, benim de en sevdiğim 🍃" to "'Yaprak' (leaf) is a native Turkish word, and my favourite 🍃",
+            "'Yaprak' deyince hemen kulaklarımı dikiyorum 🍃" to "The word 'leaf' always makes my ears perk up 🍃",
         )
         EveTopic.IDLE -> listOf(
             "Şu yapraklar çok lezzetli 🌿" to "These leaves are delicious 🌿",
@@ -364,41 +383,41 @@ internal object EveLinesBook {
             "Burada senin yanında olmak güzel 😊" to "It's nice being here with you 😊",
         )
         EveTopic.OWNED_STORY -> listOf(
-            "Beni taht yarışında kazandın, bunu hiç unutmayacağım 💚" to "You won me in the throne race, I'll never forget it 💚",
-            "Taht kürsüsünden gelen tek orman dostu benim 😊" to "I'm the only forest friend who came from the throne podium 😊",
+            "Taht yolculuğunda bir araya geldik; şimdi burada birlikteyiz 💚" to "The Throne journey brought us together; now we're here side by side 💚",
+            "Taht kürsüsünden gelen orman dostun benim 😊" to "I'm your forest friend from the Throne podium 😊",
             "Parça parça tamamlandım, şimdi hep yanındayım 🌿" to "I came together piece by piece, and now I'm always with you 🌿",
         )
         EveTopic.WIN_SEEN -> listOf(
-            "Az önce kazandın, gördüm! Kuyruğum hâlâ sallanıyor 🎉" to "You just won, I saw it! My tail is still wagging 🎉",
-            "Tebrikler %s! O galibiyet tam bir şölendi 🏆" to "Congratulations %s! That win was a feast 🏆",
-            "Kazanmak sana çok yakışıyor 😄" to "Winning really suits you 😄",
+            "Son gelişinden beri bir galibiyet daha almışsın. Tebrikler! 🎉" to "You've picked up another win since your last visit. Well done! 🎉",
+            "Tebrikler %s! Yeni galibiyetini kutlayalım 🏆" to "Congratulations %s! Let's celebrate your new win 🏆",
+            "Bir galibiyet daha! Güzel gidiyor 😄" to "Another win! Nicely done 😄",
         )
         EveTopic.LOSS_SEEN -> listOf(
-            "Bu sefer olmadı ama sorun değil, bir sonrakini birlikte alırız 💚" to "Not this time, but it's fine, we'll take the next one together 💚",
-            "Kaybetmek de öğrenmektir, %s. Ben hep yanındayım 🌿" to "Losing is learning too, %s. I'm always with you 🌿",
+            "Bu maç zor geçmiş olabilir. İstersen bir sonrakinde yeni bir yol deneriz 💚" to "That match may have been tough. We can try a new approach next time 💚",
+            "Her maç farklı, %s. Hazır olduğunda yeniden deneyebiliriz 🌿" to "Every match is different, %s. We can try again when you're ready 🌿",
             "Moralini bozma, kısa bir moladan sonra yeniden deneriz 🍃" to "Chin up, we'll try again after a short break 🍃",
         )
         EveTopic.STREAK -> listOf(
             "Üst üste %d galibiyet! Durdurulamıyorsun 🔥" to "%d wins in a row! You're unstoppable 🔥",
-            "Seri %d oldu, %s! Taht seni bekliyor 👑" to "That's a streak of %d, %s! The throne awaits 👑",
+            "%d galibiyetlik seri yakaladın, %s. Güzel gidiyorsun 👑" to "You've built a %d-win streak, %s. Nicely done 👑",
         )
         EveTopic.LONGEST -> listOf(
-            "'%w' kelimeni hâlâ unutamadım, harikaydı 🤩" to "I still can't forget your word '%w', it was amazing 🤩",
-            "En uzun kelimen '%w'… Onu geçebilecek misin? 😉" to "Your longest word is '%w'… Can you beat it? 😉",
+            "Kaydettiğim en uzun kelimen '%w'. Güzel seçim! 🌿" to "The longest word I've seen from you is '%w'. Nice choice! 🌿",
+            "Şimdiye dek gördüğüm en uzun kelimen '%w'. Daha uzunu gelir mi? 🍃" to "The longest word I've seen from you is '%w'. Will there be a longer one? 🍃",
         )
         EveTopic.THRONE_TOP -> listOf(
-            "Taht yarışında bu hafta %d. sıradasın, harika gidiyorsun! 👑" to "You're %d. in this week's throne race, great going! 👑",
+            "Bu hafta Taht'ta %d. sıradasın. Kürsüdesin! 👑" to "You're #%d in this week's Throne race. You're on the podium! 👑",
             "Kürsüdesin! %d. sıra… Böyle devam! 👑" to "You're on the podium! Rank %d… Keep it up! 👑",
         )
         EveTopic.THRONE_CLOSE -> listOf(
-            "Taht yarışında %d. sıradasın, ilk üçe az kaldı 💪" to "You're %d. in the throne race, the top three is close 💪",
-            "%d. sıradan kürsüye birkaç galibiyet var, %s 💪" to "From rank %d the podium is a few wins away, %s 💪",
+            "Taht yarışında %d. sıradasın. Kürsüye çıkmak için hâlâ zaman var 🌿" to "You're #%d in the Throne race. There's still time to reach the podium 🌿",
+            "Şu an %d. sıradasın, %s. Bir sonraki maç yeni bir fırsat 🍃" to "You're currently #%d, %s. The next match is another chance 🍃",
         )
         EveTopic.THRONE_NONE -> listOf(
-            "Bu hafta taht yarışına daha başlamadın, bir maçla açalım mı? 👑" to "You haven't started this week's throne race yet, shall we open with a match? 👑",
+            "Bu haftaki Taht sıralamanda henüz yer görünmüyor. Bir maç oynayalım mı? 👑" to "You don't have a place in this week's Throne ranking yet. Shall we play a match? 👑",
         )
         EveTopic.SUNDAY -> listOf(
-            "Bugün pazar! Taht yarışı gece yarısı bitiyor, son bir hamle? ⏳" to "It's Sunday! The throne race ends at midnight, one last push? ⏳",
+            "Taht haftası İstanbul saatiyle gece yarısı bitiyor. Sıralamana göz atabilirsin ⏳" to "The Throne week ends at midnight Istanbul time. You can check your standing ⏳",
         )
         EveTopic.MONDAY -> listOf(
             "Yeni hafta, yeni taht yarışı! Herkes sıfırdan başlıyor 🌱" to "New week, new throne race! Everyone starts from zero 🌱",

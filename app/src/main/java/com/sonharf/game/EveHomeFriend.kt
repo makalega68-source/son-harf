@@ -133,6 +133,7 @@ internal fun EveHomeFriend(
     var clipKey by remember { mutableIntStateOf(0) }
     var speech by remember { mutableStateOf<String?>(null) }
     var speechKey by remember { mutableIntStateOf(0) }
+    var lastSpokeAt by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var lastTouch by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var resting by remember { mutableStateOf(false) }
     var tapKey by remember { mutableIntStateOf(0) }
@@ -166,6 +167,7 @@ internal fun EveHomeFriend(
     fun say(text: String) {
         speech = text
         speechKey++
+        lastSpokeAt = System.currentTimeMillis()
     }
     fun talk(topic: EveTopic, number: Int = 0, word: String = "") {
         val (tr, en) = mind.line(topic, firstName, number, word)
@@ -180,13 +182,15 @@ internal fun EveHomeFriend(
         gestureKey++
     }
     fun situation(): EveSituation {
-        val now = java.util.Calendar.getInstance()
-        val day = now.get(java.util.Calendar.DAY_OF_WEEK) // Sunday = 1 … Saturday = 7
+        val local = java.util.Calendar.getInstance()
+        val competition = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Europe/Istanbul"))
+        val day = competition.get(java.util.Calendar.DAY_OF_WEEK) // Sunday = 1 … Saturday = 7
         return EveSituation(
-            hour = now.get(java.util.Calendar.HOUR_OF_DAY),
+            hour = local.get(java.util.Calendar.HOUR_OF_DAY),
             dayOfWeek = if (day == java.util.Calendar.SUNDAY) 7 else day - 1,
             throneRank = rank.value.coerceAtLeast(-1).let { if (it < 0) 99 else it },
             tournamentLive = tournament.value,
+            throneHourActive = competition.get(java.util.Calendar.HOUR_OF_DAY) in 19..21,
             winStreak = games.winStreak,
             longestWord = games.longestWord,
         )
@@ -209,6 +213,11 @@ internal fun EveHomeFriend(
             EveTopic.THRONE_TOP, EveTopic.THRONE_CLOSE -> talk(topic, number = s.throneRank)
             else -> talk(topic)
         }
+    }
+    // Ambient comments are occasional; touches and game news remain immediate.
+    fun ambient(topic: EveTopic? = null) {
+        if (System.currentTimeMillis() - lastSpokeAt < 55_000L) return
+        express(topic ?: mind.idleTopic(situation()))
     }
     // A stroll or a dash: turn towards the spot, move there at the clip's pace, then face the player.
     suspend fun walkTo(tx: Float, ty: Float, run: Boolean = false, graze: Boolean = false) {
@@ -280,7 +289,9 @@ internal fun EveHomeFriend(
         delay(1_200L)
         val news = mind.gameNews(games.wins, games.winStreak)
         if (EveSession.claimHello()) {
-            val meeting = mind.meet(System.currentTimeMillis() / 86_400_000L)
+            val nowMillis = System.currentTimeMillis()
+            val istanbulOffset = java.util.TimeZone.getTimeZone("Europe/Istanbul").getOffset(nowMillis)
+            val meeting = mind.meet((nowMillis + istanbulOffset) / 86_400_000L)
             feel(EveMood.CURIOUS)
             delay(900L)
             feel(EveMood.HAPPY)
@@ -333,7 +344,7 @@ internal fun EveHomeFriend(
                 2 -> doGesture(EveGesture.SNIFF)
                 3 -> doGesture(EveGesture.LISTEN)
                 4 -> doGesture(EveGesture.LOOK_UP)
-                5 -> express(mind.idleTopic(situation()))
+                5 -> ambient()
                 6 -> {
                     play(EveClip.GRAZE_ONCE)
                     delay(3_000L)
@@ -354,7 +365,7 @@ internal fun EveHomeFriend(
                     play(EveClip.POUNCE)
                     delay(1_050L)
                     play(EveClip.BREATHE)
-                    if (Random.nextBoolean()) talk(EveTopic.POUNCE)
+                    if (Random.nextInt(4) == 0) ambient(EveTopic.POUNCE)
                 }
                 14 -> {
                     // A short amble with her nose in the grass.
@@ -373,7 +384,7 @@ internal fun EveHomeFriend(
                     // A stroll, then she turns back to the player and says something.
                     walkTo(Random.nextFloat() * roam[0], (posY.value + Random.nextFloat() * 100f - 50f).coerceIn(0f, roam[1]))
                     delay(500L)
-                    if (Random.nextBoolean()) express(mind.idleTopic(situation())) else doGesture(EveGesture.TILT)
+                    if (Random.nextBoolean()) ambient() else doGesture(EveGesture.TILT)
                 }
             }
         }
