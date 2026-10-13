@@ -558,6 +558,7 @@ internal fun EveGameCompanion(
     signal: WordSiegeMascotSignal? = null,
     hint: Pair<Int, String>? = null,
     outcome: WordSiegeMascotOutcome? = null,
+    onLaneSwitch: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val available = remember { runCatching { context.assets.open(EveAsset.MODEL).use { } }.isSuccess }
@@ -575,7 +576,13 @@ internal fun EveGameCompanion(
     var yaw by remember { mutableStateOf(0f) }
     var walking by remember { mutableStateOf(false) }
     val x = remember { Animatable(0f) }
-    val y = remember { Animatable(0f) }
+    val placement = remember(context) { context.getSharedPreferences("eve_game_placement", android.content.Context.MODE_PRIVATE) }
+    val initialX = remember(placement) { placement.getFloat("x_fraction", 0f).coerceIn(0f, 1f) }
+    var positioned by remember { mutableStateOf(false) }
+    var dragging by remember { mutableStateOf(false) }
+    val dragY = remember { FloatArray(1) }
+    val dragX = remember { FloatArray(1) }
+    val scope = rememberCoroutineScope()
     val bond = remember { WordSiegeMascotBond(context) }
     val initialSignalKey = remember { signal?.key }
     var lastCommentAt by remember { mutableLongStateOf(0L) }
@@ -637,30 +644,27 @@ internal fun EveGameCompanion(
     }
 
     BoxWithConstraints(modifier) {
-        val modelWidth = if (maxHeight.value < 110f) 64f else 84f
+        val modelWidth = min(60f, (maxHeight.value - 4f).coerceAtLeast(32f))
         val modelHeight = modelWidth
         val maxX = (maxWidth.value - modelWidth).coerceAtLeast(0f)
-        val maxY = (maxHeight.value - modelHeight).coerceAtLeast(0f)
-        LaunchedEffect(ready, maxX, maxY) {
-            if (!ready) return@LaunchedEffect
-            x.snapTo(x.value.coerceIn(0f, maxX))
-            y.snapTo(y.value.coerceIn(0f, maxY))
-            // Short walks around the edges leave the middle of the game readable.
+        val yOffset = ((maxHeight.value - modelHeight) / 2f).coerceAtLeast(0f)
+        LaunchedEffect(ready, maxX, dragging) {
+            if (!ready || dragging) return@LaunchedEffect
+            if (!positioned) {
+                x.snapTo(initialX * maxX)
+                positioned = true
+            } else x.snapTo(x.value.coerceIn(0f, maxX))
             while (true) {
-                delay(Random.nextLong(5_000L, 9_000L))
+                delay(Random.nextLong(4_500L, 7_500L))
                 val tx = if (x.value < maxX / 2f) maxX else 0f
-                val ty = if (maxY > 90f && Random.nextBoolean()) maxY else 0f
-                val distance = hypot(tx - x.value, ty - y.value)
-                if (distance < 12f) continue
-                yaw = Math.toDegrees(atan2((tx - x.value).toDouble(), (y.value - ty).toDouble())).toFloat()
+                val distance = kotlin.math.abs(tx - x.value)
+                if (distance < 16f) continue
+                yaw = if (tx > x.value) 90f else -90f
                 walking = true
                 clip = EveClip.WALK
-                val duration = (distance / EVE_WALK_DP_PER_SEC * 1_000f).roundToInt().coerceIn(500, 10_000)
                 try {
-                    coroutineScope {
-                        launch { x.animateTo(tx, tween(duration, easing = LinearOutSlowInEasing)) }
-                        y.animateTo(ty, tween(duration, easing = LinearOutSlowInEasing))
-                    }
+                    x.animateTo(tx, tween((distance / EVE_WALK_DP_PER_SEC * 1_000f).roundToInt().coerceIn(500, 8_000), easing = androidx.compose.animation.core.LinearEasing))
+                    placement.edit().putFloat("x_fraction", if (maxX > 0f) x.value / maxX else 0f).apply()
                 } finally {
                     walking = false
                     yaw = 0f
@@ -668,41 +672,63 @@ internal fun EveGameCompanion(
                 }
             }
         }
-        if (speech != null) {
+
+        // The bubble stays in Eve's own strip, beside her instead of over letters or controls.
+        val bubbleWidth = min(190f, (maxWidth.value - modelWidth - 10f).coerceAtLeast(0f))
+        if (speech != null && bubbleWidth >= 85f) {
             Surface(
                 modifier = Modifier.align(Alignment.TopStart).offset {
-                    IntOffset((x.value + modelWidth / 2f - 90f).coerceIn(2f, (maxWidth.value - 184f).coerceAtLeast(2f)).dp.roundToPx(),
-                        (if (maxHeight.value < 130f) y.value - 48f else (y.value + modelHeight).coerceAtMost((maxHeight.value - 36f).coerceAtLeast(0f))).dp.roundToPx())
-                }.widthIn(max = min(184f, (maxWidth.value - 4f).coerceAtLeast(0f)).dp),
+                    val bubbleX = if (x.value < maxX / 2f)
+                        (x.value + modelWidth + 4f).coerceAtMost(maxWidth.value - bubbleWidth - 2f)
+                    else (x.value - bubbleWidth - 4f).coerceAtLeast(2f)
+                    IntOffset(bubbleX.dp.roundToPx(), ((maxHeight.value - 44f) / 2f).coerceAtLeast(0f).dp.roundToPx())
+                }.widthIn(min = bubbleWidth.dp, max = bubbleWidth.dp),
                 shape = RoundedCornerShape(12.dp),
                 color = Color.White,
                 border = BorderStroke(1.dp, Color(0xFF7FB069)),
-                shadowElevation = 3.dp,
+                shadowElevation = 2.dp,
             ) {
-                Text(speech.orEmpty(), Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
-                    color = Color(0xFF1F3B2C), fontSize = 11.sp, lineHeight = 14.sp,
-                    fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                Text(speech.orEmpty(), Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                    color = Color(0xFF1F3B2C), fontSize = 10.sp, lineHeight = 13.sp,
+                    fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
+                    maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
         }
         Box(
             Modifier.align(Alignment.TopStart)
-                .offset { IntOffset(x.value.dp.roundToPx(), y.value.dp.roundToPx()) }
+                .offset { IntOffset(x.value.dp.roundToPx(), yOffset.dp.roundToPx()) }
                 .size(modelWidth.dp, modelHeight.dp),
         ) {
             if (live3d) {
                 EveLiveModel(mixer, onNode = { node = it }, nodeProvider = { node },
-                    bodyYaw = { yaw },
+                    bodyYaw = { yaw }, maxFrameRate = 30,
                     expression = { EveExpression(mood, speech != null, gesture, gestureKey, walking) })
             } else {
                 Image(painterResource(R.drawable.eve_still), sh("Eve", "Eve"),
                     contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
             }
             Box(
-                Modifier.align(Alignment.Center).size(60.dp)
+                Modifier.align(Alignment.Center).fillMaxSize()
+                    .pointerInput(maxX) {
+                        detectDragGestures(
+                            onDragStart = { dragging = true; dragY[0] = 0f; dragX[0] = x.value },
+                            onDragEnd = {
+                                dragging = false
+                                placement.edit().putFloat("x_fraction", if (maxX > 0f) x.value / maxX else 0f).apply()
+                                if (kotlin.math.abs(dragY[0]) >= 28f) onLaneSwitch()
+                            },
+                            onDragCancel = { dragging = false },
+                        ) { change, amount ->
+                            change.consume()
+                            dragY[0] += amount.y.toDp().value
+                            dragX[0] = (dragX[0] + amount.x.toDp().value).coerceIn(0f, maxX)
+                            scope.launch { x.snapTo(dragX[0]) }
+                        }
+                    }
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClickLabel = sh("Eve ile konuş", "Talk to Eve"),
+                        onClickLabel = sh("Eve ile konuş veya sürükle", "Talk to or drag Eve"),
                     ) { say(sh("Buradayım. Sıradaki hamleyi birlikte düşünelim.", "I'm here. Let's think through the next move.")) }
             )
         }
@@ -720,6 +746,7 @@ private fun EveLiveModel(
     nodeProvider: () -> io.github.sceneview.node.ModelNode?,
     bodyYaw: () -> Float,
     expression: () -> EveExpression,
+    maxFrameRate: Int = 60,
 ) {
     // The body turns smoothly towards where she is heading (0 = facing the player).
     val turn = remember { FloatArray(1) }
@@ -746,6 +773,7 @@ private fun EveLiveModel(
         fillLightNode = fillLight,
         cameraManipulator = null,
         onFrame = { frameTimeNanos ->
+            if (lastFrame[0] == 0L || frameTimeNanos - lastFrame[0] >= 1_000_000_000L / maxFrameRate) {
             nodeProvider()?.let { live ->
                 runCatching {
                     val dt = if (lastFrame[0] == 0L) 0f else ((frameTimeNanos - lastFrame[0]) / 1e9f).coerceIn(0f, .1f)
@@ -764,6 +792,7 @@ private fun EveLiveModel(
                     rig?.express(expression(), frameTimeNanos)
                     live.animator.updateBoneMatrices()
                 }
+            }
             }
         },
     ) {

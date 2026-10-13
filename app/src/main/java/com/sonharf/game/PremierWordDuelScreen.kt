@@ -1648,6 +1648,11 @@ private fun PremierArena(
     // The mascot's home perch is the slot beside the target tile; it can fly across the arena.
     var arenaOrigin by remember { mutableStateOf(Offset.Zero) }
     var arenaSize by remember { mutableStateOf(IntSize.Zero) }
+    val eveOwned = EveOwnership.owns(meId)
+    val evePlacement = remember(androidx.compose.ui.platform.LocalContext.current) {
+        androidx.compose.ui.platform.LocalContext.current.applicationContext.getSharedPreferences("eve_game_placement", android.content.Context.MODE_PRIVATE)
+    }
+    var eveAtBottom by remember { mutableStateOf(evePlacement.getBoolean("bottom_lane", false)) }
     var mascotSlotCenter by remember { mutableStateOf<Offset?>(null) }
     val mascotTouches = remember { WordSiegeMascotTouchState() }
 
@@ -1800,7 +1805,16 @@ private fun PremierArena(
                     } else {
                         PremierTurnBadge(language, myTurn && !preparing, room.status, botThinking && !preparing, rivalName)
                     }
-                    Spacer(Modifier.weight(1f))
+                    if (eveOwned && !eveAtBottom) {
+                        EveGameCompanion(
+                            modifier = Modifier.fillMaxWidth().height(if (veryCompact) 50.dp else 62.dp),
+                            signal = mascotSignal, hint = hintRequest,
+                            onLaneSwitch = {
+                                eveAtBottom = true
+                                evePlacement.edit().putBoolean("bottom_lane", true).apply()
+                            },
+                        )
+                    } else Spacer(Modifier.weight(1f))
                     // Last word as tiles, its linking letters in gold. The right/wrong verdict is not
                     // repeated here (it held the new word back); the input, sound and mascot give it.
                     val slip = rivalSlip
@@ -1854,7 +1868,16 @@ private fun PremierArena(
                             }
                         )
                     }
-                    Spacer(Modifier.weight(1f))
+                    if (eveOwned && eveAtBottom) {
+                        EveGameCompanion(
+                            modifier = Modifier.fillMaxWidth().height(if (veryCompact) 50.dp else 62.dp),
+                            signal = mascotSignal, hint = hintRequest,
+                            onLaneSwitch = {
+                                eveAtBottom = false
+                                evePlacement.edit().putBoolean("bottom_lane", false).apply()
+                            },
+                        )
+                    } else Spacer(Modifier.weight(1f))
                 }
             }
             // Keep the live input and custom keyboard outside the flexible arena body.
@@ -1875,18 +1898,7 @@ private fun PremierArena(
         val mascotAnchors = if (slotCenter == null) emptyList() else listOf(Offset(.5f, .5f))
         val mascotDensity = LocalDensity.current
         val mascotBoxPx = with(mascotDensity) { mascotSize.toPx() }
-        if (EveOwnership.owns(meId)) {
-            EveGameCompanion(
-                modifier = Modifier.offset {
-                    androidx.compose.ui.unit.IntOffset(
-                        ((slotCenter?.x ?: 0f) - arenaOrigin.x - mascotBoxPx * .8f).toInt(),
-                        ((slotCenter?.y ?: 0f) - arenaOrigin.y - mascotBoxPx * .6f).toInt(),
-                    )
-                }.size(width = mascotSize * 1.6f, height = mascotSize * 1.2f),
-                signal = mascotSignal,
-                hint = hintRequest,
-            )
-        } else WordSiegeMascotCompanion(
+        if (!eveOwned) WordSiegeMascotCompanion(
             anchors = mascotAnchors,
             mascotSize = mascotSize,
             moveId = latestMove?.id,
