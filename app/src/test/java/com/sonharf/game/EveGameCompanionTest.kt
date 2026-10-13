@@ -51,7 +51,7 @@ class EveGameCompanionTest {
         val eve = File("src/main/java/com/sonharf/game/EveHomeFriend.kt").readText()
         assertTrue(eve.contains("view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply { enabled = false }"))
         assertTrue(eve.contains("view.bloomOptions = view.bloomOptions.apply { enabled = false }"))
-        assertTrue(eve.contains("view.isShadowingEnabled = false"))
+        assertTrue(eve.contains("view.setShadowingEnabled(false)"))
         assertTrue(eve.contains("view = view,"))
     }
 }

@@ -803,7 +803,7 @@ private fun EveLiveModel(
             view.bloomOptions = view.bloomOptions.apply { enabled = false }
             view.multiSampleAntiAliasingOptions = view.multiSampleAntiAliasingOptions.apply { enabled = false }
             view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply { enabled = false }
-            view.isShadowingEnabled = false
+            view.setShadowingEnabled(false)
         }
     }
     val modelInstance = rememberModelInstance(modelLoader, EveAsset.MODEL) ?: return
