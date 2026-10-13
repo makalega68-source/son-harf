@@ -14,8 +14,8 @@ import kotlin.random.Random
 internal object MascotHints {
     const val HINTS_PER_MATCH = 3
 
-    /** Mascot advantage: owning a mascot gives three free hints every match; others buy them. */
-    val freeHints: Int get() = if (WordSiegeMascotOwnership.hasAny) HINTS_PER_MATCH else 0
+    /** A purchased mascot or Eve grants three free hints in supported bot/practice matches. */
+    val freeHints: Int get() = if (WordSiegeMascotOwnership.hasAny || EveOwnership.ownsCurrentUser()) HINTS_PER_MATCH else 0
 
     /**
      * Free hints left in a match after [used] of them. Computed from hints used (not a count fixed
@@ -23,8 +23,13 @@ internal object MascotHints {
      * Against a real opponent a hint is only a strategy tip (fair play), so every player gets the
      * tips for free and banked or bought hints are never spent on them.
      */
-    fun freeHintsLeft(realOpponent: Boolean, used: Int, ownsMascot: Boolean = WordSiegeMascotOwnership.hasAny): Int {
-        val allowance = if (realOpponent || ownsMascot) HINTS_PER_MATCH else 0
+    fun freeHintsLeft(
+        realOpponent: Boolean,
+        used: Int,
+        ownsMascot: Boolean = WordSiegeMascotOwnership.hasAny,
+        ownsEve: Boolean = EveOwnership.ownsCurrentUser(),
+    ): Int {
+        val allowance = if (realOpponent || ownsMascot || ownsEve) HINTS_PER_MATCH else 0
         return (allowance - used).coerceAtLeast(0)
     }
 

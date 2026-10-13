@@ -109,8 +109,15 @@ private fun WordSiegePracticeContent(
     var showExchange by remember { mutableStateOf(false) }
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var shuffleSeed by remember { mutableIntStateOf(0) }
-    // Mascot hints against the practice bot: three per match.
+    // An owned mascot or Eve gives three hints against the practice bot.
     var siegeHintsLeft by remember { mutableIntStateOf(MascotHints.freeHints) }
+    var grantedHints by remember { mutableIntStateOf(MascotHints.freeHints) }
+    val currentGrant = MascotHints.freeHints
+    LaunchedEffect(me) { EveOwnership.refresh(context, me) }
+    LaunchedEffect(currentGrant) {
+        siegeHintsLeft = (siegeHintsLeft + currentGrant - grantedHints).coerceAtLeast(0)
+        grantedHints = currentGrant
+    }
     var siegeHint by remember { mutableStateOf<Pair<Int, String>?>(null) }
     // The hint move's cells: the mascot flies there; the tiles are already placed for the player.
     var siegeHintCells by remember { mutableStateOf<List<Int>>(emptyList()) }
@@ -741,10 +748,10 @@ private fun WordSiegePracticeContent(
                             }
                             // Three hints a match are the mascot's advantage.
                             if (siegeHintsLeft <= 0) {
-                                notice = if (WordSiegeMascotOwnership.hasAny) {
+                                notice = if (MascotHints.freeHints > 0) {
                                     sh("Bu maçın 3 ipucunu kullandın.", "You have used this match's 3 hints.")
                                 } else {
-                                    sh("İpucun kalmadı. Mağaza > Video Ödülleri'nden video izleyip +2 ipucu alabilirsin; maskot sahipleri her maçta 3 ipucu kazanır.", "No hints left. Watch a video in Store > Video Rewards for +2 hints; mascot owners get 3 every match.")
+                                    sh("İpucun kalmadı. Mağaza > Video Ödülleri'nden video izleyip +2 ipucu alabilirsin; maskot veya Eve sahipleri her maçta 3 ipucu kazanır.", "No hints left. Watch a video in Store > Video Rewards for +2 hints; mascot or Eve owners get 3 every match.")
                                 }
                                 return@WordSiegeCompactAction
                             }

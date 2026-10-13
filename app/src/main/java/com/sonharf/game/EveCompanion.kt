@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.EveStatus
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.ThroneBackend
+import io.github.jan.supabase.auth.auth
 
 /**
  * Who has Eve. She is never sold: she is earned from the weekly throne podium (shards counted on
@@ -49,6 +50,7 @@ internal object EveOwnership {
 
     var status by mutableStateOf<EveStatus?>(null)
         private set
+    private var statusUserId: String? = null
     private var cachedOwner by mutableStateOf<String?>(null)
     var homeEnabled by mutableStateOf(true)
         private set
@@ -69,7 +71,13 @@ internal object EveOwnership {
     /** Whether [userId] has Eve: the server's answer, the remembered one, or the admin list. */
     fun owns(userId: String?): Boolean {
         if (userId.isNullOrBlank()) return false
-        return status?.owned == true || cachedOwner == userId || isAdmin(userId)
+        return (statusUserId == userId && status?.owned == true) || cachedOwner == userId || isAdmin(userId)
+    }
+
+    /** The current account's Eve entitlement, used by the existing three-hint match system. */
+    fun ownsCurrentUser(): Boolean {
+        val userId = runCatching { SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull()
+        return owns(userId)
     }
 
     /** Eve walks the home screen instead of the floating mascot (never both at once). */
@@ -82,10 +90,16 @@ internal object EveOwnership {
 
     suspend fun refresh(context: Context, userId: String?, force: Boolean = false) {
         restore(context)
+        if (statusUserId != userId) {
+            statusUserId = userId
+            status = null
+            loadedAt = 0L
+        }
         if (!SupabaseProvider.configured || userId.isNullOrBlank()) return
         val now = System.currentTimeMillis()
         if (!force && now - loadedAt < 60_000L) return
         gameRequestResult { ThroneBackend.eveStatus() }.onSuccess { s ->
+            if (statusUserId != userId) return@onSuccess
             status = s
             loadedAt = now
             cachedOwner = if (s.owned) userId else null
@@ -137,10 +151,29 @@ internal fun EveThroneCard(userId: String?) {
                     Text(sh("TAHT ÖDÜLÜ · MAĞAZADA YOK", "THRONE REWARD · EXCLUSIVE"), color = EveLeaf, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     Text(sh("Eve · Orman Dostu", "Eve · Forest Friend"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
-                        sh("Taht yarışında kazandığın özel yol arkadaşın. Ana ekranda sana eşlik eder; oyunlarına ve günün akışına göre yeni şeyler söyler.",
-                            "A special companion earned in the Throne race. Eve joins you on the home screen and responds to your games and the moment."),
+                        sh("Galibiyetlerini hatırlar, ana ekranda sana eşlik eder. Birlikte vakit geçirdikçe aranızdaki dostluk gelişir.",
+                            "Eve remembers your wins and joins you on the home screen. Your friendship grows as you spend time together."),
                         color = EveCream.copy(alpha = .85f), fontSize = 12.sp, lineHeight = 16.sp,
                     )
+                }
+            }
+            Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFF24513D)) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text("3", color = EveLeaf, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                    Column {
+                        Text(
+                            sh("ÜCRETSİZ İPUCU / MAÇ", "FREE HINTS / MATCH"),
+                            color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black,
+                        )
+                        Text(
+                            sh("Kuşatma antrenmanı · Son Harf", "Word Siege practice · Last Letter"),
+                            color = EveCream.copy(alpha = .8f), fontSize = 10.sp,
+                        )
+                    }
                 }
             }
             // Twelve shard slots, filled as the player earns them.

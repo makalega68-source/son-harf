@@ -1407,10 +1407,11 @@ private fun PremierArena(
     val latestPlayedWord = latestMove?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
     val latestMoveMine = latestMove != null && latestMove.playerId == meId
 
-    // Mascot hints are a real answer word. Against a bot mascot owners get three free ones, then
+    // Mascot or Eve hints are a real answer word. Against a bot owners get three free ones, then
     // banked (rewarded video) hints, then Son Coin. Against a real opponent every player gets the
     // same three per match, so it stays even, and banked or bought hints are never spent there.
     val hintContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(meId) { EveOwnership.refresh(hintContext, meId) }
     // The hint words come from the bundled dictionary: load it off the main thread before the
     // first hint so asking for one never stalls a turn.
     LaunchedEffect(room.language) {
