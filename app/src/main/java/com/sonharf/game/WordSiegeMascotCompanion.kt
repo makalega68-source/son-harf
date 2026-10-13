@@ -1850,7 +1850,11 @@ internal fun WordSiegeMascotCompanion(
             )
         }
 
-        speech?.let { text ->
+        // A companion boxed into its own slot (the Son Harf arena) has no room for a bubble: it
+        // would be cut off to a stray tail. There the screen shows the words (a hint goes under
+        // the clock) and the mascot only acts.
+        val bubbleRoom = areaHeight > baseSizePx * 1.8f
+        if (bubbleRoom) speech?.let { text ->
             WordSiegeMascotSpeechBubble(
                 text = text,
                 id = speechId,

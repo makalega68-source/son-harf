@@ -62,6 +62,7 @@ import io.github.sceneview.rememberFillLightNode
 import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
+import io.github.sceneview.rememberView
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -792,6 +793,19 @@ private fun EveLiveModel(
     val lastFrame = remember { LongArray(1) }
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
+    // A small see-through character needs none of a full scene's costly passes: no ambient
+    // occlusion, bloom, multisampling, dynamic resolution or shadow maps. Each of them redrew
+    // every frame and slowed busy game screens (the siege board) for no visible gain.
+    val view = rememberView(engine)
+    remember(view) {
+        runCatching {
+            view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply { enabled = false }
+            view.bloomOptions = view.bloomOptions.apply { enabled = false }
+            view.multiSampleAntiAliasingOptions = view.multiSampleAntiAliasingOptions.apply { enabled = false }
+            view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply { enabled = false }
+            view.isShadowingEnabled = false
+        }
+    }
     val modelInstance = rememberModelInstance(modelLoader, EveAsset.MODEL) ?: return
     val rig = remember(modelInstance) { runCatching { EveRig(engine, modelInstance.asset) }.getOrNull() }
     val mainLight = rememberMainLightNode(engine) {
@@ -808,6 +822,7 @@ private fun EveLiveModel(
         isOpaque = false,
         engine = engine,
         modelLoader = modelLoader,
+        view = view,
         mainLightNode = mainLight,
         fillLightNode = fillLight,
         cameraManipulator = null,

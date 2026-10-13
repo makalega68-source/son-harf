@@ -42,5 +42,16 @@ class EveGameCompanionTest {
         }
         val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt").readText()
         assertTrue(practice.contains("anchors = WordSiegeBoardMascotPerches"))
+        // A slot too small for a bubble (Son Harf) shows no clipped bubble tail.
+        assertTrue(companion.contains("if (bubbleRoom) speech?.let { text ->"))
+    }
+
+    @Test fun evesThreeDViewSkipsCostlyPasses() {
+        // The live model stays light on busy game screens: no SSAO, bloom, MSAA or shadow maps.
+        val eve = File("src/main/java/com/sonharf/game/EveHomeFriend.kt").readText()
+        assertTrue(eve.contains("view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply { enabled = false }"))
+        assertTrue(eve.contains("view.bloomOptions = view.bloomOptions.apply { enabled = false }"))
+        assertTrue(eve.contains("view.isShadowingEnabled = false"))
+        assertTrue(eve.contains("view = view,"))
     }
 }
