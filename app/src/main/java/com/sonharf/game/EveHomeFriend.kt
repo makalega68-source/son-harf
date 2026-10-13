@@ -13,9 +13,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -39,6 +37,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -553,206 +552,222 @@ internal fun EveHomeFriend(
 }
 
 /**
- * Eve in a match: small, contextual and roaming along the play area's perimeter.
+ * Eve standing in for the mascot: [WordSiegeMascotCompanion] places and moves her exactly as it
+ * does Obi (perches, trips to a hint or an answer, centre stage after a match, dragging) and hands
+ * her Obi's actions and feelings, which she answers in her own body language: clips (a pounce, a
+ * look around, a nibble, a startle) and bone gestures (wag, paw wave, tilt, stretch). Between
+ * perches she runs, turned towards where she is going ([heading]), instead of flying. The game
+ * rows (Workshop, Son Harf lobby) use her the same way with just an action and a feeling.
+ * Touches land on a layer above the 3D view, which would otherwise keep them.
  */
 @Composable
-internal fun EveGameCompanion(
-    modifier: Modifier = Modifier,
-    signal: WordSiegeMascotSignal? = null,
-    hint: Pair<Int, String>? = null,
-    outcome: WordSiegeMascotOutcome? = null,
-    onLaneSwitch: () -> Unit = {},
+internal fun EveMascotBody(
+    modifier: Modifier,
+    action: WordSiegeMascotAction? = null,
+    actionKey: Long = 0L,
+    emotion: WordSiegeMascotEmotion? = null,
+    speaking: Boolean = false,
+    /** True while she runs from one spot to another. */
+    moving: Boolean = false,
+    /** Where she faces while [moving], in degrees: 0 = the player, 90 = screen right, 180 = away. */
+    heading: Float = 0f,
+    glanceKey: Int = 0,
+    glanceX: Float = 0f,
+    glanceY: Float = 0f,
+    moveId: Long? = null,
+    lastMoveMine: Boolean = false,
+    moveScore: Int = 0,
+    capturedCells: Int = 0,
+    opponentCaptured: Int = 0,
+    urgency: Float = 0f,
+    onTap: (() -> Unit)? = null,
+    onLongPress: (() -> Unit)? = null,
+    onDragStart: (() -> Unit)? = null,
+    onDrag: ((Offset) -> Unit)? = null,
+    onDragEnd: (() -> Unit)? = null,
 ) {
-    val context = LocalContext.current
-    val available = remember { runCatching { context.assets.open(EveAsset.MODEL).use { } }.isSuccess }
-    if (!available) return
+    // Emulators (software GPU) cannot keep a live Filament view stable: they get Eve as a still.
     val live3d = remember { !EveDevice.isEmulator }
     val mixer = remember { EveClipMixer(blendNanos = 450_000_000L) }
     var node by remember { mutableStateOf<io.github.sceneview.node.ModelNode?>(null) }
-    val ready = node != null || !live3d
     var clip by remember { mutableStateOf(EveClip.BREATHE) }
-    var mood by remember { mutableStateOf(EveMood.CURIOUS) }
+    var clipKey by remember { mutableIntStateOf(0) }
+    // A passing feeling (a few seconds) over the one the game asks for.
+    var feeling by remember { mutableStateOf<EveMood?>(null) }
+    var feelingKey by remember { mutableIntStateOf(0) }
     var gesture by remember { mutableStateOf(EveGesture.NONE) }
     var gestureKey by remember { mutableIntStateOf(0) }
-    var speech by remember { mutableStateOf<String?>(null) }
-    var speechKey by remember { mutableIntStateOf(0) }
-    var yaw by remember { mutableStateOf(0f) }
-    var walking by remember { mutableStateOf(false) }
-    val x = remember { Animatable(0f) }
-    val placement = remember(context) { context.getSharedPreferences("eve_game_placement", android.content.Context.MODE_PRIVATE) }
-    val initialX = remember(placement) { placement.getFloat("x_fraction", 0f).coerceIn(0f, 1f) }
-    var positioned by remember { mutableStateOf(false) }
-    var dragging by remember { mutableStateOf(false) }
-    var manuallyPlaced by remember { mutableStateOf(false) }
+    var looking by remember { mutableStateOf(false) }
+    val hop = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
-    val bond = remember { WordSiegeMascotBond(context) }
-    val initialSignalKey = remember { signal?.key }
-    var lastCommentAt by remember { mutableLongStateOf(0L) }
+    val running by rememberUpdatedState(moving)
+    val tap by rememberUpdatedState(onTap)
+    val longPress by rememberUpdatedState(onLongPress)
+    val dragStart by rememberUpdatedState(onDragStart)
+    val drag by rememberUpdatedState(onDrag)
+    val dragEnd by rememberUpdatedState(onDragEnd)
 
-    fun say(line: String, feeling: EveMood = EveMood.HAPPY) {
-        speech = line
-        speechKey++
-        lastCommentAt = System.currentTimeMillis()
-        mood = feeling
-        gesture = if (feeling == EveMood.SAD) EveGesture.TILT else EveGesture.WAG
+    fun play(next: EveClip) {
+        clip = next
+        clipKey++
+    }
+    fun feel(next: EveMood) {
+        feeling = next
+        feelingKey++
+    }
+    fun doGesture(next: EveGesture) {
+        gesture = next
         gestureKey++
     }
+    // Little jumps of joy; a new one takes over from one still in the air.
+    fun jump(times: Int = 1, height: Float = 1f) {
+        scope.launch {
+            repeat(times) {
+                hop.animateTo(height, tween(170, easing = FastOutSlowInEasing))
+                hop.animateTo(0f, spring(dampingRatio = .55f, stiffness = Spring.StiffnessMedium))
+            }
+        }
+    }
+    // A one-off clip (only while standing), then back to breathing even if cut short.
+    suspend fun clipOnce(next: EveClip, millis: Long) {
+        if (running || !live3d) return
+        play(next)
+        try {
+            delay(millis)
+        } finally {
+            if (!running && clip == next) play(EveClip.BREATHE)
+        }
+    }
 
-    LaunchedEffect(node, clip) {
-        node?.let { live -> runCatching { mixer.transition(live.animator, clip.clipName, clip.loop) } }
+    LaunchedEffect(node, clipKey) {
+        val live = node ?: return@LaunchedEffect
+        runCatching { mixer.transition(live.animator, clip.clipName, clip.loop) }
     }
-    LaunchedEffect(speechKey) {
-        if (speech == null) return@LaunchedEffect
-        delay((2_500L + (speech?.length ?: 0) * 42L).coerceAtMost(5_500L))
-        speech = null
-        mood = EveMood.CURIOUS
+    // Off she runs between spots; she stops in a calm breath.
+    LaunchedEffect(moving) {
+        if (moving) play(EveClip.RUN) else if (clip.moves) play(EveClip.BREATHE)
     }
-    LaunchedEffect(ready) {
-        if (ready) {
-            delay(1_500L)
-            if (signal == null && hint == null) say(sh("Yanındayım; güzel bir kelime bulalım.", "I'm here. Let's find a good word together."))
-        }
+    LaunchedEffect(feelingKey) {
+        if (feeling == null) return@LaunchedEffect
+        delay(3_200L)
+        feeling = null
     }
-    LaunchedEffect(outcome) {
-        when (outcome) {
-            WordSiegeMascotOutcome.WIN -> bond.recordWin()
-            WordSiegeMascotOutcome.LOSS -> bond.recordLoss()
-            else -> Unit
-        }
+    // A glance at a touch or at what she shows: the head turns that way for a moment.
+    LaunchedEffect(glanceKey) {
+        if (glanceKey == 0) return@LaunchedEffect
+        looking = true
+        delay(1_600L)
+        looking = false
     }
-    LaunchedEffect(ready, signal?.key, hint?.first, outcome) {
-        if (!ready) return@LaunchedEffect
-        if (signal != null && signal.key != initialSignalKey && signal.word.isNotBlank()) bond.recordWord(signal.word)
-        if (signal?.key == initialSignalKey && hint == null && outcome == null) return@LaunchedEffect
-        val urgent = signal?.event in setOf(WordSiegeMascotEvent.CRITICAL, WordSiegeMascotEvent.BEHIND)
-        if (hint == null && outcome == null && !urgent && System.currentTimeMillis() - lastCommentAt < 35_000L) return@LaunchedEffect
+    // Moves on the board: joy at the player's, attention (or a sigh) at the rival's.
+    val firstMove = remember { moveId }
+    LaunchedEffect(moveId) {
+        if (moveId == null || moveId == firstMove) return@LaunchedEffect
         when {
-            hint != null -> say(sh("İpucunu gösterdim. Hamleyi sen tamamla!", "I marked the hint. You finish the move!"))
-            outcome == WordSiegeMascotOutcome.WIN -> say(sh("Harika oynadın! Birlikte başardık.", "Great game! We did it together."))
-            outcome == WordSiegeMascotOutcome.LOSS -> say(sh("Bu kez olmadı. Sonraki hamlede yine yanındayım.", "Tough round. I'll be here for the next one."), EveMood.SAD)
-            outcome == WordSiegeMascotOutcome.DRAW -> say(sh("Başa baş bir oyundu. Güzel mücadele!", "That was close. Well played!"))
-            signal != null -> when (signal.event) {
-                WordSiegeMascotEvent.RARE_WORD -> say(sh("Bu kelimeyi bulman çok iyiydi!", "What a clever word!"))
-                WordSiegeMascotEvent.BIG_PRAISE, WordSiegeMascotEvent.PRAISE ->
-                    say(sh("Güzel hamle! Devamını merak ediyorum.", "Nice move! I can't wait to see what's next."))
-                WordSiegeMascotEvent.BEHIND, WordSiegeMascotEvent.COMFORT, WordSiegeMascotEvent.STREAK_LOST ->
-                    say(sh("Sakin sakin bakalım; bir fırsat buluruz.", "Let's take a look. We'll find an opening."), EveMood.CURIOUS)
-                WordSiegeMascotEvent.CRITICAL, WordSiegeMascotEvent.RIVAL_STRONG ->
-                    say(sh("Rakip iyi oynadı. Sıradaki kelimeyi düşünelim.", "Good move by your rival. Let's plan the next word."))
-                WordSiegeMascotEvent.AHEAD, WordSiegeMascotEvent.STREAK ->
-                    say(sh("Ritmi yakaladın, çok güzel gidiyor!", "You've found your rhythm. Keep it up!"))
+            lastMoveMine && (moveScore >= 25 || capturedCells >= 3) -> { feel(EveMood.HAPPY); doGesture(EveGesture.WAG); jump() }
+            lastMoveMine -> { feel(EveMood.HAPPY); doGesture(EveGesture.NOD) }
+            opponentCaptured > 0 -> { feel(EveMood.SAD); doGesture(EveGesture.TILT) }
+            else -> { feel(EveMood.CURIOUS); doGesture(EveGesture.LISTEN) }
+        }
+    }
+    // Obi's moves, told in her own body language.
+    LaunchedEffect(actionKey) {
+        val next = action ?: return@LaunchedEffect
+        if (actionKey == 0L) return@LaunchedEffect
+        when (next) {
+            WordSiegeMascotAction.HOP -> { doGesture(EveGesture.WAG); jump() }
+            WordSiegeMascotAction.BOUNCE -> { feel(EveMood.HAPPY); doGesture(EveGesture.WAG); jump(3, .75f) }
+            WordSiegeMascotAction.CHEER -> { feel(EveMood.HAPPY); doGesture(EveGesture.PAW_WAVE); jump(2) }
+            WordSiegeMascotAction.CLAP, WordSiegeMascotAction.SPARKLE -> { feel(EveMood.HAPPY); doGesture(EveGesture.WAG) }
+            WordSiegeMascotAction.DANCE -> {
+                feel(EveMood.HAPPY)
+                if (live3d && !running) clipOnce(EveClip.POUNCE, 1_050L) else doGesture(EveGesture.WIGGLE)
             }
+            WordSiegeMascotAction.GIGGLE, WordSiegeMascotAction.SWAY -> { feel(EveMood.HAPPY); doGesture(EveGesture.WIGGLE) }
+            WordSiegeMascotAction.STRETCH, WordSiegeMascotAction.BALANCE -> doGesture(EveGesture.STRETCH)
+            WordSiegeMascotAction.LOOK_AROUND ->
+                if (live3d && !running) clipOnce(EveClip.LOOK_AROUND, 7_600L) else doGesture(EveGesture.LOOK_UP)
+            WordSiegeMascotAction.NOD -> doGesture(EveGesture.NOD)
+            WordSiegeMascotAction.SHRUG, WordSiegeMascotAction.GROOM, WordSiegeMascotAction.BURP,
+            WordSiegeMascotAction.SNEEZE, WordSiegeMascotAction.SHIVER -> doGesture(EveGesture.SHAKE)
+            WordSiegeMascotAction.PEEK -> { feel(EveMood.CURIOUS); doGesture(EveGesture.LISTEN) }
+            WordSiegeMascotAction.FLINCH ->
+                if (live3d && !running) clipOnce(EveClip.STARTLE, 900L) else doGesture(EveGesture.SHAKE)
+            WordSiegeMascotAction.YAWN, WordSiegeMascotAction.DOZE -> { feel(EveMood.SLEEPY); doGesture(EveGesture.NOD) }
+            WordSiegeMascotAction.WAVE, WordSiegeMascotAction.KNOCK -> { feel(EveMood.HAPPY); doGesture(EveGesture.PAW_WAVE) }
+            WordSiegeMascotAction.THINK -> { feel(EveMood.CURIOUS); doGesture(EveGesture.TILT) }
+            // Pointing out a hint or an answer: her nose goes down to it.
+            WordSiegeMascotAction.POINT, WordSiegeMascotAction.FOOD_LOOK -> { feel(EveMood.CURIOUS); doGesture(EveGesture.SNIFF) }
+            WordSiegeMascotAction.EAT ->
+                if (live3d && !running) clipOnce(EveClip.GRAZE_ONCE, 3_000L) else doGesture(EveGesture.SNIFF)
+            WordSiegeMascotAction.NUZZLE, WordSiegeMascotAction.KISS, WordSiegeMascotAction.LOVE -> { feel(EveMood.SHY); doGesture(EveGesture.WIGGLE) }
+            WordSiegeMascotAction.WINK -> doGesture(EveGesture.TILT)
+            WordSiegeMascotAction.HIDE_FACE, WordSiegeMascotAction.SHY -> { feel(EveMood.SHY); doGesture(EveGesture.TILT) }
+            WordSiegeMascotAction.PROUD_POSE -> { feel(EveMood.HAPPY); doGesture(EveGesture.LOOK_UP) }
+            // Landing after a run, a chase or a space trip needs nothing extra.
+            WordSiegeMascotAction.LAND, WordSiegeMascotAction.CHASE_RUN, WordSiegeMascotAction.SPACE_FLIGHT -> Unit
         }
     }
 
-    BoxWithConstraints(modifier) {
-        val modelWidth = min(76f, (maxHeight.value - 4f).coerceAtLeast(32f))
-        val modelHeight = modelWidth
-        val maxX = (maxWidth.value - modelWidth).coerceAtLeast(0f)
-        val yOffset = ((maxHeight.value - modelHeight) / 2f).coerceAtLeast(0f)
-        LaunchedEffect(ready, maxX, dragging, manuallyPlaced) {
-            if (!ready || dragging) return@LaunchedEffect
-            if (!positioned) {
-                x.snapTo(initialX * maxX)
-                positioned = true
-            } else x.snapTo(x.value.coerceIn(0f, maxX))
-            if (manuallyPlaced) return@LaunchedEffect
-            while (true) {
-                delay(Random.nextLong(4_500L, 7_500L))
-                val tx = if (x.value < maxX / 2f) maxX else 0f
-                val distance = kotlin.math.abs(tx - x.value)
-                if (distance < 16f) continue
-                yaw = if (tx > x.value) 90f else -90f
-                walking = true
-                clip = EveClip.WALK
-                try {
-                    x.animateTo(tx, tween((distance / EVE_WALK_DP_PER_SEC * 1_000f).roundToInt().coerceIn(500, 8_000), easing = androidx.compose.animation.core.LinearEasing))
-                    placement.edit().putFloat("x_fraction", if (maxX > 0f) x.value / maxX else 0f).apply()
-                } finally {
-                    walking = false
-                    yaw = 0f
-                    clip = EveClip.BREATHE
-                }
-            }
-        }
+    val mood = feeling ?: when (emotion) {
+        WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.LAUGH, WordSiegeMascotEmotion.EXCITED,
+        WordSiegeMascotEmotion.PROUD, WordSiegeMascotEmotion.JUMP -> EveMood.HAPPY
+        WordSiegeMascotEmotion.SAD, WordSiegeMascotEmotion.TEARY, WordSiegeMascotEmotion.BOWED -> EveMood.SAD
+        WordSiegeMascotEmotion.SURPRISED, WordSiegeMascotEmotion.FOCUS, WordSiegeMascotEmotion.SPEAKING,
+        WordSiegeMascotEmotion.STRESSED, WordSiegeMascotEmotion.ANGRY -> EveMood.CURIOUS
+        WordSiegeMascotEmotion.CALM, null -> if (urgency > .6f) EveMood.CURIOUS else EveMood.NEUTRAL
+    }
+    // The 3D view reads these every frame, so they must always be the latest values.
+    val currentMood by rememberUpdatedState(mood)
+    val currentSpeaking by rememberUpdatedState(speaking)
+    val currentHeading by rememberUpdatedState(heading)
+    val currentGlance by rememberUpdatedState(Offset(glanceX, glanceY))
 
-        // Listen on the strip during the initial pointer pass. The embedded 3D TextureView
-        // otherwise receives the drag before a gesture detector inside Eve's model can.
-        val dragSurface = Modifier.pointerInput(maxX) {
-            awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                var previous = down.position
-                var totalY = 0f
-                var dragX = x.value
-                var moved = false
-                while (true) {
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                    if (!change.pressed) break
-                    val delta = change.position - previous
-                    previous = change.position
-                    if (!moved && (kotlin.math.abs(change.position.x - down.position.x) > 8f ||
-                                kotlin.math.abs(change.position.y - down.position.y) > 8f)) {
-                        moved = true
-                        dragging = true
-                        manuallyPlaced = true
-                        dragX = x.value
-                        scope.launch { x.stop() }
-                    }
-                    if (moved) {
-                        change.consume()
-                        totalY += delta.y.toDp().value
-                        dragX = (dragX + delta.x.toDp().value).coerceIn(0f, maxX)
-                        scope.launch { x.snapTo(dragX) }
-                    }
-                }
-                if (moved) {
-                    dragging = false
-                    placement.edit().putFloat("x_fraction", if (maxX > 0f) dragX / maxX else 0f).apply()
-                    if (kotlin.math.abs(totalY) >= 28f) onLaneSwitch()
-                }
-            }
+    Box(modifier.graphicsLayer { translationY = -hop.value * 16.dp.toPx() }) {
+        if (live3d) {
+            EveLiveModel(
+                mixer,
+                onNode = { node = it },
+                nodeProvider = { node },
+                bodyYaw = { if (running) currentHeading else 0f },
+                expression = {
+                    EveExpression(
+                        currentMood, talking = currentSpeaking, gesture = gesture, gestureKey = gestureKey, walking = running,
+                        looking = looking, lookYaw = currentGlance.x * 24f, lookPitch = currentGlance.y * 10f,
+                    )
+                },
+            )
+        } else {
+            Image(
+                painterResource(R.drawable.eve_still), sh("Eve", "Eve"),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
-
-        // The bubble stays in Eve's own strip, beside her instead of over letters or controls.
-        val bubbleWidth = min(190f, (maxWidth.value - modelWidth - 10f).coerceAtLeast(0f))
-        if (speech != null && bubbleWidth >= 85f) {
-            Surface(
-                modifier = Modifier.align(Alignment.TopStart).offset {
-                    val bubbleX = if (x.value < maxX / 2f)
-                        (x.value + modelWidth + 4f).coerceAtMost(maxWidth.value - bubbleWidth - 2f)
-                    else (x.value - bubbleWidth - 4f).coerceAtLeast(2f)
-                    IntOffset(bubbleX.dp.roundToPx(), ((maxHeight.value - 44f) / 2f).coerceAtLeast(0f).dp.roundToPx())
-                }.widthIn(min = bubbleWidth.dp, max = bubbleWidth.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, Color(0xFF7FB069)),
-                shadowElevation = 2.dp,
-            ) {
-                Text(speech.orEmpty(), Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                    color = Color(0xFF1F3B2C), fontSize = 10.sp, lineHeight = 13.sp,
-                    fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
-                    maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            }
+        if (onTap != null || onLongPress != null || onDragStart != null) {
+            val pressable = onLongPress != null
+            Box(
+                Modifier
+                    .align(Alignment.Center)
+                    .fillMaxSize(.8f)
+                    .pointerInput(pressable) {
+                        detectTapGestures(
+                            onTap = { tap?.invoke() },
+                            onLongPress = if (pressable) ({ longPress?.invoke() }) else null,
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { dragStart?.invoke() },
+                            onDragEnd = { dragEnd?.invoke() },
+                            onDragCancel = { dragEnd?.invoke() },
+                        ) { change, amount ->
+                            change.consume()
+                            drag?.invoke(amount)
+                        }
+                    },
+            )
         }
-        Box(
-            Modifier.align(Alignment.TopStart)
-                .offset { IntOffset(x.value.dp.roundToPx(), yOffset.dp.roundToPx()) }
-                .size(modelWidth.dp, modelHeight.dp),
-        ) {
-            if (live3d) {
-                EveLiveModel(mixer, onNode = { node = it }, nodeProvider = { node },
-                    bodyYaw = { yaw }, maxFrameRate = 30,
-                    expression = { EveExpression(mood, speech != null, gesture, gestureKey, walking) })
-            } else {
-                Image(painterResource(R.drawable.eve_still), sh("Eve", "Eve"),
-                    contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-            }
-         }
-        Box(Modifier.matchParentSize().then(dragSurface).clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null,
-        ) { say(sh("Buradayım. Sıradaki hamleyi birlikte düşünelim.", "I'm here. Let's think through the next move.")) })
     }
 }
 
@@ -767,7 +782,6 @@ private fun EveLiveModel(
     nodeProvider: () -> io.github.sceneview.node.ModelNode?,
     bodyYaw: () -> Float,
     expression: () -> EveExpression,
-    maxFrameRate: Int = 60,
 ) {
     // The body turns smoothly towards where she is heading (0 = facing the player).
     val turn = remember { FloatArray(1) }
@@ -794,7 +808,6 @@ private fun EveLiveModel(
         fillLightNode = fillLight,
         cameraManipulator = null,
         onFrame = { frameTimeNanos ->
-            if (lastFrame[0] == 0L || frameTimeNanos - lastFrame[0] >= 1_000_000_000L / maxFrameRate) {
             nodeProvider()?.let { live ->
                 runCatching {
                     val dt = if (lastFrame[0] == 0L) 0f else ((frameTimeNanos - lastFrame[0]) / 1e9f).coerceIn(0f, .1f)
@@ -813,7 +826,6 @@ private fun EveLiveModel(
                     rig?.express(expression(), frameTimeNanos)
                     live.animator.updateBoneMatrices()
                 }
-            }
             }
         },
     ) {
@@ -858,6 +870,10 @@ internal data class EveExpression(
     val gesture: EveGesture = EveGesture.NONE,
     val gestureKey: Int = 0,
     val walking: Boolean = false,
+    /** Looking at something (a touch, a hint): head turn [lookYaw] and nod [lookPitch] in degrees. */
+    val looking: Boolean = false,
+    val lookYaw: Float = 0f,
+    val lookPitch: Float = 0f,
 )
 
 /**
@@ -968,6 +984,7 @@ private class EveRig(engine: com.google.android.filament.Engine, asset: com.goog
             EveMood.SAD -> floatArrayOf(0f, 12f, 0f, -1.5f, 5f, 20f, 0f)
             EveMood.SLEEPY -> floatArrayOf(0f, 9f, 0f, -1.5f, 4f, 10f, 2f)
         }
+        if (expression.looking) { target[0] = expression.lookYaw.coerceIn(-24f, 24f); target[1] += expression.lookPitch.coerceIn(-10f, 10f) }
         if (expression.walking) { target[0] = 0f; target[1] = -2f; target[6] = maxOf(target[6], 9f) }
         // Unhurried easing: feelings settle over about half a second.
         val k = 1f - kotlin.math.exp(-dt * 4f)

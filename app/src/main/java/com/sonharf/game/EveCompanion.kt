@@ -83,6 +83,15 @@ internal object EveOwnership {
     /** Eve walks the home screen instead of the floating mascot (never both at once). */
     fun showOnHome(userId: String?): Boolean = owns(userId) && homeEnabled
 
+    /**
+     * Eve takes the mascot's place for the signed-in account (games, lobbies and pages, in the
+     * mascot's own spots and with its behaviour): she is owned and the owner keeps her switched on.
+     */
+    fun activeForCurrentUser(context: Context): Boolean {
+        restore(context)
+        return homeEnabled && ownsCurrentUser()
+    }
+
     fun setHomeEnabled(context: Context, enabled: Boolean) {
         homeEnabled = enabled
         prefs(context).edit().putBoolean(KEY_HOME, enabled).apply()
@@ -208,7 +217,7 @@ internal fun EveThroneCard(userId: String?) {
             }
             if (owned) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(sh("Eve ana ekranda görünsün", "Show Eve on the home screen"), Modifier.weight(1f), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(sh("Eve maskotum olsun", "Use Eve as my companion"), Modifier.weight(1f), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Switch(
                         checked = EveOwnership.homeEnabled,
                         onCheckedChange = { EveOwnership.setHomeEnabled(context, it) },
@@ -216,8 +225,8 @@ internal fun EveThroneCard(userId: String?) {
                     )
                 }
                 Text(
-                    sh("Bu seçimi kapatırsan ana ekranda mevcut maskotun görünür.",
-                        "Turn this off to show your current mascot on the home screen."),
+                    sh("Kapatırsan ana ekranda ve oyunlarda mevcut maskotun görünür.",
+                        "Turn this off to show your current mascot at home and in games."),
                     color = EveCream.copy(alpha = .7f), fontSize = 10.sp,
                 )
             }

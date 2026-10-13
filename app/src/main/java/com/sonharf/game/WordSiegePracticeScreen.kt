@@ -82,8 +82,6 @@ private fun WordSiegePracticeContent(
     // an English game gets the English bag, dictionary and AI, not the Turkish defaults.
     var state by remember { mutableStateOf(WordSiegePracticeEngine.newGame(SonHarfUiState.language)) }
     val context = LocalContext.current.applicationContext
-    val evePlacement = remember(context) { context.getSharedPreferences("eve_game_placement", android.content.Context.MODE_PRIVATE) }
-    var eveAtBottom by remember { mutableStateOf(evePlacement.getBoolean("bottom_lane", false)) }
     var dictionaryReady by remember { mutableStateOf(SharedDictionaryService.hasSnapshot(state.language)) }
     var dictionaryLoading by remember { mutableStateOf(false) }
     var dictionaryRetryKey by remember { mutableIntStateOf(0) }
@@ -570,42 +568,7 @@ private fun WordSiegePracticeContent(
 
 
 
-                val eveOwned = EveOwnership.ownsCurrentUser()
-                val companionSignal = lastMove?.takeIf { actionVfxEvent > 0 }?.let { move ->
-                    val mineMove = state.currentOwner == 2
-                    when {
-                        mineMove && move.primaryWord.length >= 8 ->
-                            WordSiegeMascotSignal("rare:$actionVfxEvent", WordSiegeMascotEvent.RARE_WORD, word = move.primaryWord)
-                        mineMove && (move.wordScore >= 25 || move.capturedCells >= 3 || move.opponentCaptured > 0) ->
-                            WordSiegeMascotSignal("big:$actionVfxEvent", WordSiegeMascotEvent.BIG_PRAISE, word = move.primaryWord)
-                        mineMove -> WordSiegeMascotSignal("ok:$actionVfxEvent", WordSiegeMascotEvent.PRAISE, word = move.primaryWord)
-                        move.wordScore >= 25 || move.opponentCaptured > 0 ->
-                            WordSiegeMascotSignal("rival:$actionVfxEvent", WordSiegeMascotEvent.RIVAL_STRONG)
-                        botTargetScore - playerTargetScore >= 40 ->
-                            WordSiegeMascotSignal("behind:$actionVfxEvent", WordSiegeMascotEvent.BEHIND)
-                        else -> null
-                    }
-                }
-                val companionOutcome = if (state.status == "finished") {
-                    when (state.winnerOwner) {
-                        1 -> WordSiegeMascotOutcome.WIN
-                        null -> WordSiegeMascotOutcome.DRAW
-                        else -> WordSiegeMascotOutcome.LOSS
-                    }
-                } else null
-
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    Column(Modifier.fillMaxSize()) {
-                        if (eveOwned && !eveAtBottom) {
-                            EveGameCompanion(
-                                modifier = Modifier.fillMaxWidth().height(64.dp),
-                                signal = companionSignal, hint = siegeHint, outcome = companionOutcome,
-                                onLaneSwitch = {
-                                    eveAtBottom = true
-                                    evePlacement.edit().putBoolean("bottom_lane", true).apply()
-                                },
-                            )
-                        }
                     WordSiegePracticeBoard(
                         board = state.board,
                         rack = state.playerRack,
@@ -624,10 +587,31 @@ private fun WordSiegePracticeContent(
                         captureEffect = captureEffect,
                         // The board always takes the space it is given; FIT scales it to fit that space.
                         // (Width-based square sizing pushed the board off wide tablet screens.)
-                        modifier = Modifier.fillMaxWidth().weight(1f),
-                        mascotSignal = companionSignal,
-                        mascotOutcome = companionOutcome,
-                        showMascot = !eveOwned,
+                        modifier = Modifier.fillMaxSize(),
+                        mascotSignal = lastMove?.takeIf { actionVfxEvent > 0 }?.let { move ->
+                            val mineMove = state.currentOwner == 2
+                            when {
+                                mineMove && move.primaryWord.length >= 8 ->
+                                    WordSiegeMascotSignal("rare:$actionVfxEvent", WordSiegeMascotEvent.RARE_WORD, word = move.primaryWord)
+                                mineMove && (move.wordScore >= 25 || move.capturedCells >= 3 || move.opponentCaptured > 0) ->
+                                    WordSiegeMascotSignal("big:$actionVfxEvent", WordSiegeMascotEvent.BIG_PRAISE, word = move.primaryWord)
+                                mineMove -> WordSiegeMascotSignal("ok:$actionVfxEvent", WordSiegeMascotEvent.PRAISE, word = move.primaryWord)
+                                move.wordScore >= 25 || move.opponentCaptured > 0 ->
+                                    WordSiegeMascotSignal("rival:$actionVfxEvent", WordSiegeMascotEvent.RIVAL_STRONG)
+                                botTargetScore - playerTargetScore >= 40 ->
+                                    WordSiegeMascotSignal("behind:$actionVfxEvent", WordSiegeMascotEvent.BEHIND)
+                                else -> null
+                            }
+                        },
+                        mascotOutcome = if (state.status == "finished") {
+                            when (state.winnerOwner) {
+                                1 -> WordSiegeMascotOutcome.WIN
+                                null -> WordSiegeMascotOutcome.DRAW
+                                else -> WordSiegeMascotOutcome.LOSS
+                            }
+                        } else {
+                            null
+                        },
                         playerName = playerProfile?.displayName,
                         playerGender = playerProfile?.gender,
                         onViewportModeChange = { boardViewportMode = it },
@@ -650,24 +634,13 @@ private fun WordSiegePracticeContent(
                             }
                         },
                     )
-                        if (eveOwned && eveAtBottom) {
-                            EveGameCompanion(
-                                modifier = Modifier.fillMaxWidth().height(64.dp),
-                                signal = companionSignal, hint = siegeHint, outcome = companionOutcome,
-                                onLaneSwitch = {
-                                    eveAtBottom = false
-                                    evePlacement.edit().putBoolean("bottom_lane", false).apply()
-                                },
-                            )
-                        }
-                    }
                     ArenaMoveImpact(eventKey = if (actionVfxEvent > 0) actionVfxEvent.toString() else null,
                         label = lastMove?.let { move ->
                             if (move.opponentCaptured > 0) sh("KÜP ELE GEÇİRİLDİ · ${move.opponentCaptured}", "CUBES CAPTURED · ${move.opponentCaptured}")
                             else "${move.primaryWord} · +${move.wordScore}"
                         }.orEmpty(),
                         accent = if (state.currentOwner == 2) PracticePlayerAccent else PracticeRivalAccent,
-                        modifier = Modifier.matchParentSize(), bannerTop = if (eveOwned && !eveAtBottom) 70.dp else 10.dp)
+                        modifier = Modifier.matchParentSize(), bannerTop = 10.dp)
 
                     if (tutorialStep >= 0 && !matchmakingFallback) {
                         Box(

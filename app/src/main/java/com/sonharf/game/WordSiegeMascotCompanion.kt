@@ -701,6 +701,12 @@ private const val STAGE = -1
 private const val VISIT = -2
 private const val USER_ANCHOR = -3
 
+/** Eve's box against Obi's: a little taller, and wide enough for her side view while running. */
+private const val EVE_IN_GAME_SCALE = 1.1f
+private const val EVE_BOX_ASPECT = 1.2f
+/** Eve's running pace between spots (her Run clip covers about this much per second). */
+private const val EVE_GAME_RUN_DP_PER_SEC = 230f
+
 /** A drifting letter the mascot sometimes chases for fun. Positions are area fractions. */
 private data class WordSiegeMascotChase(val id: Int, val letter: String, val start: Offset, val end: Offset)
 
@@ -761,11 +767,13 @@ internal fun WordSiegeMascotCompanion(
     positionKey: String = "arena",
 ) {
     if (anchors.isEmpty()) return
+    val context = LocalContext.current
     val ownedSkins = WordSiegeMascotOwnership.owned
     // The throne owner is served by the Altın Kral for the week, mascot bought or not.
     val throneKing = SonHarfCosmetics.throneChampion
-    if (requireOwnership && ownedSkins.isEmpty() && !throneKing) return
-    val context = LocalContext.current
+    // Eve (owned and chosen) takes the mascot's place: the same spots, trips and reactions.
+    val eve = forcedSkin == null && EveOwnership.activeForCurrentUser(context)
+    if (requireOwnership && ownedSkins.isEmpty() && !throneKing && !eve) return
     val bond = remember { WordSiegeMascotBond(context) }
     val mind = remember { WordSiegeMascotMind() }
     val scope = rememberCoroutineScope()
@@ -861,7 +869,7 @@ internal fun WordSiegeMascotCompanion(
     }
 
     // Each character has its own temperament and voice.
-    val personality = WordSiegeMascotPersonality.of(skin)
+    val personality = if (eve) WordSiegeMascotPersonality.EVE else WordSiegeMascotPersonality.of(skin)
     val currentPersonality by rememberUpdatedState(personality)
     val currentUrgency by rememberUpdatedState(urgency)
     val currentPendingCount by rememberUpdatedState(pendingCells.size)
@@ -899,16 +907,21 @@ internal fun WordSiegeMascotCompanion(
             return mascotBoundCenter(raw, area, sizePx, marginPx)
         }
 
+        /** Where the first trip starts: Obi flies in from the top corner, Eve runs in from the side. */
+        fun entrance(target: Offset): Offset =
+            if (eve) Offset(area.width + baseSizePx, target.y) else Offset(area.width + baseSizePx, -baseSizePx)
+
         fun currentCenter(): Offset {
             if (dragging) return mascotBoundCenter(dragCenter, area, baseSizePx, marginPx)
             val sizePx = baseSizePx * scale.value
             val target = anchorCenter(anchorIndex, sizePx)
             if (anchorIndex == USER_ANCHOR && !flying) return target
-            val start = if (fromPosition.isSpecified) fromPosition else Offset(area.width + baseSizePx, -baseSizePx)
+            val start = if (fromPosition.isSpecified) fromPosition else entrance(target)
             val t = flight.value
             if (t >= 1f) return target
             // A curved flight path that rises above both ends, like a real hop through the air.
-            val lift = max(abs(target.x - start.x) * .25f, baseSizePx * .6f)
+            // Eve runs the same way on her paws: only a light bound in her stride.
+            val lift = if (eve) baseSizePx * .12f else max(abs(target.x - start.x) * .25f, baseSizePx * .6f)
             val control = Offset((start.x + target.x) / 2f, min(start.y, target.y) - lift)
             val u = 1f - t
             val half = baseSizePx * scale.value / 2f
@@ -960,9 +973,14 @@ internal fun WordSiegeMascotCompanion(
             if (index >= 0) homeIndex = index
             val id = ++flightId
             flying = true
+            // Eve's paws must not slide: a long way takes her a little longer than Obi's flight.
+            val millis = if (!eve) durationMillis else {
+                val runDp = (anchorCenter(anchorIndex, baseSizePx * scale.value) - fromPosition).getDistance() / density.density
+                max(durationMillis, (runDp / EVE_GAME_RUN_DP_PER_SEC * 1_000f).roundToInt().coerceAtMost(2_400))
+            }
             try {
                 flight.snapTo(0f)
-                flight.animateTo(1f, tween(durationMillis, easing = FastOutSlowInEasing))
+                flight.animateTo(1f, tween(millis, easing = FastOutSlowInEasing))
                 if (guestSkin == null) perform(WordSiegeMascotAction.LAND)
             } finally {
                 // A newer flight may have taken over; otherwise never stay stuck "in the air".
@@ -1070,9 +1088,9 @@ internal fun WordSiegeMascotCompanion(
                 val together = bond.daysTogether()
                 // Only the home screen greets with a bubble, and only once per app session.
                 val aloud = greetAloud && MascotGreetingSession.claim()
-                val mascotName = sh(skin.titleTr, skin.titleEn)
+                val mascotName = if (eve) "Eve" else sh(skin.titleTr, skin.titleEn)
                 when {
-                    aloud && skin != WordSiegeMascotSkin.GOLD_KING && !MascotIntroductions.done(context, skin) -> {
+                    aloud && !eve && skin != WordSiegeMascotSkin.GOLD_KING && !MascotIntroductions.done(context, skin) -> {
                         // First time with a newly bought mascot: an excited introduction.
                         MascotIntroductions.markDone(context, skin)
                         perform(WordSiegeMascotAction.CHEER)
@@ -1197,7 +1215,8 @@ internal fun WordSiegeMascotCompanion(
                                         delay(1_100L)
                                     }
                                     2, 6 -> {
-                                        if (!mind.ready("guest-visit", 90_000L, now)) {
+                                        // The visiting characters are Obi's friends; Eve just winks.
+                                        if (eve || !mind.ready("guest-visit", 90_000L, now)) {
                                             perform(WordSiegeMascotAction.WINK)
                                             delay(mascotActionMillis(WordSiegeMascotAction.WINK))
                                         } else {
@@ -1668,7 +1687,7 @@ internal fun WordSiegeMascotCompanion(
         val sizePx = baseSizePx * scale.value
         val center = currentCenter()
         val target = anchorCenter(anchorIndex, sizePx)
-        val start = if (fromPosition.isSpecified) fromPosition else Offset(areaWidth + baseSizePx, -baseSizePx)
+        val start = if (fromPosition.isSpecified) fromPosition else entrance(target)
         val direction = if (flying) sign(target.x - start.x) else 0f
 
         chase?.let { current ->
@@ -1719,7 +1738,66 @@ internal fun WordSiegeMascotCompanion(
             )
         }
 
-        Box(
+        // Picking the mascot up and putting it somewhere else (kept for this screen).
+        val startDrag: () -> Unit = {
+            dragCenter = currentCenter()
+            dragging = true
+            tripJob?.cancel()
+            speechJob?.cancel()
+            speech = null; talking = false; chase = null; guestSkin = null
+            flying = false; busy = false; stageEmotion = null
+            anchorIndex = USER_ANCHOR
+            scope.launch { scale.snapTo(1f) }
+            lastInteractionAt = SystemClock.uptimeMillis()
+        }
+        val moveDrag: (Offset) -> Unit = { delta ->
+            dragCenter = mascotBoundCenter(dragCenter + delta, area, baseSizePx, marginPx)
+            userPoint = Offset(dragCenter.x / max(1f, area.width), dragCenter.y / max(1f, area.height))
+            lastInteractionAt = SystemClock.uptimeMillis()
+        }
+        val endDrag: () -> Unit = {
+            userPoint = Offset(dragCenter.x / max(1f, area.width), dragCenter.y / max(1f, area.height))
+            dragging = false
+            userPoint?.let { point -> placementPrefs.edit().putFloat("$positionKey:x", point.x)
+                .putFloat("$positionKey:y", point.y).apply() }
+            perform(WordSiegeMascotAction.NOD)
+        }
+
+        if (eve) {
+            // Her box is wider than Obi's (her side view while running) and a little taller, so
+            // she reads as big as Obi; she stands on exactly the same spot. Where the mascot has
+            // just its own slot (the Son Harf arena) she keeps to the slot's height.
+            val eveHeightPx = min(sizePx * EVE_IN_GAME_SCALE, max(sizePx, areaHeight))
+            val eveWidthPx = eveHeightPx * EVE_BOX_ASPECT
+            // Towards where she runs: 0 = the player, 90 = screen right, 180 = up the screen.
+            val heading = if (!flying) 0f else Math.toDegrees(
+                kotlin.math.atan2((target.x - start.x).toDouble(), (target.y - start.y).toDouble()),
+            ).toFloat()
+            EveMascotBody(
+                modifier = Modifier
+                    .offset { IntOffset((center.x - eveWidthPx / 2f).roundToInt(), (center.y - eveHeightPx / 2f).roundToInt()) }
+                    .requiredSize(with(density) { eveWidthPx.toDp() }, with(density) { eveHeightPx.toDp() }),
+                action = action,
+                actionKey = actionKey,
+                emotion = stageEmotion ?: requestedEmotion,
+                speaking = talking,
+                moving = flying,
+                heading = heading,
+                glanceKey = glanceKey,
+                glanceX = glance.x,
+                glanceY = glance.y,
+                moveId = moveId,
+                lastMoveMine = lastMoveMine,
+                moveScore = moveScore,
+                capturedCells = capturedCells,
+                opponentCaptured = opponentCaptured,
+                urgency = urgency,
+                onTap = { touchedMascot(SystemClock.uptimeMillis()) },
+                onDragStart = startDrag,
+                onDrag = moveDrag,
+                onDragEnd = endDrag,
+            )
+        } else Box(
             Modifier
                 .offset { IntOffset((center.x - sizePx / 2f).roundToInt(), (center.y - sizePx / 2f).roundToInt()) }
                 .requiredSize(displayedSize * scale.value),
@@ -1754,29 +1832,9 @@ internal fun WordSiegeMascotCompanion(
                 skin = skin,
                 // A long press opens the character picker.
                 onLongPress = if (forcedSkin == null) ({ if (!busy) showPicker = true }) else null,
-                onDragStart = {
-                    dragCenter = currentCenter()
-                    dragging = true
-                    tripJob?.cancel()
-                    speechJob?.cancel()
-                    speech = null; talking = false; chase = null; guestSkin = null
-                    flying = false; busy = false; stageEmotion = null
-                    anchorIndex = USER_ANCHOR
-                    scope.launch { scale.snapTo(1f) }
-                    lastInteractionAt = SystemClock.uptimeMillis()
-                },
-                onDrag = { delta ->
-                    dragCenter = mascotBoundCenter(dragCenter + delta, area, baseSizePx, marginPx)
-                    userPoint = Offset(dragCenter.x / max(1f, area.width), dragCenter.y / max(1f, area.height))
-                    lastInteractionAt = SystemClock.uptimeMillis()
-                },
-                onDragEnd = {
-                    userPoint = Offset(dragCenter.x / max(1f, area.width), dragCenter.y / max(1f, area.height))
-                    dragging = false
-                    userPoint?.let { point -> placementPrefs.edit().putFloat("$positionKey:x", point.x)
-                        .putFloat("$positionKey:y", point.y).apply() }
-                    perform(WordSiegeMascotAction.NOD)
-                },
+                onDragStart = startDrag,
+                onDrag = moveDrag,
+                onDragEnd = endDrag,
                 onTap = { touchedMascot(SystemClock.uptimeMillis()) },
             )
         }

@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -61,8 +60,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -148,7 +145,8 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     val language = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
     val scope = rememberCoroutineScope()
     val mascotSkin = remember { atelierMascotSkin(context) }
-    val eveOwned = EveOwnership.ownsCurrentUser()
+    // Eve (owned and chosen) sits in the mascot's place.
+    val eveOwned = EveOwnership.activeForCurrentUser(context)
     LaunchedEffect(Unit) {
         val userId = runCatching { SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull()
         EveOwnership.refresh(context, userId)
@@ -826,9 +824,11 @@ private fun AtelierMascotRow(
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         // Visual companion only: no speech bubble, no pop-ups.
-        if (eveOwned) Image(
-            painter = painterResource(R.drawable.eve_still), contentDescription = "Eve",
-            modifier = Modifier.size(98.8.dp), contentScale = ContentScale.Fit,
+        if (eveOwned) EveMascotBody(
+            modifier = Modifier.size(width = 116.dp, height = 98.8.dp),
+            action = action,
+            actionKey = actionKey,
+            emotion = mood,
         ) else WordSiegeMascot(
             moveId = null,
             lastMoveMine = false,

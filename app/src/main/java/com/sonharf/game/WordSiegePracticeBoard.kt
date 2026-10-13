@@ -86,7 +86,6 @@ internal fun WordSiegePracticeBoard(
     modifier: Modifier = Modifier,
     mascotSignal: WordSiegeMascotSignal? = null,
     mascotOutcome: WordSiegeMascotOutcome? = null,
-    showMascot: Boolean = true,
     playerName: String? = null,
     playerGender: String? = null,
     /** A mascot hint to show now (key, text). */
@@ -365,7 +364,7 @@ internal fun WordSiegePracticeBoard(
                     anchorOriginInWindow = viewportOriginInWindow,
                 )
             }
-            if (showMascot) WordSiegeMascotCompanion(
+            WordSiegeMascotCompanion(
                 anchors = WordSiegeBoardMascotPerches,
                 mascotSize = 76.dp,
                 moveId = moveEventKey?.toLong(),

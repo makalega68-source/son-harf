@@ -133,6 +133,107 @@ internal class WordSiegeMascotPersonality(
             ),
         )
 
+        /**
+         * Eve: the throne podium's gentle forest friend. She stands in for the mascot in games and
+         * keeps its behaviour, but talks in her own voice (ears, tail, paws, leaves); topics she
+         * does not cover use the shared lines.
+         */
+        val EVE = WordSiegeMascotPersonality(
+            chattiness = .95f,
+            playfulness = .95f,
+            idleBias = mapOf(
+                WordSiegeMascotIdle.LOOK_AROUND to 1.6f,
+                WordSiegeMascotIdle.NUZZLE to 1.5f,
+                WordSiegeMascotIdle.STRETCH to 1.4f,
+                WordSiegeMascotIdle.WATCH to 1.2f,
+                WordSiegeMascotIdle.KISS to .5f,
+                WordSiegeMascotIdle.BALANCE to .5f,
+            ),
+            lines = mapOf(
+                WordSiegeMascotTopic.GREET_FIRST to listOf(
+                    "Merhaba %s! Ben Eve. Bu maçta yanındayım. 🌿" to "Hi %s! I'm Eve. I'm with you this match. 🌿",
+                    "Ben Eve, ormandan geldim. Hadi birlikte oynayalım! 🍃" to "I'm Eve, all the way from the forest. Let's play together! 🍃",
+                ),
+                WordSiegeMascotTopic.GREET to listOf(
+                    "Yine birlikteyiz, %s! 🌿" to "Together again, %s! 🌿",
+                    "Kulaklarım dikildi, hazırım! 🍃" to "Ears up, I'm ready! 🍃",
+                    "Bugün güzel kelimeler kokluyorum. 🌸" to "I can smell good words today. 🌸",
+                ),
+                WordSiegeMascotTopic.HELLO to listOf(
+                    "Eve geldi! Kuyruğum sallanıyor. 🌿" to "Eve's here! My tail is wagging. 🌿",
+                    "Ben buradayım, sen kelimene odaklan. 🍃" to "I'm right here, you focus on your word. 🍃",
+                ),
+                WordSiegeMascotTopic.PRAISE to listOf(
+                    "Güzel kelime! 🌿" to "Nice word! 🌿",
+                    "Kuyruğum kendiliğinden sallandı! 🍃" to "My tail wagged all by itself! 🍃",
+                    "Tam yerinde bir hamle." to "A move right on the spot.",
+                    "Bunu sevdim, %s!" to "I like that one, %s!",
+                ),
+                WordSiegeMascotTopic.BIG_PRAISE to listOf(
+                    "Vay! Bu hamleyle kulaklarım dimdik oldu! ✨" to "Wow! That move made my ears stand straight up! ✨",
+                    "Ormanda bile böyle büyük bir hamle görmedim! 🌳✨" to "Not even in the forest have I seen a move this big! 🌳✨",
+                ),
+                WordSiegeMascotTopic.RARE_WORD to listOf(
+                    "%w! Böyle nadir bir kelimeyi nereden buldun? 🌸" to "%w! Where did you find such a rare word? 🌸",
+                    "Bunu aklımda tutacağım: %w. Çok özel! ✨" to "I'll remember this one: %w. Very special! ✨",
+                ),
+                WordSiegeMascotTopic.COMFORT to listOf(
+                    "Olsun, bir sonrakinde buluruz. 🍃" to "No worries, we'll find it next time. 🍃",
+                    "Derin bir nefes. Ben buradayım. 💚" to "Deep breath. I'm right here. 💚",
+                ),
+                WordSiegeMascotTopic.CRITICAL to listOf(
+                    "Süre azalıyor, kısa bir kelime de olur! ⏳" to "Time's running out, a short word works too! ⏳",
+                    "Hızlı ol %s, yapabilirsin! 🍃" to "Quick, %s, you can do it! 🍃",
+                ),
+                WordSiegeMascotTopic.BEHIND to listOf(
+                    "Geride olsak da oyun bitmedi. 🌿" to "We're behind, but it's not over. 🌿",
+                    "Adım adım toparlarız, söz! 🐾" to "We'll catch up step by step, promise! 🐾",
+                ),
+                WordSiegeMascotTopic.RIVAL_STRONG to listOf(
+                    "Rakip iyi oynadı. Sıra bizde! 🌿" to "Good move by the rival. Our turn now! 🌿",
+                    "Güçlü hamle… ama biz de hazırız. 🍃" to "A strong move… but we're ready too. 🍃",
+                ),
+                WordSiegeMascotTopic.AHEAD to listOf(
+                    "Öndeyiz! Kuyruğumu durduramıyorum. 🌿" to "We're ahead! I can't keep my tail still. 🌿",
+                    "Böyle devam, ritmi yakaladın! 🍃" to "Keep going, you've found the rhythm! 🍃",
+                ),
+                WordSiegeMascotTopic.STREAK to listOf(
+                    "Üst üste %n! Patilerim alkışlıyor. 🐾" to "%n in a row! My paws are clapping. 🐾",
+                    "Seri %n oldu, durmak yok! ✨" to "A streak of %n, don't stop now! ✨",
+                ),
+                WordSiegeMascotTopic.CHAT to listOf(
+                    "Bir kelimeyi tersten okumayı denedin mi? Bazen yeni bir kelime çıkar. 🍃" to "Ever read a word backwards? Sometimes a new one appears. 🍃",
+                    "Uzun kelimeler daha çok puan getirir. Ben de uzun yürüyüşleri severim. 🌿" to "Long words bring more points. I love long walks too. 🌿",
+                    "Yapraklar hışırdıyor… sanki bir kelime fısıldıyorlar. 🍃" to "The leaves are rustling… as if they're whispering a word. 🍃",
+                ),
+                WordSiegeMascotTopic.TAP to listOf(
+                    "Hihi, gıdıklanıyorum! 🌿" to "Hehe, that tickles! 🌿",
+                    "Buradayım, %s! 🐾" to "I'm here, %s! 🐾",
+                ),
+                WordSiegeMascotTopic.POKED to listOf(
+                    "Tamam tamam, uyanığım! 🙈" to "Okay, okay, I'm awake! 🙈",
+                    "Kulaklarımı karıştırdın! 🍃" to "You've ruffled my ears! 🍃",
+                ),
+                WordSiegeMascotTopic.DANCE to listOf(
+                    "Kuyruk dansı! 🌿" to "Tail dance! 🌿",
+                ),
+                WordSiegeMascotTopic.STRETCH to listOf(
+                    "Biraz gerineyim… oh, şimdi daha iyi. 🍃" to "A little stretch… ah, much better. 🍃",
+                ),
+                WordSiegeMascotTopic.WIN to listOf(
+                    "Kazandık! Birlikte çok güzeldik. 🌿✨" to "We won! We were great together. 🌿✨",
+                    "Zafer bizim, %s! Kuyruğum hiç durmuyor. 🎉" to "Victory is ours, %s! My tail won't stop. 🎉",
+                ),
+                WordSiegeMascotTopic.LOSS to listOf(
+                    "Bu sefer olmadı. Yarın yine birlikteyiz. 💚" to "Not this time. We'll be together again tomorrow. 💚",
+                    "Üzülme, iyi mücadele ettin. 🍃" to "Don't be sad, you fought well. 🍃",
+                ),
+                WordSiegeMascotTopic.DRAW to listOf(
+                    "Berabere! Kimse kaybetmedi. 🌿" to "A draw! Nobody lost. 🌿",
+                ),
+            ),
+        )
+
         /** Obi: the warm, loyal coach. The shared lines are written in his voice. */
         private val OBI = WordSiegeMascotPersonality(
             chattiness = 1f,
