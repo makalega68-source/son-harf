@@ -151,8 +151,8 @@ internal fun EveThroneCard(userId: String?) {
                     Text(sh("TAHT ÖDÜLÜ · MAĞAZADA YOK", "THRONE REWARD · EXCLUSIVE"), color = EveLeaf, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     Text(sh("Eve · Orman Dostu", "Eve · Forest Friend"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
-                        sh("Galibiyetlerini hatırlar, ana ekranda sana eşlik eder. Birlikte vakit geçirdikçe aranızdaki dostluk gelişir.",
-                            "Eve remembers your wins and joins you on the home screen. Your friendship grows as you spend time together."),
+                        sh("Ana ekranda ve oyun alanında sana eşlik eder; hamlelerine göre konuşur, galibiyetlerini hatırlar. Her maçta 3 ücretsiz ipucu sunar.",
+                            "Eve joins you at home and in games, responds to your moves, and remembers your wins. She gives you 3 free hints each match."),
                         color = EveCream.copy(alpha = .85f), fontSize = 12.sp, lineHeight = 16.sp,
                     )
                 }
@@ -170,7 +170,7 @@ internal fun EveThroneCard(userId: String?) {
                             color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black,
                         )
                         Text(
-                            sh("Kuşatma antrenmanı · Son Harf", "Word Siege practice · Last Letter"),
+                            sh("Kuşatma antrenmanı ve Son Harf", "Word Siege practice and Last Letter"),
                             color = EveCream.copy(alpha = .8f), fontSize = 10.sp,
                         )
                     }

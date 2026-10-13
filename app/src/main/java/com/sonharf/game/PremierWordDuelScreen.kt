@@ -1875,7 +1875,18 @@ private fun PremierArena(
         val mascotAnchors = if (slotCenter == null) emptyList() else listOf(Offset(.5f, .5f))
         val mascotDensity = LocalDensity.current
         val mascotBoxPx = with(mascotDensity) { mascotSize.toPx() }
-        WordSiegeMascotCompanion(
+        if (EveOwnership.owns(meId)) {
+            EveGameCompanion(
+                modifier = Modifier.offset {
+                    androidx.compose.ui.unit.IntOffset(
+                        ((slotCenter?.x ?: 0f) - arenaOrigin.x - mascotBoxPx * .8f).toInt(),
+                        ((slotCenter?.y ?: 0f) - arenaOrigin.y - mascotBoxPx * .6f).toInt(),
+                    )
+                }.size(width = mascotSize * 1.6f, height = mascotSize * 1.2f),
+                signal = mascotSignal,
+                hint = hintRequest,
+            )
+        } else WordSiegeMascotCompanion(
             anchors = mascotAnchors,
             mascotSize = mascotSize,
             moveId = latestMove?.id,

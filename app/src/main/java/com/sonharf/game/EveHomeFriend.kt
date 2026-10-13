@@ -549,6 +549,166 @@ internal fun EveHomeFriend(
     }
 }
 
+/**
+ * Eve in a match: small, contextual and roaming along the play area's perimeter.
+ */
+@Composable
+internal fun EveGameCompanion(
+    modifier: Modifier = Modifier,
+    signal: WordSiegeMascotSignal? = null,
+    hint: Pair<Int, String>? = null,
+    outcome: WordSiegeMascotOutcome? = null,
+) {
+    val context = LocalContext.current
+    val available = remember { runCatching { context.assets.open(EveAsset.MODEL).use { } }.isSuccess }
+    if (!available) return
+    val live3d = remember { !EveDevice.isEmulator }
+    val mixer = remember { EveClipMixer(blendNanos = 450_000_000L) }
+    var node by remember { mutableStateOf<io.github.sceneview.node.ModelNode?>(null) }
+    val ready = node != null || !live3d
+    var clip by remember { mutableStateOf(EveClip.BREATHE) }
+    var mood by remember { mutableStateOf(EveMood.CURIOUS) }
+    var gesture by remember { mutableStateOf(EveGesture.NONE) }
+    var gestureKey by remember { mutableIntStateOf(0) }
+    var speech by remember { mutableStateOf<String?>(null) }
+    var speechKey by remember { mutableIntStateOf(0) }
+    var yaw by remember { mutableStateOf(0f) }
+    var walking by remember { mutableStateOf(false) }
+    val x = remember { Animatable(0f) }
+    val y = remember { Animatable(0f) }
+    val bond = remember { WordSiegeMascotBond(context) }
+    val initialSignalKey = remember { signal?.key }
+    var lastCommentAt by remember { mutableLongStateOf(0L) }
+
+    fun say(line: String, feeling: EveMood = EveMood.HAPPY) {
+        speech = line
+        speechKey++
+        lastCommentAt = System.currentTimeMillis()
+        mood = feeling
+        gesture = if (feeling == EveMood.SAD) EveGesture.TILT else EveGesture.WAG
+        gestureKey++
+    }
+
+    LaunchedEffect(node, clip) {
+        node?.let { live -> runCatching { mixer.transition(live.animator, clip.clipName, clip.loop) } }
+    }
+    LaunchedEffect(speechKey) {
+        if (speech == null) return@LaunchedEffect
+        delay((2_500L + (speech?.length ?: 0) * 42L).coerceAtMost(5_500L))
+        speech = null
+        mood = EveMood.CURIOUS
+    }
+    LaunchedEffect(ready) {
+        if (ready) {
+            delay(1_500L)
+            if (signal == null && hint == null) say(sh("Yanındayım; güzel bir kelime bulalım.", "I'm here. Let's find a good word together."))
+        }
+    }
+    LaunchedEffect(outcome) {
+        when (outcome) {
+            WordSiegeMascotOutcome.WIN -> bond.recordWin()
+            WordSiegeMascotOutcome.LOSS -> bond.recordLoss()
+            else -> Unit
+        }
+    }
+    LaunchedEffect(ready, signal?.key, hint?.first, outcome) {
+        if (!ready) return@LaunchedEffect
+        if (signal != null && signal.key != initialSignalKey && signal.word.isNotBlank()) bond.recordWord(signal.word)
+        if (signal?.key == initialSignalKey && hint == null && outcome == null) return@LaunchedEffect
+        val urgent = signal?.event in setOf(WordSiegeMascotEvent.CRITICAL, WordSiegeMascotEvent.BEHIND)
+        if (hint == null && outcome == null && !urgent && System.currentTimeMillis() - lastCommentAt < 35_000L) return@LaunchedEffect
+        when {
+            hint != null -> say(sh("İpucunu gösterdim. Hamleyi sen tamamla!", "I marked the hint. You finish the move!"))
+            outcome == WordSiegeMascotOutcome.WIN -> say(sh("Harika oynadın! Birlikte başardık.", "Great game! We did it together."))
+            outcome == WordSiegeMascotOutcome.LOSS -> say(sh("Bu kez olmadı. Sonraki hamlede yine yanındayım.", "Tough round. I'll be here for the next one."), EveMood.SAD)
+            outcome == WordSiegeMascotOutcome.DRAW -> say(sh("Başa baş bir oyundu. Güzel mücadele!", "That was close. Well played!"))
+            signal != null -> when (signal.event) {
+                WordSiegeMascotEvent.RARE_WORD -> say(sh("Bu kelimeyi bulman çok iyiydi!", "What a clever word!"))
+                WordSiegeMascotEvent.BIG_PRAISE, WordSiegeMascotEvent.PRAISE ->
+                    say(sh("Güzel hamle! Devamını merak ediyorum.", "Nice move! I can't wait to see what's next."))
+                WordSiegeMascotEvent.BEHIND, WordSiegeMascotEvent.COMFORT, WordSiegeMascotEvent.STREAK_LOST ->
+                    say(sh("Sakin sakin bakalım; bir fırsat buluruz.", "Let's take a look. We'll find an opening."), EveMood.CURIOUS)
+                WordSiegeMascotEvent.CRITICAL, WordSiegeMascotEvent.RIVAL_STRONG ->
+                    say(sh("Rakip iyi oynadı. Sıradaki kelimeyi düşünelim.", "Good move by your rival. Let's plan the next word."))
+                WordSiegeMascotEvent.AHEAD, WordSiegeMascotEvent.STREAK ->
+                    say(sh("Ritmi yakaladın, çok güzel gidiyor!", "You've found your rhythm. Keep it up!"))
+            }
+        }
+    }
+
+    BoxWithConstraints(modifier) {
+        val modelWidth = 84f
+        val modelHeight = 84f
+        val maxX = (maxWidth.value - modelWidth).coerceAtLeast(0f)
+        val maxY = (maxHeight.value - modelHeight).coerceAtLeast(0f)
+        LaunchedEffect(ready, maxX, maxY) {
+            if (!ready) return@LaunchedEffect
+            x.snapTo(x.value.coerceIn(0f, maxX))
+            y.snapTo(y.value.coerceIn(0f, maxY))
+            // Short walks around the edges leave the middle of the game readable.
+            while (true) {
+                delay(Random.nextLong(5_000L, 9_000L))
+                val tx = if (x.value < maxX / 2f) maxX else 0f
+                val ty = if (maxY > 90f && Random.nextBoolean()) maxY else 0f
+                val distance = hypot(tx - x.value, ty - y.value)
+                if (distance < 12f) continue
+                yaw = Math.toDegrees(atan2((tx - x.value).toDouble(), (y.value - ty).toDouble())).toFloat()
+                walking = true
+                clip = EveClip.WALK
+                val duration = (distance / EVE_WALK_DP_PER_SEC * 1_000f).roundToInt().coerceIn(500, 10_000)
+                try {
+                    coroutineScope {
+                        launch { x.animateTo(tx, tween(duration, easing = LinearOutSlowInEasing)) }
+                        y.animateTo(ty, tween(duration, easing = LinearOutSlowInEasing))
+                    }
+                } finally {
+                    walking = false
+                    yaw = 0f
+                    clip = EveClip.BREATHE
+                }
+            }
+        }
+        if (speech != null) {
+            Surface(
+                modifier = Modifier.align(Alignment.TopStart).offset {
+                    IntOffset((x.value + modelWidth / 2f - 90f).coerceIn(2f, (maxWidth.value - 184f).coerceAtLeast(2f)).dp.roundToPx(),
+                        (y.value + modelHeight).coerceAtMost((maxHeight.value - 36f).coerceAtLeast(0f)).dp.roundToPx())
+                }.widthIn(max = min(184f, (maxWidth.value - 4f).coerceAtLeast(0f)).dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Color.White,
+                border = BorderStroke(1.dp, Color(0xFF7FB069)),
+                shadowElevation = 3.dp,
+            ) {
+                Text(speech.orEmpty(), Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                    color = Color(0xFF1F3B2C), fontSize = 11.sp, lineHeight = 14.sp,
+                    fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+            }
+        }
+        Box(
+            Modifier.align(Alignment.TopStart)
+                .offset { IntOffset(x.value.dp.roundToPx(), y.value.dp.roundToPx()) }
+                .size(modelWidth.dp, modelHeight.dp),
+        ) {
+            if (live3d) {
+                EveLiveModel(mixer, onNode = { node = it }, nodeProvider = { node },
+                    bodyYaw = { yaw },
+                    expression = { EveExpression(mood, speech != null, gesture, gestureKey, walking) })
+            } else {
+                Image(painterResource(R.drawable.eve_still), sh("Eve", "Eve"),
+                    contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+            }
+            Box(
+                Modifier.align(Alignment.Center).size(60.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClickLabel = sh("Eve ile konuş", "Talk to Eve"),
+                    ) { say(sh("Buradayım. Sıradaki hamleyi birlikte düşünelim.", "I'm here. Let's think through the next move.")) }
+            )
+        }
+    }
+}
+
 private const val EVE_BOX_WIDTH_DP = 150f
 private val EVE_MOVING_CLIPS = EveClip.entries.filter { it.moves }.map { it.clipName }
 

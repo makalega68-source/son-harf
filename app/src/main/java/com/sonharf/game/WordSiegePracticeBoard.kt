@@ -364,7 +364,14 @@ internal fun WordSiegePracticeBoard(
                     anchorOriginInWindow = viewportOriginInWindow,
                 )
             }
-            WordSiegeMascotCompanion(
+            if (EveOwnership.ownsCurrentUser()) {
+                EveGameCompanion(
+                    modifier = Modifier.matchParentSize().padding(3.dp),
+                    signal = mascotSignal,
+                    hint = hint,
+                    outcome = mascotOutcome,
+                )
+            } else WordSiegeMascotCompanion(
                 anchors = WordSiegeBoardMascotPerches,
                 mascotSize = 76.dp,
                 moveId = moveEventKey?.toLong(),
