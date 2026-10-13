@@ -13,6 +13,7 @@ on:
       - 'app/src/debug/**'
       - 'app/src/test/**'
       - '.github/workflows/**'
+      - 'scripts/**'
       - 'supabase/migrations/**'
       - '.github/workflows/ui-screenshot.yml'
 
