@@ -1649,8 +1649,9 @@ private fun PremierArena(
     var arenaOrigin by remember { mutableStateOf(Offset.Zero) }
     var arenaSize by remember { mutableStateOf(IntSize.Zero) }
     val eveOwned = EveOwnership.owns(meId)
-    val evePlacement = remember(androidx.compose.ui.platform.LocalContext.current) {
-        androidx.compose.ui.platform.LocalContext.current.applicationContext.getSharedPreferences("eve_game_placement", android.content.Context.MODE_PRIVATE)
+    val eveContext = androidx.compose.ui.platform.LocalContext.current
+    val evePlacement = remember(eveContext) {
+        eveContext.applicationContext.getSharedPreferences("eve_game_placement", android.content.Context.MODE_PRIVATE)
     }
     var eveAtBottom by remember { mutableStateOf(evePlacement.getBoolean("bottom_lane", false)) }
     var mascotSlotCenter by remember { mutableStateOf<Offset?>(null) }
