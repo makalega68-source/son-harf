@@ -567,10 +567,12 @@ internal fun EveMascotBody(
     actionKey: Long = 0L,
     emotion: WordSiegeMascotEmotion? = null,
     speaking: Boolean = false,
-    /** True while she runs from one spot to another. */
+    /** True while she walks from one spot to another. */
     moving: Boolean = false,
     /** Where she faces while [moving], in degrees: 0 = the player, 90 = screen right, 180 = away. */
     heading: Float = 0f,
+    /** How brisk her steps are on this walk (1 = her own pace); matched to how fast she moves. */
+    walkRate: Float = 1f,
     glanceKey: Int = 0,
     glanceX: Float = 0f,
     glanceY: Float = 0f,
@@ -591,6 +593,7 @@ internal fun EveMascotBody(
     val mixer = remember { EveClipMixer(blendNanos = 450_000_000L) }
     var node by remember { mutableStateOf<io.github.sceneview.node.ModelNode?>(null) }
     var clip by remember { mutableStateOf(EveClip.BREATHE) }
+    var clipRate by remember { mutableStateOf(1f) }
     var clipKey by remember { mutableIntStateOf(0) }
     // A passing feeling (a few seconds) over the one the game asks for.
     var feeling by remember { mutableStateOf<EveMood?>(null) }
@@ -607,8 +610,9 @@ internal fun EveMascotBody(
     val drag by rememberUpdatedState(onDrag)
     val dragEnd by rememberUpdatedState(onDragEnd)
 
-    fun play(next: EveClip) {
+    fun play(next: EveClip, rate: Float = 1f) {
         clip = next
+        clipRate = rate
         clipKey++
     }
     fun feel(next: EveMood) {
@@ -641,11 +645,11 @@ internal fun EveMascotBody(
 
     LaunchedEffect(node, clipKey) {
         val live = node ?: return@LaunchedEffect
-        runCatching { mixer.transition(live.animator, clip.clipName, clip.loop) }
+        runCatching { mixer.transition(live.animator, clip.clipName, clip.loop, clipRate) }
     }
-    // Off she runs between spots; she stops in a calm breath.
-    LaunchedEffect(moving) {
-        if (moving) play(EveClip.RUN) else if (clip.moves) play(EveClip.BREATHE)
+    // She walks between spots (never flies) and stops in a calm breath.
+    LaunchedEffect(moving, walkRate) {
+        if (moving) play(EveClip.WALK, walkRate) else if (clip.moves) play(EveClip.BREATHE)
     }
     LaunchedEffect(feelingKey) {
         if (feeling == null) return@LaunchedEffect
@@ -1088,16 +1092,17 @@ internal object EveSession {
  * blended, so switching clips never pops.
  */
 private class EveClipMixer(private val blendNanos: Long) {
-    private data class Track(val index: Int, val startedAt: Long, val loop: Boolean)
+    private data class Track(val index: Int, val startedAt: Long, val loop: Boolean, val rate: Float = 1f)
 
     private var current: Track? = null
     private var previous: Track? = null
     private var blendStartedAt = 0L
 
-    fun transition(animator: Animator, name: String, loop: Boolean, now: Long = System.nanoTime()) {
+    /** Plays [name] from now on, at [rate] times its own speed (a brisker walk on a longer way). */
+    fun transition(animator: Animator, name: String, loop: Boolean, rate: Float = 1f, now: Long = System.nanoTime()) {
         val index = (0 until animator.animationCount).firstOrNull { animator.getAnimationName(it) == name } ?: return
         previous = current
-        current = Track(index, now, loop)
+        current = Track(index, now, loop, rate)
         blendStartedAt = now
     }
 
@@ -1119,7 +1124,7 @@ private class EveClipMixer(private val blendNanos: Long) {
 
     private fun time(animator: Animator, track: Track, frameTimeNanos: Long): Float {
         val duration = animator.getAnimationDuration(track.index).coerceAtLeast(.0001f)
-        val elapsed = ((frameTimeNanos - track.startedAt).coerceAtLeast(0L) / 1_000_000_000.0).toFloat()
+        val elapsed = ((frameTimeNanos - track.startedAt).coerceAtLeast(0L) / 1_000_000_000.0).toFloat() * track.rate
         return if (track.loop) elapsed % duration else min(elapsed, duration)
     }
 }

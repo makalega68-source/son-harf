@@ -5,6 +5,7 @@ import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -701,11 +702,14 @@ private const val STAGE = -1
 private const val VISIT = -2
 private const val USER_ANCHOR = -3
 
-/** Eve's box against Obi's: a little taller, and wide enough for her side view while running. */
+/** Eve's box against Obi's: a little taller, and wide enough for her side view while walking. */
 private const val EVE_IN_GAME_SCALE = 1.1f
 private const val EVE_BOX_ASPECT = 1.2f
-/** Eve's running pace between spots (her Run clip covers about this much per second). */
-private const val EVE_GAME_RUN_DP_PER_SEC = 230f
+/** Eve's walking pace when her box is 128 dp tall (her Walk clip's stride), and how much brisker it may get. */
+private const val EVE_WALK_DP_PER_SEC_AT_128 = 46f
+private const val EVE_MAX_WALK_RATE = 2f
+/** About how long a trip should take her before she steps out more briskly. */
+private const val EVE_TRIP_SECONDS = 2.2f
 
 /** A drifting letter the mascot sometimes chases for fun. Positions are area fractions. */
 private data class WordSiegeMascotChase(val id: Int, val letter: String, val start: Offset, val end: Offset)
@@ -802,6 +806,8 @@ internal fun WordSiegeMascotCompanion(
     var fromPosition by remember { mutableStateOf(Offset.Unspecified) }
     val flight = remember { Animatable(0f) }
     var flying by remember { mutableStateOf(false) }
+    // How brisk Eve's steps are on the current walk (set with each trip).
+    var eveWalkRate by remember { mutableStateOf(1f) }
     var flightId by remember { mutableIntStateOf(0) }
     val scale = remember { Animatable(1f) }
     var speech by remember { mutableStateOf<String?>(null) }
@@ -907,7 +913,7 @@ internal fun WordSiegeMascotCompanion(
             return mascotBoundCenter(raw, area, sizePx, marginPx)
         }
 
-        /** Where the first trip starts: Obi flies in from the top corner, Eve runs in from the side. */
+        /** Where the first trip starts: Obi flies in from the top corner, Eve walks in from the side. */
         fun entrance(target: Offset): Offset =
             if (eve) Offset(area.width + baseSizePx, target.y) else Offset(area.width + baseSizePx, -baseSizePx)
 
@@ -920,9 +926,10 @@ internal fun WordSiegeMascotCompanion(
             val t = flight.value
             if (t >= 1f) return target
             // A curved flight path that rises above both ends, like a real hop through the air.
-            // Eve runs the same way on her paws: only a light bound in her stride.
-            val lift = if (eve) baseSizePx * .12f else max(abs(target.x - start.x) * .25f, baseSizePx * .6f)
-            val control = Offset((start.x + target.x) / 2f, min(start.y, target.y) - lift)
+            // Eve never flies: she walks the straight way on her paws.
+            val lift = max(abs(target.x - start.x) * .25f, baseSizePx * .6f)
+            val control = if (eve) Offset((start.x + target.x) / 2f, (start.y + target.y) / 2f)
+            else Offset((start.x + target.x) / 2f, min(start.y, target.y) - lift)
             val u = 1f - t
             val half = baseSizePx * scale.value / 2f
             val x = u * u * start.x + 2f * u * t * control.x + t * t * target.x
@@ -973,14 +980,17 @@ internal fun WordSiegeMascotCompanion(
             if (index >= 0) homeIndex = index
             val id = ++flightId
             flying = true
-            // Eve's paws must not slide: a long way takes her a little longer than Obi's flight.
+            // Eve walks: her pace follows her stride at her size (so her paws never slide), a little
+            // brisker on a long way so a trip still takes only a couple of seconds.
             val millis = if (!eve) durationMillis else {
-                val runDp = (anchorCenter(anchorIndex, baseSizePx * scale.value) - fromPosition).getDistance() / density.density
-                max(durationMillis, (runDp / EVE_GAME_RUN_DP_PER_SEC * 1_000f).roundToInt().coerceAtMost(2_400))
+                val walkDp = (anchorCenter(anchorIndex, baseSizePx * scale.value) - fromPosition).getDistance() / density.density
+                val pace = EVE_WALK_DP_PER_SEC_AT_128 * (baseSizePx * scale.value * EVE_IN_GAME_SCALE / density.density) / 128f
+                eveWalkRate = (walkDp / (pace * EVE_TRIP_SECONDS)).coerceIn(1f, EVE_MAX_WALK_RATE)
+                (walkDp / (pace * eveWalkRate) * 1_000f).roundToInt().coerceIn(300, 4_500)
             }
             try {
                 flight.snapTo(0f)
-                flight.animateTo(1f, tween(millis, easing = FastOutSlowInEasing))
+                flight.animateTo(1f, tween(millis, easing = if (eve) LinearOutSlowInEasing else FastOutSlowInEasing))
                 if (guestSkin == null) perform(WordSiegeMascotAction.LAND)
             } finally {
                 // A newer flight may have taken over; otherwise never stay stuck "in the air".
@@ -1764,12 +1774,12 @@ internal fun WordSiegeMascotCompanion(
         }
 
         if (eve) {
-            // Her box is wider than Obi's (her side view while running) and a little taller, so
+            // Her box is wider than Obi's (her side view while walking) and a little taller, so
             // she reads as big as Obi; she stands on exactly the same spot. Where the mascot has
             // just its own slot (the Son Harf arena) she keeps to the slot's height.
             val eveHeightPx = min(sizePx * EVE_IN_GAME_SCALE, max(sizePx, areaHeight))
             val eveWidthPx = eveHeightPx * EVE_BOX_ASPECT
-            // Towards where she runs: 0 = the player, 90 = screen right, 180 = up the screen.
+            // Towards where she walks: 0 = the player, 90 = screen right, 180 = up the screen.
             val heading = if (!flying) 0f else Math.toDegrees(
                 kotlin.math.atan2((target.x - start.x).toDouble(), (target.y - start.y).toDouble()),
             ).toFloat()
@@ -1783,6 +1793,7 @@ internal fun WordSiegeMascotCompanion(
                 speaking = talking,
                 moving = flying,
                 heading = heading,
+                walkRate = eveWalkRate,
                 glanceKey = glanceKey,
                 glanceX = glance.x,
                 glanceY = glance.y,
