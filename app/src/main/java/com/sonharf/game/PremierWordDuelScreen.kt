@@ -14,6 +14,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -60,6 +61,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import io.github.jan.supabase.auth.auth
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
@@ -1041,6 +1045,11 @@ internal fun PremierLobby(
         if (SonHarfCosmetics.throneChampion) WordSiegeMascotSkin.GOLD_KING
         else WordSiegeMascotBond(context).skinChoice?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal }
     }
+    val eveOwned = EveOwnership.ownsCurrentUser()
+    LaunchedEffect(Unit) {
+        val userId = runCatching { SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull()
+        EveOwnership.refresh(context, userId)
+    }
     var waveKey by remember { mutableStateOf(0L) }
     LaunchedEffect(Unit) { delay(600); waveKey = 1L }
     Column(
@@ -1077,7 +1086,8 @@ internal fun PremierLobby(
                         Text(pt(language,"Zinciri koparma.\nÜç raundun galibi ol.","Keep the chain alive.\nWin the three-round duel."),color=Color.White.copy(alpha=.9f),fontSize=14.sp,lineHeight=19.sp,fontWeight=FontWeight.Bold)
                         EventTag(pt(language,"15 SANİYE · 10 HAMLE","15 SECONDS · 10 TURNS"),gold=false)
                     }
-                    if(skin!=null)WordSiegeMascot(moveId=null,lastMoveMine=false,pendingCells=emptyList(),playerTurn=true,requestedEmotion=WordSiegeMascotEmotion.HAPPY,modifier=Modifier.size(114.4.dp),actionKey=waveKey,action=WordSiegeMascotAction.WAVE,skin=skin)
+                    if (eveOwned) Image(painterResource(R.drawable.eve_still), "Eve", Modifier.size(114.4.dp), contentScale = ContentScale.Fit)
+                    else if(skin!=null)WordSiegeMascot(moveId=null,lastMoveMine=false,pendingCells=emptyList(),playerTurn=true,requestedEmotion=WordSiegeMascotEmotion.HAPPY,modifier=Modifier.size(114.4.dp),actionKey=waveKey,action=WordSiegeMascotAction.WAVE,skin=skin)
                 }
             }
 
@@ -1808,7 +1818,7 @@ private fun PremierArena(
                     }
                     if (eveOwned && !eveAtBottom) {
                         EveGameCompanion(
-                            modifier = Modifier.fillMaxWidth().height(if (veryCompact) 50.dp else 62.dp),
+                            modifier = Modifier.fillMaxWidth().height(if (veryCompact) 72.dp else 82.dp),
                             signal = mascotSignal, hint = hintRequest,
                             onLaneSwitch = {
                                 eveAtBottom = true
@@ -1871,7 +1881,7 @@ private fun PremierArena(
                     }
                     if (eveOwned && eveAtBottom) {
                         EveGameCompanion(
-                            modifier = Modifier.fillMaxWidth().height(if (veryCompact) 50.dp else 62.dp),
+                            modifier = Modifier.fillMaxWidth().height(if (veryCompact) 72.dp else 82.dp),
                             signal = mascotSignal, hint = hintRequest,
                             onLaneSwitch = {
                                 eveAtBottom = false

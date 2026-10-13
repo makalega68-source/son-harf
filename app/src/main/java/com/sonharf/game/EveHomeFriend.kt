@@ -12,7 +12,9 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -580,8 +582,7 @@ internal fun EveGameCompanion(
     val initialX = remember(placement) { placement.getFloat("x_fraction", 0f).coerceIn(0f, 1f) }
     var positioned by remember { mutableStateOf(false) }
     var dragging by remember { mutableStateOf(false) }
-    val dragY = remember { FloatArray(1) }
-    val dragX = remember { FloatArray(1) }
+    var manuallyPlaced by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val bond = remember { WordSiegeMascotBond(context) }
     val initialSignalKey = remember { signal?.key }
@@ -644,16 +645,17 @@ internal fun EveGameCompanion(
     }
 
     BoxWithConstraints(modifier) {
-        val modelWidth = min(60f, (maxHeight.value - 4f).coerceAtLeast(32f))
+        val modelWidth = min(76f, (maxHeight.value - 4f).coerceAtLeast(32f))
         val modelHeight = modelWidth
         val maxX = (maxWidth.value - modelWidth).coerceAtLeast(0f)
         val yOffset = ((maxHeight.value - modelHeight) / 2f).coerceAtLeast(0f)
-        LaunchedEffect(ready, maxX, dragging) {
+        LaunchedEffect(ready, maxX, dragging, manuallyPlaced) {
             if (!ready || dragging) return@LaunchedEffect
             if (!positioned) {
                 x.snapTo(initialX * maxX)
                 positioned = true
             } else x.snapTo(x.value.coerceIn(0f, maxX))
+            if (manuallyPlaced) return@LaunchedEffect
             while (true) {
                 delay(Random.nextLong(4_500L, 7_500L))
                 val tx = if (x.value < maxX / 2f) maxX else 0f
@@ -669,6 +671,44 @@ internal fun EveGameCompanion(
                     walking = false
                     yaw = 0f
                     clip = EveClip.BREATHE
+                }
+            }
+        }
+
+        // Listen on the strip during the initial pointer pass. The embedded 3D TextureView
+        // otherwise receives the drag before a gesture detector inside Eve's model can.
+        val dragSurface = Modifier.pointerInput(maxX) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                var previous = down.position
+                var totalY = 0f
+                var dragX = x.value
+                var moved = false
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    if (!change.pressed) break
+                    val delta = change.position - previous
+                    previous = change.position
+                    if (!moved && (kotlin.math.abs(change.position.x - down.position.x) > 8f ||
+                                kotlin.math.abs(change.position.y - down.position.y) > 8f)) {
+                        moved = true
+                        dragging = true
+                        manuallyPlaced = true
+                        dragX = x.value
+                        scope.launch { x.stop() }
+                    }
+                    if (moved) {
+                        change.consume()
+                        totalY += delta.y.toDp().value
+                        dragX = (dragX + delta.x.toDp().value).coerceIn(0f, maxX)
+                        scope.launch { x.snapTo(dragX) }
+                    }
+                }
+                if (moved) {
+                    dragging = false
+                    placement.edit().putFloat("x_fraction", if (maxX > 0f) dragX / maxX else 0f).apply()
+                    if (kotlin.math.abs(totalY) >= 28f) onLaneSwitch()
                 }
             }
         }
@@ -707,31 +747,11 @@ internal fun EveGameCompanion(
                 Image(painterResource(R.drawable.eve_still), sh("Eve", "Eve"),
                     contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
             }
-            Box(
-                Modifier.align(Alignment.Center).fillMaxSize()
-                    .pointerInput(maxX) {
-                        detectDragGestures(
-                            onDragStart = { dragging = true; dragY[0] = 0f; dragX[0] = x.value },
-                            onDragEnd = {
-                                dragging = false
-                                placement.edit().putFloat("x_fraction", if (maxX > 0f) x.value / maxX else 0f).apply()
-                                if (kotlin.math.abs(dragY[0]) >= 28f) onLaneSwitch()
-                            },
-                            onDragCancel = { dragging = false },
-                        ) { change, amount ->
-                            change.consume()
-                            dragY[0] += amount.y.toDp().value
-                            dragX[0] = (dragX[0] + amount.x.toDp().value).coerceIn(0f, maxX)
-                            scope.launch { x.snapTo(dragX[0]) }
-                        }
-                    }
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClickLabel = sh("Eve ile konuş veya sürükle", "Talk to or drag Eve"),
-                    ) { say(sh("Buradayım. Sıradaki hamleyi birlikte düşünelim.", "I'm here. Let's think through the next move.")) }
-            )
-        }
+         }
+        Box(Modifier.matchParentSize().then(dragSurface).clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+        ) { say(sh("Buradayım. Sıradaki hamleyi birlikte düşünelim.", "I'm here. Let's think through the next move.")) })
     }
 }
 

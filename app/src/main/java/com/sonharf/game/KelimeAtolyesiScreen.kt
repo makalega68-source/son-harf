@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -60,6 +61,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -145,6 +148,11 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     val language = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
     val scope = rememberCoroutineScope()
     val mascotSkin = remember { atelierMascotSkin(context) }
+    val eveOwned = EveOwnership.ownsCurrentUser()
+    LaunchedEffect(Unit) {
+        val userId = runCatching { SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull()
+        EveOwnership.refresh(context, userId)
+    }
 
     var engine by remember(language) { mutableStateOf<KelimeAtolyesiEngine?>(null) }
     var state by remember(language) { mutableStateOf<AtelierState?>(null) }
@@ -582,6 +590,7 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
                 }
             } else {
             AtelierMascotRow(
+                eveOwned = eveOwned,
                 skin = mascotSkin,
                 mood = when {
                     happyUntil > System.currentTimeMillis() || current?.over == true && current.everySetDone -> WordSiegeMascotEmotion.HAPPY
@@ -805,6 +814,7 @@ private fun AtelierChip(label: String, value: String, accent: Color, pulse: Bool
 
 @Composable
 private fun AtelierMascotRow(
+    eveOwned: Boolean,
     skin: WordSiegeMascotSkin,
     mood: WordSiegeMascotEmotion,
     actionKey: Long,
@@ -816,7 +826,10 @@ private fun AtelierMascotRow(
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         // Visual companion only: no speech bubble, no pop-ups.
-        WordSiegeMascot(
+        if (eveOwned) Image(
+            painter = painterResource(R.drawable.eve_still), contentDescription = "Eve",
+            modifier = Modifier.size(98.8.dp), contentScale = ContentScale.Fit,
+        ) else WordSiegeMascot(
             moveId = null,
             lastMoveMine = false,
             pendingCells = emptyList(),
