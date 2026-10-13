@@ -637,8 +637,8 @@ internal fun EveGameCompanion(
     }
 
     BoxWithConstraints(modifier) {
-        val modelWidth = 84f
-        val modelHeight = 84f
+        val modelWidth = if (maxHeight.value < 110f) 64f else 84f
+        val modelHeight = modelWidth
         val maxX = (maxWidth.value - modelWidth).coerceAtLeast(0f)
         val maxY = (maxHeight.value - modelHeight).coerceAtLeast(0f)
         LaunchedEffect(ready, maxX, maxY) {
@@ -672,7 +672,7 @@ internal fun EveGameCompanion(
             Surface(
                 modifier = Modifier.align(Alignment.TopStart).offset {
                     IntOffset((x.value + modelWidth / 2f - 90f).coerceIn(2f, (maxWidth.value - 184f).coerceAtLeast(2f)).dp.roundToPx(),
-                        (y.value + modelHeight).coerceAtMost((maxHeight.value - 36f).coerceAtLeast(0f)).dp.roundToPx())
+                        (if (maxHeight.value < 130f) y.value - 48f else (y.value + modelHeight).coerceAtMost((maxHeight.value - 36f).coerceAtLeast(0f))).dp.roundToPx())
                 }.widthIn(max = min(184f, (maxWidth.value - 4f).coerceAtLeast(0f)).dp),
                 shape = RoundedCornerShape(12.dp),
                 color = Color.White,

@@ -186,7 +186,9 @@ internal fun EveThroneCard(userId: String?) {
                 }
             }
             Text(
-                if (owned) sh("Eve açıldı · 12/12 parça tamam", "Eve unlocked · 12/12 shards")
+                if (owned && status?.admin == true && (status.shards < 12))
+                    sh("Eve açık · yönetici erişimi", "Eve unlocked · admin access")
+                else if (owned) sh("Eve açıldı · 12/12 parça tamam", "Eve unlocked · 12/12 shards")
                 else sh("Eve ilerlemen · $shards/12 parça", "Eve progress · $shards/12 shards"),
                 color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black,
             )
