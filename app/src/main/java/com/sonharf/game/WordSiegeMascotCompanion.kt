@@ -974,7 +974,11 @@ internal fun WordSiegeMascotCompanion(
             }
         }
 
-        val flyTo: suspend (Int, Int) -> Unit = { index, durationMillis ->
+        // Where the mascot has only its own small slot (the Son Harf arena) there is no room to
+        // walk: Eve stays on her spot and only turns, talks and reacts there.
+        val eveStaysPut = eve && areaHeight <= baseSizePx * 1.8f
+        val flyTo: suspend (Int, Int) -> Unit = flyTo@{ index, durationMillis ->
+            if (eveStaysPut) return@flyTo
             fromPosition = currentCenter()
             anchorIndex = if (index >= 0 && userPoint != null) USER_ANCHOR else index
             if (index >= 0) homeIndex = index

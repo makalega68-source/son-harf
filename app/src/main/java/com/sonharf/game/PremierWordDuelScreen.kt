@@ -171,6 +171,9 @@ private fun premierSameInstant(a: String?, b: String?): Boolean {
     return left != null && left == right
 }
 
+/** A turn clock read from the server: [remainingMs] were left at [anchoredAt] (elapsedRealtime). */
+internal data class PremierTurnClockAnchor(val roomId: String, val deadline: Instant, val remainingMs: Long, val anchoredAt: Long)
+
 /**
  * True when [after] moved the turn on from [before]. An RPC that answers with the room unchanged
  * (e.g. `claim_turn_timeout` while the server clock still has time left) is not progress: taking
@@ -263,6 +266,10 @@ fun PremierWordDuelScreen() {
     var botThinking by remember { mutableStateOf(false) }
     var prepSeconds by remember { mutableIntStateOf(0) }
     var botPrepSeconds by remember { mutableIntStateOf(0) }
+    // The last server-anchored turn clock. When the clock effect restarts for the same deadline it
+    // resumes this instead of the phone's estimate: a phone clock running behind the server used to
+    // pin the round break at 10 on every restart.
+    var turnClockAnchor by remember { mutableStateOf<PremierTurnClockAnchor?>(null) }
 
     suspend fun ensureMe(): ProfileDto {
         if (backend.currentUserId() == null) backend.ensurePlayer(pt(language, "Oyuncu", "Player"))
@@ -575,7 +582,8 @@ fun PremierWordDuelScreen() {
     LaunchedEffect(
         stage,
         room?.id,
-        room?.turnDeadline,
+        // The instant, not the text: the same deadline written differently must not restart the clock.
+        room?.turnDeadline?.let { com.sonharf.game.data.parseServerInstant(it) },
         room?.currentPlayerId,
         room?.status,
         room?.botTurn,
@@ -675,11 +683,12 @@ fun PremierWordDuelScreen() {
         // Phone clock drift must not shorten the authoritative 15-second turn. The seconds tick at
         // once from the local estimate; the server's remaining_ms re-anchors them when it answers,
         // so neither a slow request nor clock skew can stall or freeze the countdown.
-        var initialRemainingMs = Duration.between(Instant.now(), deadline).toMillis()
+        val resumed = turnClockAnchor?.takeIf { it.roomId == active.id && it.deadline == deadline }
+        var initialRemainingMs = resumed?.remainingMs ?: Duration.between(Instant.now(), deadline).toMillis()
             .coerceIn(1_000L, (PREMIER_TURN_SECONDS + PREMIER_ROUND_BREAK_SECONDS) * 1000L)
-        var countdownAnchor = SystemClock.elapsedRealtime()
+        var countdownAnchor = resumed?.anchoredAt ?: SystemClock.elapsedRealtime()
         var serverClockResolved = false
-        var serverClockEverResolved = false
+        var serverClockEverResolved = resumed != null
         val roundStartEvent = active.lastEvent == "round_started" || active.lastEvent == "sudden_death_started"
         fun syncTurnClock() {
             serverClockResolved = false
@@ -691,6 +700,7 @@ fun PremierWordDuelScreen() {
                     val halfRoundTripMs = ((requestFinishedAt - requestStartedAt) / 2L).coerceIn(0L, 750L)
                     initialRemainingMs = (serverClock.remainingMs - halfRoundTripMs).coerceAtLeast(0L)
                     countdownAnchor = SystemClock.elapsedRealtime()
+                    turnClockAnchor = PremierTurnClockAnchor(active.id, deadline, initialRemainingMs, countdownAnchor)
                 }
                 serverClockResolved = true
                 serverClockEverResolved = true

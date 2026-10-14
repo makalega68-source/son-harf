@@ -281,6 +281,7 @@ internal fun MainSettingsScreen(
                             MatchNotifications.signedOut(context)
                             RememberedCredentialVault.clear(context)
                             SonHarfPreferences.setRememberLogin(context, false)
+                            AccountCaches.signedOut(context)
                             logoutDialog = false
                             onSignedOut()
                         }

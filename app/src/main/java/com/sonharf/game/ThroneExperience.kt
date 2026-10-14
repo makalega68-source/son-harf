@@ -305,7 +305,7 @@ GameEventStage(gold=true) {
    Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
     // The ruler's photo inside the crowned gold ring of the podium artwork.
     PodiumPortrait(Modifier.clip(RoundedCornerShape(18.dp))) { photo ->
-     if(owner!=null)ProfilePhotoAvatarWithGender(owner.avatarPath,owner.gender,owner.name,photo,visible=owner.avatarVisibility!="hidden",showGenderBadge=false)
+     if(owner!=null)ProfilePhotoAvatarWithGender(owner.avatarPath,owner.gender,owner.name,photo,visible=owner.avatarVisibility!="hidden",showGenderBadge=false,ring=false)
      else DefaultProfilePortrait(null,Modifier.size(photo).clip(CircleShape))
     }
     Text(sh("TAHT SAHİBİ","THRONE OWNER"),color=EventInk,fontSize=12.sp,fontWeight=FontWeight.Black,letterSpacing=2.sp)

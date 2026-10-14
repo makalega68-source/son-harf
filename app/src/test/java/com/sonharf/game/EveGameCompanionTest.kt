@@ -54,4 +54,10 @@ class EveGameCompanionTest {
         assertTrue(eve.contains("view.setShadowingEnabled(false)"))
         assertTrue(eve.contains("view = view,"))
     }
+
+    @Test fun eveDoesNotWalkInTheSonHarfSlot() {
+        val companion = File("src/main/java/com/sonharf/game/WordSiegeMascotCompanion.kt").readText()
+        assertTrue(companion.contains("val eveStaysPut = eve && areaHeight <= baseSizePx * 1.8f"))
+        assertTrue(companion.contains("if (eveStaysPut) return@flyTo"))
+    }
 }

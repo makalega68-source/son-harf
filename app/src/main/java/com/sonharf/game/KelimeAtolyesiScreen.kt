@@ -123,11 +123,12 @@ private object AtelierRecords {
 }
 
 /** The mascot the player picked, if owned, else their first owned character; visual companion only. */
-private fun atelierMascotSkin(context: android.content.Context): WordSiegeMascotSkin {
+/** The player's own mascot for the Workshop row; none for a player who owns none. */
+private fun atelierMascotSkin(context: android.content.Context): WordSiegeMascotSkin? {
     val owned = WordSiegeMascotOwnership.owned
     val picked = WordSiegeMascotBond(context).skinChoice
     if (SonHarfCosmetics.throneChampion) return WordSiegeMascotSkin.GOLD_KING
-    return picked?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } ?: WordSiegeMascotSkin.ORB
+    return picked?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal }
 }
 
 private fun atelierTaskText(task: AtelierTask, language: String): String = when (task.kind) {
@@ -144,7 +145,8 @@ internal fun KelimeAtolyesiScreen(onExit: () -> Unit) {
     val context = LocalContext.current
     val language = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
     val scope = rememberCoroutineScope()
-    val mascotSkin = remember { atelierMascotSkin(context) }
+    // Follows the owned mascots as they load (none for a player who owns none).
+    val mascotSkin = atelierMascotSkin(context)
     // Eve (owned and chosen) sits in the mascot's place.
     val eveOwned = EveOwnership.activeForCurrentUser(context)
     LaunchedEffect(Unit) {
@@ -813,7 +815,7 @@ private fun AtelierChip(label: String, value: String, accent: Color, pulse: Bool
 @Composable
 private fun AtelierMascotRow(
     eveOwned: Boolean,
-    skin: WordSiegeMascotSkin,
+    skin: WordSiegeMascotSkin?,
     mood: WordSiegeMascotEmotion,
     actionKey: Long,
     action: WordSiegeMascotAction?,
@@ -829,7 +831,7 @@ private fun AtelierMascotRow(
             action = action,
             actionKey = actionKey,
             emotion = mood,
-        ) else WordSiegeMascot(
+        ) else if (skin != null) WordSiegeMascot(
             moveId = null,
             lastMoveMine = false,
             pendingCells = emptyList(),

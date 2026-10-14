@@ -80,6 +80,12 @@ internal object WordSiegeMascotOwnership {
         owned = ids.mapNotNull { WordSiegeMascotSkin.fromProductId(it) }.toSet()
     }
 
+    /** Forgets the owned mascots kept on this device (another account signed in, or sign-out). */
+    fun clearLocal(context: Context) {
+        owned = emptySet()
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+    }
+
     suspend fun refresh(context: Context) {
         if (!SupabaseProvider.configured) return
         val keys = runCatching {

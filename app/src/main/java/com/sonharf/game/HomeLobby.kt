@@ -94,6 +94,14 @@ internal fun HomeLobbyScreen(
         if (!SupabaseProvider.configured) return@LaunchedEffect
         profile = me?.let { id -> gameRequestResult { backend.getProfile(id) }.getOrNull() }
     }
+    // The frame, styles and mascots shown come from this account's server data: whatever another
+    // account left on this phone is dropped first, then the real ones are loaded.
+    LaunchedEffect(me) {
+        if (!SupabaseProvider.configured || me.isNullOrBlank()) return@LaunchedEffect
+        AccountCaches.ensureFor(lobbyContext, me)
+        gameRequestResult { backend.getEquippedCosmetics() }.onSuccess { SonHarfCosmetics.applyAndPersist(lobbyContext, it) }
+        runCatching { WordSiegeMascotOwnership.refresh(lobbyContext) }
+    }
     // Only a badge count: open games where it is your turn plus pending invitations.
     LaunchedEffect(me, foreground) {
         if (me == null || !foreground) return@LaunchedEffect

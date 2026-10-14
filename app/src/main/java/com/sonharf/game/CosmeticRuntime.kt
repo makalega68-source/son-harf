@@ -57,6 +57,13 @@ object SonHarfCosmetics {
         mascotHatId = e?.mascotHatId?.takeIf { it in MascotHats.ids }
     }
 
+    /** Forgets the equipped styles kept on this device (another account signed in, or sign-out). */
+    fun clearLocal(context: Context) {
+        apply(null)
+        throneUntil = 0L
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+    }
+
     fun restore(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         profileFrameId = prefs.getString("profile_frame_id", null)?.takeIf { !it.isNullOrBlank() }

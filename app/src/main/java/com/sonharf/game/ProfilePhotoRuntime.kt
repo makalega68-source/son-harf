@@ -220,6 +220,8 @@ internal fun ProfilePhotoAvatarWithGender(
     showGenderBadge: Boolean = true,
     frameId: String? = null,
     userId: String? = null,
+    /** False where the photo already sits inside an artwork ring (the throne podium): no ring of its own. */
+    ring: Boolean = true,
 ) {
     val resolvedFrame = if (userId != null) rememberPlayerFrame(userId) else frameId
     val framed = ProfileFrameCollection.find(resolvedFrame) != null
@@ -248,7 +250,8 @@ internal fun ProfilePhotoAvatarWithGender(
     val bitmap = rememberProfileBitmap(bytes)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(if (framed) size * .72f else size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color(0xFFF2C14E), accent, Color(0xFFB07F1E), Color(0xFFF2C14E)))).padding(3.dp),
+            Modifier.size(if (framed) size * .72f else size).clip(CircleShape)
+                .then(if (ring) Modifier.background(Brush.sweepGradient(listOf(Color(0xFFF2C14E), accent, Color(0xFFB07F1E), Color(0xFFF2C14E)))).padding(3.dp) else Modifier),
             contentAlignment = Alignment.Center,
         ) {
             if (visible && bitmap != null) {
