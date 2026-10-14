@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -63,6 +64,8 @@ suspend fun restoreMembershipSession(context: Context): Boolean {
     withTimeoutOrNull(5_000L) { auth.sessionStatus.first { it !is SessionStatus.Initializing } }
     if (hasVerifiedMembershipSession()) return true
     if (auth.currentSessionOrNull()?.user?.email?.isNotBlank() == true) return true
+    // A guest account (no email) plays too; it is kept until the player signs out.
+    if (PlayerAccount.hasPlayableSession()) return true
     if (!SonHarfPreferences.rememberLogin(context)) return false
     val saved = RememberedCredentialVault.load(context) ?: return false
     return runCatching {
@@ -124,7 +127,7 @@ private suspend fun currentIdentityProfile(): AuthIdentityProfile? {
 private suspend fun lockIdentity(name: String, gender: String): AuthIdentityProfile =
     SupabaseProvider.client.postgrest.rpc(
         "complete_profile_identity_v2",
-        buildJsonObject { put("p_display_name", name.trim()); put("p_gender", gender) },
+        buildJsonObject { put("p_display_name", name.trim()); put("p_gender", PlayerAccount.serverGender(gender)) },
     ).decodeSingle()
 
 @Composable
@@ -152,6 +155,9 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     var notice by remember { mutableStateOf("") }
     var success by remember { mutableStateOf(false) }
     var pendingVerificationEmail by remember { mutableStateOf<String?>(null) }
+    // New players start with "play now" (a guest account, no email); a device that has signed in
+    // with email before opens on the email form.
+    var emailMode by remember { mutableStateOf(rememberedCredential != null || SonHarfPreferences.rememberedEmail(context).isNotBlank()) }
     var otpCode by remember { mutableStateOf("") }
     // Each new code cancels the previous one, so "send again" waits a minute between sends.
     var lastResendAt by remember { mutableStateOf(0L) }
@@ -278,6 +284,49 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 notice = friendly(it.message.orEmpty())
             }
             busy = false
+        }
+    }
+
+    fun playAsGuest() {
+        if (busy) return
+        if (displayName.trim().length < 2) { notice = sh("Oyuncu adı en az 2 karakter olmalı.", "Player name must be at least 2 characters."); success = false; return }
+        if (gender.isBlank()) { notice = sh("Kadın, Erkek veya Diğer seçeneklerinden birini seç.", "Select Female, Male, or Other."); success = false; return }
+        busy = true
+        scope.launch {
+            notice = ""; success = false
+            runCatching { PlayerAccount.startGuest(context, displayName, gender) }
+                .onSuccess { busy = false; onAuthenticated() }
+                .onFailure { notice = PlayerAccount.friendlyError(it.toString()); busy = false }
+        }
+    }
+
+    fun continueWithGoogle() {
+        if (busy) return
+        busy = true
+        scope.launch {
+            notice = ""; success = false
+            runCatching {
+                PlayerAccount.signInWithGoogle(context)
+                // A first Google sign-in takes the name typed here (if any) as the player's name.
+                val profile = runCatching { currentIdentityProfile() }.getOrNull()
+                if (profile != null && !profile.identityLocked && displayName.trim().length >= 2 && gender.isNotBlank()) {
+                    runCatching { lockIdentity(displayName, gender) }
+                }
+            }.onSuccess { busy = false; onAuthenticated() }
+                .onFailure { notice = PlayerAccount.friendlyError(it.toString()); busy = false }
+        }
+    }
+
+    // Back goes one step back inside the entry screen instead of leaving the app.
+    BackHandler(enabled = pendingVerificationEmail != null || emailMode) {
+        if (pendingVerificationEmail != null) {
+            pendingVerificationEmail = null
+            otpCode = ""
+            notice = ""
+            success = false
+        } else {
+            emailMode = false
+            notice = ""
         }
     }
 
@@ -488,7 +537,24 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             register = true
                         },
                     )
+                } else if (!emailMode) {
+                    QuickPlayCard(
+                        displayName = displayName,
+                        onNameChange = { displayName = it.take(24) },
+                        gender = gender,
+                        onGender = { gender = it },
+                        busy = busy,
+                        notice = notice,
+                        success = success,
+                        googleAvailable = PlayerAccount.googleAvailable,
+                        onPlay = ::playAsGuest,
+                        onGoogle = ::continueWithGoogle,
+                        onEmail = { emailMode = true; notice = "" },
+                    )
                 } else {
+                    TextButton(onClick = { emailMode = false; notice = "" }, modifier = Modifier.fillMaxWidth()) {
+                        Text(sh("← Hızlı başla: e-postasız oyna", "← Quick start: play without email"), color = AuthUi.Sand, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                     Card(
                         colors = CardDefaults.cardColors(containerColor = AuthUi.Surface.copy(alpha = .97f)),
                         shape = RoundedCornerShape(28.dp),
@@ -691,6 +757,108 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     )
                 }
                 Spacer(Modifier.height(20.dp))
+            }
+        }
+    }
+}
+
+/**
+ * The first screen for a new player: a name, a profile choice and "play now" on a guest account.
+ * Google keeps the account on every phone; email stays one tap away.
+ */
+@Composable
+private fun QuickPlayCard(
+    displayName: String,
+    onNameChange: (String) -> Unit,
+    gender: String,
+    onGender: (String) -> Unit,
+    busy: Boolean,
+    notice: String,
+    success: Boolean,
+    googleAvailable: Boolean,
+    onPlay: () -> Unit,
+    onGoogle: () -> Unit,
+    onEmail: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = AuthUi.Surface.copy(alpha = .97f)),
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, AuthUi.Border),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(sh("Adını yaz, hemen oyna!", "Pick a name and play now!"), color = AuthUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text(sh("E-posta veya şifre gerekmez. İlerlemen bu hesapta saklanır.", "No email or password needed. Your progress is saved on this account."), color = AuthUi.Muted, fontSize = 13.sp)
+            OutlinedTextField(
+                displayName,
+                onNameChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                leadingIcon = { Icon(Icons.Rounded.Person, null, tint = AuthUi.Primary) },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                label = { Text(sh("Oyuncu adı", "Player name")) },
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("erkek" to sh("Erkek", "Male"), "kadın" to sh("Kadın", "Female"), "diğer" to sh("Diğer", "Other")).forEach { (value, label) ->
+                    val selected = gender == value
+                    FilterChip(
+                        selected = selected,
+                        onClick = { onGender(value) },
+                        label = { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold) } },
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = AuthUi.SurfaceSoft,
+                            labelColor = AuthUi.Muted,
+                            selectedContainerColor = AuthUi.PrimarySoft,
+                            selectedLabelColor = AuthUi.Ivory,
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = selected,
+                            borderColor = AuthUi.Border,
+                            selectedBorderColor = AuthUi.Lavender,
+                        ),
+                    )
+                }
+            }
+            Button(
+                onClick = onPlay,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth().height(58.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AuthUi.Primary, contentColor = AuthUi.Ivory),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
+            ) {
+                if (busy) {
+                    CircularProgressIndicator(Modifier.size(22.dp), color = AuthUi.Ivory, strokeWidth = 2.5.dp)
+                } else {
+                    Text(sh("HEMEN OYNA", "PLAY NOW"), fontWeight = FontWeight.Black, fontSize = 17.sp)
+                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.Rounded.ChevronRight, null, Modifier.size(24.dp))
+                }
+            }
+            if (googleAvailable) {
+                OutlinedButton(
+                    onClick = onGoogle,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, AuthUi.Sand),
+                ) {
+                    Text("G", color = AuthUi.Sand, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(sh("Google ile devam et", "Continue with Google"), color = AuthUi.Text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            }
+            if (notice.isNotBlank()) {
+                Surface(color = if (success) AuthUi.SuccessSoft else AuthUi.WarningSoft, shape = RoundedCornerShape(14.dp)) {
+                    Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = AuthUi.Text, fontSize = 14.sp, textAlign = TextAlign.Center)
+                }
+            }
+            TextButton(onClick = onEmail, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                Text(sh("Hesabım var · E-posta ile giriş", "I have an account · Email sign-in"), color = AuthUi.Sand, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
         }
     }

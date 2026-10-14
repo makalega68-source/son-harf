@@ -68,7 +68,7 @@ fun StableV1App() {
     LaunchedEffect(Unit) {
         // The stored session loads asynchronously: wait for it (and silently re-login with the
         // remembered credentials if needed) so a signed-in player never sees the entry screens again.
-        authenticated = SupabaseProvider.configured && (hasVerifiedMembershipSession() || restoreMembershipSession(context))
+        authenticated = SupabaseProvider.configured && (PlayerAccount.hasPlayableSession() || restoreMembershipSession(context))
         authChecked = true
     }
 

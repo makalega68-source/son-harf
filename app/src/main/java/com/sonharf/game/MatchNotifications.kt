@@ -61,7 +61,7 @@ internal object MatchNotifications {
         withTimeoutOrNull(10_000) { SupabaseProvider.client.auth.sessionStatus.first { it !is SessionStatus.Initializing } }
         val backend = OnlineGameBackend()
         // Never sign in, create a guest or use another account from background work.
-        if (backend.currentUserId() != expectedUser || !hasVerifiedMembershipSession()) return true
+        if (backend.currentUserId() != expectedUser || !PlayerAccount.hasPlayableSession()) return true
         val manager = context.getSystemService(NotificationManager::class.java) ?: return true
         val english = SonHarfPreferences.language(context) == "en"
         manager.createNotificationChannel(NotificationChannel(CHANNEL, if (english) "Matches and invitations" else "Maçlar ve davetler", NotificationManager.IMPORTANCE_DEFAULT))

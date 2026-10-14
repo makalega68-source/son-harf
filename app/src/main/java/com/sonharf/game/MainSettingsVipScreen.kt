@@ -181,8 +181,40 @@ internal fun MainSettingsScreen(
         item {
             MainSettingsGroup(sh("HESAP", "ACCOUNT")) {
                 val email = runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.currentUserOrNull()?.email }.getOrNull().orEmpty()
+                var guest by remember { mutableStateOf(PlayerAccount.isGuest()) }
+                var linking by remember { mutableStateOf(false) }
                 if (email.isNotBlank()) {
                     Text(email, color = LobbyPalette.Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(3.dp))
+                } else if (guest) {
+                    // A guest account lives on this phone only: offer to keep it with Google.
+                    Text(sh("Misafir hesap", "Guest account"), color = LobbyPalette.Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        sh("İlerlemen bu telefonda. Telefon değişirse ya da uygulama silinirse kaybolmaması için Google hesabına bağla.",
+                            "Your progress is on this phone. Link Google so it isn't lost if you change phones or delete the app."),
+                        color = MainUi.Muted, fontSize = 11.sp,
+                    )
+                    if (PlayerAccount.googleAvailable) {
+                        Spacer(Modifier.height(6.dp))
+                        Button(
+                            onClick = {
+                                if (linking) return@Button
+                                linking = true
+                                scope.launch {
+                                    runCatching { PlayerAccount.linkGoogle(context) }
+                                        .onSuccess {
+                                            guest = PlayerAccount.isGuest()
+                                            notice = sh("Hesabın Google'a bağlandı. İlerlemen artık güvende.", "Your account is linked to Google. Your progress is safe.")
+                                        }
+                                        .onFailure { error -> PlayerAccount.friendlyError(error.toString()).takeIf { it.isNotBlank() }?.let { notice = it } }
+                                    linking = false
+                                }
+                            },
+                            enabled = !linking,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = MainUi.Green),
+                        ) { Text(sh("GOOGLE HESABINA BAĞLA", "LINK GOOGLE ACCOUNT"), fontWeight = FontWeight.Black) }
+                    }
                     Spacer(Modifier.height(3.dp))
                 }
                 MainSettingsLink(Icons.Rounded.ManageAccounts, sh("Hesap ve gizlilik", "Account & privacy"), sh("Engellenenler ve hesap silme", "Blocked users and account deletion"), onAccount)
@@ -231,7 +263,14 @@ internal fun MainSettingsScreen(
         AlertDialog(
             onDismissRequest = { logoutDialog = false },
             title = { Text(sh("Çıkış yapılsın mı?", "Sign out?"), fontWeight = FontWeight.Black) },
-            text = { Text(sh("Bu cihazdaki Kelime Tahtı oturumu kapatılacak.", "Your Kelime Tahtı session on this device will end.")) },
+            text = {
+                Text(
+                    if (PlayerAccount.isGuest()) sh(
+                        "Misafir hesaptasın: çıkış yaparsan bu hesaba bir daha giremezsin ve ilerlemen kaybolur. Önce Google hesabına bağlaman önerilir.",
+                        "You're on a guest account: if you sign out you can't get back into it and your progress is lost. Link Google first.",
+                    ) else sh("Bu cihazdaki Kelime Tahtı oturumu kapatılacak.", "Your Kelime Tahtı session on this device will end."),
+                )
+            },
             dismissButton = { TextButton(onClick = { logoutDialog = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
             confirmButton = {
                 Button(

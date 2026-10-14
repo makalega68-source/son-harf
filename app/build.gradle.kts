@@ -38,6 +38,13 @@ android {
         val bannerAdUnitId = bannerAdUnitIdProvider.get()
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
+        // Google sign-in (Credential Manager) needs the Google Cloud "Web application" OAuth client
+        // ID that Supabase's Google provider also uses. Empty hides the Google buttons.
+        val googleWebClientId = providers.gradleProperty("SON_HARF_GOOGLE_WEB_CLIENT_ID")
+            .orElse(providers.environmentVariable("SON_HARF_GOOGLE_WEB_CLIENT_ID"))
+            .orElse("")
+            .get()
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", "\"$rewardedAdUnitId\"")
         buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", "\"$bannerAdUnitId\"")
         manifestPlaceholders["ADMOB_APP_ID"] = admobAppId
@@ -123,6 +130,10 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
     implementation("io.ktor:ktor-client-okhttp:3.5.1")
+    // Google sign-in through the system account picker.
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     implementation("com.android.billingclient:billing-ktx:8.0.0")
     implementation("com.google.android.gms:play-services-ads:24.5.0")

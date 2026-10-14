@@ -21,3 +21,7 @@
 -keep class com.google.android.filament.** { *; }
 -keep class io.github.sceneview.** { *; }
 -dontwarn io.github.sceneview.**
+
+# Credential Manager (Google sign-in) loads its Play Services provider by reflection.
+-if class androidx.credentials.CredentialManager
+-keep class androidx.credentials.playservices.** { *; }
