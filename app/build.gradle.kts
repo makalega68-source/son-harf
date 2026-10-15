@@ -24,8 +24,8 @@ android {
         applicationId = "com.sonharf.game"
         minSdk = 26
         targetSdk = 36
-        versionCode = 55
-        versionName = "1.0.18"
+        versionCode = 56
+        versionName = "1.0.19"
 
         val supabaseUrl = providers.gradleProperty("SON_HARF_SUPABASE_URL")
             .orElse("https://bzdtftzdjtjoqhtcqtxb.supabase.co")
@@ -42,7 +42,8 @@ android {
         // ID that Supabase's Google provider also uses. Empty hides the Google buttons.
         val googleWebClientId = providers.gradleProperty("SON_HARF_GOOGLE_WEB_CLIENT_ID")
             .orElse(providers.environmentVariable("SON_HARF_GOOGLE_WEB_CLIENT_ID"))
-            .orElse("")
+            // The Web client ID is public (it ships inside every app build); not a secret.
+            .orElse("825154787424-bde1htajsoljn9vhbf9c4c8n65kob9nb.apps.googleusercontent.com")
             .get()
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", "\"$rewardedAdUnitId\"")
