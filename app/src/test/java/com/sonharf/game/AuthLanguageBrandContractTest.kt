@@ -24,7 +24,8 @@ class AuthLanguageBrandContractTest {
         assertTrue(auth.contains("sh(\"Şifre\", \"Password\")"))
         assertTrue(auth.contains("sh(\"Erkek\", \"Male\")"))
         assertTrue(auth.contains("sh(\"Kadın\", \"Female\")"))
-        assertTrue(auth.contains("sh(\"Diğer\", \"Other\")"))
+        // Only two gender choices on sign-up.
+        assertFalse(auth.contains("sh(\"Diğer\", \"Other\")"))
         assertTrue(auth.contains("Incorrect email or password"))
         assertTrue(auth.contains("Verification email sent"))
 

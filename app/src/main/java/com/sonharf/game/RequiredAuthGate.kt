@@ -603,7 +603,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 )
                                 Text(sh("Bu ad oyuncu profilinde kalıcı olarak görünür.", "This name will remain on your player profile."), color = authColors.onSurfaceVariant, fontSize = 12.sp)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    listOf("erkek" to sh("Erkek", "Male"), "kadın" to sh("Kadın", "Female"), "diğer" to sh("Diğer", "Other")).forEach { (value, label) ->
+                                    listOf("erkek" to sh("Erkek", "Male"), "kadın" to sh("Kadın", "Female")).forEach { (value, label) ->
                                         val selected = gender == value
                                         FilterChip(
                                             selected = selected,
@@ -800,7 +800,7 @@ private fun QuickPlayCard(
                 label = { Text(sh("Oyuncu adı", "Player name")) },
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("erkek" to sh("Erkek", "Male"), "kadın" to sh("Kadın", "Female"), "diğer" to sh("Diğer", "Other")).forEach { (value, label) ->
+                listOf("erkek" to sh("Erkek", "Male"), "kadın" to sh("Kadın", "Female")).forEach { (value, label) ->
                     val selected = gender == value
                     FilterChip(
                         selected = selected,

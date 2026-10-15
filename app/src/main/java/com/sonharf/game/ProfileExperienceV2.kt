@@ -563,7 +563,7 @@ private fun LegacyIdentityDialogV2(initialName: String, busy: Boolean, onDismiss
                 Text(sh("Bu ekran yalnız eski hesaplar içindir. E-posta tekrar istenmez; kayıt sonrası bu bilgiler değiştirilemez.", "This is only for legacy accounts. Email is not requested; these values are locked after saving."), fontSize = 14.sp)
                 OutlinedTextField(name, { name = it.take(24) }, label = { Text(sh("Oyuncu adı", "Player name")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("erkek" to "Erkek", "kadın" to "Kadın", "diğer" to "Diğer").forEach { (value, label) ->
+                    listOf("erkek" to "Erkek", "kadın" to "Kadın").forEach { (value, label) ->
                         FilterChip(selected = gender == value, onClick = { gender = value }, label = { Text(label) }, modifier = Modifier.weight(1f))
                     }
                 }
