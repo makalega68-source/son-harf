@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
@@ -12,6 +12,7 @@ import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.auth.signInAnonymously
 import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -22,6 +23,8 @@ import kotlinx.serialization.json.put
  * also sign a returning player straight in. Email sign-in stays as an option.
  */
 internal object PlayerAccount {
+    private const val GOOGLE_PICKER_TIMEOUT_MS = 120_000L
+
     /** Any signed-in account, guest or member, may play. */
     fun hasPlayableSession(): Boolean =
         runCatching { SupabaseProvider.client.auth.currentUserOrNull() != null }.getOrDefault(false)
@@ -63,15 +66,17 @@ internal object PlayerAccount {
         SonHarfPreferences.setRememberLogin(context, true)
     }
 
-    /** The Google account's ID token from the system account picker. Needs an activity context. */
+    /**
+     * The Google account's ID token from Google's full account chooser (the "Sign in with Google"
+     * flow, which opens on every phone; the small bottom sheet did not appear on some phones and
+     * left the button spinning). Needs an activity context. Never waits forever.
+     */
     private suspend fun googleIdToken(activityContext: Context): String {
-        val option = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
-            .setAutoSelectEnabled(false)
-            .build()
+        val option = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID).build()
         val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
-        val credential = CredentialManager.create(activityContext).getCredential(activityContext, request).credential
+        val credential = withTimeout(GOOGLE_PICKER_TIMEOUT_MS) {
+            CredentialManager.create(activityContext).getCredential(activityContext, request)
+        }.credential
         check(credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
             "google_no_credential"
         }
@@ -112,8 +117,15 @@ internal object PlayerAccount {
         "GetCredentialCancellationException" in raw || "canceled" in raw.lowercase() || "cancelled" in raw.lowercase() -> ""
         "NoCredentialException" in raw || "google_no_credential" in raw ->
             sh("Telefonda Google hesabı bulunamadı.", "No Google account was found on this phone.")
+        "TimeoutCancellationException" in raw || "Timed out waiting" in raw ->
+            sh("Google penceresi açılamadı. Google Play Hizmetleri'ni güncelleyip tekrar dene.",
+                "The Google window didn't open. Update Google Play services and try again.")
+        "Developer console is not set up" in raw || "[10]" in raw || "28444" in raw ->
+            sh("Google girişi henüz hazır değil (uygulama kaydı). Kısa süre sonra tekrar dene.",
+                "Google sign-in isn't ready yet (app registration). Try again soon.")
         "Unable to resolve host" in raw || "timeout" in raw.lowercase() ->
             sh("İnternet bağlantısını kontrol edip tekrar dene.", "Check your internet connection and try again.")
-        else -> sh("İşlem tamamlanamadı. Tekrar dene.", "That didn't work. Try again.")
+        else -> sh("İşlem tamamlanamadı. Tekrar dene.", "That didn't work. Try again.") +
+            raw.substringBefore(':').substringAfterLast('.').takeIf { it.isNotBlank() && it.length < 60 }?.let { " ($it)" }.orEmpty()
     }
 }
