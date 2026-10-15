@@ -23,4 +23,10 @@ class GuestPlayContractTest {
         // Signing out of a guest account warns that the progress would be lost.
         assertTrue(source("MainSettingsVipScreen.kt").contains("Misafir hesaptasın: çıkış yaparsan"))
     }
+
+    @Test fun guestsAreAskedOnHomeToSecureTheirAccount() {
+        val home = java.io.File("src/main/java/com/sonharf/game/HomeLobby.kt").readText()
+        assertTrue(home.contains("HomeSecureAccountBanner(me)"))
+        assertTrue(home.contains("PlayerAccount.linkGoogle(context)"))
+    }
 }

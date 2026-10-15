@@ -35,6 +35,7 @@ import com.sonharf.game.data.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** Lobby colours: deep petrol board behind the logo; the action tiles reuse its green and red. */
 internal object LobbyBrand {
@@ -213,6 +214,9 @@ internal fun HomeLobbyScreen(
                 }
             }
 
+            // A guest's progress lives on this phone only: ask them, right here, to keep it with Google.
+            HomeSecureAccountBanner(me)
+
             // Son Harf is the main game: its two 3D tiles (new match, my games) lead the lobby.
             Text(sh("Son Harf", "Last Letter").uppercase(), Modifier.fillMaxWidth().padding(top = 14.dp),
                 color = LobbyBrand.Gold, fontSize = 15.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp,
@@ -277,6 +281,52 @@ internal fun HomeLobbyScreen(
     )
     guide?.let { LobbyGuideDialog(it) { guide = null } }
     if (adminOpen) AdminPanelDialog { adminOpen = false }
+}
+
+/** Shown to guests only: one tap links Google to this same account, so nothing earned is lost. */
+@Composable
+private fun HomeSecureAccountBanner(userId: String?) {
+    if (!PlayerAccount.googleAvailable) return
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var guest by remember(userId) { mutableStateOf(PlayerAccount.isGuest()) }
+    var linking by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    if (!guest && message == null) return
+    Surface(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp), shape = RoundedCornerShape(18.dp),
+        color = LobbyBrand.Band, border = BorderStroke(1.5.dp, LobbyBrand.Gold)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Rounded.Shield, null, tint = LobbyBrand.Gold, modifier = Modifier.size(30.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(if (guest) sh("Hesabını güvenceye al", "Secure your account") else sh("Hesabın güvende", "Your account is safe"),
+                        color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                    Text(message ?: sh("Altınların, puanın ve ürünlerin kaybolmasın. Telefon değişse de devam et.",
+                        "Keep your gold, rating and items, even on a new phone."),
+                        color = Color.White.copy(alpha = .8f), fontSize = 12.sp)
+                }
+            }
+            if (guest) Button(
+                onClick = {
+                    if (linking) return@Button
+                    linking = true
+                    scope.launch {
+                        runCatching { PlayerAccount.linkGoogle(context) }
+                            .onSuccess {
+                                guest = PlayerAccount.isGuest()
+                                message = sh("Google hesabına bağlandı. İlerlemen artık güvende.", "Linked to Google. Your progress is safe.")
+                            }
+                            .onFailure { error -> PlayerAccount.friendlyError(error.toString()).takeIf { it.isNotBlank() }?.let { message = it } }
+                        linking = false
+                    }
+                },
+                enabled = !linking,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = LobbyBrand.Gold, contentColor = LobbyBrand.Band),
+            ) { Text(if (linking) sh("BAĞLANIYOR…", "LINKING…") else sh("GOOGLE İLE GÜVENCEYE AL", "SECURE WITH GOOGLE"), fontWeight = FontWeight.Black) }
+        }
+    }
 }
 
 /** A game row: icon on the left, name and one live line in the middle, an arrow on the right. */
