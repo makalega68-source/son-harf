@@ -1,14 +1,5 @@
 package com.sonharf.game
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,11 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CloudDownload
-import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Send
-import androidx.compose.material.icons.rounded.StopCircle
-import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -33,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
@@ -73,7 +59,6 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
     val nanoEngine = remember { MascotNanoEngine() }
     val language = SonHarfUiState.language
     val isTurkish = language.lowercase(Locale.ROOT).startsWith("tr")
-    val languageTag = if (isTurkish) "tr-TR" else "en-US"
 
     val messages = remember {
         mutableStateListOf(
@@ -89,93 +74,11 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
         )
     }
     var input by remember { mutableStateOf("") }
-    var voiceMode by remember { mutableStateOf(false) }
     var thinking by remember { mutableStateOf(false) }
-    var listening by remember { mutableStateOf(false) }
-    var speechError by remember { mutableStateOf<String?>(null) }
-    var recognizedUtterance by remember { mutableStateOf<String?>(null) }
     var nanoAvailability by remember { mutableStateOf(MascotNanoAvailability.CHECKING) }
     var downloadBytes by remember { mutableStateOf<Long?>(null) }
     var mascotActionKey by remember { mutableLongStateOf(1L) }
     var mascotAction by remember { mutableStateOf<WordSiegeMascotAction?>(WordSiegeMascotAction.PEEK) }
-
-    val recognizer = remember {
-        if (SpeechRecognizer.isRecognitionAvailable(context)) {
-            runCatching { SpeechRecognizer.createSpeechRecognizer(context) }.getOrNull()
-        } else {
-            null
-        }
-    }
-    DisposableEffect(recognizer, languageTag) {
-        recognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {
-                listening = true
-                speechError = null
-            }
-
-            override fun onBeginningOfSpeech() = Unit
-            override fun onRmsChanged(rmsdB: Float) = Unit
-            override fun onBufferReceived(buffer: ByteArray?) = Unit
-            override fun onEndOfSpeech() = Unit
-
-            override fun onError(error: Int) {
-                listening = false
-                speechError = if (isTurkish) {
-                    "Sesini anlayamadım. Mikrofona tekrar dokunabilirsin."
-                } else {
-                    "I couldn't catch that. Tap the microphone and try again."
-                }
-            }
-
-            override fun onResults(results: Bundle?) {
-                listening = false
-                val text = results
-                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    ?.firstOrNull()
-                    ?.trim()
-                if (!text.isNullOrBlank()) recognizedUtterance = text
-            }
-
-            override fun onPartialResults(partialResults: Bundle?) = Unit
-            override fun onEvent(eventType: Int, params: Bundle?) = Unit
-        })
-        onDispose {
-            recognizer?.cancel()
-            recognizer?.destroy()
-        }
-    }
-
-    fun startVoiceInput() {
-        if (recognizer == null) {
-            speechError = if (isTurkish) "Bu cihazda konuşma tanıma kullanılamıyor." else "Speech recognition isn't available on this device."
-            return
-        }
-        if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return
-        speechError = null
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageTag)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, languageTag)
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-        }
-        recognizer.startListening(intent)
-        listening = true
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) startVoiceInput()
-        else speechError = if (isTurkish) "Sesli sohbet için mikrofon izni gerekiyor." else "Microphone permission is required for voice chat."
-    }
-
-    fun requestVoiceInput() {
-        if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            startVoiceInput()
-        } else {
-            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        }
-    }
 
     fun submit(rawText: String) {
         val text = rawText.trim()
@@ -189,9 +92,22 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
         messages.add(userMessage)
         input = ""
         thinking = true
-        speechError = null
 
         scope.launch {
+            val localResult = ObiLocalAssistant.handle(context, text, isTurkish)
+            if (localResult.handled) {
+                messages.add(
+                    MascotChatMessage(
+                        id = System.nanoTime(),
+                        text = localResult.reply.orEmpty(),
+                        fromMascot = true,
+                    ),
+                )
+                thinking = false
+                mascotActionKey += 1L
+                mascotAction = WordSiegeMascotAction.NOD
+                return@launch
+            }
             val prompt = MascotConversation.prompt(contextBeforeMessage, text, language, mascotSkin)
             val nanoReply = if (nanoAvailability == MascotNanoAvailability.READY) {
                 nanoEngine.generate(prompt)
@@ -219,13 +135,6 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
         } while (nanoAvailability == MascotNanoAvailability.DOWNLOADING)
     }
 
-    LaunchedEffect(recognizedUtterance) {
-        val spokenText = recognizedUtterance ?: return@LaunchedEffect
-        recognizedUtterance = null
-        input = spokenText
-        submit(spokenText)
-    }
-
     val listState = rememberLazyListState()
     LaunchedEffect(messages.size, thinking) {
         if (messages.isNotEmpty()) {
@@ -240,7 +149,6 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
             .imePadding(),
     ) {
         MascotChatHeader(onBack = {
-            recognizer?.cancel()
             onBack()
         })
 
@@ -261,6 +169,8 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
                 }
             },
         )
+
+        ObiLocalToolsCard(isTurkish)
 
         Box(
             Modifier
@@ -303,17 +213,6 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
             }
         }
 
-        ModeSelector(
-            voiceMode = voiceMode,
-            isTurkish = isTurkish,
-            onText = {
-                voiceMode = false
-                    recognizer?.cancel()
-                listening = false
-            },
-            onVoice = { voiceMode = true },
-        )
-
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -332,30 +231,10 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
             }
         }
 
-        if (speechError != null) {
-            Text(
-                text = speechError.orEmpty(),
-                modifier = Modifier.padding(horizontal = ChatScreenHorizontal, vertical = 2.dp),
-                color = ChatColors.RewardAmber,
-                fontSize = 11.sp,
-            )
-        }
-
         ChatComposer(
             input = input,
             onInputChange = { input = it },
-            voiceMode = voiceMode,
-            listening = listening,
             enabled = !thinking,
-            isTurkish = isTurkish,
-            onMic = {
-                if (listening) {
-                    recognizer?.cancel()
-                    listening = false
-                } else {
-                    requestVoiceInput()
-                }
-            },
             onSend = { submit(input) },
         )
     }
@@ -375,19 +254,44 @@ private fun MascotChatHeader(onBack: () -> Unit) {
         }
         Column(Modifier.weight(1f)) {
             Text(
-                sh("Maskotla Sohbet", "Mascot Chat"),
+                sh("Obi Yerel", "Obi Local"),
                 color = ChatColors.TextPrimary,
                 fontSize = 19.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                sh("Sadece burada konuşur", "Only speaks here"),
+                sh("Notlar ve hatırlatıcılar telefonunda kalır", "Notes and reminders stay on your phone"),
                 color = ChatColors.TextSecondary,
                 fontSize = 11.sp,
             )
         }
-        Icon(Icons.Rounded.VolumeUp, null, tint = ChatColors.Lavender, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(8.dp))
+    }
+}
+
+@Composable
+private fun ObiLocalToolsCard(isTurkish: Boolean) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = ChatScreenHorizontal, vertical = 3.dp),
+        shape = ChatShapes.Medium,
+        color = ChatColors.PrimarySurface,
+        border = BorderStroke(1.dp, ChatColors.PlayGreen.copy(alpha = .28f)),
+    ) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 9.dp)) {
+            Text(
+                if (isTurkish) "İnternetsiz asistan" else "Offline assistant",
+                color = ChatColors.TextPrimary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                if (isTurkish) "\"Not al ...\" · \"20 dakika zamanlayıcı başlat\" · \"Yarın saat 09.00'da ... diye hatırlat\"" else "\"Take a note ...\" · \"Start a 20 minute timer\" · \"Remind me tomorrow at 9 ...\"",
+                color = ChatColors.TextSecondary,
+                fontSize = 10.sp,
+                lineHeight = 14.sp,
+            )
+        }
     }
 }
 
@@ -447,35 +351,6 @@ private fun NanoStatusCard(
 }
 
 @Composable
-private fun ModeSelector(
-    voiceMode: Boolean,
-    isTurkish: Boolean,
-    onText: () -> Unit,
-    onVoice: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = ChatScreenHorizontal, vertical = 4.dp),
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        FilterChip(
-            selected = !voiceMode,
-            onClick = onText,
-            label = { Text(if (isTurkish) "Yazılı" else "Text") },
-            leadingIcon = { Icon(Icons.Rounded.Keyboard, null, modifier = Modifier.size(17.dp)) },
-        )
-        Spacer(Modifier.width(10.dp))
-        FilterChip(
-            selected = voiceMode,
-            onClick = onVoice,
-            label = { Text(if (isTurkish) "Sesli" else "Voice") },
-            leadingIcon = { Icon(Icons.Rounded.Mic, null, modifier = Modifier.size(17.dp)) },
-        )
-    }
-}
-
-@Composable
 private fun MascotMessageBubble(message: MascotChatMessage) {
     val alignment = if (message.fromMascot) Alignment.CenterStart else Alignment.CenterEnd
     val background = if (message.fromMascot) ChatColors.PrimarySurface else ChatColors.DeepBlue
@@ -525,11 +400,7 @@ private fun MascotThinkingBubble(isTurkish: Boolean) {
 private fun ChatComposer(
     input: String,
     onInputChange: (String) -> Unit,
-    voiceMode: Boolean,
-    listening: Boolean,
     enabled: Boolean,
-    isTurkish: Boolean,
-    onMic: () -> Unit,
     onSend: () -> Unit,
 ) {
     Surface(
@@ -538,33 +409,7 @@ private fun ChatComposer(
         border = BorderStroke(1.dp, ChatColors.Divider),
     ) {
         Column(Modifier.padding(horizontal = ChatScreenHorizontal, vertical = 10.dp)) {
-            if (voiceMode) {
-                Text(
-                    if (listening) {
-                        if (isTurkish) "Seni dinliyorum…" else "I'm listening…"
-                    } else {
-                        if (isTurkish) "Mikrofona dokun; cevabımı sesli vereyim." else "Tap the microphone and I'll answer out loud."
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-                    color = if (listening) ChatColors.PlayGreen else ChatColors.TextSecondary,
-                    textAlign = TextAlign.Center,
-                    fontSize = 11.sp,
-                )
-            }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (voiceMode) {
-                    FilledIconButton(
-                        onClick = onMic,
-                        enabled = enabled,
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (listening) ChatColors.Danger else ChatColors.TacticalTurquoise,
-                            contentColor = Color.White,
-                        ),
-                    ) {
-                        Icon(if (listening) Icons.Rounded.StopCircle else Icons.Rounded.Mic, null)
-                    }
-                    Spacer(Modifier.width(8.dp))
-                }
                 OutlinedTextField(
                     value = input,
                     onValueChange = onInputChange,

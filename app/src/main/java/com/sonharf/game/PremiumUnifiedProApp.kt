@@ -371,7 +371,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     }
                     PremiumDestination.MASCOT_CHAT -> MascotChatScreen(
                         onBack = { destination = PremiumDestination.HOME },
-                        mascotSkin = chatMascotSkin(shellContext),
+                        mascotSkin = WordSiegeMascotSkin.ORB,
                     )
                 }
                 }
@@ -391,14 +391,6 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             }
         }
     }
-}
-
-/** The mascot the player picked, if they own it, otherwise their first owned character. */
-private fun chatMascotSkin(context: android.content.Context): WordSiegeMascotSkin {
-    val owned = WordSiegeMascotOwnership.owned
-    val picked = WordSiegeMascotBond(context).skinChoice
-    if (SonHarfCosmetics.throneChampion) return WordSiegeMascotSkin.GOLD_KING
-    return picked?.takeIf { it in owned } ?: owned.minByOrNull { it.ordinal } ?: WordSiegeMascotSkin.ORB
 }
 
 @Composable
