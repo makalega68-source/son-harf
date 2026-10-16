@@ -38,4 +38,11 @@ jobs:
         run: |
           cp obi/build/outputs/apk/debug/obi-debug.apk Obi-Yerel-Test.apk
           gh release view obi-local-test >/dev/null 2>&1 || gh release create obi-local-test --prerelease --title "Obi yerel test" --notes "Obi yerel kişisel asistan test sürümü."
-          gh release upload obi-local-test Obi-Yerel-Test.apk --clobber
+          expected="sha256:$(sha256sum Obi-Yerel-Test.apk | cut -d' ' -f1)"
+          for attempt in 1 2 3; do
+            if gh release upload obi-local-test Obi-Yerel-Test.apk --clobber; then exit 0; fi
+            actual="$(gh api repos/${{ github.repository }}/releases/tags/obi-local-test --jq '.assets[] | select(.name == "Obi-Yerel-Test.apk") | .digest' 2>/dev/null || true)"
+            if [ "$actual" = "$expected" ]; then exit 0; fi
+            sleep 3
+          done
+          exit 1
