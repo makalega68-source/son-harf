@@ -319,3 +319,31 @@ jobs:
             gh release upload branch-test Kelime-Tahti-Play.aab --clobber || echo "::warning::Play bundle upload failed"
           fi
           set -e
+
+  publish-obi-local:
+    if: github.event_name == 'pull_request' && github.head_ref == 'claude/mascot-animations-behavior-31rof9'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+      - name: Build standalone Obi APK
+        run: ./gradlew :obi:assembleDebug --stacktrace
+      - name: Publish Obi direct download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp obi/build/outputs/apk/debug/obi-debug.apk Obi-Yerel-Test.apk
+          gh release view obi-local-test >/dev/null 2>&1 || gh release create obi-local-test --prerelease --title "Obi yerel test" --notes "Obi yerel kişisel asistan test sürümü."
+          gh release upload obi-local-test Obi-Yerel-Test.apk --clobber
