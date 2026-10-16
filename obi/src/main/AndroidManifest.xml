@@ -22,6 +22,10 @@
         <activity
             android:name=".MainActivity"
             android:exported="false" />
+        <activity
+            android:name=".ObiGeminiSetupActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <receiver
             android:name=".ObiReminderReceiver"
             android:exported="false" />

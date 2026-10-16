@@ -27,7 +27,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.ScrollView
 import android.view.inputmethod.EditorInfo
-import android.text.InputType
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.nl.translate.TranslateLanguage
@@ -40,6 +39,7 @@ class ObiOverlayService : Service() {
     companion object {
         const val ACTION_START = "com.obi.local.START_OVERLAY"
         const val ACTION_STOP = "com.obi.local.STOP_OVERLAY"
+        const val ACTION_SHOW = "com.obi.local.SHOW_OVERLAY"
         const val ACTION_READY = "com.obi.local.OVERLAY_READY"
         const val ACTION_ERROR = "com.obi.local.OVERLAY_ERROR"
         private const val CHANNEL = "obi_companion"
@@ -65,6 +65,10 @@ class ObiOverlayService : Service() {
     private val moves = ArrayDeque<WordSiegeMascotAction>()
     private val celebration = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == ACTION_SHOW) {
+                mascot?.visibility = View.VISIBLE
+                return
+            }
             animate(WordSiegeMascotAction.CHEER)
             showBubble(intent.getStringExtra("text") ?: "Yaşasın! ✨")
         }
@@ -99,13 +103,18 @@ class ObiOverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        if (Build.VERSION.SDK_INT >= 33) registerReceiver(celebration, IntentFilter("com.obi.local.CELEBRATE"), Context.RECEIVER_NOT_EXPORTED)
-        else registerReceiver(celebration, IntentFilter("com.obi.local.CELEBRATE"))
+        val filter = IntentFilter().apply { addAction("com.obi.local.CELEBRATE"); addAction(ACTION_SHOW) }
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(celebration, filter, Context.RECEIVER_NOT_EXPORTED)
+        else registerReceiver(celebration, filter)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             stopSelf()
+            return START_NOT_STICKY
+        }
+        if (intent?.action == ACTION_SHOW) {
+            mascot?.visibility = View.VISIBLE
             return START_NOT_STICKY
         }
         if (!Settings.canDrawOverlays(this)) {
@@ -118,7 +127,7 @@ class ObiOverlayService : Service() {
             if (mascot == null) {
                 addMascot()
                 handler.postDelayed(ambient, 8_000L)
-            }
+            } else mascot?.visibility = View.VISIBLE
             notifyEntry(ACTION_READY)
         } catch (_: RuntimeException) {
             notifyEntry(ACTION_ERROR)
@@ -325,42 +334,17 @@ class ObiOverlayService : Service() {
             setTextColor(Color.rgb(156, 212, 202)); setPadding(dp(4), dp(13), dp(4), 0)
             setOnClickListener { settings.visibility = if (settings.visibility == View.GONE) View.VISIBLE else View.GONE }
         }
-        val connect = pill(if (gemini.connected()) "✓  Gemini anahtarı kayıtlı" else "✦  Gemini bağla", true)
-        val setup = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
-        val keyInput = EditText(this).apply {
-            hint = "Gemini API anahtarını yapıştır"; setTextColor(Color.WHITE)
-            setHintTextColor(Color.rgb(178, 188, 203)); textSize = 14f
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            setPadding(dp(10), dp(8), dp(10), dp(8))
-        }
-        val keyHelp = TextView(this).apply {
-            text = "İlk kez: Google AI Studio'dan ücretsiz katman anahtarı oluştur, buraya yapıştır. Sonrasında Obi kendisi bağlanır. Anahtar telefonda şifreli saklanır."
-            textSize = 12f; setTextColor(Color.rgb(193, 209, 220)); setPadding(dp(5), dp(8), dp(5), dp(8))
-        }
-        val save = pill("Bağlantıyı kaydet", true).apply { setOnClickListener {
-            if (gemini.saveKey(keyInput.text.toString())) {
-                keyInput.text.clear(); setup.visibility = View.GONE
-                compose.visibility = View.VISIBLE; shortcuts.visibility = View.VISIBLE
-                settingsToggle.visibility = View.VISIBLE
-                connect.text = "✓  Gemini anahtarı kayıtlı"
-                message.text = "Anahtar kaydedildi. Gemini'ye bir şey soralım 💜"
-            } else message.text = "Anahtar kaydedilemedi. API anahtarını kontrol et."
-        } }
-        val studio = pill("API anahtarı al ↗", false).apply { setOnClickListener {
-            startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://aistudio.google.com/api-keys"))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } }
+        val connect = pill(if (gemini.connected()) "✓  Gemini ayarları" else "✦  Gemini bağla", true)
         connect.setOnClickListener {
-            val opening = setup.visibility != View.VISIBLE
-            setup.visibility = if (opening) View.VISIBLE else View.GONE
-            compose.visibility = if (opening) View.GONE else View.VISIBLE
-            shortcuts.visibility = if (opening) View.GONE else View.VISIBLE
-            settingsToggle.visibility = if (opening) View.GONE else View.VISIBLE
+            hidePanel()
+            hideBubble()
+            mascot?.visibility = View.GONE
+            try {
+                startActivity(Intent(this, ObiGeminiSetupActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (_: RuntimeException) {
+                mascot?.visibility = View.VISIBLE
+            }
         }
-        setup.addView(keyHelp)
-        setup.addView(keyInput, LinearLayout.LayoutParams(-1, dp(48)))
-        setup.addView(studio, LinearLayout.LayoutParams(-1, dp(40)).apply { topMargin = dp(6) })
-        setup.addView(save, LinearLayout.LayoutParams(-1, dp(43)).apply { topMargin = dp(6) })
         settings.addView(pill("Bildirim izni", false).apply { setOnClickListener {
             hidePanel()
             startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
@@ -371,7 +355,6 @@ class ObiOverlayService : Service() {
         card.addView(compose, LinearLayout.LayoutParams(-1, dp(50)).apply { topMargin = dp(14) })
         card.addView(shortcuts, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(10) })
         card.addView(connect, LinearLayout.LayoutParams(-1, dp(43)).apply { topMargin = dp(10) })
-        card.addView(setup)
         card.addView(settingsToggle)
         card.addView(settings)
         val params = WindowManager.LayoutParams(
