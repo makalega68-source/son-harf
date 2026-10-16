@@ -243,6 +243,7 @@ class ObiOverlayService : Service() {
             registerReceiver(phone, system)
         }
         store.scheduleDaily()
+        if (gemini.connected()) ObiGeminiVoice(this).prepareFixed()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

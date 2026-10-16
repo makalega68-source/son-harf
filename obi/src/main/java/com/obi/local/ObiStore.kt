@@ -410,6 +410,12 @@ internal class ObiStore(private val context: Context) {
         repeat?.let { entry.put("repeat", it) }
         putList("pending_alarms", jsonList("pending_alarms") + entry)
         arm(id, time, text, kind)
+        // Make Obi's spoken line now, while online, so the alert can speak offline later.
+        if (prefs.getBoolean("voice_alerts", true)) {
+            val voice = ObiGeminiVoice(context)
+            if (kind == "alarm") voice.prepareFixed()
+            else if (!text.startsWith("Obi ")) voice.prepare("rem_$id", ObiGeminiVoice.reminderLine(text))
+        }
         ObiWidget.refresh(context)
         return id
     }
@@ -437,6 +443,7 @@ internal class ObiStore(private val context: Context) {
     fun cancel(id: Int) {
         val alarm = alarms().firstOrNull { it.id == id }
         if (alarm != null) context.getSystemService(AlarmManager::class.java)?.cancel(pendingFor(id, alarm.text, alarm.kind))
+        ObiGeminiVoice(context).forget("rem_$id")
         forgetAlarm(id)
     }
 
@@ -577,7 +584,7 @@ class ObiReminderReceiver : BroadcastReceiver() {
         if (context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).getBoolean("voice_alerts", true)) {
             runCatching {
                 context.startForegroundService(Intent(context, ObiVoiceAlertService::class.java)
-                    .putExtra("kind", if (kind == "alarm") "alarm" else "reminder").putExtra("text", text))
+                    .putExtra("kind", if (kind == "alarm") "alarm" else "reminder").putExtra("text", text).putExtra("id", id))
             }
         }
     }

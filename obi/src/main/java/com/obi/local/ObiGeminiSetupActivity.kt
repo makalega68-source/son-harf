@@ -87,6 +87,7 @@ class ObiGeminiSetupActivity : Activity() {
         body.addView(action("Bağlantıyı kaydet", true) {
             if (gemini.saveKey(keyField.text.toString())) {
                 keyField.text.clear()
+                ObiGeminiVoice(this).prepareFixed()
                 status.text = "Anahtar kaydedildi. Obi'ye dönüp bir mesaj yazarak bağlantıyı dene."
                 finish()
             } else status.text = "Anahtar kaydedilemedi. AI Studio'daki API anahtarını kontrol et."

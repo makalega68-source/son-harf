@@ -34,7 +34,7 @@ class ObiVoiceAlertService : Service() {
         private val TURKISH = Locale("tr", "TR")
 
         /** Voice pitch (1.0 = engine default); Obi talks a little higher and brighter. */
-        fun pitch(context: Context): Float = context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).getFloat("voice_pitch", 1.45f)
+        fun pitch(context: Context): Float = context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).getFloat("voice_pitch", 1.6f)
 
         fun setPitch(context: Context, value: Float) {
             context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).edit().putFloat("voice_pitch", value.coerceIn(0.9f, 2.0f)).apply()
@@ -44,6 +44,7 @@ class ObiVoiceAlertService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var player: MediaPlayer? = null
     private var tts: TextToSpeech? = null
+    private var track: android.media.AudioTrack? = null
     private var activeStart = 0
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -75,9 +76,39 @@ class ObiVoiceAlertService : Service() {
         else startForeground(ID, notification)
         stopSound()
         // An alarm is said twice so it can wake someone; a reminder once.
-        speak(if (kind == "alarm" && intent?.action != ACTION_PREVIEW) "$phrase … $phrase" else phrase, sound, startId)
+        val twice = kind == "alarm" && intent?.action != ACTION_PREVIEW
+        val id = intent?.getIntExtra("id", 0) ?: 0
+        val (key, line) = when {
+            intent?.action == ACTION_PREVIEW -> "preview" to ObiGeminiVoice.FIXED.getValue("preview")
+            kind == "alarm" && morning -> "alarm_morning" to ObiGeminiVoice.FIXED.getValue("alarm_morning")
+            kind == "alarm" -> "alarm" to ObiGeminiVoice.FIXED.getValue("alarm")
+            text != null && id != 0 -> "rem_$id" to ObiGeminiVoice.reminderLine(text)
+            else -> "reminder" to ObiGeminiVoice.FIXED.getValue("reminder")
+        }
+        val voice = ObiGeminiVoice(this)
+        val phoneVoice = { speak(if (twice) "$phrase … $phrase" else phrase, sound, startId) }
+        if (voice.has(key)) playGemini(voice, key, twice, startId, phoneVoice)
+        else if (ObiGemini(this).connected()) Thread {
+            // Not made yet (e.g. a new phrase): try now, briefly; otherwise use the phone's voice.
+            val ready = runCatching { voice.prepareBlocking(key, line) }.getOrDefault(false)
+            handler.post {
+                if (activeStart != startId) return@post
+                if (ready) playGemini(voice, key, twice, startId, phoneVoice) else phoneVoice()
+            }
+        }.start()
+        else phoneVoice()
         handler.postDelayed({ if (activeStart == startId) stopSelfResult(startId) }, 30_000L)
         return START_NOT_STICKY
+    }
+
+    private fun playGemini(voice: ObiGeminiVoice, key: String, twice: Boolean, startId: Int, fallback: () -> Unit) {
+        track = voice.play(key, pitch(this), if (twice) 2 else 1) {
+            // A one-off reminder's clip is no longer needed once it has been said.
+            val id = key.removePrefix("rem_").toIntOrNull()
+            if (id != null && ObiStore(this).alarms().none { it.id == id }) voice.forget(key)
+            handler.post { if (activeStart == startId) stopSelfResult(startId) }
+        }
+        if (track == null) fallback()
     }
 
     private fun speak(phrase: String, fallback: Int, startId: Int) {
@@ -139,6 +170,8 @@ class ObiVoiceAlertService : Service() {
     private fun stopSound() {
         player?.release()
         player = null
+        track?.let { runCatching { it.stop() } }
+        track = null
     }
 
     override fun onDestroy() {

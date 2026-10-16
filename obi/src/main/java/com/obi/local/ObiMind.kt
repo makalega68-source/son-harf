@@ -152,6 +152,9 @@ internal class ObiGemini(private val context: Context) {
 
     fun connected(): Boolean = readKey() != null
 
+    /** For other on-device Gemini features (the voice); never logged or sent anywhere but Google. */
+    internal fun apiKey(): String? = readKey()
+
     fun saveKey(raw: String): Boolean = runCatching {
         val key = raw.trim()
         require(key.length in 20..300 && key.none(Char::isWhitespace))
