@@ -10,11 +10,17 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.activity.result.contract.ActivityResultContracts
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -34,6 +40,12 @@ class ObiEntryActivity : ComponentActivity() {
     private var openedPermissionScreen = false
     private var waitingForMascot = false
     private var status by mutableStateOf("Obi'yi ana ekranda göstermek için aşağıdaki adımları izle.")
+    private var showPrivacy by mutableStateOf(false)
+    private var askingNotifications = false
+    private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        askingNotifications = false
+        if (Settings.canDrawOverlays(this)) startMascot()
+    }
 
     private val resultReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -58,11 +70,15 @@ class ObiEntryActivity : ComponentActivity() {
         } else {
             registerReceiver(resultReceiver, filter)
         }
+        // Reminders, alarms and the morning message are notifications; ask once on Android 13+.
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            askingNotifications = runCatching { notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) }.isSuccess
+        }
         setContent {
             MaterialTheme {
                 Surface(Modifier.fillMaxSize(), color = Color(0xFF0B1020)) {
                     Column(
-                        Modifier.fillMaxSize().padding(28.dp),
+                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
@@ -81,6 +97,19 @@ class ObiEntryActivity : ComponentActivity() {
                             "İzin verdikten sonra Ayarlar'dan geri dön. Obi görünmezse uygulama simgesine tekrar dokun.",
                             modifier = Modifier.padding(top = 14.dp), color = Color(0xFFAFB9D4), fontSize = 13.sp,
                         )
+                        Text(
+                            "Neden bu izin? Obi, diğer uygulamaların üzerinde küçük bir arkadaş olarak durabilmek için ‘üstte gösterme’ iznine ihtiyaç duyar. Ekranını okumaz, dokunduğun başka hiçbir şeyi görmez.",
+                            modifier = Modifier.padding(top = 18.dp), color = Color(0xFFDAF8F2), fontSize = 13.sp, lineHeight = 19.sp,
+                        )
+                        Text(
+                            if (showPrivacy) "Gizlilik  ▲" else "Gizlilik  ▼",
+                            modifier = Modifier.padding(top = 16.dp).clickable { showPrivacy = !showPrivacy },
+                            color = Color(0xFF8FECDC), fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                        )
+                        if (showPrivacy) Text(
+                            ObiPrivacy.TEXT,
+                            modifier = Modifier.padding(top = 8.dp), color = Color(0xFFAFB9D4), fontSize = 12.sp, lineHeight = 18.sp,
+                        )
                     }
                 }
             }
@@ -89,6 +118,7 @@ class ObiEntryActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (askingNotifications) return
         if (Settings.canDrawOverlays(this)) {
             startMascot()
         } else if (openedPermissionScreen) {

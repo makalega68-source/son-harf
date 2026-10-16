@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Glow -->
+    <path android:fillColor="#3356E4F7" android:pathData="M54,20a34,34 0,1 1,0 68a34,34 0,1 1,0 -68z" />
+    <!-- Orb body -->
+    <path android:pathData="M54,25a29,29 0,1 1,0 58a29,29 0,1 1,0 -58z">
+        <aapt:attr xmlns:aapt="http://schemas.android.com/aapt" name="android:fillColor">
+            <gradient android:type="radial" android:centerX="46" android:centerY="44" android:gradientRadius="40"
+                android:startColor="#FF9AF3EA" android:endColor="#FF5B47C8" />
+        </aapt:attr>
+    </path>
+    <!-- Shine -->
+    <path android:fillColor="#88FFFFFF" android:pathData="M41,37a7,4.5 -30,1 1,9 -4a7,4.5 -30,1 1,-9 4z" />
+    <!-- Eyes -->
+    <path android:fillColor="#FF1B1640" android:pathData="M39,50a5,6.5 0 1,0 10,0a5,6.5 0 1,0 -10,0z M59,50a5,6.5 0 1,0 10,0a5,6.5 0 1,0 -10,0z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M40.2,47a1.8,1.8 0 1,0 3.6,0a1.8,1.8 0 1,0 -3.6,0z M60.2,47a1.8,1.8 0 1,0 3.6,0a1.8,1.8 0 1,0 -3.6,0z" />
+    <!-- Cheeks -->
+    <path android:fillColor="#66FF8FB8" android:pathData="M32,60a4,2.5 0 1,0 8,0a4,2.5 0 1,0 -8,0z M68,60a4,2.5 0 1,0 8,0a4,2.5 0 1,0 -8,0z" />
+    <!-- Smile -->
+    <path android:strokeColor="#FF1B1640" android:strokeWidth="2.6" android:strokeLineCap="round"
+        android:pathData="M47,62q7,6 14,0" />
+</vector>

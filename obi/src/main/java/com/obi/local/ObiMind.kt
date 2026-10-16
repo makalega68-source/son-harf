@@ -38,9 +38,11 @@ internal class ObiMind(private val context: Context) {
     }
 
     fun touch(): String {
-        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        val calendar = java.util.Calendar.getInstance()
+        val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+        val minuteOfDay = hour * 60 + calendar.get(java.util.Calendar.MINUTE)
         return when {
-            hour >= 23 || hour < 7 -> next("night", listOf(
+            ObiLife.isNight(minuteOfDay, prefs.getInt("bedtime", 23 * 60)) -> next("night", listOf(
                 "Geç oldu; gözlerine biraz dinlenme borçluyuz 🌙", "Ben burada nöbetteyim, sen dinlenebilirsin.",
                 "Bugünün yükünü burada bırakalım. Yarın yeni bir sayfa açarız.", "Uykun geldiyse ekranı kapat, rüyalarında görüşürüz ✨",
                 "Psst! Gece sessiz, ben hâlâ buradayım.", "Ay ışığında bile parlıyorsun ✨",
@@ -98,7 +100,7 @@ internal class ObiMind(private val context: Context) {
             "Buradayım. Aklındaki ilk şeyi yazabilirsin."))
         if (listOf("teşekkür", "sağ ol", "eyvallah").any(t::contains)) return next("thanks", listOf(
             "Ne demek! İşine yaradıysa sevindim.", "Her zaman. Başka bir şeye bakalım mı?", "Rica ederim 💜"))
-        if (t.contains("ne yapabilir") || t == "yardım") return "Not alırım, alarm ve hatırlatma kurarım, doğum gününü hatırlarım, metin çeviririm. Gemini bağlanırsa seninle serbestçe yazışırım."
+        if (t.contains("ne yapabilir") || t == "yardım") return "Not alırım; alarm, tekrarlayan hatırlatma ve odak sayacı kurarım; alışveriş listeni, harcamalarını, doğum günlerini ve geri sayımlarını tutarım; hava durumunu söylerim; her gün İngilizce kelime öğretirim; seninle oyun oynarım. Gemini bağlanırsa serbestçe yazışır, panodaki metni özetler ya da çeviririm."
         return next("open", listOf(
             "Bunu biraz açar mısın? Seni doğru anlamak istiyorum.",
             "İlginç! Bunun sende bıraktığı hissi anlatır mısın?",
@@ -114,7 +116,19 @@ internal class ObiGemini(private val context: Context) {
     private val prefs = context.getSharedPreferences("obi_gemini", Context.MODE_PRIVATE)
     private val alias = "obi_personal_gemini_key"
     private val model = "gemini-3.5-flash-lite"
-    private val history = ArrayDeque<Pair<String, String>>()
+    private val history = ArrayDeque<Pair<String, String>>().apply {
+        // The last few turns survive restarts so a conversation can continue.
+        runCatching {
+            val saved = JSONArray(prefs.getString("history", "[]") ?: "[]")
+            for (i in 0 until saved.length()) saved.optJSONObject(i)?.let { addLast(it.optString("role") to it.optString("text")) }
+        }
+    }
+
+    private fun saveHistory() {
+        val array = JSONArray()
+        synchronized(history) { history.forEach { (role, text) -> array.put(JSONObject().put("role", role).put("text", text)) } }
+        prefs.edit().putString("history", array.toString()).apply()
+    }
 
     fun connected(): Boolean = readKey() != null
 
@@ -128,7 +142,66 @@ internal class ObiGemini(private val context: Context) {
         true
     }.getOrDefault(false)
 
-    fun disconnect() { prefs.edit().remove("key").remove("iv").apply(); history.clear() }
+    fun disconnect() { prefs.edit().remove("key").remove("iv").remove("history").apply(); synchronized(history) { history.clear() } }
+
+    fun forgetConversation() { synchronized(history) { history.clear() }; prefs.edit().remove("history").apply() }
+
+    private fun usedToday(): Int = if (prefs.getString("day", "") == LocalDate.now().toString()) prefs.getInt("used", 0) else 0
+
+    @Synchronized private fun countRequest() {
+        prefs.edit().putString("day", LocalDate.now().toString()).putInt("used", usedToday() + 1).apply()
+    }
+
+    private fun post(key: String, body: JSONObject): Pair<Int, JSONObject?> {
+        val connection = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent").openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod = "POST"
+            connection.connectTimeout = 6000
+            connection.readTimeout = 15000
+            connection.doOutput = true
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.setRequestProperty("x-goog-api-key", key)
+            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            val status = connection.responseCode
+            if (status !in 200..299) return status to null
+            return status to JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+        } finally { connection.disconnect() }
+    }
+
+    private fun firstText(root: JSONObject): String {
+        val parts = root.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts")
+        return (0 until parts.length()).mapNotNull { parts.getJSONObject(it).optString("text").takeIf(String::isNotBlank) }.joinToString("\n")
+    }
+
+    /**
+     * When the local parser cannot read a time ("cumartesi öğleden sonra üç buçukta"), Gemini turns the sentence
+     * into a date and a short label. The alarm itself is still set by the phone.
+     */
+    fun extractSchedule(command: String, done: (Long?, String?) -> Unit) {
+        val key = readKey() ?: return done(null, null)
+        if (usedToday() >= 20) return done(null, null)
+        Thread {
+            val result: Pair<Long?, String?> = runCatching {
+                val now = java.time.LocalDateTime.now().withSecond(0).withNano(0)
+                val instruction = "Şu an $now (${now.dayOfWeek}). Kullanıcı Türkçe bir alarm ya da hatırlatma istiyor: \"${command.take(300)}\". " +
+                    "JSON döndür: {\"datetime\": \"YYYY-MM-DDTHH:MM\" ya da null, \"text\": kısa hatırlatma metni (alarm ise \"Alarm\")}. Geçmiş bir zaman verme."
+                val body = JSONObject()
+                    .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", instruction)))))
+                    .put("generationConfig", JSONObject().put("responseMimeType", "application/json").put("temperature", 0.1)
+                        .put("maxOutputTokens", 200).put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal")))
+                val (_, root) = post(key, body)
+                if (root == null) return@runCatching Pair<Long?, String?>(null, null)
+                countRequest()
+                val parsed = JSONObject(firstText(root))
+                val time = parsed.optString("datetime").takeIf { it.length >= 16 }
+                    ?.let { java.time.LocalDateTime.parse(it.take(16)) }
+                    ?.takeIf { it.isAfter(now) }
+                    ?.atZone(java.time.ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+                Pair<Long?, String?>(time, parsed.optString("text").takeIf { it.isNotBlank() }?.take(80)
+            }.getOrDefault(null to null)
+            android.os.Handler(android.os.Looper.getMainLooper()).post { done(result.first, result.second) }
+        }.start()
+    }
 
     private fun secret(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -155,7 +228,7 @@ internal class ObiGemini(private val context: Context) {
         Thread {
             val answer = runCatching {
                 val contents = JSONArray()
-                history.takeLast(6).forEach { (role, text) -> contents.put(JSONObject().put("role", role).put("parts", JSONArray().put(JSONObject().put("text", text)))) }
+                synchronized(history) { history.toList() }.takeLast(6).forEach { (role, text) -> contents.put(JSONObject().put("role", role).put("parts", JSONArray().put(JSONObject().put("text", text)))) }
                 contents.put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", prompt.take(1500)))))
                 val body = JSONObject()
                     .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text",
@@ -189,6 +262,7 @@ internal class ObiGemini(private val context: Context) {
                         history.addLast("user" to prompt.take(1500)); history.addLast("model" to reply.take(1000))
                         while (history.size > 6) history.removeFirst()
                     }
+                    saveHistory()
                     prefs.edit().putString("day", today).putInt("used", used + 1).apply()
                     ObiReply(reply, action)
                 } finally { connection.disconnect() }
