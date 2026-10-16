@@ -30,7 +30,7 @@ class ObiGeminiSetupActivity : Activity() {
             setPadding(dp(24), dp(20), dp(24), dp(32))
             setBackgroundColor(Color.rgb(17, 24, 39))
         }
-        val scroll = ScrollView(this).apply { fillViewport = true; addView(body) }
+        val scroll = ScrollView(this).apply { isFillViewport = true; addView(body) }
         setContentView(scroll)
 
         val close = TextView(this).apply {
