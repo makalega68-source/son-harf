@@ -339,7 +339,18 @@ jobs:
         with:
           validate-wrappers: false
       - name: Build standalone Obi APK
-        run: ./gradlew :obi:assembleDebug --stacktrace
+        run: |
+          set +e
+          ./gradlew :obi:assembleDebug --stacktrace > obi-build.log 2>&1
+          result=$?
+          cat obi-build.log
+          exit $result
+      - name: Upload Obi build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Obi-build-log
+          path: obi-build.log
       - name: Publish Obi direct download
         env:
           GH_TOKEN: ${{ github.token }}
