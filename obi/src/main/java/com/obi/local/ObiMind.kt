@@ -197,8 +197,8 @@ internal class ObiGemini(private val context: Context) {
                     ?.let { java.time.LocalDateTime.parse(it.take(16)) }
                     ?.takeIf { it.isAfter(now) }
                     ?.atZone(java.time.ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
-                Pair<Long?, String?>(time, parsed.optString("text").takeIf { it.isNotBlank() }?.take(80)
-            }.getOrDefault(null to null)
+                Pair<Long?, String?>(time, parsed.optString("text").takeIf { it.isNotBlank() }?.take(80))
+            }.getOrDefault(Pair<Long?, String?>(null, null))
             android.os.Handler(android.os.Looper.getMainLooper()).post { done(result.first, result.second) }
         }.start()
     }
