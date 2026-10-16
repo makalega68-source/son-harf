@@ -10,7 +10,6 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,7 +32,7 @@ import androidx.compose.ui.unit.sp
 class ObiEntryActivity : ComponentActivity() {
     private var openedPermissionScreen = false
     private var waitingForMascot = false
-    private var status by mutableStateOf("Obi'yi ekranda göstermek için bir kez izin vermen gerekiyor.")
+    private var status by mutableStateOf("Obi'yi ana ekranda göstermek için aşağıdaki adımları izle.")
 
     private val resultReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -68,13 +67,17 @@ class ObiEntryActivity : ComponentActivity() {
                     ) {
                         Text("Obi", color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Black)
                         Text(status, modifier = Modifier.padding(top = 16.dp), color = Color(0xFFDAF8F2), fontSize = 17.sp)
+                        Text(
+                            "1. Aşağıdaki düğmeye bas.\n2. Açılan ‘Diğer uygulamaların üzerinde göster’ listesinde gerekirse ‘Daha fazla’ya bas.\n3. Listeden Obi’yi bul ve üzerine dokun. Ana ekran uygulamasını seçme.\n4. ‘Diğer uygulamaların üzerinde göster’ anahtarını aç.\n5. Geri okuna basarak Obi’ye dön. Obi ana ekranda görünecek.",
+                            modifier = Modifier.padding(top = 18.dp), color = Color.White, fontSize = 16.sp, lineHeight = 25.sp,
+                        )
                         Button(onClick = {
                             if (Settings.canDrawOverlays(this@ObiEntryActivity)) startMascot() else openPermissionSettings()
                         }, modifier = Modifier.fillMaxWidth().padding(top = 22.dp)) {
-                            Text(if (Settings.canDrawOverlays(this@ObiEntryActivity)) "Obi'yi göster" else "Ekran üstü iznini aç")
+                            Text(if (Settings.canDrawOverlays(this@ObiEntryActivity)) "Obi'yi göster" else "İzin ayarlarını aç")
                         }
                         Text(
-                            "Ayarlar'da Obi'yi seçip ‘Diğer uygulamaların üzerinde göster’ iznini aç. Geri dönünce Obi ana ekranda belirecek.",
+                            "İzin verdikten sonra Ayarlar'dan geri dön. Obi görünmezse uygulama simgesine tekrar dokun.",
                             modifier = Modifier.padding(top = 14.dp), color = Color(0xFFAFB9D4), fontSize = 13.sp,
                         )
                     }
@@ -87,17 +90,14 @@ class ObiEntryActivity : ComponentActivity() {
         super.onResume()
         if (Settings.canDrawOverlays(this)) {
             startMascot()
-        } else if (!openedPermissionScreen) {
-            // Let the launcher draw first; then Android shows the required system permission page.
-            window.decorView.post { if (!isFinishing && !openedPermissionScreen) openPermissionSettings() }
-        } else {
-            status = "İzin kapalı. Obi'nin ekranda görünmesi için Ayarlar'da Obi'ye izin ver."
+        } else if (openedPermissionScreen) {
+            status = "İzin hâlâ kapalı. Listede Obi'yi seçip anahtarı aç, sonra geri dön."
         }
     }
 
     private fun openPermissionSettings() {
         openedPermissionScreen = true
-        status = "Ayarlar'da Obi'yi seçip ekran üstü iznini aç."
+        status = "Listede ‘Daha fazla’ → Obi → ‘Diğer uygulamaların üzerinde göster’ anahtarını aç; sonra geri dön."
         val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
         try {
             startActivity(intent)

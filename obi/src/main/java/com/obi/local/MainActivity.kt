@@ -161,6 +161,33 @@ internal class ObiStore(private val context: Context) {
     private val prefs = context.getSharedPreferences("obi_local", Context.MODE_PRIVATE)
     fun handle(raw: String): String {
         val text = raw.trim(); val normalized = text.lowercase(Locale("tr", "TR"))
+        if (normalized.contains("doğum günüm") || normalized.contains("dogum gunum")) {
+            val date = Regex("(\\d{1,2})\\s*(ocak|şubat|mart|nisan|mayıs|haziran|temmuz|ağustos|eylül|ekim|kasım|aralık)").find(normalized)
+                ?: return "Doğum gününü ‘Doğum günüm 12 Mayıs’ diye yazabilirsin."
+            val months = listOf("ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül", "ekim", "kasım", "aralık")
+            val day = date.groupValues[1].toInt()
+            val month = months.indexOf(date.groupValues[2]) + 1
+            if (day !in 1..31) return "Günü 1 ile 31 arasında yazabilir misin?"
+            prefs.edit().putInt("birth_day", day).putInt("birth_month", month).apply()
+            scheduleDaily()
+            return "Harika! $day ${date.groupValues[2].replaceFirstChar { it.uppercase() }} gününü kaydettim 🎂"
+        }
+        if (normalized.contains("günaydın mesajı") || normalized.contains("sabah motive et")) {
+            prefs.edit().putBoolean("morning_enabled", true).apply()
+            scheduleDaily()
+            return "Tamam! Sabah 08.00 civarında sana güzel bir mesaj göndereceğim. Bildirim iznini açmayı unutma."
+        }
+        if (normalized.contains("sabah mesajını kapat")) {
+            prefs.edit().putBoolean("morning_enabled", false).apply()
+            return "Sabah mesajlarını kapattım."
+        }
+        if (normalized.contains("alarm kur")) {
+            val time = reminderTime(normalized) ?: return "Örnek: ‘Yarın saat 09.00 alarm kur’."
+            schedule(time, "Obi alarmı: Uyanma zamanı!", "alarm")
+            return "Alarmı ${formatClock(time)} için kurdum. Android bildirimiyle haber vereceğim."
+        }
+        if (normalized.contains("deprem")) return "Deprem bilgisi için AFAD Son Depremler sayfasını aç. Obi henüz doğrulanmış acil uyarı göndermiyor; resmî uyarıların yerine geçmez."
+        if (normalized.contains("çevir") || normalized.contains("cevir")) return "Çeviri için dil ve metni yazabilirsin; yerel çeviri modeli henüz eklenmedi."
         if (normalized.contains("notlarımı göster") || normalized.contains("notlarimi göster")) return notes().takeLast(5).reversed().mapIndexed { i, item -> "${i + 1}. $item" }.joinToString("\n").ifBlank { "Henüz notun yok. ‘Not al …’ yazabilirsin." }
         noteText(normalized, text)?.let { note -> save(note); return "Tamam, bunu hatırlayacağım: ‘$note’" }
         timerMinutes(normalized)?.let { minutes -> schedule(System.currentTimeMillis() + minutes * 60_000L, "Obi zamanlayıcısı"); return "Tamam. $minutes dakika sonra sana haber vereceğim." }
@@ -169,7 +196,7 @@ internal class ObiStore(private val context: Context) {
             val note = text.replace(Regex("(?i)(yarın|yarin)?\\s*saat\\s*\\d{1,2}(?:[:.]\\d{2})?.*?(diye )?hatırlat(ır mısın|ir misin)?"), "").trim().ifBlank { "Hatırlatıcı" }
             schedule(time, note); return "Tamam, ${formatClock(time)} için ‘$note’ hatırlatıcısını kurdum."
         }
-        return "Şimdilik yerel moddayım. ‘Not al …’, ‘Notlarımı göster’, ‘20 dakika zamanlayıcı başlat’ veya ‘Yarın saat 09.00’da … diye hatırlat’ yazabilirsin."
+        return "‘Not al …’, ‘20 dakika zamanlayıcı başlat’, ‘Yarın saat 09.00 alarm kur’, ‘Doğum günüm 12 Mayıs’ veya ‘Sabah motive et’ yazabilirsin."
     }
     fun notes(): List<String> = runCatching { val v = JSONArray(prefs.getString("notes", "[]") ?: "[]"); List(v.length()) { v.getString(it) } }.getOrDefault(emptyList())
     private fun save(note: String) { val v = JSONArray(prefs.getString("notes", "[]") ?: "[]"); v.put(note); prefs.edit().putString("notes", v.toString()).apply() }
@@ -177,14 +204,48 @@ internal class ObiStore(private val context: Context) {
     private fun timerMinutes(t: String): Int? { if (!t.contains("zamanlayıcı") && !t.contains("zamanlayici") && !t.contains("timer")) return null; val m = Regex("(\\d{1,3})\\s*(dakika|dk|saat)").find(t) ?: return null; val n = m.groupValues[1].toIntOrNull() ?: return null; return (if (m.groupValues[2] == "saat") n * 60 else n).takeIf { it in 1..1440 } }
     private fun reminderTime(t: String): Long? { val m = Regex("saat\\s*(\\d{1,2})(?:[:.]?(\\d{2}))?").find(t) ?: return null; val h = m.groupValues[1].toIntOrNull()?.takeIf { it in 0..23 } ?: return null; val min = m.groupValues[2].toIntOrNull()?.takeIf { it in 0..59 } ?: 0; return Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, h); set(Calendar.MINUTE, min); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0); if (t.contains("yarın") || t.contains("yarin") || timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1) }.timeInMillis }
     private fun formatClock(time: Long): String = Calendar.getInstance().run { timeInMillis = time; String.format(Locale("tr", "TR"), "%02d:%02d", get(Calendar.HOUR_OF_DAY), get(Calendar.MINUTE)) }
-    private fun schedule(time: Long, text: String) { val id = (System.nanoTime() and 0x7fff_ffffL).toInt(); val intent = Intent(context, ObiReminderReceiver::class.java).putExtra("text", text).setAction("com.obi.local.REMINDER.$id"); val pending = PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE); context.getSystemService(AlarmManager::class.java)?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, time, pending) }
+    private fun schedule(time: Long, text: String, kind: String = "reminder") { val id = (System.nanoTime() and 0x7fff_ffffL).toInt(); val intent = Intent(context, ObiReminderReceiver::class.java).putExtra("text", text).putExtra("kind", kind).setAction("com.obi.local.REMINDER.$id"); val pending = PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE); context.getSystemService(AlarmManager::class.java)?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, time, pending) }
+    fun scheduleDaily() {
+        val next = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 8); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
+        }.timeInMillis
+        val pending = PendingIntent.getBroadcast(context, 808, Intent(context, ObiReminderReceiver::class.java).setAction("com.obi.local.DAILY"), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        context.getSystemService(AlarmManager::class.java)?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pending)
+    }
 }
 
 class ObiReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == "com.obi.local.DAILY") {
+            val prefs = context.getSharedPreferences("obi_local", Context.MODE_PRIVATE)
+            val today = Calendar.getInstance()
+            val birthday = prefs.getInt("birth_day", 0) == today.get(Calendar.DAY_OF_MONTH) && prefs.getInt("birth_month", 0) == today.get(Calendar.MONTH) + 1
+            val message = when {
+                birthday -> "İyi ki doğdun! Bugün senin günün 🎂✨"
+                prefs.getBoolean("morning_enabled", false) -> "Günaydın! Bugün küçük bir adım da büyük bir başlangıç 💜"
+                else -> null
+            }
+            if (message != null) notify(context, message, "Obi günaydın diyor")
+            if (message != null) context.sendBroadcast(Intent("com.obi.local.CELEBRATE").setPackage(context.packageName).putExtra("text", message))
+            ObiStore(context).scheduleDaily()
+            return
+        }
+        notify(context, intent.getStringExtra("text") ?: "Hatırlatıcı zamanı geldi.", if (intent.getStringExtra("kind") == "alarm") "Obi alarmı" else "Obi hatırlatıyor")
+        context.sendBroadcast(Intent("com.obi.local.CELEBRATE").setPackage(context.packageName).putExtra("text", intent.getStringExtra("text") ?: "Hatırlatıcı zamanı geldi."))
+    }
+
+    private fun notify(context: Context, text: String, title: String) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return; val channel = "obi_reminders"
         manager.createNotificationChannel(NotificationChannel(channel, "Obi hatırlatıcıları", NotificationManager.IMPORTANCE_HIGH))
-        val open = PendingIntent.getActivity(context, 4, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE); val text = intent.getStringExtra("text") ?: "Hatırlatıcı zamanı geldi."
-        manager.notify((System.currentTimeMillis() and 0x7fff_ffffL).toInt(), Notification.Builder(context, channel).setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle("Obi hatırlatıyor").setContentText(text).setStyle(Notification.BigTextStyle().bigText(text)).setContentIntent(open).setAutoCancel(true).build())
+        if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+        val open = PendingIntent.getActivity(context, 4, Intent(context, ObiEntryActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        manager.notify((System.currentTimeMillis() and 0x7fff_ffffL).toInt(), Notification.Builder(context, channel).setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle(title).setContentText(text).setStyle(Notification.BigTextStyle().bigText(text)).setContentIntent(open).setAutoCancel(true).build())
+    }
+}
+
+class ObiBootReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) ObiStore(context).scheduleDaily()
     }
 }
