@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "KelimeTahti"
 include(":app")
+include(":obi")

@@ -1,0 +1,41 @@
+name: Obi Local APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/mascot-animations-behavior-31rof9]
+    paths:
+      - 'obi/**'
+      - 'settings.gradle.kts'
+      - '.github/workflows/obi-local.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+      - name: Build Obi test APK
+        run: ./gradlew :obi:assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Obi-Yerel-Test
+          path: obi/build/outputs/apk/debug/obi-debug.apk
+          if-no-files-found: error
+      - name: Publish direct APK download
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp obi/build/outputs/apk/debug/obi-debug.apk Obi-Yerel-Test.apk
+          gh release view obi-local-test >/dev/null 2>&1 || gh release create obi-local-test --prerelease --title "Obi yerel test" --notes "Obi yerel kişisel asistan test sürümü."
+          gh release upload obi-local-test Obi-Yerel-Test.apk --clobber
