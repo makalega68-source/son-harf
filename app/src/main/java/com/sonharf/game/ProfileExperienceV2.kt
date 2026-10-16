@@ -128,7 +128,7 @@ private suspend fun setAvatarHiddenV2(hidden: Boolean): ProfileV2Dto =
 private suspend fun completeLegacyIdentityV2(name: String, gender: String): ProfileV2Dto =
     SupabaseProvider.client.postgrest.rpc(
         "complete_profile_identity_v2",
-        buildJsonObject { put("p_display_name", name.trim()); put("p_gender", gender) },
+        buildJsonObject { put("p_display_name", name.trim()); put("p_gender", PlayerAccount.serverGender(gender)) },
     ).decodeSingle()
 
 @Composable
@@ -510,7 +510,7 @@ fun ProfileExperienceV2Screen() {
                     busy = true
                     runCatching { completeLegacyIdentityV2(name, gender) }
                         .onSuccess { profile = it; legacyIdentity = false; notice = sh("Oyuncu adı ve cinsiyet kalıcı olarak kaydedildi.", "Player name and gender were saved permanently.") }
-                        .onFailure { notice = sh("Bilgiler kaydedilemedi. Oyuncu adı 2-24 karakter olmalı.", "Could not save. Player name must be 2-24 characters.") }
+                        .onFailure { error -> notice = PlayerAccount.friendlyError(error.toString()).ifBlank { sh("Bilgiler kaydedilemedi.", "Could not save.") }; legacyIdentity = false }
                     busy = false
                 }
             },
