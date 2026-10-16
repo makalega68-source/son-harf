@@ -236,6 +236,7 @@ internal fun MascotChatScreen(onBack: () -> Unit, mascotSkin: WordSiegeMascotSki
             onInputChange = { input = it },
             enabled = !thinking,
             onSend = { submit(input) },
+            isTurkish = isTurkish,
         )
     }
 }
@@ -402,6 +403,7 @@ private fun ChatComposer(
     onInputChange: (String) -> Unit,
     enabled: Boolean,
     onSend: () -> Unit,
+    isTurkish: Boolean,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
