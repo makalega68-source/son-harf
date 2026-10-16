@@ -241,7 +241,7 @@ internal class ObiStore(private val context: Context) {
         }
         if (!canScheduleExact()) {
             needsExactPermission = true
-            return "$what $whenText civarına kurdum. Tam saatinde çalması için aşağıdan kesin alarm iznini aç."
+            return "$what $whenText civarına kurdum. Tam saatinde çalması için bana ‘kesin alarm izni’ yaz."
         }
         return "$what $whenText için kurdum ✓"
     }

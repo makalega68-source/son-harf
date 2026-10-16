@@ -110,9 +110,29 @@ internal class ObiMind(private val context: Context) {
 }
 
 /** Personal-test key is supplied by the owner, encrypted with Android Keystore, never in the APK. */
-internal data class ObiReply(val text: String, val action: WordSiegeMascotAction = WordSiegeMascotAction.NOD)
+internal data class ObiReply(
+    val text: String,
+    val action: WordSiegeMascotAction = WordSiegeMascotAction.NOD,
+    /** A phone task Gemini recognised in free text (see [ObiGemini.TOOLS]); the app performs it locally. */
+    val intent: String? = null,
+    val args: JSONObject? = null,
+)
 
 internal class ObiGemini(private val context: Context) {
+    companion object {
+        const val DAILY_LIMIT = 150
+
+        /** Phone tasks Gemini may hand back to the app; the app, not Gemini, carries them out. */
+        const val TOOLS = "Telefonda yapılacak bir iş istenirse intent ve args alanlarını doldur, yoksa intent \"none\" olsun. " +
+            "intent değerleri ve args: list_add {items:[metinler]}, list_show {}, list_remove {item}, list_clear {}, " +
+            "note_add {text}, notes_show {}, reminder {datetime:\"YYYY-MM-DDTHH:MM\", text, repeat: \"daily\"|\"weekdays\"|null}, " +
+            "alarm {datetime, repeat}, alarms_show {}, weather {city}, expense_add {label, amount}, expenses_show {}, " +
+            "countdown_add {label, date:\"YYYY-MM-DD\"}, countdowns_show {}, birthday_add {person, day, month}, focus {minutes}, " +
+            "game {name: \"guess\"|\"riddle\"|\"quiz\"|\"catch\"}, wardrobe {}, mood {score:1-5}, words_today {}. " +
+            "Örnek: ‘süt ekmek al’ → list_add; ‘listem’ / ‘listemi getir’ → list_show; ‘Arnavutköy'de hava’ → weather. " +
+            "Bir iş yapıldığında text kısa bir onay olsun; sonucu uygulama gösterecek. Çeviri, sohbet ve sorular için intent none."
+    }
+
     private val prefs = context.getSharedPreferences("obi_gemini", Context.MODE_PRIVATE)
     private val alias = "obi_personal_gemini_key"
     private val model = "gemini-3.5-flash-lite"
@@ -179,7 +199,7 @@ internal class ObiGemini(private val context: Context) {
      */
     fun extractSchedule(command: String, done: (Long?, String?) -> Unit) {
         val key = readKey() ?: return done(null, null)
-        if (usedToday() >= 20) return done(null, null)
+        if (usedToday() >= DAILY_LIMIT) return done(null, null)
         Thread {
             val result: Pair<Long?, String?> = runCatching {
                 val now = java.time.LocalDateTime.now().withSecond(0).withNano(0)
@@ -220,11 +240,11 @@ internal class ObiGemini(private val context: Context) {
         String(cipher.doFinal(Base64.decode(encoded, Base64.NO_WRAP)))
     }.getOrNull()
 
-    fun ask(prompt: String, done: (ObiReply) -> Unit) {
+    fun ask(prompt: String, tools: Boolean = false, done: (ObiReply) -> Unit) {
         val key = readKey() ?: return done(ObiReply("Gemini bağlanmadı. ‘Gemini bağla’ düğmesine bas."))
         val today = LocalDate.now().toString()
         val used = if (prefs.getString("day", "") == today) prefs.getInt("used", 0) else 0
-        if (used >= 20) return done(ObiReply("Bugünlük 20 Gemini isteğini kullandık. Yarın yeniden konuşuruz; yerel not ve alarmlar çalışmaya devam eder."))
+        if (used >= DAILY_LIMIT) return done(ObiReply("Bugünlük Gemini hakkımızı kullandık. Yarın yeniden konuşuruz; not, liste ve alarmlar yine çalışır."))
         Thread {
             val answer = runCatching {
                 val contents = JSONArray()
@@ -232,7 +252,8 @@ internal class ObiGemini(private val context: Context) {
                 contents.put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", prompt.take(1500)))))
                 val body = JSONObject()
                     .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text",
-                        "Adın Obi. Türkçe yazışan şirin bir telefon maskotusun. Ses kullanma. Kullanıcının bağlamını önceki konuşmadan izle; farklı, doğal ve somut yanıtlar ver. Çeviri, açıklama, özetleme, yazı yazma, fikir üretme ve sohbet isteklerini karşıla. Sadece sohbet dışında telefondaki eylemleri yaptığını iddia etme; not/alarm/hatırlatıcıyı uygulama yerel olarak ele alır. Ekranı gördüğünü veya başka uygulamaları kontrol ettiğini söyleme. JSON nesnesi dön: text kullanıcıya yanıt, action ise yanıtın duygusuna uygun tek bir hareket. action değerleri: NOD, THINK, CHEER, DANCE, WAVE, LOVE, GIGGLE, SHY, WINK, SPARKLE, CLAP, SHRUG, YAWN, DOZE, POINT, BOUNCE. Kısa bir sohbet yanıtında da eylemi duyguya göre değiştir."))))
+                        "Adın Obi. Türkçe yazışan şirin bir telefon maskotusun. Ses kullanma. Kullanıcının bağlamını önceki konuşmadan izle; farklı, doğal ve somut yanıtlar ver. Çeviri, açıklama, özetleme, yazı yazma, fikir üretme ve sohbet isteklerini karşıla. Sadece sohbet dışında telefondaki eylemleri yaptığını iddia etme; not/alarm/hatırlatıcıyı uygulama yerel olarak ele alır. Ekranı gördüğünü veya başka uygulamaları kontrol ettiğini söyleme. JSON nesnesi dön: text kullanıcıya yanıt, action ise yanıtın duygusuna uygun tek bir hareket. action değerleri: NOD, THINK, CHEER, DANCE, WAVE, LOVE, GIGGLE, SHY, WINK, SPARKLE, CLAP, SHRUG, YAWN, DOZE, POINT, BOUNCE. Kısa bir sohbet yanıtında da eylemi duyguya göre değiştir. Yanıtların kısa ve konuşma balonuna sığacak gibi olsun." +
+                        (if (tools) " Şu an ${java.time.LocalDateTime.now().withSecond(0).withNano(0)} (${java.time.LocalDate.now().dayOfWeek}). " + TOOLS else "")))))
                     .put("contents", contents)
                     .put("generationConfig", JSONObject().put("maxOutputTokens", 900).put("temperature", 0.8)
                         .put("responseMimeType", "application/json")
@@ -258,13 +279,14 @@ internal class ObiGemini(private val context: Context) {
                     val allowed = setOf("NOD", "THINK", "CHEER", "DANCE", "WAVE", "LOVE", "GIGGLE", "SHY", "WINK", "SPARKLE", "CLAP", "SHRUG", "YAWN", "DOZE", "POINT", "BOUNCE")
                     val chosen = parsed?.optString("action")?.uppercase(Locale.ROOT)?.takeIf(allowed::contains)
                     val action = chosen?.let { WordSiegeMascotAction.valueOf(it) } ?: WordSiegeMascotAction.NOD
+                    val intent = parsed?.optString("intent")?.takeIf { tools && it.isNotBlank() && it != "none" && it != "null" }
                     synchronized(history) {
                         history.addLast("user" to prompt.take(1500)); history.addLast("model" to reply.take(1000))
                         while (history.size > 6) history.removeFirst()
                     }
                     saveHistory()
                     prefs.edit().putString("day", today).putInt("used", used + 1).apply()
-                    ObiReply(reply, action)
+                    ObiReply(reply, action, intent, parsed?.optJSONObject("args"))
                 } finally { connection.disconnect() }
             }.getOrElse { ObiReply("Bağlantı kurulamadı. İnterneti kontrol edip yeniden dene.", WordSiegeMascotAction.SHRUG) }
             android.os.Handler(android.os.Looper.getMainLooper()).post { done(answer) }
@@ -278,7 +300,7 @@ internal class ObiGemini(private val context: Context) {
         val sameDay = prefs.getString("day", "") == today
         val used = if (sameDay) prefs.getInt("used", 0) else 0
         val packs = if (prefs.getString("touch_day", "") == today) prefs.getInt("touch_packs", 0) else 0
-        if (used >= 20 || packs >= 4) return done(emptyList())
+        if (used >= DAILY_LIMIT || packs >= 4) return done(emptyList())
         Thread {
             val replies = runCatching {
                 val instruction = "Obi adlı sevimli telefon maskotu için dokunma tepkileri üret. Saat $hour. Gece olsa bile sürekli uyku öğüdü verme. " +

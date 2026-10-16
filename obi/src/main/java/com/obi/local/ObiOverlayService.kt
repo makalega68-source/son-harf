@@ -102,13 +102,8 @@ class ObiOverlayService : Service() {
     private var timerLabel: TextView? = null
     private var hat = WordSiegeMascotHat.NONE
 
-    // Panel parts that outlive one build of the menu.
-    private var menuBox: LinearLayout? = null
-    private var chatBox: LinearLayout? = null
-    private var chatLog: LinearLayout? = null
-    private var chatScroll: ScrollView? = null
-    private var actionRow: LinearLayout? = null
     private var input: EditText? = null
+    private var askMoodNext = false
     private var requestId = 0
     private var game: ChatGame? = null
 
@@ -138,8 +133,9 @@ class ObiOverlayService : Service() {
                 ACTION_SHOW -> { mascot?.visibility = View.VISIBLE; fetchTouchPack() }
                 ObiStore.ACTION_LOOK_CHANGED -> applyLook()
                 ObiStore.ACTION_ASK_MOOD -> {
+                    askMoodNext = true
                     animate(WordSiegeMascotAction.WAVE)
-                    showBubble("Bugün nasıldın? Bana iki kez dokun, bir yüz seç 💜")
+                    showBubble("Bugün nasıldın? Bana dokun, anlat 💜")
                 }
                 ObiStore.ACTION_NUDGE -> {
                     animate(runCatching { WordSiegeMascotAction.valueOf(intent.getStringExtra("action") ?: "BOUNCE") }.getOrDefault(WordSiegeMascotAction.BOUNCE))
@@ -147,7 +143,8 @@ class ObiOverlayService : Service() {
                 }
                 else -> {
                     animate(WordSiegeMascotAction.CHEER)
-                    showBubble(intent.getStringExtra("text") ?: "Yaşasın! ✨")
+                    val text = intent.getStringExtra("text") ?: "Yaşasın! ✨"
+                    if (panel != null) say(text) else showBubble(text)
                     if (store.focusEnd() == 0L) endFocusView()
                 }
             }
@@ -600,55 +597,140 @@ class ObiOverlayService : Service() {
         if (catchScore > 0) reward(3)
     }
 
-    // ---- The panel --------------------------------------------------------------------------------
+    // ---- The chat: a calm full-screen sheet with Obi, a speech balloon and the keyboard ---------------
 
-    private fun showPanel(openChat: Boolean) {
+    private enum class Pending { NONE, CITY, LIST_ITEMS, MOOD, GAME_PICK }
+
+    private var pending = Pending.NONE
+    private var replyText: TextView? = null
+    private var youText: TextView? = null
+    private var replyScroll: ScrollView? = null
+    private var lastUser = ""
+    private var lastReply = ""
+
+    private fun showPanel(@Suppress("UNUSED_PARAMETER") openChat: Boolean = true, askFirst: Pending = Pending.NONE) {
+        val ask0 = askFirst
         if (!Settings.canDrawOverlays(this)) return
         hideBubble()
-        if (panel != null) { if (openChat) openChatView() ; return }
+        val ask = if (askMoodNext && ask0 == Pending.NONE) Pending.MOOD.also { askMoodNext = false } else ask0
+        if (panel != null) { if (ask != Pending.NONE) startAsk(ask); return }
         val metrics = resources.displayMetrics
-        val card = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(16))
-            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(CARD_TOP, CARD_BOTTOM)).apply {
-                cornerRadius = dp(26).toFloat(); setStroke(dp(1), Color.argb(150, 92, 179, 168))
-            }
-            elevation = dp(18).toFloat()
+        val root = android.widget.FrameLayout(this).apply {
+            setBackgroundColor(Color.argb(185, 8, 12, 24))
+            setOnClickListener { hidePanel() }
         }
-        val menu = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val chat = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
-        menuBox = menu; chatBox = chat
-        card.addView(menu); card.addView(chat)
-        buildChat(chat, (metrics.heightPixels * .34f).toInt())
-        showHome()
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(16), dp(8), dp(16), dp(12))
+            isClickable = true
+        }
+        root.addView(content, android.widget.FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
+        root.addView(label("×", 30f, SOFT).apply {
+            gravity = Gravity.CENTER; contentDescription = "Kapat"; setOnClickListener { hidePanel() }
+        }, android.widget.FrameLayout.LayoutParams(dp(52), dp(52), Gravity.TOP or Gravity.END).apply { topMargin = dp(36); rightMargin = dp(8) })
+
+        // Speech balloon above Obi's head: the user's last words small, Obi's answer large.
+        val balloon = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(10), dp(16), dp(12))
+            background = GradientDrawable().apply { setColor(Color.rgb(246, 243, 255)); cornerRadius = dp(22).toFloat() }
+            elevation = dp(6).toFloat()
+        }
+        val you = label("", 12f, Color.rgb(110, 100, 150)).apply { visibility = View.GONE; maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END }
+        balloon.addView(you)
+        val reply = TextView(this).apply {
+            textSize = 17f; setTextColor(Color.rgb(28, 24, 52)); setLineSpacing(dp(2).toFloat(), 1f)
+        }
+        val scroll = CappedScroll(this, (metrics.heightPixels * .36f).toInt()).apply { addView(reply); isVerticalScrollBarEnabled = true }
+        balloon.addView(scroll)
+        content.addView(balloon, LinearLayout.LayoutParams(-1, -2))
+        content.addView(label("▼", 22f, Color.rgb(246, 243, 255)).apply { gravity = Gravity.CENTER },
+            LinearLayout.LayoutParams(-2, -2).apply { topMargin = -dp(9) })
+        replyText = reply; youText = you; replyScroll = scroll
+
+        val avatar = WordSiegeMascotView(this).apply {
+            setSkin(store.skin())
+            updateGame(null, false, 0, 0, 0, null, emptyList(), true, WordSiegeMascotEmotion.HAPPY)
+            contentDescription = "Obi"
+            setOnClickListener { animate(nextMove()) }
+        }
+        content.addView(avatar, LinearLayout.LayoutParams(dp(150), dp(150)))
+        chatMascot = avatar
+
+        val field = EditText(this).apply {
+            hint = "Obi'ye yaz…"
+            setTextColor(Color.WHITE); setHintTextColor(Color.rgb(170, 190, 204))
+            textSize = 16f; setPadding(dp(16), dp(12), dp(16), dp(12))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(35, 48, 68)); cornerRadius = dp(24).toFloat()
+                setStroke(dp(1), Color.rgb(84, 111, 130))
+            }
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            // Wrap long text over up to five lines (growing upwards) while Enter still sends.
+            setHorizontallyScrolling(false)
+            maxLines = 5
+            imeOptions = EditorInfo.IME_ACTION_SEND or EditorInfo.IME_FLAG_NO_EXTRACT_UI
+            // Ask the keyboard for Turkish instead of whatever language it used last.
+            imeHintLocales = android.os.LocaleList(java.util.Locale("tr", "TR"))
+        }
+        input = field
+        fun send() {
+            val text = field.text.toString().trim()
+            field.text.clear()
+            submit(text)
+        }
+        field.setOnEditorActionListener { _, actionId, event ->
+            val enter = event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN
+            if (actionId == EditorInfo.IME_ACTION_SEND || enter) { send(); true } else false
+        }
+        val sendButton = pill("➤", true).apply { setOnClickListener { send() } }
+        val compose = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.BOTTOM }
+        compose.addView(field, LinearLayout.LayoutParams(0, -2, 1f))
+        compose.addView(sendButton, LinearLayout.LayoutParams(dp(52), dp(50)).apply { leftMargin = dp(8) })
+        content.addView(compose, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
+
+        // Keep the writing field above the keyboard.
+        root.setOnApplyWindowInsetsListener { view, insets ->
+            val bottom = if (Build.VERSION.SDK_INT >= 30) {
+                insets.getInsets(android.view.WindowInsets.Type.ime() or android.view.WindowInsets.Type.navigationBars()).bottom
+            } else 0
+            view.setPadding(0, 0, 0, bottom)
+            insets
+        }
+
         val params = WindowManager.LayoutParams(
-            (metrics.widthPixels - dp(24)).coerceAtMost(dp(400)), WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-            PixelFormat.TRANSLUCENT,
+            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, 0, PixelFormat.TRANSLUCENT,
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = dp(48)
-            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
+                if (Build.VERSION.SDK_INT >= 30) WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING else WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
         }
         try {
-            windows.addView(card, params)
-            panel = card
-            if (openChat) openChatView()
+            windows.addView(root, params)
+            panel = root
         } catch (_: SecurityException) {
-            // User may revoke the overlay permission while Obi is open.
+            return
         }
+        mascot?.visibility = View.GONE
+        applyLook()
+        if (ask != Pending.NONE) startAsk(ask)
+        else if (lastReply.isNotBlank()) showReply(lastReply, remember = false)
+        else say(if (gemini.connected()) "Buradayım! Ne yapalım? 💜" else
+            "Buradayım! Not, liste, alarm, hava durumu… hepsini bana yazarak söyleyebilirsin.\nSerbest sohbet için ‘Gemini bağla’ yaz.")
+        animate(WordSiegeMascotAction.WAVE)
+        field.requestFocus()
+        handler.postDelayed({
+            if (panel != null) (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(field, InputMethodManager.SHOW_IMPLICIT)
+        }, 200L)
     }
 
-    private fun header(title: String, back: (() -> Unit)?): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-        if (back != null) addView(label("‹", 28f, SOFT).apply {
-            gravity = Gravity.CENTER; contentDescription = "Geri"; setOnClickListener { back() }
-        }, LinearLayout.LayoutParams(dp(36), dp(44)))
-        addView(label(title, 20f, Color.WHITE, bold = true), LinearLayout.LayoutParams(0, dp(44), 1f))
-        addView(label("×", 28f, SOFT).apply {
-            gravity = Gravity.CENTER; contentDescription = "Kapat"; setOnClickListener { hidePanel() }
-        }, LinearLayout.LayoutParams(dp(42), dp(44)))
+    private fun startAsk(ask: Pending) {
+        pending = ask
+        when (ask) {
+            Pending.MOOD -> say("Bugün nasıldın? 1'den 5'e bir sayı ya da birkaç kelime yaz 💜")
+            else -> Unit
+        }
     }
 
     private fun label(text: String, size: Float, color: Int, bold: Boolean = false): TextView = TextView(this).apply {
@@ -656,198 +738,39 @@ class ObiOverlayService : Service() {
         if (bold) typeface = Typeface.DEFAULT_BOLD
     }
 
-    private fun pill(text: String, accent: Boolean, small: Boolean = false): TextView = TextView(this).apply {
+    private fun pill(text: String, accent: Boolean): TextView = TextView(this).apply {
         this.text = text
-        textSize = if (small) 12f else 14f
+        textSize = 18f
         gravity = Gravity.CENTER
-        setTextColor(if (accent) Color.WHITE else SOFT)
-        setPadding(dp(10), 0, dp(10), 0)
+        setTextColor(Color.WHITE)
         background = GradientDrawable().apply {
             if (accent) { colors = intArrayOf(ACCENT, Color.rgb(84, 104, 214)); orientation = GradientDrawable.Orientation.LEFT_RIGHT }
             else setColor(CHIP)
-            cornerRadius = dp(15).toFloat()
+            cornerRadius = dp(25).toFloat()
         }
         isClickable = true
     }
 
-    /** Rows of two equal chips. */
-    private fun grid(items: List<Pair<String, () -> Unit>>): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        items.chunked(2).forEach { row ->
-            addView(LinearLayout(this@ObiOverlayService).apply {
-                orientation = LinearLayout.HORIZONTAL
-                row.forEachIndexed { i, (text, click) ->
-                    addView(pill(text, false).apply { setOnClickListener { click() } },
-                        LinearLayout.LayoutParams(0, dp(44), 1f).apply { if (i == 0 && row.size > 1) rightMargin = dp(6) })
-                }
-                if (row.size == 1) addView(View(this@ObiOverlayService), LinearLayout.LayoutParams(0, dp(44), 1f).apply { leftMargin = dp(6) })
-            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
+    /** Obi answers in the balloon and moves its mouth for a moment. */
+    private fun say(text: String, action: WordSiegeMascotAction? = null) = showReply(text, remember = true, action = action)
+
+    private fun showReply(text: String, remember: Boolean, action: WordSiegeMascotAction? = null) {
+        if (remember) lastReply = text
+        replyText?.text = text
+        youText?.let { you ->
+            you.text = if (lastUser.isBlank()) "" else "Sen: $lastUser"
+            you.visibility = if (lastUser.isBlank()) View.GONE else View.VISIBLE
         }
+        replyScroll?.post { replyScroll?.scrollTo(0, 0) }
+        action?.let(::animate)
+        chatMascot?.updateCompanion(actionKey, null, false, 1f, true, true, hat = hat)
+        handler.postDelayed({ chatMascot?.updateCompanion(actionKey, null, false, 1f, false, true, hat = hat) },
+            (900L + text.length * 35L).coerceAtMost(4_000L))
     }
 
-    private fun section(title: String): TextView = label(title, 12f, MINT, bold = true).apply {
-        setPadding(dp(4), dp(14), 0, dp(2))
-    }
-
-    private fun showHome() {
-        val menu = menuBox ?: return
-        menu.removeAllViews()
-        menu.addView(header("✦  Obi", null))
-        val bond = store.bond()
-        val next = ObiLife.nextUnlock(bond)
-        menu.addView(label("♥ Bağımız: $bond" + (next?.let { "  •  Sıradaki: ${it.name} (${it.points})" } ?: "  •  Her şey açıldı! 👑"), 12f, GOLD).apply {
-            setPadding(dp(4), 0, 0, dp(6))
-        })
-        val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val scroll = CappedScroll(this, (resources.displayMetrics.heightPixels * .62f).toInt()).apply {
-            isVerticalScrollBarEnabled = false; addView(content)
-        }
-        menu.addView(scroll)
-
-        if (!gemini.connected()) {
-            content.addView(label("Gemini ile sohbet için Google AI Studio'dan ücretsiz bir API anahtarı al ve bağla. Bağlanana kadar not, alarm ve liste yerel çalışır.", 13f, SOFT).apply {
-                setPadding(dp(4), dp(4), dp(4), dp(8))
-            })
-            content.addView(pill("✦  Gemini'yi bağla", true).apply {
-                setOnClickListener {
-                    hidePanel()
-                    mascot?.visibility = View.GONE
-                    runCatching { startActivity(Intent(this@ObiOverlayService, ObiGeminiSetupActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                        .onFailure { mascot?.visibility = View.VISIBLE }
-                }
-            }, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(4) })
-        }
-        val main = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        main.addView(pill("♡  Sohbet", true).apply { setOnClickListener { openChatView() } },
-            LinearLayout.LayoutParams(0, dp(50), 1f).apply { rightMargin = dp(6) })
-        main.addView(pill("✎  Notlarım", false).apply { setOnClickListener { openChatView(); submit("notlarımı göster") } },
-            LinearLayout.LayoutParams(0, dp(50), 1f))
-        content.addView(main, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
-
-        // Mood of the day.
-        content.addView(section(if (store.moodLoggedToday()) "BUGÜN NASILDIN? (kaydedildi)" else "BUGÜN NASILDIN?"))
-        val today = store.moods()[LocalDate.now()]
-        val moods = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        ObiLife.moodFaces.forEachIndexed { i, face ->
-            moods.addView(TextView(this).apply {
-                text = face; textSize = 24f; gravity = Gravity.CENTER
-                background = GradientDrawable().apply {
-                    setColor(if (today == i + 1) ACCENT else CHIP); cornerRadius = dp(14).toFloat()
-                }
-                setOnClickListener {
-                    val reply = store.logMood(i + 1)
-                    animate(if (i >= 3) WordSiegeMascotAction.DANCE else if (i <= 1) WordSiegeMascotAction.NUZZLE else WordSiegeMascotAction.NOD)
-                    openChatView(); addMessage(false, reply)
-                }
-            }, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (i > 0) leftMargin = dp(5) })
-        }
-        content.addView(moods)
-
-        content.addView(section("GÜNLÜK"))
-        val focusing = store.focusEnd() > 0L
-        content.addView(grid(listOf(
-            "⏰ Alarmlarım" to { openChatView(); submit("alarmlarım") },
-            "🛒 Listem" to { openChatView(); submit("listemi göster") },
-            (if (focusing) "⏹ Odağı bitir" else "⏱ Odaklan 25 dk") to {
-                openChatView(); submit(if (focusing) "odağı bitir" else "odaklan 25 dakika")
-            },
-            "💸 Harcamalar" to { openChatView(); submit("harcamalarım") },
-            "☁ Hava" to { openChatView(); submit("hava durumu") },
-            "🎂 Doğum günleri" to { openChatView(); submit("doğum günleri") },
-            "⏳ Geri sayımlar" to { openChatView(); submit("geri sayımlar") },
-            "📘 Günün kelimeleri" to { openChatView(); submit("bugünün kelimeleri") },
-        )))
-
-        content.addView(section("EĞLENCE"))
-        content.addView(grid(listOf(
-            "🎮 Oyunlar" to { showGames() },
-            "👕 Dolap" to { showWardrobe() },
-            "📊 Haftam" to { openChatView(); submit("haftam nasıl") },
-            "🎯 Kelime Tahtı" to { openKelimeTahti() },
-        )))
-
-        content.addView(section("AYARLAR"))
-        val voiceOn = localPrefs.getBoolean("voice_alerts", true)
-        content.addView(grid(listOf(
-            (if (voiceOn) "♪ Sesli uyarı: açık" else "♪ Sesli uyarı: kapalı") to {
-                localPrefs.edit().putBoolean("voice_alerts", !voiceOn).apply(); showHome()
-            },
-            "♪ Sesi dene" to {
-                runCatching { startForegroundService(Intent(this, ObiVoiceAlertService::class.java).setAction(ObiVoiceAlertService.ACTION_PREVIEW)) }
-                Unit
-            },
-            (if (store.waterEnabled()) "💧 Su: açık" else "💧 Su: kapalı") to {
-                store.handle(if (store.waterEnabled()) "su hatırlatıcısını kapat" else "su hatırlatıcısını aç"); showHome()
-            },
-            (if (store.breakEnabled()) "🧘 Mola: açık" else "🧘 Mola: kapalı") to {
-                store.handle(if (store.breakEnabled()) "mola hatırlatıcısını kapat" else "mola hatırlatıcısını aç"); showHome()
-            },
-            "🔔 Bildirim izni" to {
-                hidePanel()
-                runCatching { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                Unit
-            },
-        ) + (if (!store.canScheduleExact()) listOf("⏰ Kesin alarm izni" to { openExactAlarmSettings() }) else emptyList())))
-        content.addView(label("İpucu: ‘her gün 21'de ilacımı hatırlat’, ‘listeye süt ekle’, ‘market 250 TL’, ‘geri sayım tatil 15 temmuz’, ‘şehrim İzmir’, ‘yatma saatim 23’.", 11f, Color.rgb(160, 178, 200)).apply {
-            setPadding(dp(4), dp(12), dp(4), 0)
-        })
-    }
-
-    private fun showGames() {
-        val menu = menuBox ?: return
-        menu.removeAllViews()
-        menu.addView(header("🎮  Oyunlar", ::showHome))
-        val best = getSharedPreferences(PREFS, MODE_PRIVATE).getInt("catch_best", 0)
-        val list = listOf(
-            Triple("🔤  Kelime tahmini", "5 harfli kelimeyi 6 denemede bul") { openChatView(); startGuess() },
-            Triple("❓  Bilmece", "Obi sorar, sen bulursun") { openChatView(); startRiddle() },
-            Triple("📘  Kelime testi", "Bugünün 3 İngilizce kelimesi") { openChatView(); startQuiz() },
-            Triple("⚡  Obi'yi yakala", "15 saniyede kaç kez? Rekor: $best") { startCatchGame() },
-        )
-        list.forEach { (title, hint, click) ->
-            menu.addView(LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(14), dp(10), dp(14), dp(10))
-                background = GradientDrawable().apply { setColor(CHIP); cornerRadius = dp(16).toFloat() }
-                addView(label(title, 15f, Color.WHITE, bold = true))
-                addView(label(hint, 12f, SOFT))
-                setOnClickListener { click() }
-            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
-        }
-    }
-
-    private fun showWardrobe() {
-        val menu = menuBox ?: return
-        menu.removeAllViews()
-        menu.addView(header("👕  Obi'nin dolabı", ::showHome))
-        val bond = store.bond()
-        menu.addView(label("Benimle konuştukça, oyun oynadıkça ve ruh hâlini yazdıkça bağımız güçlenir ve yeni kıyafetler açılır. ♥ $bond", 12f, SOFT).apply {
-            setPadding(dp(4), 0, dp(4), dp(6))
-        })
-        val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        menu.addView(CappedScroll(this, (resources.displayMetrics.heightPixels * .6f).toInt()).apply { addView(content) })
-        val skin = store.skin()
-        val chosenHat = store.chosenHat()
-        content.addView(section("KARAKTER"))
-        content.addView(grid(ObiLife.unlocks.filter { it.skin != null }.map { item ->
-            val open = item.points <= bond
-            val mark = if (item.skin == skin) "✓ " else if (!open) "🔒 " else ""
-            "$mark${item.name}${if (!open) " (${item.points})" else ""}" to {
-                if (open) { store.wear(skin = item.skin); animate(WordSiegeMascotAction.SPARKLE); showWardrobe() }
-            }
-        }))
-        content.addView(section("ŞAPKA"))
-        val hats = listOf(ObiLife.Unlock(0, hat = WordSiegeMascotHat.NONE)) + ObiLife.unlocks.filter { it.hat != null }
-        content.addView(grid(hats.map { item ->
-            val open = item.points <= bond
-            val mark = if (item.hat == chosenHat) "✓ " else if (!open) "🔒 " else ""
-            "$mark${item.name}${if (!open) " (${item.points})" else ""}" to {
-                if (open) { store.wear(hat = item.hat); animate(WordSiegeMascotAction.PROUD_POSE); showWardrobe() }
-            }
-        }))
-        content.addView(label("Bayramlarda ve doğum gününde Obi, sen şapka seçmediysen özel şapkasını kendisi takar.", 11f, Color.rgb(160, 178, 200)).apply {
-            setPadding(dp(4), dp(10), dp(4), 0)
-        })
+    private fun thinking(text: String = "…") {
+        replyText?.text = text
+        animate(WordSiegeMascotAction.THINK)
     }
 
     private fun openKelimeTahti() {
@@ -861,277 +784,274 @@ class ObiOverlayService : Service() {
         }
     }
 
-    private fun openExactAlarmSettings() {
+    private fun openSettings(intent: Intent) {
         hidePanel()
-        runCatching {
-            startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }
+        runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 
-    // ---- Chat ---------------------------------------------------------------------------------------
+    private fun openExactAlarmSettings() =
+        openSettings(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
 
-    private fun buildChat(chat: LinearLayout, logHeight: Int) {
-        chat.addView(header("Obi ile sohbet") { chatBox?.visibility = View.GONE; menuBox?.visibility = View.VISIBLE; showHome() })
-        val avatar = WordSiegeMascotView(this).apply {
-            setSkin(store.skin())
-            updateGame(null, false, 0, 0, 0, null, emptyList(), true, WordSiegeMascotEmotion.HAPPY)
-            contentDescription = "Obi, sohbet arkadaşın"
-            setOnClickListener { animate(nextMove()) }
-        }
-        chat.addView(avatar, LinearLayout.LayoutParams(dp(104), dp(104)).apply { gravity = Gravity.CENTER_HORIZONTAL })
-        chatMascot = avatar
-        val log = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 0, 0, dp(4)) }
-        val scroll = CappedScroll(this, logHeight).apply { addView(log); isVerticalScrollBarEnabled = false }
-        chat.addView(scroll, LinearLayout.LayoutParams(-1, -2))
-        chatLog = log; chatScroll = scroll
-        loadLog()
-        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        chat.addView(HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false; addView(actions)
-        }, LinearLayout.LayoutParams(-1, dp(40)).apply { topMargin = dp(6) })
-        actionRow = actions
-        resetActions()
-        val field = EditText(this).apply {
-            hint = "Obi'ye yaz…"; maxLines = 3
-            setTextColor(Color.WHITE); setHintTextColor(Color.rgb(170, 190, 204))
-            textSize = 15f; setPadding(dp(14), dp(8), dp(14), dp(8))
-            background = GradientDrawable().apply {
-                setColor(Color.rgb(35, 48, 68)); cornerRadius = dp(18).toFloat()
-                setStroke(dp(1), Color.rgb(84, 111, 130))
-            }
-            imeOptions = EditorInfo.IME_ACTION_SEND
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-        }
-        input = field
-        val send = pill("➤", true).apply { setOnClickListener { submit(field.text.toString().trim()); field.text.clear() } }
-        field.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEND) { submit(field.text.toString().trim()); field.text.clear(); true } else false
-        }
-        val compose = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        compose.addView(field, LinearLayout.LayoutParams(0, -2, 1f))
-        compose.addView(send, LinearLayout.LayoutParams(dp(52), dp(48)).apply { leftMargin = dp(8) })
-        chat.addView(compose, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
-    }
-
-    private fun openChatView() {
-        menuBox?.visibility = View.GONE
-        chatBox?.visibility = View.VISIBLE
+    private fun openGeminiSetup() {
+        hidePanel()
         mascot?.visibility = View.GONE
-        animate(WordSiegeMascotAction.WAVE)
-        scrollToEnd()
-        val field = input ?: return
-        field.requestFocus()
-        handler.postDelayed({
-            if (panel != null) (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(field, InputMethodManager.SHOW_IMPLICIT)
-        }, 180L)
+        runCatching { startActivity(Intent(this, ObiGeminiSetupActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            .onFailure { mascot?.visibility = View.VISIBLE }
     }
 
-    private fun loadLog() {
-        val log = chatLog ?: return
-        val saved = runCatching { JSONArray(localPrefs.getString("chat_log", "[]") ?: "[]") }.getOrDefault(JSONArray())
-        if (saved.length() == 0) { addBubble(log, false, "Buradayım. Bana yaz 💜\nNe yapabileceğimi merak edersen ‘ne yapabilirsin’ yaz."); return }
-        for (i in 0 until saved.length()) saved.optJSONObject(i)?.let { addBubble(log, it.optBoolean("me"), it.optString("text")) }
-    }
+    private val helpText = "Bana yazman yeterli, örneğin:\n" +
+        "• listeye süt ekmek ekle / listem\n• not al: faturayı öde / notlarım\n" +
+        "• her gün 21'de ilacımı hatırlat / 10 dakika sonra alarm kur / alarmlarım\n" +
+        "• Arnavutköy'de hava nasıl / şehrim İzmir\n• market 250 TL / harcamalarım\n" +
+        "• geri sayım tatil 15 temmuz / annemin doğum günü 5 mart\n" +
+        "• odaklan 25 dakika • oyun oynayalım • dolap / Pofi'yi giy / bere tak\n" +
+        "• panodakini özetle / panodakini çevir • bugünün kelimeleri\n" +
+        "• sesli uyarıyı kapat • su hatırlatıcısını aç • Gemini bağla"
 
-    private fun persist(me: Boolean, text: String) {
-        val saved = runCatching { JSONArray(localPrefs.getString("chat_log", "[]") ?: "[]") }.getOrDefault(JSONArray())
-        saved.put(JSONObject().put("me", me).put("text", text.take(1200)))
-        val trimmed = JSONArray()
-        for (i in maxOf(0, saved.length() - 30) until saved.length()) trimmed.put(saved.get(i))
-        localPrefs.edit().putString("chat_log", trimmed.toString()).apply()
-    }
-
-    private fun addBubble(log: LinearLayout, me: Boolean, text: String): TextView {
-        val bubbleView = TextView(this).apply {
-            this.text = text
-            textSize = 15f
-            setTextColor(if (me) Color.WHITE else Color.rgb(228, 245, 240))
-            setTextIsSelectable(true)
-            setPadding(dp(13), dp(9), dp(13), dp(9))
-            background = GradientDrawable().apply {
-                setColor(if (me) ACCENT else Color.rgb(37, 54, 73))
-                cornerRadii = if (me) floatArrayOf(dp(18f), dp(18f), dp(4f), dp(4f), dp(18f), dp(18f), dp(18f), dp(18f))
-                    else floatArrayOf(dp(4f), dp(4f), dp(18f), dp(18f), dp(18f), dp(18f), dp(18f), dp(18f))
-            }
-        }
-        log.addView(bubbleView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-            gravity = if (me) Gravity.END else Gravity.START
-            topMargin = dp(6)
-            if (me) leftMargin = dp(40) else rightMargin = dp(40)
-        })
-        return bubbleView
-    }
-
-    /** Adds a chat line; returns the bubble so an answer can replace a "thinking" placeholder. */
-    private fun addMessage(me: Boolean, text: String, save: Boolean = true): TextView? {
-        val log = chatLog ?: return null
-        val view = addBubble(log, me, text)
-        if (save) persist(me, text)
-        scrollToEnd()
-        return view
-    }
-
-    private fun finish(placeholder: TextView?, text: String) {
-        placeholder?.text = text
-        persist(false, text)
-        scrollToEnd()
-    }
-
-    private fun scrollToEnd() {
-        val scroll = chatScroll ?: return
-        scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
-    }
-
-    private fun resetActions(extra: List<Pair<String, () -> Unit>> = emptyList()) {
-        val row = actionRow ?: return
-        row.removeAllViews()
-        val items = extra + listOf(
-            "📋 Özetle" to { clipboardTask("summary") },
-            "📋 Çevir" to { clipboardTask("translate") },
-            "📋 Kibar cevap" to { clipboardTask("reply") },
-            "🧹 Sohbeti temizle" to { clearChat() },
-        )
-        items.forEachIndexed { i, (text, click) ->
-            row.addView(pill(text, i < extra.size, small = true).apply { setOnClickListener { click() } },
-                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(36)).apply { if (i > 0) leftMargin = dp(6) })
-        }
-    }
-
-    private fun clearChat() {
-        localPrefs.edit().remove("chat_log").apply()
-        gemini.forgetConversation()
-        game = null
-        chatLog?.removeAllViews()
-        addMessage(false, "Temiz bir sayfa açtık ✨", save = false)
-        resetActions()
-    }
+    private fun clipboardText(): String = runCatching {
+        (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)?.coerceToText(this)?.toString()?.trim()
+    }.getOrNull().orEmpty()
 
     private fun clipboardTask(kind: String) {
-        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-        val text = runCatching { clipboard.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()?.trim() }
-            .getOrNull().orEmpty()
-        if (text.isBlank()) {
-            addMessage(false, "Panoda metin göremedim. Metni kopyalayıp yazı kutusuna yapıştırarak da gönderebilirsin.", save = false)
-            return
-        }
-        addMessage(true, when (kind) { "summary" -> "📋 Panodakini özetle"; "translate" -> "📋 Panodakini çevir"; else -> "📋 Kibar bir cevap yaz" })
+        val text = clipboardText()
+        if (text.isBlank()) { say("Panoda yazı göremedim. Metni buraya yapıştırıp ‘özetle:’ ya da ‘çevir:’ diye başlayarak da yazabilirsin."); return }
+        lastUser = "Panodaki: “${text.take(60)}${if (text.length > 60) "…" else ""}”"
         if (kind == "translate" && !gemini.connected()) { translate("çevir: ${text.take(1500)}"); return }
-        if (!gemini.connected()) { addMessage(false, "Bunun için Gemini'yi bağlamalısın. Menüde ‘Gemini'yi bağla’ düğmesi var."); return }
+        if (!gemini.connected()) { say("Bunun için önce Gemini'yi bağlamalısın. ‘Gemini bağla’ yaz."); return }
         val prompt = when (kind) {
             "summary" -> "Aşağıdaki metni Türkçe olarak en fazla 4 kısa maddede özetle:\n\n"
             "translate" -> "Aşağıdaki metin Türkçeyse İngilizceye, değilse Türkçeye çevir. Sadece çeviriyi yaz:\n\n"
             else -> "Aşağıdaki mesaja kibar, sıcak ve kısa bir Türkçe cevap taslağı yaz. Sadece cevabı yaz:\n\n"
         } + text.take(3000)
-        askGemini(prompt)
+        askGemini(prompt, tools = false)
     }
 
-    private fun askGemini(prompt: String) {
+    private fun askGemini(prompt: String, tools: Boolean = true) {
         requestId++
         val current = requestId
-        val placeholder = addMessage(false, "Bir bakayım… ✨", save = false)
-        animate(WordSiegeMascotAction.THINK)
-        gemini.ask(prompt) { answer ->
-            if (current == requestId) {
-                finish(placeholder, answer.text)
-                animate(answer.action)
-            }
+        thinking()
+        gemini.ask(prompt, tools) { answer ->
+            if (current != requestId) return@ask
+            if (answer.intent != null && runIntent(answer.intent, answer.args ?: JSONObject(), answer.text)) return@ask
+            say(answer.text, answer.action)
         }
+    }
+
+    private fun fetchWeather(candidates: List<String>, saveCity: Boolean) {
+        requestId++
+        val current = requestId
+        thinking("Hava verisini getiriyorum… ☁")
+        Thread {
+            val result = weather.blocking(candidates)
+            handler.post {
+                if (current != requestId) return@post
+                if (result == null) {
+                    pending = Pending.CITY
+                    say("‘${candidates.firstOrNull() ?: ""}’ için hava bilgisi bulamadım. Şehir ya da ilçe adını tekrar yazar mısın?", WordSiegeMascotAction.SHRUG)
+                } else {
+                    if (saveCity && store.city() == null) candidates.firstOrNull()?.let { store.handle("şehrim $it") }
+                    say(result, WordSiegeMascotAction.POINT)
+                }
+            }
+        }.start()
+    }
+
+    private fun showList() {
+        val items = store.shopping()
+        if (items.isEmpty()) { pending = Pending.LIST_ITEMS; say("Alışveriş listen boş. Ne ekleyeyim? (örneğin: süt ekmek kahve)", WordSiegeMascotAction.THINK) }
+        else say(store.handle("listemi göster"), WordSiegeMascotAction.NOD)
+    }
+
+    private fun wardrobeText(): String {
+        val bond = store.bond()
+        val open = ObiLife.unlocked(bond)
+        val next = ObiLife.nextUnlock(bond)
+        val skins = open.mapNotNull { it.skin?.titleTr }.joinToString(", ")
+        val hats = open.mapNotNull { it.hat }.joinToString(", ") { ObiLife.hatName(it) }.ifBlank { "henüz yok" }
+        return "♥ Bağımız: $bond\n👕 Karakterler: $skins\n🎩 Şapkalar: $hats" +
+            (next?.let { "\nSıradaki: ${it.name} (${it.points} ♥ gerekiyor)" } ?: "\nHer şey açıldı! 👑") +
+            "\n\nGiymek için: ‘Pofi'yi giy’, ‘bere tak’, ‘şapkayı çıkar’."
+    }
+
+    /** Runs a phone task that Gemini recognised. Returns false when it could not be done locally. */
+    private fun runIntent(intent: String, args: JSONObject, geminiText: String): Boolean {
+        fun strings(name: String): List<String> = args.optJSONArray(name)?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty().filter { it.isNotBlank() }
+        when (intent) {
+            "list_add" -> strings("items").ifEmpty { listOf(args.optString("item")).filter { it.isNotBlank() } }
+                .takeIf { it.isNotEmpty() }?.let { say(store.handle("listeye ${it.joinToString(", ")} ekle"), WordSiegeMascotAction.NOD) } ?: return false
+            "list_show" -> showList()
+            "list_remove" -> args.optString("item").takeIf { it.isNotBlank() }?.let { say(store.handle("listeden ${ObiLife.lower(it)} sil")) } ?: return false
+            "list_clear" -> say(store.handle("listeyi temizle"))
+            "note_add" -> args.optString("text").takeIf { it.isNotBlank() }?.let { say(store.handle("not al $it"), WordSiegeMascotAction.NOD) } ?: return false
+            "notes_show" -> say(store.handle("notlarımı göster"))
+            "reminder", "alarm" -> {
+                val time = args.optString("datetime").takeIf { it.length >= 16 }?.let {
+                    runCatching { java.time.LocalDateTime.parse(it.take(16)) }.getOrNull()
+                }?.takeIf { it.isAfter(java.time.LocalDateTime.now()) }
+                    ?.atZone(java.time.ZoneId.systemDefault())?.toInstant()?.toEpochMilli() ?: return false
+                val repeat = args.optString("repeat").takeIf { it == "daily" || it == "weekdays" || it.startsWith("weekly:") }
+                val alarm = intent == "alarm"
+                val text = if (alarm) "Obi alarmı: Uyanma zamanı!" else args.optString("text").ifBlank { "Hatırlatıcı" }
+                store.schedule(time, text, if (alarm) "alarm" else "reminder", repeat)
+                val day = java.time.Instant.ofEpochMilli(time).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                val whenText = repeat?.let { ObiLife.repeatLabel(it) } ?: when (day) {
+                    LocalDate.now() -> "bugün"; LocalDate.now().plusDays(1) -> "yarın"
+                    else -> "${day.dayOfMonth} ${ObiLife.title(ObiLife.months[day.monthValue - 1])}"
+                }
+                say("${if (alarm) "Alarmı" else "‘$text’ hatırlatıcısını"} $whenText ${store.formatClock(time)} için kurdum ✓" +
+                    if (!store.canScheduleExact()) "\nTam saatinde çalması için ‘kesin alarm izni’ yaz." else "", WordSiegeMascotAction.CHEER)
+            }
+            "alarms_show" -> say(store.handle("alarmlarım"))
+            "weather" -> {
+                val city = args.optString("city").takeIf { it.isNotBlank() } ?: store.city()
+                if (city == null) { pending = Pending.CITY; say("Hangi şehir ya da ilçe?") } else fetchWeather(listOf(ObiLife.lower(city)), saveCity = true)
+            }
+            "expense_add" -> {
+                val amount = args.optDouble("amount", Double.NaN).takeIf { !it.isNaN() && it > 0 } ?: return false
+                say(store.handle("harcama: ${args.optString("label").ifBlank { "Harcama" }} ${if (amount % 1.0 == 0.0) amount.toLong().toString() else amount.toString()} tl"))
+            }
+            "expenses_show" -> say(store.handle("harcamalarım"))
+            "countdown_add" -> {
+                val date = runCatching { LocalDate.parse(args.optString("date").take(10)) }.getOrNull() ?: return false
+                say(store.handle("geri sayım ${args.optString("label").ifBlank { "etkinlik" }} ${date.dayOfMonth} ${ObiLife.months[date.monthValue - 1]} ${date.year}"))
+            }
+            "countdowns_show" -> say(store.handle("geri sayımlar"))
+            "birthday_add" -> {
+                val day = args.optInt("day"); val month = args.optInt("month")
+                if (day !in 1..31 || month !in 1..12) return false
+                say(store.handle("${ObiLife.lower(args.optString("person").ifBlank { "o kişinin" })} doğum günü $day ${ObiLife.months[month - 1]}"))
+            }
+            "focus" -> say(startFocus(args.optInt("minutes", 25).coerceIn(5, 120)))
+            "game" -> startGameByName(args.optString("name"))
+            "wardrobe" -> say(wardrobeText())
+            "mood" -> args.optInt("score").takeIf { it in 1..5 }?.let { say(store.logMood(it)) } ?: return false
+            "words_today" -> say(store.handle("bugünün kelimeleri"))
+            else -> return false
+        }
+        return true
     }
 
     private fun submit(command: String) {
         if (command.isBlank()) return
         lastInteractionAt = System.currentTimeMillis()
-        addMessage(true, command)
+        lastUser = command
         reward(1)
         val t = ObiLife.lower(command)
+
+        // Follow-up answers to Obi's own question.
+        val asked = pending
+        pending = Pending.NONE
+        when (asked) {
+            Pending.CITY -> if (t.split(Regex("\\s+")).size <= 3 && !store.canHandle(command)) {
+                fetchWeather(ObiParse.cityCandidates("$t hava").ifEmpty { listOf(t) }, saveCity = true); return
+            }
+            Pending.LIST_ITEMS -> if (!store.canHandle(command) && !t.contains("?")) {
+                say(store.handle("listeye ${ObiLife.listItems(t).joinToString(", ")} ekle"), WordSiegeMascotAction.NOD); return
+            }
+            Pending.MOOD -> ObiLife.moodScore(command)?.let { say(store.logMood(it), if (it >= 4) WordSiegeMascotAction.DANCE else WordSiegeMascotAction.NUZZLE); return }
+            Pending.GAME_PICK -> if (startGameByName(t)) return
+            Pending.NONE -> Unit
+        }
         game?.let { if (playGame(it, command)) return }
 
-        if (t.contains("odaklan") || t.contains("pomodoro")) {
-            val minutes = Regex("(\\d{1,3})").find(t)?.groupValues?.get(1)?.toIntOrNull()?.coerceIn(5, 120) ?: 25
-            addMessage(false, startFocus(minutes)); return
+        when {
+            t.contains("gemini") && (t.contains("bağla") || t.contains("bagla") || t.contains("anahtar")) -> { openGeminiSetup(); return }
+            t == "yardım" || t == "yardim" || t.contains("ne yapabilirsin") || t.contains("neler yapabilirsin") || t == "komutlar" -> { say(helpText); return }
+            t.contains("odaklan") || t.contains("pomodoro") -> {
+                val minutes = Regex("(\\d{1,3})").find(t)?.groupValues?.get(1)?.toIntOrNull()?.coerceIn(5, 120) ?: 25
+                say(startFocus(minutes)); return
+            }
+            t.contains("odağı bitir") || t.contains("odagi bitir") || t.contains("odak bitir") -> {
+                store.stopFocus(); endFocusView(); say("Odak modunu bitirdim. Güzel çalıştın! 👏", WordSiegeMascotAction.CLAP); return
+            }
+            t.contains("oyun") || t == "oyna" -> {
+                pending = Pending.GAME_PICK
+                say("Hangisini oynayalım? 🎮\n• kelime tahmini\n• bilmece\n• kelime testi\n• yakala (Obi'yi yakala)", WordSiegeMascotAction.BOUNCE); return
+            }
+            startGameByName(t, onlyExact = true) -> return
+            ObiLife.isWardrobe(t) || t.contains("bağımız") || t.contains("bagimiz") -> { say(wardrobeText()); return }
+            t.contains("pano") -> {
+                clipboardTask(when { t.contains("çevir") || t.contains("cevir") -> "translate"; t.contains("cevap") -> "reply"; else -> "summary" }); return
+            }
+            t.contains("kelime tahtı") && !t.contains("?") -> { openKelimeTahti(); return }
+            t.contains("kesin alarm") -> { openExactAlarmSettings(); return }
+            t.contains("bildirim izni") -> { openSettings(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)); return }
+            t.contains("sesli uyarı") || t.contains("sesli uyari") -> {
+                val on = !t.contains("kapat")
+                localPrefs.edit().putBoolean("voice_alerts", on).apply()
+                say(if (on) "Sesli uyarıları açtım ♪" else "Sesli uyarıları kapattım. Sadece bildirim göndereceğim."); return
+            }
+            t.contains("sesini dene") || t.contains("sesini duy") -> {
+                runCatching { startForegroundService(Intent(this, ObiVoiceAlertService::class.java).setAction(ObiVoiceAlertService.ACTION_PREVIEW)) }
+                say("Obi, Obi! ♪", WordSiegeMascotAction.DANCE); return
+            }
+            t.startsWith("ruh halim") || t.startsWith("bugün ") && ObiLife.moodScore(t.removePrefix("bugün ")) != null && t.split(" ").size <= 3 -> {
+                ObiLife.moodScore(t)?.let { say(store.logMood(it)); return }
+            }
         }
-        if (t.contains("odağı bitir") || t.contains("odagi bitir") || t.contains("odak bitir")) {
-            store.stopFocus(); endFocusView()
-            addMessage(false, "Odak modunu bitirdim. Güzel çalıştın! 👏"); animate(WordSiegeMascotAction.CLAP); return
+        ObiLife.wear(t)?.let { wear ->
+            val open = ObiLife.unlocked(store.bond())
+            val skinOk = wear.skin == null || open.any { it.skin == wear.skin }
+            val hatOk = wear.hat == null || wear.hat == WordSiegeMascotHat.NONE || open.any { it.hat == wear.hat }
+            if (!skinOk || !hatOk) {
+                val need = ObiLife.unlocks.firstOrNull { (wear.skin != null && it.skin == wear.skin) || (wear.hat != null && it.hat == wear.hat) }
+                say("Bu henüz açılmadı 🔒 ${need?.points ?: ""} ♥ bağ puanında açılacak. Şu an: ${store.bond()} ♥"); return
+            }
+            store.wear(wear.skin, wear.hat)
+            say("Nasıl oldum? ✨", WordSiegeMascotAction.PROUD_POSE); return
         }
-        if (t == "oyun" || t.contains("oyun oynayalım") || t.contains("oyun oynayalim")) { showGamesFromChat(); return }
+        if (ObiLife.listCommand(t) == ObiLife.ListCommand.Show) { showList(); return }
 
         val wantsSchedule = (t.contains("hatırlat") || t.contains("hatirlat") || t.contains("alarm kur") || t.contains("uyandır") || t.contains("uyandir")) &&
             !t.contains("su hatırlat") && !t.contains("mola hatırlat") && !ObiLife.isAlarmList(t) && ObiLife.alarmToDelete(t) == null
         if (wantsSchedule && ObiParse.triggerTime(t) == null && gemini.connected()) {
-            val placeholder = addMessage(false, "Saati çözüyorum… ⏰", save = false)
-            animate(WordSiegeMascotAction.THINK)
-            val repeat = ObiLife.repeatRule(t)
-            gemini.extractSchedule(command) { time, text ->
-                if (time == null) { finish(placeholder, store.handle(command)); return@extractSchedule }
-                val alarm = t.contains("alarm") || t.contains("uyandır") || t.contains("uyandir")
-                store.schedule(time, if (alarm) "Obi alarmı: Uyanma zamanı!" else (text ?: ObiParse.reminderNote(command)), if (alarm) "alarm" else "reminder", repeat)
-                finish(placeholder, "${if (alarm) "Alarmı" else "‘${text ?: "Hatırlatıcı"}’ hatırlatıcısını"} ${store.formatClock(time)} için kurdum ✓ (${java.time.Instant.ofEpochMilli(time).atZone(java.time.ZoneId.systemDefault()).toLocalDate().let { "${it.dayOfMonth} ${ObiLife.title(ObiLife.months[it.monthValue - 1])}" }})")
-                animate(WordSiegeMascotAction.CHEER)
-                exactPrompt()
-            }
-            return
+            askGemini(command); return
         }
         if (store.canHandle(command)) {
-            addMessage(false, store.handle(command))
-            animate(when {
+            val reply = store.handle(command)
+            say(reply, when {
                 t.contains("alarm") || t.contains("hatırlat") -> WordSiegeMascotAction.CHEER
-                t.contains("liste") -> WordSiegeMascotAction.NOD
-                t.contains("tl") || t.contains("lira") -> WordSiegeMascotAction.THINK
                 else -> WordSiegeMascotAction.NOD
             })
-            exactPrompt()
             ObiWidget.refresh(this)
             return
         }
         if (weather.canHandle(command)) {
-            requestId++
-            val current = requestId
-            val placeholder = addMessage(false, "Hava verisini getiriyorum… ☁", save = false)
-            animate(WordSiegeMascotAction.LOOK_AROUND)
-            weather.ask(command, store.city()) { result ->
-                if (current == requestId) { finish(placeholder, result); animate(WordSiegeMascotAction.POINT) }
-            }
+            val candidates = ObiParse.cityCandidates(command).ifEmpty { listOfNotNull(store.city()) }
+            if (candidates.isEmpty()) { pending = Pending.CITY; say("Hangi şehir ya da ilçe? 🌤") } else fetchWeather(candidates, saveCity = false)
             return
         }
         if (gemini.connected()) { askGemini(command); return }
-        if (!translate(command)) {
-            addMessage(false, store.handle(command))
-            animate(nextMove())
-        }
-    }
-
-    private fun exactPrompt() {
-        if (!store.needsExactPermission) { resetActions(); return }
-        resetActions(listOf("⏰ Kesin alarm iznini aç" to { openExactAlarmSettings() }))
+        if (!translate(command)) say(store.handle(command), nextMove())
     }
 
     // ---- Chat games ---------------------------------------------------------------------------------
 
-    private fun showGamesFromChat() {
-        addMessage(false, "Hangi oyunu oynayalım? 🎮")
-        resetActions(listOf(
-            "🔤 Kelime tahmini" to { startGuess() },
-            "❓ Bilmece" to { startRiddle() },
-            "📘 Kelime testi" to { startQuiz() },
-            "⚡ Obi'yi yakala" to { startCatchGame() },
-        ))
+    private fun startGameByName(raw: String, onlyExact: Boolean = false): Boolean {
+        val t = ObiLife.lower(raw)
+        val exact = t.split(Regex("\\s+")).size <= 3
+        if (onlyExact && !exact) return false
+        when {
+            t.contains("tahmin") || t == "guess" -> startGuess()
+            t.contains("bilmece") || t == "riddle" -> startRiddle()
+            t.contains("test") || t.contains("quiz") -> startQuiz()
+            t.contains("yakala") || t == "catch" -> startCatchGame()
+            else -> return false
+        }
+        return true
     }
 
     private fun startGuess() {
         val answer = ObiLife.guessWords.random()
         game = GuessGame(answer)
-        animate(WordSiegeMascotAction.THINK)
-        addMessage(false, "5 harfli bir kelime düşündüm. İlk harfi ‘${answer.first().uppercaseChar()}’. 6 hakkın var!\n🟩 doğru yer • 🟨 kelimede var • ⬜ yok\n(Vazgeçmek için ‘pes’)")
-        resetActions(listOf("🏳 Pes" to { submit("pes") }))
+        say("5 harfli bir kelime düşündüm. İlk harfi ‘${answer.first().uppercaseChar()}’. 6 hakkın var!\n🟩 doğru yer • 🟨 kelimede var • ⬜ yok\n(Vazgeçmek için ‘pes’)", WordSiegeMascotAction.THINK)
     }
 
     private fun startRiddle() {
         val riddle = ObiLife.riddles.random()
         game = RiddleGame(riddle)
-        animate(WordSiegeMascotAction.THINK)
-        addMessage(false, "❓ ${riddle.question}")
-        resetActions(listOf("💡 İpucu" to { submit("ipucu") }, "🏳 Pes" to { submit("pes") }))
+        say("❓ ${riddle.question}\n(‘ipucu’ ya da ‘pes’ yazabilirsin)", WordSiegeMascotAction.THINK)
     }
 
     private fun startQuiz() {
@@ -1142,63 +1062,64 @@ class ObiOverlayService : Service() {
 
     private fun askQuiz(quizGame: QuizGame) {
         val quiz = ObiLife.quiz(LocalDate.now(), quizGame.index, quizGame.seed + quizGame.index)
-        addMessage(false, "📘 Soru ${quizGame.index + 1}/3: “${quiz.word.en}” ne demek?")
-        resetActions(quiz.options.map { option -> option to { submit(option) } })
+        say("📘 Soru ${quizGame.index + 1}/3: “${quiz.word.en}” ne demek?\n" +
+            quiz.options.mapIndexed { i, o -> "${'a' + i}) $o" }.joinToString("   "))
     }
 
-    /** Returns true when the message was a move in the running game. */
+    /** Returns true when the message was a move in the running game; other requests fall through. */
     private fun playGame(current: ChatGame, raw: String): Boolean {
         val t = ObiLife.lower(raw)
-        if (t == "pes" || t == "çık" || t == "cik" || t == "bitir") {
+        val words = t.split(Regex("\\s+")).size
+        if (t == "pes" || t == "çık" || t == "cik" || t == "bitir" || t == "oyunu bitir") {
             val reveal = when (current) {
                 is GuessGame -> "Kelime ‘${current.answer}’ idi. Bir dahakine! 🙂"
                 is RiddleGame -> "Cevap: ${current.riddle.answers.first()}. Güzel bilmeceydi, değil mi?"
                 is QuizGame -> "Testi bitirdik. Puanın: ${current.score}/3"
             }
-            game = null; resetActions()
-            addMessage(false, reveal); animate(WordSiegeMascotAction.SHRUG)
+            game = null
+            say(reveal, WordSiegeMascotAction.SHRUG)
             return true
         }
         when (current) {
             is GuessGame -> {
+                if (words > 1) return false
                 val guess = t.filter { it.isLetter() }
-                if (guess.length != 5) { addMessage(false, "5 harfli bir kelime yaz 🙂"); return true }
+                if (guess.length != 5) { say("5 harfli bir kelime yaz 🙂"); return true }
                 current.tries++
                 val marks = ObiLife.guessMarks(current.answer, guess)
-                if (guess == current.answer) {
-                    game = null; resetActions()
-                    addMessage(false, "$marks\nBildin! ${current.tries}. denemede 🎉"); animate(WordSiegeMascotAction.DANCE); reward(3)
-                } else if (current.tries >= 6) {
-                    game = null; resetActions()
-                    addMessage(false, "$marks\nHakların bitti. Kelime ‘${current.answer}’ idi."); animate(WordSiegeMascotAction.SHRUG)
-                } else {
-                    addMessage(false, "$marks  ${guess.uppercase(java.util.Locale("tr", "TR"))}\nKalan hak: ${6 - current.tries}"); animate(WordSiegeMascotAction.NOD)
+                when {
+                    guess == current.answer -> { game = null; say("$marks\nBildin! ${current.tries}. denemede 🎉", WordSiegeMascotAction.DANCE); reward(3) }
+                    current.tries >= 6 -> { game = null; say("$marks\nHakların bitti. Kelime ‘${current.answer}’ idi.", WordSiegeMascotAction.SHRUG) }
+                    else -> say("$marks  ${guess.uppercase(java.util.Locale("tr", "TR"))}\nKalan hak: ${6 - current.tries}", WordSiegeMascotAction.NOD)
                 }
             }
             is RiddleGame -> {
-                if (t == "ipucu") { addMessage(false, "💡 ${current.riddle.hint}"); return true }
-                if (ObiLife.riddleCorrect(current.riddle, t)) {
-                    game = null; resetActions()
-                    addMessage(false, "Doğru! 🎉 Cevap: ${current.riddle.answers.first()}"); animate(WordSiegeMascotAction.CHEER); reward(3)
-                } else if (++current.misses >= 3) {
-                    game = null; resetActions()
-                    addMessage(false, "Olmadı 🙂 Cevap: ${current.riddle.answers.first()}"); animate(WordSiegeMascotAction.GIGGLE)
-                } else {
-                    addMessage(false, "Hmm, değil. Tekrar dene ya da ‘ipucu’ yaz."); animate(WordSiegeMascotAction.SHRUG)
+                if (words > 4) return false
+                if (t == "ipucu") { say("💡 ${current.riddle.hint}"); return true }
+                when {
+                    ObiLife.riddleCorrect(current.riddle, t) -> { game = null; say("Doğru! 🎉 Cevap: ${current.riddle.answers.first()}", WordSiegeMascotAction.CHEER); reward(3) }
+                    ++current.misses >= 3 -> { game = null; say("Olmadı 🙂 Cevap: ${current.riddle.answers.first()}", WordSiegeMascotAction.GIGGLE) }
+                    else -> say("Hmm, değil. Tekrar dene ya da ‘ipucu’ yaz.", WordSiegeMascotAction.SHRUG)
                 }
             }
             is QuizGame -> {
                 val quiz = ObiLife.quiz(LocalDate.now(), current.index, current.seed + current.index)
-                val right = t == ObiLife.lower(quiz.word.tr)
+                val letter = t.trim(')', '.', ' ').singleOrNull()?.let { it - 'a' }?.takeIf { it in quiz.options.indices }
+                val answer = letter?.let { quiz.options[it] } ?: quiz.options.firstOrNull { ObiLife.lower(it) == t }
+                if (answer == null && words > 2) return false
+                val right = answer != null && ObiLife.lower(answer) == ObiLife.lower(quiz.word.tr)
                 if (right) current.score++
-                addMessage(false, if (right) "Doğru ✓ ${quiz.word.en} = ${quiz.word.tr}\n“${quiz.word.example}”" else "Olmadı. ${quiz.word.en} = ${quiz.word.tr}\n“${quiz.word.example}”")
-                animate(if (right) WordSiegeMascotAction.CLAP else WordSiegeMascotAction.SHRUG)
                 current.index++
+                val feedback = (if (right) "Doğru ✓ " else "Olmadı. ") + "${quiz.word.en} = ${quiz.word.tr}\n“${quiz.word.example}”"
+                animate(if (right) WordSiegeMascotAction.CLAP else WordSiegeMascotAction.SHRUG)
                 if (current.index >= 3) {
-                    game = null; resetActions()
-                    addMessage(false, "Test bitti! Puanın: ${current.score}/3 ${if (current.score == 3) "🏆" else "✨"}")
+                    game = null
+                    say("$feedback\n\nTest bitti! Puanın: ${current.score}/3 ${if (current.score == 3) "🏆" else "✨"}")
                     if (current.score > 0) reward(3)
-                } else handler.postDelayed({ if (game === current) askQuiz(current) }, 700L)
+                } else {
+                    say(feedback)
+                    handler.postDelayed({ if (game === current) askQuiz(current) }, 2_200L)
+                }
             }
         }
         return true
@@ -1214,10 +1135,11 @@ class ObiOverlayService : Service() {
         val sourceText = command.replace(Regex("(?i)ingilizceye|türkçeye|turkceye|english|translate|çevir|cevir|bunu|şunu|lütfen|please"), "")
             .trim(' ', ':', '-', '“', '”', '"')
         if (sourceText.isBlank()) {
-            addMessage(false, "Çevireceğin metni de yaz: ‘Çevir: Hello, how are you?’", save = false)
+            say("Çevireceğin metni de yaz: ‘Çevir: Hello, how are you?’")
             return true
         }
-        val placeholder = addMessage(false, "Dili algılıyorum…", save = false)
+        thinking("Dili algılıyorum…")
+        val placeholder = replyText
         if (explicitEnglish) startTranslation(sourceText, TranslateLanguage.TURKISH, TranslateLanguage.ENGLISH, placeholder)
         else if (explicitTurkish) startTranslation(sourceText, TranslateLanguage.ENGLISH, TranslateLanguage.TURKISH, placeholder)
         else {
@@ -1244,17 +1166,17 @@ class ObiOverlayService : Service() {
         translator.downloadModelIfNeeded(DownloadConditions.Builder().build())
             .addOnSuccessListener {
                 translator.translate(text)
-                    .addOnSuccessListener { translated -> finish(placeholder, translated); translator.close() }
-                    .addOnFailureListener { finish(placeholder, "Çeviri başarısız oldu. Tekrar dene."); translator.close() }
+                    .addOnSuccessListener { translated -> if (placeholder === replyText) say(translated, WordSiegeMascotAction.NOD); translator.close() }
+                    .addOnFailureListener { if (placeholder === replyText) say("Çeviri başarısız oldu. Tekrar dene."); translator.close() }
             }
-            .addOnFailureListener { finish(placeholder, "Dil modeli indirilemedi. İnternet bağlantını kontrol et."); translator.close() }
+            .addOnFailureListener { if (placeholder === replyText) say("Dil modeli indirilemedi. İnternet bağlantını kontrol et."); translator.close() }
     }
 
     private fun hidePanel() {
         panel?.let { runCatching { windows.removeView(it) } }
         panel = null
         chatMascot = null
-        menuBox = null; chatBox = null; chatLog = null; chatScroll = null; actionRow = null; input = null
+        replyText = null; youText = null; replyScroll = null; input = null
         if (catchUntil == 0L) mascot?.visibility = View.VISIBLE
         requestId++
     }

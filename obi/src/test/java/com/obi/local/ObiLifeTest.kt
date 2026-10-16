@@ -95,3 +95,29 @@ class ObiLifeTest {
         assertNull(ObiLife.celebration(LocalDate.of(2026, 10, 16)))
     }
 }
+
+class ObiChatWordsTest {
+    @Test fun listPhrasings() {
+        assertEquals(ObiLife.ListCommand.Show, ObiLife.listCommand("listemi getir"))
+        assertEquals(ObiLife.ListCommand.Show, ObiLife.listCommand("listem"))
+        assertEquals(listOf("süt", "ekmek", "kahve", "kola"), ObiLife.listItems("süt ekmek kahve kola"))
+        assertEquals(listOf("zeytin yağı", "peynir"), ObiLife.listItems("zeytin yağı, peynir"))
+    }
+
+    @Test fun moodAnswers() {
+        assertEquals(4, ObiLife.moodScore("4"))
+        assertEquals(5, ObiLife.moodScore("harika geçti"))
+        assertEquals(3, ObiLife.moodScore("idare eder"))
+        assertEquals(2, ObiLife.moodScore("iyi değil"))
+        assertEquals(4, ObiLife.moodScore("iyiyim"))
+        assertNull(ObiLife.moodScore("bugün maç var"))
+    }
+
+    @Test fun wardrobeWords() {
+        assertEquals(WordSiegeMascotSkin.PINK, ObiLife.wear("pofi'yi giy")?.skin)
+        assertEquals(WordSiegeMascotHat.BERET, ObiLife.wear("bere tak")?.hat)
+        assertEquals(WordSiegeMascotHat.NONE, ObiLife.wear("şapkayı çıkar")?.hat)
+        assertNull(ObiLife.wear("obi nasılsın"))
+        assertNull(ObiLife.wear("kola al"))
+    }
+}

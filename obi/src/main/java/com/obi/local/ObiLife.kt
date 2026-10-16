@@ -74,7 +74,7 @@ internal object ObiLife {
     /** "3. notu sil", "not 3 sil" → 3; "notları temizle" / "tüm notları sil" → 0. */
     fun noteToDelete(t: String): Int? {
         if (t.contains("notları temizle") || t.contains("notlari temizle") || (t.contains("tüm notları") && t.contains("sil"))) return 0
-        val match = Regex("(\\d{1,3})\\s*\\.?\\s*not\\w*\\s+sil|not\\w*\\s+(\\d{1,3})\\w*\\s+sil").find(t) ?: return null
+        val match = Regex("(\\d{1,3})\\s*\\.?\\s*not[\\p{L}'’]*\\s+sil|not[\\p{L}'’]*\\s+(\\d{1,3})[\\p{L}'’]*\\s+sil").find(t) ?: return null
         return (match.groupValues[1].ifBlank { match.groupValues[2] }).toIntOrNull()?.takeIf { it >= 1 }
     }
 
@@ -98,8 +98,16 @@ internal object ObiLife {
         Regex("^listeden\\s+(.+?)\\s+(?:sil|çıkar|cikar)$").find(t)?.let { return ListCommand.Remove(it.groupValues[1].trim()) }
         Regex("^(.+?)\\s+(?:alındı|alindi)$").find(t)?.let { return ListCommand.Remove(it.groupValues[1].trim()) }
         if (t.contains("listeyi temizle") || t.contains("listeyi sil")) return ListCommand.Clear
-        if (t == "listem" || t == "liste" || listOf("listemi göster", "listeyi göster", "alışveriş listes", "alisveris listes").any(t::contains)) return ListCommand.Show
+        if (t == "listem" || t == "liste" || t == "alışveriş" || listOf("alışveriş listes", "alisveris listes").any(t::contains)) return ListCommand.Show
+        if (Regex("liste(?:m|mi|yi|m[ıi]z)?(?!\\p{L})").containsMatchIn(t) &&
+            listOf("göster", "getir", "aç", "oku", "ne var", "neler var", "söyle", "bak").any(t::contains)) return ListCommand.Show
         return null
+    }
+
+    /** Items typed after Obi asked "Ne ekleyeyim?": "süt ekmek kahve" or "süt, zeytin yağı". */
+    fun listItems(t: String): List<String> {
+        val parts = if (t.contains(',') || t.contains(" ve ")) t.split(Regex("\\s*(?:,|\\sve\\s)\\s*")) else t.split(Regex("\\s+"))
+        return parts.map { it.trim(' ', '.', '!') }.filter { it.isNotBlank() }.take(20)
     }
 
     // ---- Expenses ---------------------------------------------------------------------------
@@ -196,6 +204,21 @@ internal object ObiLife {
         3 -> "İdare eder bir gün. Bazen bu da gayet yeterli."
         4 -> "Güzel bir gün! Neyin iyi geldiğini hatırlayalım ✨"
         else -> "Harika bir gün! Bu enerjiyi kutlayalım 🎉"
+    }
+
+    /** A mood answer: "4", "4/5", an emoji or words such as "iyiyim", "idare eder", "berbat". */
+    fun moodScore(raw: String): Int? {
+        val t = lower(raw)
+        Regex("^([1-5])(?:\\s*/\\s*5)?$").find(t)?.let { return it.groupValues[1].toInt() }
+        moodFaces.forEachIndexed { i, face -> if (t.contains(face)) return i + 1 }
+        return when {
+            listOf("çok kötü", "berbat", "rezalet", "felaket").any(t::contains) -> 1
+            listOf("iyi değil", "kötü", "üzgün", "yorgun", "moralim bozuk", "mutsuz").any(t::contains) -> 2
+            listOf("idare", "fena değil", "normal", "eh işte", "orta").any(t::contains) -> 3
+            listOf("harika", "süper", "mükemmel", "çok iyi", "muhteşem", "şahane").any(t::contains) -> 5
+            listOf("iyi", "güzel", "keyifli", "mutlu").any(t::contains) -> 4
+            else -> null
+        }
     }
 
     fun weeklyMood(scores: Map<LocalDate, Int>, today: LocalDate): String {
@@ -337,6 +360,27 @@ internal object ObiLife {
         WordSiegeMascotHat.WIZARD -> "Büyücü şapkası"
         WordSiegeMascotHat.TOP_HAT -> "Silindir şapka"
     }
+
+    /** What to wear from "Pofi'yi giy", "bere tak", "şapkayı çıkar"; null when the text is not about clothes. */
+    data class Wear(val skin: WordSiegeMascotSkin? = null, val hat: WordSiegeMascotHat? = null)
+
+    private val hatWords = listOf(
+        "parti" to WordSiegeMascotHat.PARTY, "taç" to WordSiegeMascotHat.CROWN, "tac" to WordSiegeMascotHat.CROWN,
+        "bere" to WordSiegeMascotHat.BERET, "çiçek" to WordSiegeMascotHat.FLOWER, "büyücü" to WordSiegeMascotHat.WIZARD,
+        "silindir" to WordSiegeMascotHat.TOP_HAT,
+    )
+
+    fun wear(t: String): Wear? {
+        if (Regex("şapka[\\p{L}'’]*\\s+(?:çıkar|cikar)").containsMatchIn(t) || t.contains("şapkasız")) return Wear(hat = WordSiegeMascotHat.NONE)
+        val verb = Regex("(?<!\\p{L})(?:giy\\p{L}*|ol|olsana|olur musun|tak|takar\\p{L}*|tak\\p{L}*|dönüş\\p{L}*)(?!\\p{L})").containsMatchIn(t)
+        if (!verb) return null
+        val skin = WordSiegeMascotSkin.entries.filter { it != WordSiegeMascotSkin.GOLD_KING }
+            .firstOrNull { Regex("(?<!\\p{L})${lower(it.titleTr)}").containsMatchIn(t) }
+        val hat = if (t.contains("tak") || t.contains("şapka")) hatWords.firstOrNull { t.contains(it.first) }?.second else null
+        return if (skin != null || hat != null) Wear(skin, hat) else null
+    }
+
+    fun isWardrobe(t: String): Boolean = listOf("dolap", "kıyafet", "kostüm", "neler giyebil").any(t::contains)
 
     fun unlocked(points: Int): List<Unlock> = unlocks.filter { it.points <= points }
     fun nextUnlock(points: Int): Unlock? = unlocks.firstOrNull { it.points > points }
