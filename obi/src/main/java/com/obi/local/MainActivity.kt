@@ -189,7 +189,8 @@ internal class ObiStore(private val context: Context) {
         if (normalized.contains("alarm") || normalized.contains("uyandır") || normalized.contains("uyandir")) {
             val time = reminderTime(normalized) ?: return "Saati anlayamadım. Örnek: ‘Sabah 9'a alarm kur’."
             schedule(time, "Obi alarmı: Uyanma zamanı!", "alarm")
-            return "Alarmı ${formatClock(time)} için kurdum. Android bildirimiyle haber vereceğim."
+            return if (canScheduleExact()) "Alarmı ${formatClock(time)} için kurdum. Obi sana seslenecek."
+                else "Alarmı ${formatClock(time)} civarına kurdum. Tam saatinde çalması için menüden ‘Kesin alarm izni’ni aç."
         }
         if (normalized.contains("notlarımı göster") || normalized.contains("notlarimi göster")) return notes().takeLast(5).reversed().mapIndexed { i, item -> "${i + 1}. $item" }.joinToString("\n").ifBlank { "Henüz notun yok. ‘Not al …’ yazabilirsin." }
         noteText(normalized, text)?.let { note -> save(note); return "Tamam, bunu hatırlayacağım: ‘$note’" }
@@ -231,7 +232,23 @@ internal class ObiStore(private val context: Context) {
         }.timeInMillis
     }
     private fun formatClock(time: Long): String = Calendar.getInstance().run { timeInMillis = time; String.format(Locale("tr", "TR"), "%02d:%02d", get(Calendar.HOUR_OF_DAY), get(Calendar.MINUTE)) }
-    private fun schedule(time: Long, text: String, kind: String = "reminder") { val id = (System.nanoTime() and 0x7fff_ffffL).toInt(); val intent = Intent(context, ObiReminderReceiver::class.java).putExtra("text", text).putExtra("kind", kind).setAction("com.obi.local.REMINDER.$id"); val pending = PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE); context.getSystemService(AlarmManager::class.java)?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, time, pending) }
+    fun canScheduleExact(): Boolean = context.getSystemService(AlarmManager::class.java)?.let {
+        Build.VERSION.SDK_INT < 31 || it.canScheduleExactAlarms()
+    } ?: false
+    private fun schedule(time: Long, text: String, kind: String = "reminder") {
+        val id = (System.nanoTime() and 0x7fff_ffffL).toInt()
+        val intent = Intent(context, ObiReminderReceiver::class.java).putExtra("text", text)
+            .putExtra("kind", kind).setAction("com.obi.local.REMINDER.$id")
+        val pending = PendingIntent.getBroadcast(context, id, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val manager = context.getSystemService(AlarmManager::class.java) ?: return
+        if (canScheduleExact()) {
+            val open = PendingIntent.getActivity(context, id,
+                Intent(context, ObiEntryActivity::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            manager.setAlarmClock(AlarmManager.AlarmClockInfo(time, open), pending)
+        } else manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, time, pending)
+    }
     fun scheduleDaily() {
         val next = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 8); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
@@ -260,6 +277,12 @@ class ObiReminderReceiver : BroadcastReceiver() {
         }
         notify(context, intent.getStringExtra("text") ?: "Hatırlatıcı zamanı geldi.", if (intent.getStringExtra("kind") == "alarm") "Obi alarmı" else "Obi hatırlatıyor")
         context.sendBroadcast(Intent("com.obi.local.CELEBRATE").setPackage(context.packageName).putExtra("text", intent.getStringExtra("text") ?: "Hatırlatıcı zamanı geldi."))
+        if (context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).getBoolean("voice_alerts", true)) {
+            runCatching {
+                context.startForegroundService(Intent(context, ObiVoiceAlertService::class.java)
+                    .putExtra("kind", intent.getStringExtra("kind") ?: "reminder"))
+            }
+        }
     }
 
     private fun notify(context: Context, text: String, title: String) {

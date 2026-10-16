@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.IBinder
 import android.os.Handler
 import android.os.Looper
+import android.net.Uri
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
@@ -393,6 +394,28 @@ class ObiOverlayService : Service() {
             setOnClickListener { openChat(); submit("notlarımı göster") }
         }, LinearLayout.LayoutParams(0, dp(50), 1f))
         menu.addView(buttons)
+        val voicePrefs = getSharedPreferences("obi_local", MODE_PRIVATE)
+        menu.addView(pill(if (voicePrefs.getBoolean("voice_alerts", true)) "♪  Sesli uyarılar açık" else "♪  Sesli uyarılar kapalı", false).apply {
+            setOnClickListener {
+                val enabled = !voicePrefs.getBoolean("voice_alerts", true)
+                voicePrefs.edit().putBoolean("voice_alerts", enabled).apply()
+                text = if (enabled) "♪  Sesli uyarılar açık" else "♪  Sesli uyarılar kapalı"
+            }
+        }, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(9) })
+        menu.addView(pill("Obi'nin sesini dene", false).apply {
+            setOnClickListener {
+                runCatching { startForegroundService(Intent(this@ObiOverlayService, ObiVoiceAlertService::class.java)
+                    .setAction(ObiVoiceAlertService.ACTION_PREVIEW)) }
+                    .onFailure { text = "Ses başlatılamadı" }
+            }
+        }, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(7) })
+        if (!store.canScheduleExact()) menu.addView(pill("Kesin alarm izni", false).apply {
+            setOnClickListener {
+                hidePanel()
+                runCatching { startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.parse("package:$packageName")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
+        }, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(7) })
         menu.addView(pill("Bildirim izni", false).apply { setOnClickListener {
             hidePanel()
             startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
