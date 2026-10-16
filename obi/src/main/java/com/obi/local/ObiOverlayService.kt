@@ -28,6 +28,8 @@ class ObiOverlayService : Service() {
     companion object {
         const val ACTION_START = "com.obi.local.START_OVERLAY"
         const val ACTION_STOP = "com.obi.local.STOP_OVERLAY"
+        const val ACTION_READY = "com.obi.local.OVERLAY_READY"
+        const val ACTION_ERROR = "com.obi.local.OVERLAY_ERROR"
         private const val CHANNEL = "obi_companion"
         private const val NOTIFICATION_ID = 1201
         private const val PREFS = "obi_overlay"
@@ -51,27 +53,32 @@ class ObiOverlayService : Service() {
             return START_NOT_STICKY
         }
         if (!Settings.canDrawOverlays(this)) {
+            notifyEntry(ACTION_ERROR)
             stopSelf()
             return START_NOT_STICKY
         }
-        startForegroundNotification()
-        if (mascot == null) {
-            try {
+        try {
+            startForegroundNotification()
+            if (mascot == null) {
                 addMascot()
-            } catch (_: SecurityException) {
-                stopSelf()
-            } catch (_: WindowManager.BadTokenException) {
-                stopSelf()
             }
+            notifyEntry(ACTION_READY)
+        } catch (_: RuntimeException) {
+            notifyEntry(ACTION_ERROR)
+            stopSelf()
         }
         return START_NOT_STICKY
+    }
+
+    private fun notifyEntry(action: String) {
+        sendBroadcast(Intent(action).setPackage(packageName))
     }
 
     private fun startForegroundNotification() {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Obi ekranda", NotificationManager.IMPORTANCE_LOW))
         val open = PendingIntent.getActivity(
-            this, 1, Intent(this, MainActivity::class.java),
+            this, 1, Intent(this, ObiEntryActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val stop = PendingIntent.getService(
@@ -103,7 +110,7 @@ class ObiOverlayService : Service() {
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = prefs.getInt("x", (bounds.widthPixels - size).coerceAtLeast(0))
+            x = prefs.getInt("x", dp(28))
                 .coerceIn(0, (bounds.widthPixels - size).coerceAtLeast(0))
             y = prefs.getInt("y", bounds.heightPixels / 3)
                 .coerceIn(0, (bounds.heightPixels - size).coerceAtLeast(0))

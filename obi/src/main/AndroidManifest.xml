@@ -10,13 +10,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Obi">
         <activity
-            android:name=".MainActivity"
+            android:name=".ObiEntryActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
         <receiver
             android:name=".ObiReminderReceiver"
             android:exported="false" />
