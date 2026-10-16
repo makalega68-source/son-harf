@@ -576,7 +576,8 @@ class ObiReminderReceiver : BroadcastReceiver() {
         context.sendBroadcast(Intent(ObiStore.ACTION_CELEBRATE).setPackage(context.packageName).putExtra("text", text))
         if (context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).getBoolean("voice_alerts", true)) {
             runCatching {
-                context.startForegroundService(Intent(context, ObiVoiceAlertService::class.java).putExtra("kind", if (kind == "alarm") "alarm" else "reminder"))
+                context.startForegroundService(Intent(context, ObiVoiceAlertService::class.java)
+                    .putExtra("kind", if (kind == "alarm") "alarm" else "reminder").putExtra("text", text))
             }
         }
     }

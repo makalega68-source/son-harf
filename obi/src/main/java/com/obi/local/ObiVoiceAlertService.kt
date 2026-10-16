@@ -5,27 +5,45 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
 import java.util.Calendar
+import java.util.Locale
 
-/** Plays offline Higgsfield Luna recordings for user-requested alarm/reminder alerts. */
+/**
+ * Speaks user-requested alarms and reminders in Turkish with the phone's own speech engine, in a
+ * small, high voice. Falls back to the bundled recordings only when no Turkish voice is installed.
+ */
 class ObiVoiceAlertService : Service() {
     companion object {
         const val ACTION_PREVIEW = "com.obi.local.PREVIEW_VOICE"
         const val ACTION_STOP = "com.obi.local.STOP_VOICE"
         private const val CHANNEL = "obi_voice_alert"
         private const val ID = 1302
+        private val TURKISH = Locale("tr", "TR")
+
+        /** Voice pitch (1.0 = engine default); Obi talks a little higher and brighter. */
+        fun pitch(context: Context): Float = context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).getFloat("voice_pitch", 1.45f)
+
+        fun setPitch(context: Context, value: Float) {
+            context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).edit().putFloat("voice_pitch", value.coerceIn(0.9f, 2.0f)).apply()
+        }
     }
 
     private val handler = Handler(Looper.getMainLooper())
     private var player: MediaPlayer? = null
+    private var tts: TextToSpeech? = null
     private var activeStart = 0
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -33,12 +51,14 @@ class ObiVoiceAlertService : Service() {
         if (intent?.action == ACTION_STOP) { stopSelf(); return START_NOT_STICKY }
         activeStart = startId
         val kind = intent?.getStringExtra("kind") ?: "reminder"
+        val text = intent?.getStringExtra("text")?.takeIf { it.isNotBlank() && !it.startsWith("Obi alarmı") }
         val morning = Calendar.getInstance().get(Calendar.HOUR_OF_DAY) in 5..11
         val (phrase, sound) = when {
-            intent?.action == ACTION_PREVIEW -> "Merhaba! Ben Obi. Obi, Obi!" to R.raw.obi_preview
-            kind == "alarm" && morning -> "Sabah oldu, uyan hadi! Obi, Obi!" to R.raw.obi_morning
-            kind == "alarm" -> "Alarm zamanı! Obi, Obi!" to R.raw.obi_alarm
-            else -> "Hatırlatma var! Obi, Obi!" to R.raw.obi_reminder
+            intent?.action == ACTION_PREVIEW -> "Merhaba! Ben Obi. Sesim böyle, beğendin mi?" to R.raw.obi_preview
+            kind == "alarm" && morning -> "Günaydın! Sabah oldu, hadi uyan bakalım. Yeni bir gün seni bekliyor!" to R.raw.obi_morning
+            kind == "alarm" -> "Alarm zamanı geldi! Hadi bakalım, kalkıyoruz!" to R.raw.obi_alarm
+            text != null -> "Hatırlatma var: ${text.trimEnd('.', '!')}." to R.raw.obi_reminder
+            else -> "Hatırlatma zamanı geldi!" to R.raw.obi_reminder
         }
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Obi sesli uyarı", NotificationManager.IMPORTANCE_LOW))
@@ -46,15 +66,61 @@ class ObiVoiceAlertService : Service() {
             Intent(this, ObiVoiceAlertService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notification = Notification.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(R.drawable.ic_obi_notification)
             .setContentTitle("Obi sesleniyor")
             .setContentText(phrase)
             .addAction(Notification.Action.Builder(null, "Sesi durdur", stop).build())
             .setOngoing(true).build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         else startForeground(ID, notification)
-        player?.release()
-        player = null
+        stopSound()
+        // An alarm is said twice so it can wake someone; a reminder once.
+        speak(if (kind == "alarm" && intent?.action != ACTION_PREVIEW) "$phrase … $phrase" else phrase, sound, startId)
+        handler.postDelayed({ if (activeStart == startId) stopSelfResult(startId) }, 30_000L)
+        return START_NOT_STICKY
+    }
+
+    private fun speak(phrase: String, fallback: Int, startId: Int) {
+        var engine: TextToSpeech? = null
+        engine = TextToSpeech(this) { status ->
+            val ready = engine
+            val turkish = status == TextToSpeech.SUCCESS && ready != null &&
+                ready.isLanguageAvailable(TURKISH) >= TextToSpeech.LANG_AVAILABLE
+            if (!turkish || ready == null) {
+                ready?.shutdown()
+                if (tts === ready) tts = null
+                playRecording(fallback, startId)
+                return@TextToSpeech
+            }
+            ready.language = TURKISH
+            bestTurkishVoice(ready)?.let { ready.voice = it }
+            ready.setPitch(pitch(this))
+            ready.setSpeechRate(1.0f)
+            ready.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            ready.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) = Unit
+                override fun onDone(utteranceId: String?) { handler.post { if (activeStart == startId) stopSelfResult(startId) } }
+                @Deprecated("Deprecated in Java")
+                override fun onError(utteranceId: String?) { handler.post { playRecording(fallback, startId) } }
+            })
+            val result = ready.speak(phrase, TextToSpeech.QUEUE_FLUSH, Bundle(), "obi_$startId")
+            if (result != TextToSpeech.SUCCESS) playRecording(fallback, startId)
+        }
+        tts = engine
+    }
+
+    /** Prefers an installed (offline), high-quality Turkish voice; a female one when the engine names it. */
+    private fun bestTurkishVoice(engine: TextToSpeech): Voice? = runCatching {
+        engine.voices.orEmpty()
+            .filter { it.locale.language == "tr" && !it.features.orEmpty().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) }
+            .sortedWith(compareBy<Voice>({ it.isNetworkConnectionRequired }, { -it.quality },
+                { if (it.name.contains("female", true) || it.name.contains("-tra-") || it.name.contains("-tre-")) 0 else 1 }))
+            .firstOrNull()
+    }.getOrNull()
+
+    private fun playRecording(sound: Int, startId: Int) {
+        stopSound()
         val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
         runCatching {
@@ -68,14 +134,18 @@ class ObiVoiceAlertService : Service() {
                 media.start()
             } ?: stopSelfResult(startId)
         }.onFailure { stopSelfResult(startId) }
-        handler.postDelayed({ if (activeStart == startId) stopSelfResult(startId) }, 20_000L)
-        return START_NOT_STICKY
+    }
+
+    private fun stopSound() {
+        player?.release()
+        player = null
     }
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
-        player?.release()
-        player = null
+        stopSound()
+        tts?.let { runCatching { it.stop(); it.shutdown() } }
+        tts = null
         super.onDestroy()
     }
 }

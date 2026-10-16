@@ -806,7 +806,7 @@ class ObiOverlayService : Service() {
         "• geri sayım tatil 15 temmuz / annemin doğum günü 5 mart\n" +
         "• odaklan 25 dakika • oyun oynayalım • dolap / Pofi'yi giy / bere tak\n" +
         "• panodakini özetle / panodakini çevir • bugünün kelimeleri\n" +
-        "• sesli uyarıyı kapat • su hatırlatıcısını aç • Gemini bağla"
+        "• sesini dene / sesini incelt / sesini kalınlaştır • sesli uyarıyı kapat\n• su hatırlatıcısını aç • Gemini bağla"
 
     private fun clipboardText(): String = runCatching {
         (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.takeIf { it.itemCount > 0 }
@@ -981,6 +981,12 @@ class ObiOverlayService : Service() {
                 val on = !t.contains("kapat")
                 localPrefs.edit().putBoolean("voice_alerts", on).apply()
                 say(if (on) "Sesli uyarıları açtım ♪" else "Sesli uyarıları kapattım. Sadece bildirim göndereceğim."); return
+            }
+            t.contains("sesini incelt") || t.contains("sesin ince") || t.contains("sesini kalınlaştır") || t.contains("sesini kalinlastir") || t.contains("sesin kalın") -> {
+                val thinner = t.contains("ince")
+                ObiVoiceAlertService.setPitch(this, ObiVoiceAlertService.pitch(this) + if (thinner) 0.15f else -0.15f)
+                runCatching { startForegroundService(Intent(this, ObiVoiceAlertService::class.java).setAction(ObiVoiceAlertService.ACTION_PREVIEW)) }
+                say(if (thinner) "Sesimi biraz incelttim. Nasıl? ♪" else "Sesimi biraz kalınlaştırdım. Nasıl? ♪", WordSiegeMascotAction.GIGGLE); return
             }
             t.contains("sesini dene") || t.contains("sesini duy") -> {
                 runCatching { startForegroundService(Intent(this, ObiVoiceAlertService::class.java).setAction(ObiVoiceAlertService.ACTION_PREVIEW)) }
