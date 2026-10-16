@@ -25,9 +25,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".MainActivity"
-            android:exported="false" />
-        <activity
             android:name=".ObiGeminiSetupActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
@@ -35,7 +32,10 @@
             android:name=".ObiReminderReceiver"
             android:exported="false" />
         <receiver android:name=".ObiBootReceiver" android:exported="false">
-            <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
         </receiver>
         <service
             android:name=".ObiOverlayService"

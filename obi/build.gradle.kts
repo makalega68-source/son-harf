@@ -12,8 +12,8 @@ android {
         applicationId = "com.obi.local"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.8.0"
+        versionCode = 9
+        versionName = "0.8.1"
     }
 
     buildFeatures { compose = true }
@@ -33,4 +33,5 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    testImplementation("junit:junit:4.13.2")
 }

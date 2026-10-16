@@ -25,7 +25,7 @@ jobs:
         with:
           validate-wrappers: false
       - name: Build Obi test APK
-        run: ./gradlew :obi:assembleDebug --stacktrace
+        run: ./gradlew :obi:testDebugUnitTest :obi:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: Obi-Yerel-Test

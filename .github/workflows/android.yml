@@ -117,7 +117,7 @@ jobs:
       - name: Compile and test (package only when requested)
         run: |
           set -o pipefail
-          tasks=(clean :app:testDebugUnitTest :obi:assembleDebug)
+          tasks=(clean :app:testDebugUnitTest :obi:testDebugUnitTest :obi:assembleDebug)
           if [ "$NO_APK" != "true" ]; then tasks+=(:app:assembleDebug); fi
           if ! ./gradlew "${tasks[@]}" --stacktrace --warning-mode all 2>&1 | tee build.log; then
             # Surface compiler errors and failing tests as annotations so they are readable without log access.
