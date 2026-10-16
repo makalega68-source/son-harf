@@ -12,6 +12,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -35,15 +37,49 @@ import java.util.Locale
 import org.json.JSONArray
 
 class MainActivity : ComponentActivity() {
+    private var overlayRunning by mutableStateOf(false)
+    private var pendingOverlayStart = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { ObiApp() }
+        setContent {
+            ObiApp(overlayRunning = overlayRunning, onOverlayToggle = { toggleOverlay() })
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (pendingOverlayStart && Settings.canDrawOverlays(this)) {
+            pendingOverlayStart = false
+            startOverlay()
+        }
+        overlayRunning = ObiOverlayService.isRunning(this)
+    }
+
+    private fun toggleOverlay() {
+        if (overlayRunning) {
+            stopService(Intent(this, ObiOverlayService::class.java))
+            overlayRunning = false
+        } else if (Settings.canDrawOverlays(this)) {
+            startOverlay()
+        } else {
+            pendingOverlayStart = true
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            try { startActivity(intent) } catch (_: android.content.ActivityNotFoundException) {
+                startActivity(Intent(Settings.ACTION_SETTINGS))
+            }
+        }
+    }
+
+    private fun startOverlay() {
+        startForegroundService(Intent(this, ObiOverlayService::class.java).setAction(ObiOverlayService.ACTION_START))
+        overlayRunning = true
     }
 }
 
 @Composable
-private fun ObiApp() {
+private fun ObiApp(overlayRunning: Boolean, onOverlayToggle: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val store = remember { ObiStore(context) }
     var input by remember { mutableStateOf("") }
@@ -70,6 +106,16 @@ private fun ObiApp() {
                         if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }) { Icon(Icons.Rounded.NotificationsActive, "Hatırlatıcı bildirimleri") }
                 }
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = onOverlayToggle, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                    Text(if (overlayRunning) "Obi'yi ekrandan kaldır" else "Obi'yi telefonda gezdir", fontSize = 16.sp)
+                }
+                Text(
+                    if (overlayRunning) "Obi diğer uygulamaların üzerinde. Sürükleyerek taşı; dokununca yazı alanı açılır."
+                    else "Bir kez ekran üstü izni ver. Obi, uygulamadan çıksan da ekranda kalır; bildirimden kapatabilirsin.",
+                    color = Color(0xFFAFB9D4), fontSize = 12.sp, lineHeight = 17.sp,
+                    modifier = Modifier.fillMaxWidth().padding(top = 7.dp),
+                )
                 Spacer(Modifier.height(8.dp))
                 Text("Dokun bana", color = Color(0xFF8FECDC), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -110,7 +156,7 @@ private fun ObiAction(label: String, onClick: () -> Unit) {
     }
 }
 
-private class ObiStore(private val context: Context) {
+internal class ObiStore(private val context: Context) {
     private val prefs = context.getSharedPreferences("obi_local", Context.MODE_PRIVATE)
     fun handle(raw: String): String {
         val text = raw.trim(); val normalized = text.lowercase(Locale("tr", "TR"))
