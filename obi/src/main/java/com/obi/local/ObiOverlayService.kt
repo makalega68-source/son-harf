@@ -55,6 +55,7 @@ class ObiOverlayService : Service() {
     private var mascot: WordSiegeMascotView? = null
     private var mascotParams: WindowManager.LayoutParams? = null
     private var panel: View? = null
+    private var chatMascot: WordSiegeMascotView? = null
     private var bubble: View? = null
     private val handler = Handler(Looper.getMainLooper())
     private var lastTapAt = 0L
@@ -218,14 +219,18 @@ class ObiOverlayService : Service() {
     }
 
     private fun animate(action: WordSiegeMascotAction) {
-        mascot?.updateCompanion(++actionKey, action, action == WordSiegeMascotAction.SPACE_FLIGHT, 1f, false, false)
+        actionKey++
+        mascot?.updateCompanion(actionKey, action, action == WordSiegeMascotAction.SPACE_FLIGHT, 1f, false, false)
+        chatMascot?.updateCompanion(actionKey, action, action == WordSiegeMascotAction.SPACE_FLIGHT, 1f, action == WordSiegeMascotAction.NOD, true)
         if (action == WordSiegeMascotAction.SPACE_FLIGHT) handler.postDelayed({
             mascot?.updateCompanion(actionKey, null, false, 1f, false, false)
+            chatMascot?.updateCompanion(actionKey, null, false, 1f, false, true)
         }, mascotActionMillis(action))
     }
 
     private fun showBubble(message: String) {
         hideBubble()
+        if (panel != null) return
         val label = TextView(this).apply {
             text = message
             textSize = 14f
@@ -258,6 +263,8 @@ class ObiOverlayService : Service() {
 
     private fun showPanel() {
         if (!Settings.canDrawOverlays(this)) return
+        hideBubble()
+        if (panel != null) return
         val width = resources.displayMetrics.widthPixels
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -278,7 +285,13 @@ class ObiOverlayService : Service() {
             gravity = Gravity.CENTER
             setOnClickListener { hidePanel() }
         }
-        header.addView(title, LinearLayout.LayoutParams(0, dp(42), 1f))
+        val avatar = WordSiegeMascotView(this).apply {
+            updateGame(null, false, 0, 0, 0, null, emptyList(), true, WordSiegeMascotEmotion.HAPPY)
+            contentDescription = "Obi, sohbet arkadaşın"
+            setOnClickListener { animate(WordSiegeMascotAction.WAVE) }
+        }
+        header.addView(avatar, LinearLayout.LayoutParams(dp(68), dp(68)).apply { rightMargin = dp(6) })
+        header.addView(title, LinearLayout.LayoutParams(0, dp(68), 1f))
         header.addView(close, LinearLayout.LayoutParams(dp(42), dp(42)))
         val message = TextView(this).apply {
             text = mind.touch()
@@ -297,24 +310,36 @@ class ObiOverlayService : Service() {
             }
             imeOptions = EditorInfo.IME_ACTION_SEND
         }
-        val send = pill("➤", true).apply {
-            setOnClickListener {
-                val command = input.text.toString().trim()
-                if (command.isNotEmpty()) {
-                    if (!translate(command, message)) {
-                        if (store.canHandle(command) || !gemini.connected()) message.text = store.handle(command)
-                        else {
-                            message.text = "Bir düşüneyim… ✨"
-                            gemini.ask(command) { answer ->
-                                if (panel === card) message.text = answer
-                                showBubble(answer.take(85))
-                            }
-                        }
+        var requestId = 0
+        fun submit(command: String) {
+            if (command.isBlank()) return
+            requestId++
+            val currentRequest = requestId
+            lastInteractionAt = System.currentTimeMillis()
+            if (store.canHandle(command)) {
+                message.text = store.handle(command)
+                animate(when {
+                    command.contains("alarm", true) || command.contains("hatırlat", true) -> WordSiegeMascotAction.CHEER
+                    command.contains("not", true) -> WordSiegeMascotAction.NOD
+                    else -> WordSiegeMascotAction.WAVE
+                })
+            } else if (gemini.connected()) {
+                message.text = "Dinliyorum, bir düşüneyim… ✨"
+                animate(WordSiegeMascotAction.THINK)
+                gemini.ask(command) { answer ->
+                    if (panel === card && currentRequest == requestId) {
+                        message.text = answer.text
+                        animate(answer.action)
                     }
-                    input.text.clear()
-                    animate(nextMove())
                 }
+            } else if (!translate(command, message)) {
+                message.text = store.handle(command)
+                animate(nextMove())
             }
+        }
+        val send = pill("➤", true).apply { setOnClickListener { submit(input.text.toString().trim()); input.text.clear() } }
+        input.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEND) { submit(input.text.toString().trim()); input.text.clear(); true } else false
         }
         val compose = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         compose.addView(input, LinearLayout.LayoutParams(0, dp(50), 1f))
@@ -322,19 +347,19 @@ class ObiOverlayService : Service() {
         val shortcuts = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         fun quick(label: String, command: String) {
             val item = pill(label, false)
-            item.setOnClickListener { message.text = store.handle(command); animate(nextMove()) }
+            item.setOnClickListener { if (command == "sohbet") { input.requestFocus(); message.text = "Buradayım. Aklından geçenleri yaz 💜"; animate(WordSiegeMascotAction.WAVE) } else submit(command) }
             shortcuts.addView(item, LinearLayout.LayoutParams(0, dp(38), 1f).apply { rightMargin = dp(5) })
         }
         quick("☀  Motive et", "motive et")
         quick("✎  Notlarım", "notlarımı göster")
-        quick("♡  Sohbet", "merhaba")
+        quick("♡  Sohbet", "sohbet")
         val settings = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
         val settingsToggle = TextView(this).apply {
-            text = "⚙  Ayarlar ve Gemini  ▾"; textSize = 13f
+            text = "⚙  Ayarlar  ▾"; textSize = 13f
             setTextColor(Color.rgb(156, 212, 202)); setPadding(dp(4), dp(13), dp(4), 0)
             setOnClickListener { settings.visibility = if (settings.visibility == View.GONE) View.VISIBLE else View.GONE }
         }
-        val connect = pill(if (gemini.connected()) "✓  Gemini ayarları" else "✦  Gemini bağla", true)
+        val connect = pill(if (gemini.connected()) "Gemini bağlantısını yönet" else "✦  Gemini bağla", !gemini.connected())
         connect.setOnClickListener {
             hidePanel()
             hideBubble()
@@ -350,11 +375,12 @@ class ObiOverlayService : Service() {
             startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         } }, LinearLayout.LayoutParams(-1, dp(40)).apply { topMargin = dp(7) })
+        if (gemini.connected()) settings.addView(connect, LinearLayout.LayoutParams(-1, dp(40)).apply { topMargin = dp(7) })
         card.addView(header)
         card.addView(message, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
         card.addView(compose, LinearLayout.LayoutParams(-1, dp(50)).apply { topMargin = dp(14) })
         card.addView(shortcuts, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(10) })
-        card.addView(connect, LinearLayout.LayoutParams(-1, dp(43)).apply { topMargin = dp(10) })
+        if (!gemini.connected()) card.addView(connect, LinearLayout.LayoutParams(-1, dp(43)).apply { topMargin = dp(10) })
         card.addView(settingsToggle)
         card.addView(settings)
         val params = WindowManager.LayoutParams(
@@ -370,6 +396,8 @@ class ObiOverlayService : Service() {
         try {
             windows.addView(card, params)
             panel = card
+            chatMascot = avatar
+            mascot?.visibility = View.GONE
         } catch (_: SecurityException) {
             // User may revoke the overlay permission while Obi is open.
         }
@@ -432,6 +460,8 @@ class ObiOverlayService : Service() {
     private fun hidePanel() {
         panel?.let { runCatching { windows.removeView(it) } }
         panel = null
+        chatMascot = null
+        mascot?.visibility = View.VISIBLE
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

@@ -162,7 +162,7 @@ internal class ObiStore(private val context: Context) {
     private val mind = ObiMind(context)
     fun canHandle(raw: String): Boolean {
         val t = raw.lowercase(Locale("tr", "TR"))
-        return listOf("not al", "bunu not et", "şunu not et", "not et", "notlarım", "notlarim", "zamanlayıcı", "zamanlayici", "timer", "hatırlat", "hatirlat", "alarm kur", "doğum günüm", "dogum gunum", "sabah motive et", "günaydın mesajı", "sabah mesajını kapat", "adım ", "benim adım").any(t::contains)
+        return listOf("not al", "bunu not et", "şunu not et", "not et", "notlarım", "notlarim", "zamanlayıcı", "zamanlayici", "timer", "hatırlat", "hatirlat", "alarm", "uyandır", "uyandir", "doğum günüm", "dogum gunum", "sabah motive et", "günaydın mesajı", "sabah mesajını kapat", "adım ", "benim adım").any(t::contains)
     }
     fun handle(raw: String): String {
         val text = raw.trim(); val normalized = text.lowercase(Locale("tr", "TR"))
@@ -186,8 +186,8 @@ internal class ObiStore(private val context: Context) {
             prefs.edit().putBoolean("morning_enabled", false).apply()
             return "Sabah mesajlarını kapattım."
         }
-        if (normalized.contains("alarm kur")) {
-            val time = reminderTime(normalized) ?: return "Örnek: ‘Yarın saat 09.00 alarm kur’."
+        if (normalized.contains("alarm") || normalized.contains("uyandır") || normalized.contains("uyandir")) {
+            val time = reminderTime(normalized) ?: return "Saati anlayamadım. Örnek: ‘Sabah 9'a alarm kur’."
             schedule(time, "Obi alarmı: Uyanma zamanı!", "alarm")
             return "Alarmı ${formatClock(time)} için kurdum. Android bildirimiyle haber vereceğim."
         }
@@ -205,7 +205,28 @@ internal class ObiStore(private val context: Context) {
     private fun save(note: String) { val v = JSONArray(prefs.getString("notes", "[]") ?: "[]"); v.put(note); prefs.edit().putString("notes", v.toString()).apply() }
     private fun noteText(n: String, o: String): String? { val p = listOf("not al", "bunu not et", "şunu not et", "not et").firstOrNull { n.startsWith(it) } ?: return null; return o.drop(p.length).trim(' ', ':', '-', '“', '”').takeIf { it.isNotBlank() } }
     private fun timerMinutes(t: String): Int? { if (!t.contains("zamanlayıcı") && !t.contains("zamanlayici") && !t.contains("timer")) return null; val m = Regex("(\\d{1,3})\\s*(dakika|dk|saat)").find(t) ?: return null; val n = m.groupValues[1].toIntOrNull() ?: return null; return (if (m.groupValues[2] == "saat") n * 60 else n).takeIf { it in 1..1440 } }
-    private fun reminderTime(t: String): Long? { val m = Regex("saat\\s*(\\d{1,2})(?:[:.]?(\\d{2}))?").find(t) ?: return null; val h = m.groupValues[1].toIntOrNull()?.takeIf { it in 0..23 } ?: return null; val min = m.groupValues[2].toIntOrNull()?.takeIf { it in 0..59 } ?: 0; return Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, h); set(Calendar.MINUTE, min); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0); if (t.contains("yarın") || t.contains("yarin") || timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1) }.timeInMillis }
+    private fun reminderTime(t: String): Long? {
+        val clock = Regex("(?:saat\\s*)?(?<!\\d)(\\d{1,2})(?:[:.](\\d{2}))?\\s*(?:['’]?(?:a|e|da|de|ta|te))?(?!\\d)")
+        val match = clock.findAll(t).firstOrNull { candidate ->
+            val prefix = t.substring(0, candidate.range.first).trimEnd()
+            val suffix = t.substring(candidate.range.last + 1).trimStart()
+            candidate.value.contains(':') || candidate.value.contains('.') ||
+                prefix.endsWith("saat") || prefix.endsWith("sabah") || prefix.endsWith("akşam") || prefix.endsWith("aksam") ||
+                prefix.endsWith("gece") || prefix.endsWith("öğlen") || prefix.endsWith("oglen") ||
+                candidate.value.contains('a') || candidate.value.contains('e') || suffix.startsWith("alarm")
+        } ?: return null
+        var hour = match.groupValues[1].toIntOrNull()?.takeIf { it in 0..23 } ?: return null
+        val minute = match.groupValues[2].toIntOrNull()?.takeIf { it in 0..59 } ?: 0
+        if (listOf("akşam", "aksam", "öğleden sonra", "ogleden sonra").any(t::contains) && hour in 1..11) hour += 12
+        if (listOf("sabah", "gece").any(t::contains) && hour == 12) hour = 0
+        val tomorrow = t.contains("yarın") || t.contains("yarin")
+        return Calendar.getInstance().apply {
+            if (tomorrow) add(Calendar.DAY_OF_YEAR, 1)
+            set(Calendar.HOUR_OF_DAY, hour); set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            if (!tomorrow && timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
+        }.timeInMillis
+    }
     private fun formatClock(time: Long): String = Calendar.getInstance().run { timeInMillis = time; String.format(Locale("tr", "TR"), "%02d:%02d", get(Calendar.HOUR_OF_DAY), get(Calendar.MINUTE)) }
     private fun schedule(time: Long, text: String, kind: String = "reminder") { val id = (System.nanoTime() and 0x7fff_ffffL).toInt(); val intent = Intent(context, ObiReminderReceiver::class.java).putExtra("text", text).putExtra("kind", kind).setAction("com.obi.local.REMINDER.$id"); val pending = PendingIntent.getBroadcast(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE); context.getSystemService(AlarmManager::class.java)?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, time, pending) }
     fun scheduleDaily() {

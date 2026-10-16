@@ -93,6 +93,8 @@ internal class ObiMind(private val context: Context) {
 }
 
 /** Personal-test key is supplied by the owner, encrypted with Android Keystore, never in the APK. */
+internal data class ObiReply(val text: String, val action: WordSiegeMascotAction = WordSiegeMascotAction.NOD)
+
 internal class ObiGemini(private val context: Context) {
     private val prefs = context.getSharedPreferences("obi_gemini", Context.MODE_PRIVATE)
     private val alias = "obi_personal_gemini_key"
@@ -130,11 +132,11 @@ internal class ObiGemini(private val context: Context) {
         String(cipher.doFinal(Base64.decode(encoded, Base64.NO_WRAP)))
     }.getOrNull()
 
-    fun ask(prompt: String, done: (String) -> Unit) {
-        val key = readKey() ?: return done("Gemini bağlanmadı. ‘Gemini bağla’ düğmesine bas.")
+    fun ask(prompt: String, done: (ObiReply) -> Unit) {
+        val key = readKey() ?: return done(ObiReply("Gemini bağlanmadı. ‘Gemini bağla’ düğmesine bas."))
         val today = LocalDate.now().toString()
         val used = if (prefs.getString("day", "") == today) prefs.getInt("used", 0) else 0
-        if (used >= 20) return done("Bugünlük 20 sohbet hakkını kullandık. Yarın yeniden konuşuruz; yerel not ve alarmlar çalışmaya devam eder.")
+        if (used >= 20) return done(ObiReply("Bugünlük 20 Gemini isteğini kullandık. Yarın yeniden konuşuruz; yerel not ve alarmlar çalışmaya devam eder."))
         Thread {
             val answer = runCatching {
                 val contents = JSONArray()
@@ -142,9 +144,9 @@ internal class ObiGemini(private val context: Context) {
                 contents.put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", prompt.take(1500)))))
                 val body = JSONObject()
                     .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text",
-                        "Adın Obi. Türkçe yazışan şirin bir telefon maskotusun. Ses kullanma. Kısa, doğal, tekrar etmeyen yanıtlar ver; gerektiğinde soru sor. Bilmediğini uydurma. Not, alarm ve hatırlatıcı kurduğunu ancak uygulama gerçekten kurduysa söyle. Acil uyarı verdiğini iddia etme."))))
+                        "Adın Obi. Türkçe yazışan şirin bir telefon maskotusun. Ses kullanma. Kullanıcının bağlamını önceki konuşmadan izle; farklı, doğal ve somut yanıtlar ver. Çeviri, açıklama, özetleme, yazı yazma, fikir üretme ve sohbet isteklerini karşıla. Sadece sohbet dışında telefondaki eylemleri yaptığını iddia etme; not/alarm/hatırlatıcıyı uygulama yerel olarak ele alır. Ekranı gördüğünü veya başka uygulamaları kontrol ettiğini söyleme. JSON nesnesi dön: text kullanıcıya yanıt, action ise yanıtın duygusuna uygun tek bir hareket. action değerleri: NOD, THINK, CHEER, DANCE, WAVE, LOVE, GIGGLE, SHY, WINK, SPARKLE, CLAP, SHRUG, YAWN, DOZE, POINT, BOUNCE. Kısa bir sohbet yanıtında da eylemi duyguya göre değiştir."))))
                     .put("contents", contents)
-                    .put("generationConfig", JSONObject().put("maxOutputTokens", 250).put("temperature", 0.9))
+                    .put("generationConfig", JSONObject().put("maxOutputTokens", 1200).put("temperature", 0.9).put("responseMimeType", "application/json"))
                 val connection = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent").openConnection() as HttpURLConnection
                 try {
                     connection.requestMethod = "POST"
@@ -155,20 +157,25 @@ internal class ObiGemini(private val context: Context) {
                     connection.setRequestProperty("x-goog-api-key", key)
                     connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
                     val status = connection.responseCode
-                    if (status == 429) return@runCatching "Gemini sınırına ulaştı. Bir süre sonra tekrar dene."
-                    if (status == 401 || status == 403) return@runCatching "Gemini anahtarı kabul edilmedi. Bağlantıyı kontrol et."
-                    if (status !in 200..299) return@runCatching "Gemini şu anda yanıt vermedi (kod $status)."
+                    if (status == 429) return@runCatching ObiReply("Gemini sınırına ulaştı. Bir süre sonra tekrar dene.", WordSiegeMascotAction.SHRUG)
+                    if (status == 401 || status == 403) return@runCatching ObiReply("Gemini anahtarı kabul edilmedi. Bağlantıyı kontrol et.", WordSiegeMascotAction.SHRUG)
+                    if (status !in 200..299) return@runCatching ObiReply("Gemini şu anda yanıt vermedi (kod $status).", WordSiegeMascotAction.SHRUG)
                     val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                     val parts = json.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts")
-                    val reply = (0 until parts.length()).mapNotNull { parts.getJSONObject(it).optString("text").takeIf(String::isNotBlank) }.joinToString("\n").ifBlank { "Şu an yanıt oluşturamadım." }
+                    val rawReply = (0 until parts.length()).mapNotNull { parts.getJSONObject(it).optString("text").takeIf(String::isNotBlank) }.joinToString("\n")
+                    val parsed = runCatching { JSONObject(rawReply) }.getOrNull()
+                    val reply = parsed?.optString("text")?.takeIf(String::isNotBlank) ?: rawReply.ifBlank { "Şu an yanıt oluşturamadım." }
+                    val allowed = setOf("NOD", "THINK", "CHEER", "DANCE", "WAVE", "LOVE", "GIGGLE", "SHY", "WINK", "SPARKLE", "CLAP", "SHRUG", "YAWN", "DOZE", "POINT", "BOUNCE")
+                    val chosen = parsed?.optString("action")?.uppercase(Locale.ROOT)?.takeIf(allowed::contains)
+                    val action = chosen?.let { WordSiegeMascotAction.valueOf(it) } ?: WordSiegeMascotAction.NOD
                     synchronized(history) {
                         history.addLast("user" to prompt.take(1500)); history.addLast("model" to reply.take(1000))
                         while (history.size > 6) history.removeFirst()
                     }
                     prefs.edit().putString("day", today).putInt("used", used + 1).apply()
-                    reply
+                    ObiReply(reply, action)
                 } finally { connection.disconnect() }
-            }.getOrElse { "Bağlantı kurulamadı. İnterneti kontrol edip yeniden dene." }
+            }.getOrElse { ObiReply("Bağlantı kurulamadı. İnterneti kontrol edip yeniden dene.", WordSiegeMascotAction.SHRUG) }
             android.os.Handler(android.os.Looper.getMainLooper()).post { done(answer) }
         }.start()
     }
