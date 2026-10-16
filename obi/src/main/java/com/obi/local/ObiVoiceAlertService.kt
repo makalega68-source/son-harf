@@ -8,16 +8,14 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import java.util.Calendar
-import java.util.Locale
 
-/** Speaks only short user-requested alarm/reminder alerts; never listens to the microphone. */
+/** Plays offline Higgsfield Luna recordings for user-requested alarm/reminder alerts. */
 class ObiVoiceAlertService : Service() {
     companion object {
         const val ACTION_PREVIEW = "com.obi.local.PREVIEW_VOICE"
@@ -27,7 +25,7 @@ class ObiVoiceAlertService : Service() {
     }
 
     private val handler = Handler(Looper.getMainLooper())
-    private var tts: TextToSpeech? = null
+    private var player: MediaPlayer? = null
     private var activeStart = 0
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -36,11 +34,11 @@ class ObiVoiceAlertService : Service() {
         activeStart = startId
         val kind = intent?.getStringExtra("kind") ?: "reminder"
         val morning = Calendar.getInstance().get(Calendar.HOUR_OF_DAY) in 5..11
-        val phrase = when {
-            intent?.action == ACTION_PREVIEW -> "Merhaba! Ben Obi. Obi, Obi!"
-            kind == "alarm" && morning -> "Sabah oldu, uyan hadi! Obi, Obi!"
-            kind == "alarm" -> "Alarm zamanı! Obi, Obi!"
-            else -> "Hatırlatma var! Obi, Obi!"
+        val (phrase, sound) = when {
+            intent?.action == ACTION_PREVIEW -> "Merhaba! Ben Obi. Obi, Obi!" to R.raw.obi_preview
+            kind == "alarm" && morning -> "Sabah oldu, uyan hadi! Obi, Obi!" to R.raw.obi_morning
+            kind == "alarm" -> "Alarm zamanı! Obi, Obi!" to R.raw.obi_alarm
+            else -> "Hatırlatma var! Obi, Obi!" to R.raw.obi_reminder
         }
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Obi sesli uyarı", NotificationManager.IMPORTANCE_LOW))
@@ -55,32 +53,29 @@ class ObiVoiceAlertService : Service() {
             .setOngoing(true).build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         else startForeground(ID, notification)
-        tts?.stop(); tts?.shutdown(); tts = null
-        tts = TextToSpeech(this) { status ->
-            val engine = tts ?: return@TextToSpeech
-            if (startId != activeStart) return@TextToSpeech
-            if (status != TextToSpeech.SUCCESS) { stopSelfResult(startId); return@TextToSpeech }
-            engine.language = Locale("tr", "TR")
-            engine.setPitch(1.35f)
-            engine.setSpeechRate(0.94f)
-            engine.setAudioAttributes(AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-            engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) = Unit
-                override fun onDone(utteranceId: String?) { handler.post { stopSelfResult(startId) } }
-                @Deprecated("Deprecated in Java")
-                override fun onError(utteranceId: String?) { handler.post { stopSelfResult(startId) } }
-            })
-            engine.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "obi-voice-$startId")
-        }
+        player?.release()
+        player = null
+        val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
+        runCatching {
+            MediaPlayer.create(this, sound, attributes, 0)?.also { media ->
+                player = media
+                media.setOnCompletionListener { if (activeStart == startId) stopSelfResult(startId) }
+                media.setOnErrorListener { _, _, _ ->
+                    if (activeStart == startId) stopSelfResult(startId)
+                    true
+                }
+                media.start()
+            } ?: stopSelfResult(startId)
+        }.onFailure { stopSelfResult(startId) }
         handler.postDelayed({ if (activeStart == startId) stopSelfResult(startId) }, 20_000L)
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
-        tts?.stop(); tts?.shutdown(); tts = null
+        player?.release()
+        player = null
         super.onDestroy()
     }
 }
