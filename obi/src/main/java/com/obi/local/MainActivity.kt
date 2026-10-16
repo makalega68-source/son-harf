@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
         if (pendingOverlayStart && Settings.canDrawOverlays(this)) {
             pendingOverlayStart = false
             startOverlay()
+            return
         }
         overlayRunning = ObiOverlayService.isRunning(this)
     }
