@@ -63,6 +63,7 @@ class ObiOverlayService : Service() {
         const val ACTION_STOP = "com.obi.local.STOP_OVERLAY"
         const val ACTION_SHOW = "com.obi.local.SHOW_OVERLAY"
         const val ACTION_OPEN_CHAT = "com.obi.local.OPEN_CHAT"
+        const val ACTION_HIDE = "com.obi.local.HIDE_OVERLAY"
         const val ACTION_READY = "com.obi.local.OVERLAY_READY"
         const val ACTION_ERROR = "com.obi.local.OVERLAY_ERROR"
         private const val CHANNEL = "obi_companion"
@@ -104,6 +105,13 @@ class ObiOverlayService : Service() {
 
     private var input: EditText? = null
     private var askMoodNext = false
+
+    // Hiding: by the user (drag to "Gizle" or the notification) and automatically in full screen.
+    private var userHidden = false
+    private var fullscreenHidden = false
+    private var probe: View? = null
+    private var hideTarget: TextView? = null
+    private var overHideTarget = false
     private var requestId = 0
     private var game: ChatGame? = null
 
@@ -130,7 +138,7 @@ class ObiOverlayService : Service() {
     private val events = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                ACTION_SHOW -> { mascot?.visibility = View.VISIBLE; fetchTouchPack() }
+                ACTION_SHOW -> { showMascotIfAllowed(); fetchTouchPack() }
                 ObiStore.ACTION_LOOK_CHANGED -> applyLook()
                 ObiStore.ACTION_ASK_MOOD -> {
                     askMoodNext = true
@@ -252,7 +260,11 @@ class ObiOverlayService : Service() {
             return START_NOT_STICKY
         }
         if (intent?.action == ACTION_SHOW && mascot != null) {
-            mascot?.visibility = View.VISIBLE
+            setUserHidden(false)
+            return START_NOT_STICKY
+        }
+        if (intent?.action == ACTION_HIDE && mascot != null) {
+            setUserHidden(true)
             return START_NOT_STICKY
         }
         if (!Settings.canDrawOverlays(this)) {
@@ -271,7 +283,9 @@ class ObiOverlayService : Service() {
                 handler.postDelayed({ fetchTouchPack() }, 1_200L)
                 handler.postDelayed({ greetToday() }, 2_000L)
                 if (store.focusEnd() > 0L) startFocusView()
-            } else mascot?.visibility = View.VISIBLE
+            }
+            // Opening Obi from its icon, widget or notification always brings it back.
+            setUserHidden(false)
             if (intent?.action == ACTION_OPEN_CHAT) handler.post { showPanel(openChat = true) }
             notifyEntry(ACTION_READY)
         } catch (_: RuntimeException) {
@@ -296,11 +310,17 @@ class ObiOverlayService : Service() {
             this, 2, Intent(this, ObiOverlayService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        val toggle = PendingIntent.getService(
+            this, 3, Intent(this, ObiOverlayService::class.java).setAction(if (userHidden) ACTION_SHOW else ACTION_HIDE),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         val notification = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_obi_notification)
-            .setContentTitle("Obi ekranında")
-            .setContentText("Dokun: söz ve hareket • Çift dokun: menü • Sürükle: taşı")
+            .setContentTitle(if (userHidden) "Obi saklanıyor" else "Obi ekranında")
+            .setContentText(if (userHidden) "Göstermek için ‘Obi'yi göster’e dokun. Alarmlar yine çalışır."
+                else "Dokun: söz • Çift dokun: sohbet • Aşağıdaki ‘Gizle’ye sürükle: sakla")
             .setContentIntent(open)
+            .addAction(Notification.Action.Builder(null, if (userHidden) "Obi'yi göster" else "Gizle", toggle).build())
             .addAction(Notification.Action.Builder(null, "Obi'yi kapat", stop).build())
             .setOngoing(true)
             .build()
@@ -336,6 +356,7 @@ class ObiOverlayService : Service() {
             isClickable = true
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
             updateGame(null, false, 0, 0, 0, null, emptyList(), true, WordSiegeMascotEmotion.HAPPY)
+            dragStarted = { showHideTarget() }
             dragMoved = { delta ->
                 val width = resources.displayMetrics.widthPixels
                 val height = resources.displayMetrics.heightPixels
@@ -343,17 +364,110 @@ class ObiOverlayService : Service() {
                 params.y = (params.y + delta.y.roundToInt()).coerceIn(0, (height - params.height).coerceAtLeast(0))
                 runCatching { windows.updateViewLayout(this, params) }
                 placeTimer()
+                if (hideTarget == null) showHideTarget()
+                updateHideTarget(params)
             }
             dragFinished = {
-                if (catchUntil == 0L) prefs.edit().putInt("x", params.x).putInt("y", params.y).apply()
+                val hide = overHideTarget && catchUntil == 0L
+                removeHideTarget()
+                overHideTarget = false
+                if (hide) {
+                    // Put Obi back where it was, so it returns there when shown again.
+                    params.x = prefs.getInt("x", dp(28)); params.y = prefs.getInt("y", resources.displayMetrics.heightPixels / 3)
+                    runCatching { windows.updateViewLayout(this, params) }
+                    placeTimer()
+                    setUserHidden(true)
+                } else if (catchUntil == 0L) prefs.edit().putInt("x", params.x).putInt("y", params.y).apply()
             }
             setOnClickListener { onMascotTap(prefs) }
         }
         windows.addView(view, params)
         mascot = view
         mascotParams = params
+        userHidden = prefs.getBoolean("user_hidden", false)
+        addFullscreenProbe()
+        showMascotIfAllowed()
         applyLook()
         prefs.edit().putBoolean("running", true).apply()
+    }
+
+    private fun showMascotIfAllowed() {
+        val view = mascot ?: return
+        val visible = catchUntil > 0L || (!userHidden && !fullscreenHidden && panel == null)
+        view.visibility = if (visible) View.VISIBLE else View.GONE
+        timerLabel?.visibility = if (visible) View.VISIBLE else View.GONE
+        if (!visible) hideBubble()
+    }
+
+    private fun setUserHidden(hidden: Boolean) {
+        if (userHidden == hidden) { showMascotIfAllowed(); return }
+        userHidden = hidden
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("user_hidden", hidden).apply()
+        showMascotIfAllowed()
+        runCatching { startForegroundNotification() }
+    }
+
+    private fun autoHideEnabled(): Boolean = localPrefs.getBoolean("fullscreen_hide", true)
+
+    private fun onFullscreen(full: Boolean) {
+        val hide = full && autoHideEnabled()
+        if (hide == fullscreenHidden) return
+        fullscreenHidden = hide
+        showMascotIfAllowed()
+    }
+
+    /** A 1-pixel, untouchable window that only listens for other apps going full screen (games, video). */
+    private fun addFullscreenProbe() {
+        val view = View(this)
+        val params = WindowManager.LayoutParams(
+            1, WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            PixelFormat.TRANSPARENT,
+        ).apply { gravity = Gravity.TOP or Gravity.START }
+        if (Build.VERSION.SDK_INT >= 30) {
+            view.setOnApplyWindowInsetsListener { _, insets ->
+                onFullscreen(!insets.isVisible(android.view.WindowInsets.Type.statusBars()))
+                insets
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            view.setOnSystemUiVisibilityChangeListener { flags -> onFullscreen(flags and View.SYSTEM_UI_FLAG_FULLSCREEN != 0) }
+        }
+        runCatching { windows.addView(view, params); probe = view }
+    }
+
+    private fun showHideTarget() {
+        if (hideTarget != null || catchUntil > 0L) return
+        val target = TextView(this).apply {
+            text = "✕  Gizle"; textSize = 15f; setTextColor(Color.WHITE); gravity = Gravity.CENTER
+            setPadding(dp(22), dp(12), dp(22), dp(12))
+            background = GradientDrawable().apply { setColor(Color.argb(200, 30, 36, 56)); cornerRadius = dp(26).toFloat(); setStroke(dp(2), Color.argb(160, 255, 255, 255)) }
+        }
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            PixelFormat.TRANSLUCENT,
+        ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; y = dp(56) }
+        runCatching { windows.addView(target, params); hideTarget = target }
+        overHideTarget = false
+    }
+
+    private fun updateHideTarget(params: WindowManager.LayoutParams) {
+        val target = hideTarget ?: return
+        val metrics = resources.displayMetrics
+        val centerX = params.x + params.width / 2
+        val centerY = params.y + params.height / 2
+        val over = centerY > metrics.heightPixels - dp(190) && kotlin.math.abs(centerX - metrics.widthPixels / 2) < dp(120)
+        if (over == overHideTarget) return
+        overHideTarget = over
+        (target.background as? GradientDrawable)?.setColor(if (over) Color.argb(230, 214, 72, 96) else Color.argb(200, 30, 36, 56))
+        target.scaleX = if (over) 1.15f else 1f; target.scaleY = target.scaleX
+    }
+
+    private fun removeHideTarget() {
+        hideTarget?.let { runCatching { windows.removeView(it) } }
+        hideTarget = null
     }
 
     private fun onMascotTap(prefs: android.content.SharedPreferences) {
@@ -425,7 +539,7 @@ class ObiOverlayService : Service() {
 
     private fun showBubble(message: String) {
         hideBubble()
-        if (panel != null) return
+        if (panel != null || mascot?.visibility != View.VISIBLE) return
         val anchor = mascotParams ?: return
         val width = resources.displayMetrics.widthPixels
         val label = TextView(this).apply {
@@ -562,6 +676,7 @@ class ObiOverlayService : Service() {
         hidePanel()
         catchScore = 0
         catchUntil = SystemClock.uptimeMillis() + 15_000L
+        showMascotIfAllowed()
         showBubble("Beni yakala! 15 saniye, ne kadar çok dokunursan o kadar puan ⚡")
         handler.postDelayed(object : Runnable {
             override fun run() {
@@ -585,6 +700,7 @@ class ObiOverlayService : Service() {
 
     private fun finishCatchGame() {
         catchUntil = 0L
+        showMascotIfAllowed()
         val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
         val best = maxOf(prefs.getInt("catch_best", 0), catchScore)
         prefs.edit().putInt("catch_best", best).apply()
@@ -797,7 +913,7 @@ class ObiOverlayService : Service() {
         hidePanel()
         mascot?.visibility = View.GONE
         runCatching { startActivity(Intent(this, ObiGeminiSetupActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            .onFailure { mascot?.visibility = View.VISIBLE }
+            .onFailure { showMascotIfAllowed() }
     }
 
     private val helpText = "Bana yazman yeterli, örneğin:\n" +
@@ -807,7 +923,7 @@ class ObiOverlayService : Service() {
         "• geri sayım tatil 15 temmuz / annemin doğum günü 5 mart\n" +
         "• odaklan 25 dakika • oyun oynayalım • dolap / Pofi'yi giy / bere tak\n" +
         "• panodakini özetle / panodakini çevir • bugünün kelimeleri\n" +
-        "• sesini dene / sesini incelt / sesini kalınlaştır • sesli uyarıyı kapat\n• su hatırlatıcısını aç • Gemini bağla"
+        "• sesini dene / sesini incelt / sesini kalınlaştır • sesli uyarıyı kapat\n• gizlen • tam ekranda gizlenme / tam ekranda gizlen\n• su hatırlatıcısını aç • Gemini bağla"
 
     private fun clipboardText(): String = runCatching {
         (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.takeIf { it.itemCount > 0 }
@@ -976,6 +1092,15 @@ class ObiOverlayService : Service() {
                 clipboardTask(when { t.contains("çevir") || t.contains("cevir") -> "translate"; t.contains("cevap") -> "reply"; else -> "summary" }); return
             }
             t.contains("kelime tahtı") && !t.contains("?") -> { openKelimeTahti(); return }
+            t.contains("tam ekran") && (t.contains("gizlen") || t.contains("saklan")) -> {
+                val on = !t.contains("gizlenme") && !t.contains("saklanma") && !t.contains("kapat")
+                localPrefs.edit().putBoolean("fullscreen_hide", on).apply()
+                if (!on) onFullscreen(false)
+                say(if (on) "Tamam! Oyun ya da video tam ekran açılınca kendiliğimden saklanırım 🙈" else "Tamam, tam ekranda da görünür kalacağım."); return
+            }
+            t == "gizlen" || t == "saklan" || t.contains("obi gizlen") || t.contains("kendini gizle") -> {
+                hidePanel(); setUserHidden(true); return
+            }
             t.contains("kesin alarm") -> { openExactAlarmSettings(); return }
             t.contains("bildirim izni") -> { openSettings(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)); return }
             t.contains("sesli uyarı") || t.contains("sesli uyari") -> {
@@ -1184,7 +1309,7 @@ class ObiOverlayService : Service() {
         panel = null
         chatMascot = null
         replyText = null; youText = null; replyScroll = null; input = null
-        if (catchUntil == 0L) mascot?.visibility = View.VISIBLE
+        showMascotIfAllowed()
         requestId++
     }
 
@@ -1207,6 +1332,9 @@ class ObiOverlayService : Service() {
         hidePanel()
         timerLabel?.let { runCatching { windows.removeView(it) } }
         timerLabel = null
+        removeHideTarget()
+        probe?.let { runCatching { windows.removeView(it) } }
+        probe = null
         mascot?.let { runCatching { windows.removeView(it) } }
         mascot = null
         mascotParams = null
