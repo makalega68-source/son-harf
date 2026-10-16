@@ -44,7 +44,7 @@ class ObiGeminiSetupActivity : Activity() {
         }
         body.addView(title)
         val guide = TextView(this).apply {
-            text = "İlk kez anahtarı oluşturup kopyala. AI Studio açılırken Obi ekrandan çekilir. Geri döndüğünde aşağıdaki ‘Panodan yapıştır’ düğmesine bas. Anahtarı yalnızca telefonunda şifreli saklarız."
+            text = "1. ‘API anahtarı al’ düğmesine bas. Google AI Studio'da hesabınla giriş yap.\n\n2. ‘Create API key’ seçeneğiyle anahtar oluştur ve kopyala. Anahtarı kimseyle paylaşma.\n\n3. Obi'ye geri dön, ‘Panodan yapıştır’ ve ‘Bağlantıyı kaydet’ düğmelerine bas.\n\n4. Ekrandaki Obi'ye çift dokun, ‘Sohbet’i aç ve örneğin ‘Bunu İngilizceye çevir: Merhaba’ yaz.\n\nBağlandıktan sonra kurulum menüden kalkar. Anahtar bu telefonda şifreli saklanır; Gemini yanıtları için yazdıkların Google'a gönderilir."
             textSize = 15f; setTextColor(Color.rgb(205, 219, 233))
             setLineSpacing(dp(4).toFloat(), 1f)
         }

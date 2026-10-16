@@ -21,6 +21,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -99,6 +100,7 @@ class ObiOverlayService : Service() {
         }
     }
     private val store by lazy { ObiStore(this) }
+    private val weather by lazy { ObiWeather() }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -268,40 +270,59 @@ class ObiOverlayService : Service() {
         val width = resources.displayMetrics.widthPixels
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(14), dp(18), dp(16))
+            setPadding(dp(18), dp(16), dp(18), dp(18))
             background = GradientDrawable().apply {
                 setColor(Color.rgb(22, 31, 51)); cornerRadius = dp(26).toFloat()
                 setStroke(dp(1), Color.rgb(92, 179, 168))
             }
             elevation = dp(18).toFloat()
         }
-        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val title = TextView(this).apply {
-            text = "✦  Obi"; setTextColor(Color.WHITE); textSize = 21f
-            setTypeface(null, android.graphics.Typeface.BOLD)
+        val menu = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val chat = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        fun header(label: String): LinearLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            addView(TextView(this@ObiOverlayService).apply {
+                text = label; textSize = 21f; setTextColor(Color.WHITE)
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            }, LinearLayout.LayoutParams(0, dp(44), 1f))
+            addView(TextView(this@ObiOverlayService).apply {
+                text = "×"; textSize = 28f; gravity = Gravity.CENTER
+                setTextColor(Color.rgb(190, 205, 224))
+                contentDescription = "Obi'yi kapat"
+                setOnClickListener { hidePanel() }
+            }, LinearLayout.LayoutParams(dp(42), dp(44)))
         }
-        val close = TextView(this).apply {
-            text = "×"; textSize = 26f; setTextColor(Color.rgb(190, 205, 224))
-            gravity = Gravity.CENTER
-            setOnClickListener { hidePanel() }
+        menu.addView(header("✦  Obi"))
+        val intro = TextView(this).apply {
+            text = if (gemini.connected()) "Obi ile yazış, not al veya hatırlatıcı kur."
+                else "Gemini ile sohbet için:\n1. Google AI Studio'dan API anahtarı oluştur.\n2. Anahtarı kopyala.\n3. Obi'de “Gemini'yi bağla” düğmesine basıp yapıştır ve kaydet.\nBağlanana kadar not ve alarm yerel çalışır."
+            textSize = 15f; setTextColor(Color.rgb(212, 229, 239))
+            setPadding(dp(4), dp(12), dp(4), dp(16))
+        }
+        menu.addView(intro)
+        if (!gemini.connected()) menu.addView(pill("✦  Gemini'yi bağla", true).apply {
+            setOnClickListener {
+                hidePanel()
+                mascot?.visibility = View.GONE
+                runCatching { startActivity(Intent(this@ObiOverlayService, ObiGeminiSetupActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    .onFailure { mascot?.visibility = View.VISIBLE }
+            }
+        }, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(10) })
+
+        val message = TextView(this).apply {
+            text = "Buradayım. Bana yaz 💜"
+            setTextColor(Color.rgb(228, 245, 240)); textSize = 16f
+            setPadding(dp(16), dp(13), dp(16), dp(13))
+            background = GradientDrawable().apply { setColor(Color.rgb(37, 54, 73)); cornerRadius = dp(22).toFloat() }
+            maxLines = 8
         }
         val avatar = WordSiegeMascotView(this).apply {
             updateGame(null, false, 0, 0, 0, null, emptyList(), true, WordSiegeMascotEmotion.HAPPY)
             contentDescription = "Obi, sohbet arkadaşın"
             setOnClickListener { animate(WordSiegeMascotAction.WAVE) }
         }
-        header.addView(avatar, LinearLayout.LayoutParams(dp(68), dp(68)).apply { rightMargin = dp(6) })
-        header.addView(title, LinearLayout.LayoutParams(0, dp(68), 1f))
-        header.addView(close, LinearLayout.LayoutParams(dp(42), dp(42)))
-        val message = TextView(this).apply {
-            text = mind.touch()
-            setTextColor(Color.rgb(222, 242, 239)); textSize = 15f
-            setPadding(dp(14), dp(10), dp(14), dp(10))
-            background = GradientDrawable().apply { setColor(Color.rgb(37, 54, 73)); cornerRadius = dp(18).toFloat() }
-            maxLines = 7
-        }
         val input = EditText(this).apply {
-            hint = "Obi'ye bir şey yaz…"; maxLines = 3
+            hint = "Obi'ye yaz…"; maxLines = 2
             setTextColor(Color.WHITE); setHintTextColor(Color.rgb(170, 190, 204))
             textSize = 15f; setPadding(dp(14), dp(8), dp(14), dp(8))
             background = GradientDrawable().apply {
@@ -309,6 +330,18 @@ class ObiOverlayService : Service() {
                 setStroke(dp(1), Color.rgb(84, 111, 130))
             }
             imeOptions = EditorInfo.IME_ACTION_SEND
+        }
+        fun openChat() {
+            menu.visibility = View.GONE
+            chat.visibility = View.VISIBLE
+            chatMascot = avatar
+            mascot?.visibility = View.GONE
+            animate(WordSiegeMascotAction.WAVE)
+            input.requestFocus()
+            handler.postDelayed({
+                if (panel === card) (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
+                    .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
+            }, 180L)
         }
         var requestId = 0
         fun submit(command: String) {
@@ -323,8 +356,17 @@ class ObiOverlayService : Service() {
                     command.contains("not", true) -> WordSiegeMascotAction.NOD
                     else -> WordSiegeMascotAction.WAVE
                 })
+            } else if (weather.canHandle(command)) {
+                message.text = "Hava verisini getiriyorum… ☁"
+                animate(WordSiegeMascotAction.LOOK_AROUND)
+                weather.ask(command) { result ->
+                    if (panel === card && currentRequest == requestId) {
+                        message.text = result
+                        animate(WordSiegeMascotAction.POINT)
+                    }
+                }
             } else if (gemini.connected()) {
-                message.text = "Dinliyorum, bir düşüneyim… ✨"
+                message.text = "Bir bakayım… ✨"
                 animate(WordSiegeMascotAction.THINK)
                 gemini.ask(command) { answer ->
                     if (panel === card && currentRequest == requestId) {
@@ -344,45 +386,24 @@ class ObiOverlayService : Service() {
         val compose = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         compose.addView(input, LinearLayout.LayoutParams(0, dp(50), 1f))
         compose.addView(send, LinearLayout.LayoutParams(dp(52), dp(50)).apply { leftMargin = dp(8) })
-        val shortcuts = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        fun quick(label: String, command: String) {
-            val item = pill(label, false)
-            item.setOnClickListener { if (command == "sohbet") { input.requestFocus(); message.text = "Buradayım. Aklından geçenleri yaz 💜"; animate(WordSiegeMascotAction.WAVE) } else submit(command) }
-            shortcuts.addView(item, LinearLayout.LayoutParams(0, dp(38), 1f).apply { rightMargin = dp(5) })
-        }
-        quick("☀  Motive et", "motive et")
-        quick("✎  Notlarım", "notlarımı göster")
-        quick("♡  Sohbet", "sohbet")
-        val settings = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
-        val settingsToggle = TextView(this).apply {
-            text = "⚙  Ayarlar  ▾"; textSize = 13f
-            setTextColor(Color.rgb(156, 212, 202)); setPadding(dp(4), dp(13), dp(4), 0)
-            setOnClickListener { settings.visibility = if (settings.visibility == View.GONE) View.VISIBLE else View.GONE }
-        }
-        val connect = pill(if (gemini.connected()) "Gemini bağlantısını yönet" else "✦  Gemini bağla", !gemini.connected())
-        connect.setOnClickListener {
-            hidePanel()
-            hideBubble()
-            mascot?.visibility = View.GONE
-            try {
-                startActivity(Intent(this, ObiGeminiSetupActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            } catch (_: RuntimeException) {
-                mascot?.visibility = View.VISIBLE
-            }
-        }
-        settings.addView(pill("Bildirim izni", false).apply { setOnClickListener {
+        val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        buttons.addView(pill("♡  Sohbet", true).apply { setOnClickListener { openChat() } },
+            LinearLayout.LayoutParams(0, dp(50), 1f).apply { rightMargin = dp(6) })
+        buttons.addView(pill("✎  Notlarım", false).apply {
+            setOnClickListener { openChat(); submit("notlarımı göster") }
+        }, LinearLayout.LayoutParams(0, dp(50), 1f))
+        menu.addView(buttons)
+        menu.addView(pill("Bildirim izni", false).apply { setOnClickListener {
             hidePanel()
             startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } }, LinearLayout.LayoutParams(-1, dp(40)).apply { topMargin = dp(7) })
-        if (gemini.connected()) settings.addView(connect, LinearLayout.LayoutParams(-1, dp(40)).apply { topMargin = dp(7) })
-        card.addView(header)
-        card.addView(message, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
-        card.addView(compose, LinearLayout.LayoutParams(-1, dp(50)).apply { topMargin = dp(14) })
-        card.addView(shortcuts, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(10) })
-        if (!gemini.connected()) card.addView(connect, LinearLayout.LayoutParams(-1, dp(43)).apply { topMargin = dp(10) })
-        card.addView(settingsToggle)
-        card.addView(settings)
+        } }, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(9) })
+        chat.addView(header("Obi ile sohbet"))
+        chat.addView(message, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+        chat.addView(avatar, LinearLayout.LayoutParams(dp(170), dp(170)).apply { gravity = Gravity.CENTER_HORIZONTAL })
+        chat.addView(compose, LinearLayout.LayoutParams(-1, dp(50)).apply { topMargin = dp(4) })
+        card.addView(menu)
+        card.addView(chat)
         val params = WindowManager.LayoutParams(
             (width - dp(28)).coerceAtMost(dp(390)), WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -396,8 +417,6 @@ class ObiOverlayService : Service() {
         try {
             windows.addView(card, params)
             panel = card
-            chatMascot = avatar
-            mascot?.visibility = View.GONE
         } catch (_: SecurityException) {
             // User may revoke the overlay permission while Obi is open.
         }

@@ -146,12 +146,14 @@ internal class ObiGemini(private val context: Context) {
                     .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text",
                         "Adın Obi. Türkçe yazışan şirin bir telefon maskotusun. Ses kullanma. Kullanıcının bağlamını önceki konuşmadan izle; farklı, doğal ve somut yanıtlar ver. Çeviri, açıklama, özetleme, yazı yazma, fikir üretme ve sohbet isteklerini karşıla. Sadece sohbet dışında telefondaki eylemleri yaptığını iddia etme; not/alarm/hatırlatıcıyı uygulama yerel olarak ele alır. Ekranı gördüğünü veya başka uygulamaları kontrol ettiğini söyleme. JSON nesnesi dön: text kullanıcıya yanıt, action ise yanıtın duygusuna uygun tek bir hareket. action değerleri: NOD, THINK, CHEER, DANCE, WAVE, LOVE, GIGGLE, SHY, WINK, SPARKLE, CLAP, SHRUG, YAWN, DOZE, POINT, BOUNCE. Kısa bir sohbet yanıtında da eylemi duyguya göre değiştir."))))
                     .put("contents", contents)
-                    .put("generationConfig", JSONObject().put("maxOutputTokens", 1200).put("temperature", 0.9).put("responseMimeType", "application/json"))
+                    .put("generationConfig", JSONObject().put("maxOutputTokens", 900).put("temperature", 0.8)
+                        .put("responseMimeType", "application/json")
+                        .put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal")))
                 val connection = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent").openConnection() as HttpURLConnection
                 try {
                     connection.requestMethod = "POST"
-                    connection.connectTimeout = 10000
-                    connection.readTimeout = 20000
+                    connection.connectTimeout = 6000
+                    connection.readTimeout = 15000
                     connection.doOutput = true
                     connection.setRequestProperty("Content-Type", "application/json")
                     connection.setRequestProperty("x-goog-api-key", key)

@@ -196,7 +196,10 @@ internal class ObiStore(private val context: Context) {
         timerMinutes(normalized)?.let { minutes -> schedule(System.currentTimeMillis() + minutes * 60_000L, "Obi zamanlayıcısı"); return "Tamam. $minutes dakika sonra sana haber vereceğim." }
         if (normalized.contains("hatırlat") || normalized.contains("hatirlat")) {
             val time = reminderTime(normalized) ?: return "Saat de yaz: örneğin ‘yarın saat 09.00’da annemi ara diye hatırlat’."
-            val note = text.replace(Regex("(?i)(yarın|yarin)?\\s*saat\\s*\\d{1,2}(?:[:.]\\d{2})?.*?(diye )?hatırlat(ır mısın|ir misin)?"), "").trim().ifBlank { "Hatırlatıcı" }
+            val note = text
+                .replace(Regex("(?i)(?:yarın|yarin|bugün|bugun)?\\s*(?:sabah|akşam|aksam|gece|öğlen|oglen)?\\s*(?:saat\\s*)?\\d{1,2}(?:[:.]\\d{2})?(?:[’']?\\s*(?:da|de|ta|te|a|e))?"), "")
+                .replace(Regex("(?i)(?:diye\\s+)?hatırlat(?:ır mısın|ir misin)?"), "")
+                .trim(' ', ',', ':', '-', '’', '\'').ifBlank { "Hatırlatıcı" }
             schedule(time, note); return "Tamam, ${formatClock(time)} için ‘$note’ hatırlatıcısını kurdum."
         }
         return mind.respond(text)
