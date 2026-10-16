@@ -325,7 +325,7 @@ class ObiOverlayService : Service() {
             setTextColor(Color.rgb(156, 212, 202)); setPadding(dp(4), dp(13), dp(4), 0)
             setOnClickListener { settings.visibility = if (settings.visibility == View.GONE) View.VISIBLE else View.GONE }
         }
-        val connect = pill(if (gemini.connected()) "✓  Gemini bağlı · değiştir" else "✦  Gemini bağla", true)
+        val connect = pill(if (gemini.connected()) "✓  Gemini anahtarı kayıtlı" else "✦  Gemini bağla", true)
         val setup = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
         val keyInput = EditText(this).apply {
             hint = "Gemini API anahtarını yapıştır"; setTextColor(Color.WHITE)
@@ -340,7 +340,9 @@ class ObiOverlayService : Service() {
         val save = pill("Bağlantıyı kaydet", true).apply { setOnClickListener {
             if (gemini.saveKey(keyInput.text.toString())) {
                 keyInput.text.clear(); setup.visibility = View.GONE
-                connect.text = "✓  Gemini bağlı · değiştir"
+                compose.visibility = View.VISIBLE; shortcuts.visibility = View.VISIBLE
+                settingsToggle.visibility = View.VISIBLE
+                connect.text = "✓  Gemini anahtarı kayıtlı"
                 message.text = "Anahtar kaydedildi. Gemini'ye bir şey soralım 💜"
             } else message.text = "Anahtar kaydedilemedi. API anahtarını kontrol et."
         } }
@@ -348,7 +350,13 @@ class ObiOverlayService : Service() {
             startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://aistudio.google.com/api-keys"))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         } }
-        connect.setOnClickListener { setup.visibility = if (setup.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
+        connect.setOnClickListener {
+            val opening = setup.visibility != View.VISIBLE
+            setup.visibility = if (opening) View.VISIBLE else View.GONE
+            compose.visibility = if (opening) View.GONE else View.VISIBLE
+            shortcuts.visibility = if (opening) View.GONE else View.VISIBLE
+            settingsToggle.visibility = if (opening) View.GONE else View.VISIBLE
+        }
         setup.addView(keyHelp)
         setup.addView(keyInput, LinearLayout.LayoutParams(-1, dp(48)))
         setup.addView(studio, LinearLayout.LayoutParams(-1, dp(40)).apply { topMargin = dp(6) })
