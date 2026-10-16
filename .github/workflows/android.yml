@@ -117,7 +117,7 @@ jobs:
       - name: Compile and test (package only when requested)
         run: |
           set -o pipefail
-          tasks=(clean :app:testDebugUnitTest)
+          tasks=(clean :app:testDebugUnitTest :obi:assembleDebug)
           if [ "$NO_APK" != "true" ]; then tasks+=(:app:assembleDebug); fi
           if ! ./gradlew "${tasks[@]}" --stacktrace --warning-mode all 2>&1 | tee build.log; then
             # Surface compiler errors and failing tests as annotations so they are readable without log access.
@@ -163,6 +163,15 @@ jobs:
         with:
           name: Kelime-Tahti-Guncel
           path: Kelime-Tahti-Guncel.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload standalone Obi APK artifact
+        if: success() && env.NO_APK != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Obi-Yerel-Test
+          path: obi/build/outputs/apk/debug/obi-debug.apk
           if-no-files-found: error
           retention-days: 7
 
@@ -268,9 +277,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp SonHarf-Final-Test.apk Kelime-Tahti-Test.apk
+          cp obi/build/outputs/apk/debug/obi-debug.apk Obi-Yerel-Test.apk
           gh release view branch-test >/dev/null 2>&1 || gh release create branch-test --prerelease --target "$GITHUB_SHA" --title "Kelime Tahtı test APK" --notes "Kelime Tahtı test sürümü (doğrudan kurulabilir APK)."
           gh release edit branch-test --notes "Kelime Tahtı test sürümü, commit ${GITHUB_SHA::8}. Doğrudan kurulabilir APK."
           gh release upload branch-test Kelime-Tahti-Test.apk --clobber
+          gh release upload branch-test Obi-Yerel-Test.apk --clobber
           # A small phone build too: the store-shrunk APK with only the arm64 native libraries,
           # re-signed with the same debug key so it installs over the test build. Best effort:
           # a problem here is reported but never fails the job (the full APK is already up).
