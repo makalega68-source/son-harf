@@ -66,10 +66,15 @@ class ObiOverlayService : Service() {
     private val mind by lazy { ObiMind(this) }
     private val gemini by lazy { ObiGemini(this) }
     private val moves = ArrayDeque<WordSiegeMascotAction>()
+    private val touchReplies = ArrayDeque<ObiReply>()
+    private val recentTouches = ArrayDeque<String>()
+    private var touchPackLoading = false
+    private var lastTouchFetchAt = 0L
     private val celebration = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == ACTION_SHOW) {
                 mascot?.visibility = View.VISIBLE
+                fetchTouchPack()
                 return
             }
             animate(WordSiegeMascotAction.CHEER)
@@ -131,6 +136,7 @@ class ObiOverlayService : Service() {
             if (mascot == null) {
                 addMascot()
                 handler.postDelayed(ambient, 8_000L)
+                handler.postDelayed({ fetchTouchPack() }, 1_200L)
             } else mascot?.visibility = View.VISIBLE
             notifyEntry(ACTION_READY)
         } catch (_: RuntimeException) {
@@ -174,6 +180,11 @@ class ObiOverlayService : Service() {
         val size = dp(SIZE_DP)
         val bounds = resources.displayMetrics
         val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+        val savedTouches = prefs.getString("recent_touches", null)
+        if (recentTouches.isEmpty() && savedTouches != null) runCatching {
+            val items = org.json.JSONArray(savedTouches)
+            for (index in 0 until items.length()) recentTouches.addLast(items.getString(index))
+        }
         val params = WindowManager.LayoutParams(
             size, size, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
@@ -210,8 +221,13 @@ class ObiOverlayService : Service() {
                 } else {
                     lastTapAt = now
                     lastInteractionAt = System.currentTimeMillis()
-                    animate(nextMove())
-                    showBubble(mind.touch())
+                    val reply = if (touchReplies.isEmpty()) ObiReply(mind.touch(), nextMove()) else touchReplies.removeFirst()
+                    animate(reply.action)
+                    showBubble(reply.text)
+                    recentTouches.addLast(reply.text)
+                    while (recentTouches.size > 8) recentTouches.removeFirst()
+                    prefs.edit().putString("recent_touches", org.json.JSONArray(recentTouches.toList()).toString()).apply()
+                    if (touchReplies.size < 3) fetchTouchPack()
                 }
             }
         }
@@ -219,6 +235,18 @@ class ObiOverlayService : Service() {
         mascot = view
         mascotParams = params
         prefs.edit().putBoolean("running", true).apply()
+    }
+
+    private fun fetchTouchPack() {
+        val now = System.currentTimeMillis()
+        if (touchPackLoading || !gemini.connected() || now - lastTouchFetchAt < 90_000L) return
+        touchPackLoading = true
+        lastTouchFetchAt = now
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        gemini.touchPack(hour, recentTouches.toList()) { generated ->
+            touchPackLoading = false
+            generated.forEach(touchReplies::addLast)
+        }
     }
 
     private fun animate(action: WordSiegeMascotAction) {

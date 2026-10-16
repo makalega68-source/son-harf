@@ -27,8 +27,14 @@ internal class ObiMind(private val context: Context) {
 
     private fun next(group: String, options: List<String>): String {
         val queue = pools.getOrPut(group) { ArrayDeque() }
-        if (queue.isEmpty()) queue.addAll(options.shuffled())
-        return queue.removeFirst().replace("{isim}", prefs.getString("name", "")?.let { if (it.isBlank()) "" else "$it, " } ?: "")
+        if (queue.isEmpty()) {
+            val previous = prefs.getString("last_$group", "") ?: ""
+            queue.addAll(options.filterNot { it == previous }.shuffled())
+            options.find { it == previous }?.let(queue::addLast)
+        }
+        val selected = queue.removeFirst()
+        prefs.edit().putString("last_$group", selected).apply()
+        return selected.replace("{isim}", prefs.getString("name", "")?.let { if (it.isBlank()) "" else "$it, " } ?: "")
     }
 
     fun touch(): String {
@@ -36,11 +42,20 @@ internal class ObiMind(private val context: Context) {
         return when {
             hour >= 23 || hour < 7 -> next("night", listOf(
                 "Geç oldu; gözlerine biraz dinlenme borçluyuz 🌙", "Ben burada nöbetteyim, sen dinlenebilirsin.",
-                "Bugünün yükünü burada bırakalım. Yarın yeni bir sayfa açarız.", "Uykun geldiyse ekranı kapat, rüyalarında görüşürüz ✨"))
+                "Bugünün yükünü burada bırakalım. Yarın yeni bir sayfa açarız.", "Uykun geldiyse ekranı kapat, rüyalarında görüşürüz ✨",
+                "Psst! Gece sessiz, ben hâlâ buradayım.", "Ay ışığında bile parlıyorsun ✨",
+                "Biraz esneyip yıldız sayalım mı?", "Gece keşiflerine çıktım; ilk durağım senin ekranın!",
+                "Dokundun, uykum kaçtı. Merhaba!", "Az önce küçük bir rüya gördüm; sen de vardın.",
+                "Karanlıkta bile gülümsemeni gördüm sanki.", "Benim için gece, fısıltıyla söylenen bir merhaba.",
+                "Uyumadıysan iki kelime sohbet edebiliriz.", "Sana minik bir yıldız bıraktım ⭐",
+                "Bir dokunuşla uyandım, şimdi gözlerim sende.", "Yarın için aklında güzel bir şey var mı?"))
             hour < 11 -> next("morning", listOf(
                 "{isim}Bugün her şeyi yetiştirmek zorunda değilsin. Bir şey seç, onunla başla.",
                 "Günaydın! İlk küçük adımı birlikte atalım mı?", "Güne bir nefes ve bir bardak suyla başlayalım ☀️",
-                "Dünkü emeğini küçümseme; bugün onun üzerine ekleyebilirsin."))
+                "Dünkü emeğini küçümseme; bugün onun üzerine ekleyebilirsin.",
+                "Gün başladı! Küçük bir dans mı etsek?", "Bugünün ilk gülümsemesini yakaladım galiba!",
+                "Merhaba sabah kuşu! Ben hazırım.", "Yeni güne bir selam: Obi, Obi!",
+                "Gözlerini açtın mı? Benimkiler kocaman açık!", "Bugün nasıl bir macera seçiyorsun?"))
             else -> next("touch", listOf(
                 "{isim}Bana dokundun, geldim! Ne var aklında?", "Bir fikrin mi var? Anlat, birlikte şekillendirelim.",
                 "Yorulduysan iki dakika durabiliriz. Kaçmıyorum 💜", "Bugün kendin için yaptığın küçük bir şey var mı?",
@@ -179,6 +194,57 @@ internal class ObiGemini(private val context: Context) {
                 } finally { connection.disconnect() }
             }.getOrElse { ObiReply("Bağlantı kurulamadı. İnterneti kontrol edip yeniden dene.", WordSiegeMascotAction.SHRUG) }
             android.os.Handler(android.os.Looper.getMainLooper()).post { done(answer) }
+        }.start()
+    }
+
+    /** Prepare a small bank of distinct tap reactions in one request, keeping taps instant. */
+    fun touchPack(hour: Int, recent: List<String>, done: (List<ObiReply>) -> Unit) {
+        val key = readKey() ?: return done(emptyList())
+        val today = LocalDate.now().toString()
+        val sameDay = prefs.getString("day", "") == today
+        val used = if (sameDay) prefs.getInt("used", 0) else 0
+        val packs = if (prefs.getString("touch_day", "") == today) prefs.getInt("touch_packs", 0) else 0
+        if (used >= 20 || packs >= 4) return done(emptyList())
+        Thread {
+            val replies = runCatching {
+                val instruction = "Obi adlı sevimli telefon maskotu için dokunma tepkileri üret. Saat $hour. Gece olsa bile sürekli uyku öğüdü verme. " +
+                    "Sekiz farklı, kısa, oyuncu, sıcak Türkçe söz yaz; her biri en çok 90 karakter. Aynı fikri yineleme. " +
+                    "Son kullanılan sözler: ${recent.takeLast(5).joinToString(" / ")}. " +
+                    "JSON nesnesi döndür: replies dizisindeki her öğede text ve action olsun. " +
+                    "action değerleri WAVE, BOUNCE, WINK, GIGGLE, LOVE, CHEER, DANCE, PEEK, SHY, HOP, SPARKLE, NOD."
+                val body = JSONObject()
+                    .put("contents", JSONArray().put(JSONObject().put("role", "user")
+                        .put("parts", JSONArray().put(JSONObject().put("text", instruction)))))
+                    .put("generationConfig", JSONObject().put("responseMimeType", "application/json")
+                        .put("temperature", 1.0).put("maxOutputTokens", 1400)
+                        .put("thinkingConfig", JSONObject().put("thinkingLevel", "minimal")))
+                val connection = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent").openConnection() as HttpURLConnection
+                try {
+                    connection.requestMethod = "POST"
+                    connection.connectTimeout = 6000; connection.readTimeout = 15000
+                    connection.doOutput = true
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.setRequestProperty("x-goog-api-key", key)
+                    connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+                    if (connection.responseCode !in 200..299) return@runCatching emptyList<ObiReply>()
+                    val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                    val raw = root.getJSONArray("candidates").getJSONObject(0).getJSONObject("content")
+                        .getJSONArray("parts").getJSONObject(0).getString("text")
+                    val items = JSONObject(raw).getJSONArray("replies")
+                    val actions = setOf("WAVE", "BOUNCE", "WINK", "GIGGLE", "LOVE", "CHEER", "DANCE", "PEEK", "SHY", "HOP", "SPARKLE", "NOD")
+                    val generated = (0 until items.length()).mapNotNull { index ->
+                        val item = items.optJSONObject(index) ?: return@mapNotNull null
+                        val phrase = item.optString("text").trim().take(90).takeIf { it.length in 5..90 } ?: return@mapNotNull null
+                        val move = item.optString("action").uppercase(Locale.ROOT).takeIf(actions::contains) ?: "WAVE"
+                        ObiReply(phrase, WordSiegeMascotAction.valueOf(move))
+                    }.distinctBy { it.text.lowercase(Locale("tr", "TR")) }.take(8)
+                    if (generated.isNotEmpty()) prefs.edit().putString("day", today)
+                        .putString("touch_day", today).putInt("used", used + 1)
+                        .putInt("touch_packs", packs + 1).apply()
+                    generated
+                } finally { connection.disconnect() }
+            }.getOrDefault(emptyList())
+            android.os.Handler(android.os.Looper.getMainLooper()).post { done(replies) }
         }.start()
     }
 }
