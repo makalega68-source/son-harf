@@ -159,6 +159,11 @@ private fun ObiAction(label: String, onClick: () -> Unit) {
 
 internal class ObiStore(private val context: Context) {
     private val prefs = context.getSharedPreferences("obi_local", Context.MODE_PRIVATE)
+    private val mind = ObiMind(context)
+    fun canHandle(raw: String): Boolean {
+        val t = raw.lowercase(Locale("tr", "TR"))
+        return listOf("not al", "bunu not et", "şunu not et", "not et", "notlarım", "notlarim", "zamanlayıcı", "zamanlayici", "timer", "hatırlat", "hatirlat", "alarm kur", "doğum günüm", "dogum gunum", "sabah motive et", "günaydın mesajı", "sabah mesajını kapat", "adım ", "benim adım").any(t::contains)
+    }
     fun handle(raw: String): String {
         val text = raw.trim(); val normalized = text.lowercase(Locale("tr", "TR"))
         if (normalized.contains("doğum günüm") || normalized.contains("dogum gunum")) {
@@ -186,8 +191,6 @@ internal class ObiStore(private val context: Context) {
             schedule(time, "Obi alarmı: Uyanma zamanı!", "alarm")
             return "Alarmı ${formatClock(time)} için kurdum. Android bildirimiyle haber vereceğim."
         }
-        if (normalized.contains("deprem")) return "Deprem bilgisi için AFAD Son Depremler sayfasını aç. Obi henüz doğrulanmış acil uyarı göndermiyor; resmî uyarıların yerine geçmez."
-        if (normalized.contains("çevir") || normalized.contains("cevir")) return "Çeviri için dil ve metni yazabilirsin; yerel çeviri modeli henüz eklenmedi."
         if (normalized.contains("notlarımı göster") || normalized.contains("notlarimi göster")) return notes().takeLast(5).reversed().mapIndexed { i, item -> "${i + 1}. $item" }.joinToString("\n").ifBlank { "Henüz notun yok. ‘Not al …’ yazabilirsin." }
         noteText(normalized, text)?.let { note -> save(note); return "Tamam, bunu hatırlayacağım: ‘$note’" }
         timerMinutes(normalized)?.let { minutes -> schedule(System.currentTimeMillis() + minutes * 60_000L, "Obi zamanlayıcısı"); return "Tamam. $minutes dakika sonra sana haber vereceğim." }
@@ -196,7 +199,7 @@ internal class ObiStore(private val context: Context) {
             val note = text.replace(Regex("(?i)(yarın|yarin)?\\s*saat\\s*\\d{1,2}(?:[:.]\\d{2})?.*?(diye )?hatırlat(ır mısın|ir misin)?"), "").trim().ifBlank { "Hatırlatıcı" }
             schedule(time, note); return "Tamam, ${formatClock(time)} için ‘$note’ hatırlatıcısını kurdum."
         }
-        return "‘Not al …’, ‘20 dakika zamanlayıcı başlat’, ‘Yarın saat 09.00 alarm kur’, ‘Doğum günüm 12 Mayıs’ veya ‘Sabah motive et’ yazabilirsin."
+        return mind.respond(text)
     }
     fun notes(): List<String> = runCatching { val v = JSONArray(prefs.getString("notes", "[]") ?: "[]"); List(v.length()) { v.getString(it) } }.getOrDefault(emptyList())
     private fun save(note: String) { val v = JSONArray(prefs.getString("notes", "[]") ?: "[]"); v.put(note); prefs.edit().putString("notes", v.toString()).apply() }

@@ -5,8 +5,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.app.AppOpsManager
-import android.app.usage.UsageStatsManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -27,7 +25,11 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.ScrollView
+import android.view.inputmethod.EditorInfo
+import android.text.InputType
 import com.google.mlkit.common.model.DownloadConditions
+import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
@@ -58,19 +60,25 @@ class ObiOverlayService : Service() {
     private var lastTapAt = 0L
     private var lastInteractionAt = System.currentTimeMillis()
     private var actionKey = 0L
-    private var phraseIndex = 0
-    private var lastUsageCheckAt = 0L
+    private val mind by lazy { ObiMind(this) }
+    private val gemini by lazy { ObiGemini(this) }
+    private val moves = ArrayDeque<WordSiegeMascotAction>()
     private val celebration = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             animate(WordSiegeMascotAction.CHEER)
             showBubble(intent.getStringExtra("text") ?: "Yaşasın! ✨")
         }
     }
-    private val phrases = listOf(
-        "İyi ki buradasın ✨", "Bugün birlikte güzel şeyler yapabiliriz!", "Gülüşün ekrana yakışıyor 💜",
-        "Biraz soluklan; ben buradayım.", "Küçük bir adım bile ilerlemedir!", "Seninle vakit geçirmek güzel 🌟",
-        "Kendine nazik davran, olur mu?", "Hadi, güzel bir şey düşünelim!"
-    )
+    private fun nextMove(): WordSiegeMascotAction {
+        if (moves.isEmpty()) moves.addAll(listOf(
+            WordSiegeMascotAction.SPACE_FLIGHT, WordSiegeMascotAction.CHEER, WordSiegeMascotAction.NUZZLE,
+            WordSiegeMascotAction.LOVE, WordSiegeMascotAction.BOUNCE, WordSiegeMascotAction.WINK,
+            WordSiegeMascotAction.KISS, WordSiegeMascotAction.DANCE, WordSiegeMascotAction.CLAP,
+            WordSiegeMascotAction.SHY, WordSiegeMascotAction.GIGGLE, WordSiegeMascotAction.HOP,
+            WordSiegeMascotAction.PEEK, WordSiegeMascotAction.SWAY, WordSiegeMascotAction.CHASE_RUN
+        ).shuffled())
+        return moves.removeFirst()
+    }
     private val ambient = object : Runnable {
         override fun run() {
             if (mascot != null && panel == null) {
@@ -81,7 +89,6 @@ class ObiOverlayService : Service() {
                     else -> listOf(WordSiegeMascotAction.LOOK_AROUND, WordSiegeMascotAction.SWAY, WordSiegeMascotAction.WAVE).random()
                 }
                 animate(action)
-                checkScreenTime()
             }
             handler.postDelayed(this, 30_000L)
         }
@@ -94,25 +101,6 @@ class ObiOverlayService : Service() {
         super.onCreate()
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(celebration, IntentFilter("com.obi.local.CELEBRATE"), Context.RECEIVER_NOT_EXPORTED)
         else registerReceiver(celebration, IntentFilter("com.obi.local.CELEBRATE"))
-    }
-
-    private fun checkScreenTime() {
-        val now = System.currentTimeMillis()
-        if (now - lastUsageCheckAt < 10 * 60_000L) return
-        lastUsageCheckAt = now
-        val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
-        val ops = getSystemService(AppOpsManager::class.java)
-        if (ops.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName) != AppOpsManager.MODE_ALLOWED) return
-        val day = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0)
-        }.timeInMillis
-        val stats = getSystemService(UsageStatsManager::class.java).queryUsageStats(UsageStatsManager.INTERVAL_DAILY, day, now)
-        val total = stats.sumOf { it.totalTimeInForeground }
-        if (total >= 3 * 60 * 60_000L && prefs.getLong("warned_day", 0L) != day) {
-            prefs.edit().putLong("warned_day", day).apply()
-            animate(WordSiegeMascotAction.NUZZLE)
-            showBubble("Biraz ekrandan uzaklaşıp dinlenelim mi? 💜")
-        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -209,11 +197,8 @@ class ObiOverlayService : Service() {
                 } else {
                     lastTapAt = now
                     lastInteractionAt = System.currentTimeMillis()
-                    val action = listOf(WordSiegeMascotAction.SPACE_FLIGHT, WordSiegeMascotAction.CHEER,
-                        WordSiegeMascotAction.NUZZLE, WordSiegeMascotAction.LOVE, WordSiegeMascotAction.BOUNCE,
-                        WordSiegeMascotAction.WINK, WordSiegeMascotAction.KISS).random()
-                    animate(action)
-                    showBubble(phrases[phraseIndex++ % phrases.size])
+                    animate(nextMove())
+                    showBubble(mind.touch())
                 }
             }
         }
@@ -267,107 +252,190 @@ class ObiOverlayService : Service() {
         val width = resources.displayMetrics.widthPixels
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setPadding(dp(18), dp(14), dp(18), dp(16))
             background = GradientDrawable().apply {
-                setColor(Color.rgb(27, 37, 59))
-                cornerRadius = dp(22).toFloat()
-                setStroke(dp(1), Color.rgb(110, 215, 192))
+                setColor(Color.rgb(22, 31, 51)); cornerRadius = dp(26).toFloat()
+                setStroke(dp(1), Color.rgb(92, 179, 168))
             }
-            elevation = dp(10).toFloat()
+            elevation = dp(18).toFloat()
         }
+        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val title = TextView(this).apply {
-            text = "Obi  ·  ×"
-            setTextColor(Color.WHITE)
-            textSize = 18f
+            text = "✦  Obi"; setTextColor(Color.WHITE); textSize = 21f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+        val close = TextView(this).apply {
+            text = "×"; textSize = 26f; setTextColor(Color.rgb(190, 205, 224))
+            gravity = Gravity.CENTER
             setOnClickListener { hidePanel() }
         }
+        header.addView(title, LinearLayout.LayoutParams(0, dp(42), 1f))
+        header.addView(close, LinearLayout.LayoutParams(dp(42), dp(42)))
         val message = TextView(this).apply {
-            text = "Merhaba! Çift dokunarak yazışabiliriz. Örnek: ‘Yarın saat 09.00 alarm kur’ veya ‘Doğum günüm 12 Mayıs’."
-            setTextColor(Color.rgb(218, 248, 242))
-            textSize = 14f
-            setPadding(0, dp(8), 0, dp(8))
+            text = mind.touch()
+            setTextColor(Color.rgb(222, 242, 239)); textSize = 15f
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            background = GradientDrawable().apply { setColor(Color.rgb(37, 54, 73)); cornerRadius = dp(18).toFloat() }
+            maxLines = 7
         }
         val input = EditText(this).apply {
-            hint = "Obi'ye yaz…"
-            setSingleLine(false)
-            maxLines = 2
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.LTGRAY)
-            textSize = 15f
+            hint = "Obi'ye bir şey yaz…"; maxLines = 3
+            setTextColor(Color.WHITE); setHintTextColor(Color.rgb(170, 190, 204))
+            textSize = 15f; setPadding(dp(14), dp(8), dp(14), dp(8))
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(35, 48, 68)); cornerRadius = dp(17).toFloat()
+                setStroke(dp(1), Color.rgb(84, 111, 130))
+            }
+            imeOptions = EditorInfo.IME_ACTION_SEND
         }
-        val send = Button(this).apply {
-            text = "Gönder"
+        val send = pill("➤", true).apply {
             setOnClickListener {
                 val command = input.text.toString().trim()
                 if (command.isNotEmpty()) {
-                    if (!translate(command, message)) message.text = store.handle(command)
+                    if (!translate(command, message)) {
+                        if (store.canHandle(command) || !gemini.connected()) message.text = store.handle(command)
+                        else {
+                            message.text = "Bir düşüneyim… ✨"
+                            gemini.ask(command) { answer ->
+                                if (panel === card) message.text = answer
+                                showBubble(answer.take(85))
+                            }
+                        }
+                    }
                     input.text.clear()
-                    animate(WordSiegeMascotAction.CHEER)
+                    animate(nextMove())
                 }
             }
         }
-        card.addView(title)
-        card.addView(message)
-        card.addView(input)
-        card.addView(send)
-        card.addView(Button(this).apply {
-            text = "AFAD son depremler"
-            setOnClickListener {
-                startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://deprem.afad.gov.tr/last-earthquakes.html")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
-        })
-        card.addView(Button(this).apply {
-            text = "Ekran süresi uyarısını aç"
-            setOnClickListener {
-                hidePanel()
-                startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
-        })
-        card.addView(Button(this).apply {
-            text = "Hatırlatıcı bildirim izni"
-            setOnClickListener {
-                hidePanel()
-                startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                    .putExtra(Settings.EXTRA_APP_PACKAGE, packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
-        })
+        val compose = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        compose.addView(input, LinearLayout.LayoutParams(0, dp(50), 1f))
+        compose.addView(send, LinearLayout.LayoutParams(dp(52), dp(50)).apply { leftMargin = dp(8) })
+        val shortcuts = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        fun quick(label: String, command: String) {
+            val item = pill(label, false)
+            item.setOnClickListener { message.text = store.handle(command); animate(nextMove()) }
+            shortcuts.addView(item, LinearLayout.LayoutParams(0, dp(38), 1f).apply { rightMargin = dp(5) })
+        }
+        quick("☀  Motive et", "motive et")
+        quick("✎  Notlarım", "notlarımı göster")
+        quick("♡  Sohbet", "merhaba")
+        val settings = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        val settingsToggle = TextView(this).apply {
+            text = "⚙  Ayarlar ve Gemini  ▾"; textSize = 13f
+            setTextColor(Color.rgb(156, 212, 202)); setPadding(dp(4), dp(13), dp(4), 0)
+            setOnClickListener { settings.visibility = if (settings.visibility == View.GONE) View.VISIBLE else View.GONE }
+        }
+        val connect = pill(if (gemini.connected()) "✓  Gemini bağlı · değiştir" else "✦  Gemini bağla", true)
+        val setup = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        val keyInput = EditText(this).apply {
+            hint = "Gemini API anahtarını yapıştır"; setTextColor(Color.WHITE)
+            setHintTextColor(Color.rgb(178, 188, 203)); textSize = 14f
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+        }
+        val keyHelp = TextView(this).apply {
+            text = "İlk kez: Google AI Studio'dan ücretsiz katman anahtarı oluştur, buraya yapıştır. Sonrasında Obi kendisi bağlanır. Anahtar telefonda şifreli saklanır."
+            textSize = 12f; setTextColor(Color.rgb(193, 209, 220)); setPadding(dp(5), dp(8), dp(5), dp(8))
+        }
+        val save = pill("Bağlantıyı kaydet", true).apply { setOnClickListener {
+            if (gemini.saveKey(keyInput.text.toString())) {
+                keyInput.text.clear(); setup.visibility = View.GONE
+                connect.text = "✓  Gemini bağlı · değiştir"
+                message.text = "Anahtar kaydedildi. Gemini'ye bir şey soralım 💜"
+            } else message.text = "Anahtar kaydedilemedi. API anahtarını kontrol et."
+        } }
+        val studio = pill("API anahtarı al ↗", false).apply { setOnClickListener {
+            startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://aistudio.google.com/api-keys"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } }
+        connect.setOnClickListener { setup.visibility = if (setup.visibility == View.VISIBLE) View.GONE else View.VISIBLE }
+        setup.addView(keyHelp)
+        setup.addView(keyInput, LinearLayout.LayoutParams(-1, dp(48)))
+        setup.addView(studio, LinearLayout.LayoutParams(-1, dp(40)).apply { topMargin = dp(6) })
+        setup.addView(save, LinearLayout.LayoutParams(-1, dp(43)).apply { topMargin = dp(6) })
+        settings.addView(pill("Bildirim izni", false).apply { setOnClickListener {
+            hidePanel()
+            startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } }, LinearLayout.LayoutParams(-1, dp(40)).apply { topMargin = dp(7) })
+        card.addView(header)
+        card.addView(message, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
+        card.addView(compose, LinearLayout.LayoutParams(-1, dp(50)).apply { topMargin = dp(14) })
+        card.addView(shortcuts, LinearLayout.LayoutParams(-1, dp(38)).apply { topMargin = dp(10) })
+        card.addView(connect, LinearLayout.LayoutParams(-1, dp(43)).apply { topMargin = dp(10) })
+        card.addView(setup)
+        card.addView(settingsToggle)
+        card.addView(settings)
         val params = WindowManager.LayoutParams(
-            (width - dp(32)).coerceAtMost(dp(380)), WindowManager.LayoutParams.WRAP_CONTENT,
+            (width - dp(28)).coerceAtMost(dp(390)), WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = dp(70)
+            y = dp(56)
             softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
         }
         try {
             windows.addView(card, params)
             panel = card
-            input.requestFocus()
         } catch (_: SecurityException) {
-            // The user may have revoked the overlay permission while Obi was open.
+            // User may revoke the overlay permission while Obi is open.
+        }
+    }
+
+    private fun pill(label: String, accent: Boolean): TextView = TextView(this).apply {
+        text = label; textSize = if (accent) 15f else 12f
+        gravity = Gravity.CENTER; setTextColor(if (accent) Color.WHITE else Color.rgb(212, 231, 232))
+        background = GradientDrawable().apply {
+            setColor(if (accent) Color.rgb(96, 71, 160) else Color.rgb(43, 60, 80))
+            cornerRadius = dp(15).toFloat()
         }
     }
 
     private fun translate(command: String, result: TextView): Boolean {
-        val english = Regex("(?i)^ingilizceye çevir[: ]+(.+)$").find(command)
-        val turkish = Regex("(?i)^türkçeye çevir[: ]+(.+)$").find(command)
-        val match = english ?: turkish ?: return false
-        val options = TranslatorOptions.Builder()
-            .setSourceLanguage(if (english != null) TranslateLanguage.TURKISH else TranslateLanguage.ENGLISH)
-            .setTargetLanguage(if (english != null) TranslateLanguage.ENGLISH else TranslateLanguage.TURKISH)
-            .build()
-        val translator = Translation.getClient(options)
-        result.text = "Çeviri modeli hazırlanıyor. İlk kullanımda Wi-Fi ve yaklaşık 30 MB indirme gerekebilir…"
-        translator.downloadModelIfNeeded(DownloadConditions.Builder().requireWifi().build())
-            .addOnSuccessListener {
-                translator.translate(match.groupValues[1])
-                    .addOnSuccessListener { result.text = it; translator.close() }
-                    .addOnFailureListener { result.text = "Çeviri yapılamadı. Yeniden dene."; translator.close() }
-            }
-            .addOnFailureListener { result.text = "Model indirilemedi. Wi-Fi bağlantısını kontrol et."; translator.close() }
+        val lower = command.lowercase(java.util.Locale("tr", "TR"))
+        if (!lower.contains("çevir") && !lower.contains("cevir") && !lower.startsWith("translate ")) return false
+        val explicitEnglish = lower.contains("ingilizceye") || lower.contains("english")
+        val explicitTurkish = lower.contains("türkçeye") || lower.contains("turkceye")
+        val sourceText = command.replace(Regex("(?i)ingilizceye|türkçeye|turkceye|english|translate|çevir|cevir|bunu|şunu|lütfen|please"), "")
+            .trim(' ', ':', '-', '“', '”', '"')
+        if (sourceText.isBlank()) {
+            result.text = "Çevireceğin metni de yaz: ‘Çevir: Hello, how are you?’"
+            return true
+        }
+        result.text = "Dili algılıyorum…"
+        if (explicitEnglish) startTranslation(sourceText, TranslateLanguage.TURKISH, TranslateLanguage.ENGLISH, result)
+        else if (explicitTurkish) startTranslation(sourceText, TranslateLanguage.ENGLISH, TranslateLanguage.TURKISH, result)
+        else {
+            val identifier = LanguageIdentification.getClient()
+            identifier.identifyLanguage(sourceText)
+                .addOnSuccessListener { code ->
+                    identifier.close()
+                    val english = code == "en" || (code == "und" && sourceText.none { it in "çğıöşüÇĞİÖŞÜ" })
+                    startTranslation(sourceText,
+                        if (english) TranslateLanguage.ENGLISH else TranslateLanguage.TURKISH,
+                        if (english) TranslateLanguage.TURKISH else TranslateLanguage.ENGLISH, result)
+                }
+                .addOnFailureListener {
+                    identifier.close()
+                    startTranslation(sourceText, TranslateLanguage.TURKISH, TranslateLanguage.ENGLISH, result)
+                }
+        }
         return true
+    }
+
+    private fun startTranslation(text: String, source: String, target: String, result: TextView) {
+        val translator = Translation.getClient(TranslatorOptions.Builder()
+            .setSourceLanguage(source).setTargetLanguage(target).build())
+        result.text = "Çeviri hazırlanıyor; ilk kullanımda dil modeli indirilebilir (mobil veri kullanabilir)…"
+        translator.downloadModelIfNeeded(DownloadConditions.Builder().build())
+            .addOnSuccessListener {
+                translator.translate(text)
+                    .addOnSuccessListener { translated -> result.text = translated; translator.close() }
+                    .addOnFailureListener { result.text = "Çeviri başarısız oldu. Tekrar dene."; translator.close() }
+            }
+            .addOnFailureListener { result.text = "Dil modeli indirilemedi. İnternet bağlantını kontrol et."; translator.close() }
     }
 
     private fun hidePanel() {
