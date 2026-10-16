@@ -272,7 +272,7 @@ jobs:
       # Phones cannot always open GitHub's artifact ZIPs: the branch's test APK is also published
       # as a plain .apk download on a pre-release.
       - name: Publish branch test APK as a direct download
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/claude/mascot-animations-behavior-31rof9' && env.NO_APK != 'true'
+        if: success() && env.NO_APK != 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/claude/mascot-animations-behavior-31rof9') || (github.event_name == 'pull_request' && github.head_ref == 'claude/mascot-animations-behavior-31rof9'))
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
