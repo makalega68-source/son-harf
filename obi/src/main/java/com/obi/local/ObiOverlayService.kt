@@ -1009,7 +1009,8 @@ class ObiOverlayService : Service() {
                     ?.atZone(java.time.ZoneId.systemDefault())?.toInstant()?.toEpochMilli() ?: return false
                 val repeat = args.optString("repeat").takeIf { it == "daily" || it == "weekdays" || it.startsWith("weekly:") }
                 val alarm = intent == "alarm"
-                val text = if (alarm) "Obi alarmı: Uyanma zamanı!" else args.optString("text").ifBlank { "Hatırlatıcı" }
+                if (alarm) { say(store.setAlarm(time, repeat), WordSiegeMascotAction.CHEER); return true }
+                val text = args.optString("text").ifBlank { "Hatırlatıcı" }
                 store.schedule(time, text, if (alarm) "alarm" else "reminder", repeat)
                 val day = java.time.Instant.ofEpochMilli(time).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
                 val whenText = repeat?.let { ObiLife.repeatLabel(it) } ?: when (day) {

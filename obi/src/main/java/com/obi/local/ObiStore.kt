@@ -11,6 +11,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.AlarmClock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -137,8 +138,7 @@ internal class ObiStore(private val context: Context) {
         val repeat = ObiLife.repeatRule(normalized)
         if (normalized.contains("alarm") || normalized.contains("uyandır") || normalized.contains("uyandir")) {
             val time = ObiParse.triggerTime(normalized) ?: return "Saati anlayamadım. Örnek: ‘Sabah 9'a alarm kur’, ‘her gün 7'de alarm’ veya ‘10 dakika sonra alarm kur’."
-            schedule(time, "Obi alarmı: Uyanma zamanı!", "alarm", repeat)
-            return scheduledReply("Alarmı", time, repeat)
+            return setAlarm(time, repeat, ObiParse.relativeMinutes(normalized))
         }
 
         // Notes.
@@ -228,6 +228,52 @@ internal class ObiStore(private val context: Context) {
                 "\n\nAkşam ‘Oyunlar → Kelime testi’ ile kendini dene!"
         }
         return mind.respond(text)
+    }
+
+    /**
+     * A wake-up alarm goes into the phone's own Clock app, so it shows there and rings like any
+     * alarm; "10 dakika sonra" becomes a Clock timer. Only a one-off alarm more than a day ahead,
+     * which the Clock app cannot date, stays with Obi.
+     */
+    fun setAlarm(time: Long, repeat: String?, relativeMinutes: Int? = null): String {
+        val label = "Obi alarmı"
+        if (relativeMinutes != null && repeat == null) {
+            val timer = Intent(AlarmClock.ACTION_SET_TIMER)
+                .putExtra(AlarmClock.EXTRA_LENGTH, relativeMinutes * 60)
+                .putExtra(AlarmClock.EXTRA_MESSAGE, label)
+                .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (runCatching { context.startActivity(timer) }.isSuccess)
+                return "Saat uygulamasında $relativeMinutes dakikalık zamanlayıcı kurdum ⏱ (${formatClock(time)})"
+        }
+        val clock = Instant.ofEpochMilli(time).atZone(ZoneId.systemDefault())
+        val withinADay = time - System.currentTimeMillis() <= 24 * 60 * 60_000L
+        if (repeat != null || withinADay) {
+            val intent = Intent(AlarmClock.ACTION_SET_ALARM)
+                .putExtra(AlarmClock.EXTRA_HOUR, clock.hour)
+                .putExtra(AlarmClock.EXTRA_MINUTES, clock.minute)
+                .putExtra(AlarmClock.EXTRA_MESSAGE, label)
+                .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            clockDays(repeat)?.let { intent.putExtra(AlarmClock.EXTRA_DAYS, it) }
+            if (runCatching { context.startActivity(intent) }.isSuccess) {
+                val day = clock.toLocalDate()
+                val whenText = repeat?.let { ObiLife.repeatLabel(it) } ?: if (day == LocalDate.now()) "bugün" else "yarın"
+                return "Saat uygulamasına alarm kurdum ⏰ $whenText ${formatClock(time)}. Oradan görebilir, kapatabilirsin."
+            }
+        }
+        // No Clock app could take it (or it is days away): Obi rings it itself.
+        schedule(time, "Obi alarmı: Uyanma zamanı!", "alarm", repeat)
+        return scheduledReply("Alarmı", time, repeat)
+    }
+
+    /** Clock app day list (Calendar.SUNDAY = 1 … SATURDAY = 7) for a repeat rule. */
+    private fun clockDays(repeat: String?): ArrayList<Int>? = when {
+        repeat == null -> null
+        repeat == "daily" -> arrayListOf(Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY, Calendar.SUNDAY)
+        repeat == "weekdays" -> arrayListOf(Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY, Calendar.FRIDAY)
+        repeat.startsWith("weekly:") -> repeat.removePrefix("weekly:").toIntOrNull()?.let { iso -> arrayListOf(iso % 7 + 1) }
+        else -> null
     }
 
     private fun scheduledReply(what: String, time: Long, repeat: String?): String {
