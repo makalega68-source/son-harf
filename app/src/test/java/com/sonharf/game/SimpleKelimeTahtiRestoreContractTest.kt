@@ -15,15 +15,15 @@ class SimpleKelimeKusatmasiRestoreContractTest {
 
         assertFalse(online.contains("PanSiegeMapControl("))
         assertFalse(practice.contains("HARİTA KONTROLÜ"))
-        assertTrue(online.contains("modifier = Modifier.weight(1f).height(52.dp)"))
-        assertTrue(spec.contains("Harf\\n×2"))
-        assertTrue(spec.contains("Kelime\\n×2"))
+        assertTrue(online.contains("modifier = Modifier.weight(1f).height(40.dp)"))
+        assertTrue(spec.contains("\"HB²\""))
+        assertTrue(spec.contains("\"KB²\""))
 
-        assertTrue(online.contains("PanSiegeMine = Color(0xFFA8D5B5)"))
-        assertTrue(online.contains("PanSiegeRival = Color(0xFFE4AEAA)"))
-        assertTrue(board.contains("PracticeSiegeMine = Color(0xFFA8D5B5)"))
-        assertTrue(board.contains("PracticeSiegeRival = Color(0xFFE4AEAA)"))
-        assertTrue(board.contains("if (mode == WordSiegeBoardViewportMode.CLOSE)"))
+        assertTrue(online.contains("PanSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine"))
+        assertTrue(online.contains("PanSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival"))
+        assertTrue(board.contains("PracticeSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine"))
+        assertTrue(board.contains("PracticeSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival"))
+        assertTrue(board.contains("detectWordSiegeBoardGestures"))
         assertFalse(board.contains("WordSiegeBoardViewportMode.CLOSE && !enabled"))
 
         assertTrue(logo.contains("R.drawable.kelime_kusatma_logo_hd"))

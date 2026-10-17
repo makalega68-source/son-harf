@@ -113,8 +113,8 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
                     }
                     Text(
                         sh(
-                            "Premium ödül yolu • daha fazla Son Coin • ilerleme ödülleri",
-                            "Premium reward track • more Son Coins • progression rewards",
+                            "Premium ödül yolu • daha fazla Altın • ilerleme ödülleri",
+                            "Premium reward track • more Gold • progression rewards",
                         ),
                         color = SonHarfMuted,
                         fontSize = 9.sp,

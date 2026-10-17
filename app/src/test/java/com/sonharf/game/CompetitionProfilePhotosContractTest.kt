@@ -13,11 +13,16 @@ class CompetitionProfilePhotosContractTest {
 
         assertTrue(source.contains("memberProfiles"))
         assertTrue(source.contains("leaderboardProfiles"))
-        assertTrue(source.contains("playerProfiles"))
         assertTrue(source.contains("ProfilePhotoAvatar("))
         assertTrue(source.contains("if (!nextProfiles.containsKey(member.userId))"))
         assertTrue(source.contains("if (!nextProfiles.containsKey(row.userId))"))
-        assertTrue(source.contains("if (!nextProfiles.containsKey(userId))"))
+
+        // Rival history moved to its own screen; it keeps the profile cache and only fetches unseen rivals.
+        val rivals = projectFile("app/src/main/java/com/sonharf/game/LatestRivalsScreen.kt").readText()
+        assertTrue(source.contains("LatestRivalsScreen(it)"))
+        assertTrue(rivals.contains("FramedProfilePhotoAvatar("))
+        assertTrue(rivals.contains("filter { userId -> !nextProfiles.containsKey(userId) }"))
+        assertTrue(rivals.contains(".distinctBy { it.opponentId }"))
     }
 
     private fun projectFile(path: String): File {

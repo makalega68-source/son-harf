@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The real Obi (same art as the Kelime Tahtı mascot icon), centred inside the 66dp safe zone. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:left="6dp" android:top="8dp" android:right="6dp" android:bottom="4dp">
+        <bitmap android:src="@drawable/obi_launcher_happy" android:gravity="fill" android:filter="true" />
+    </item>
+</layer-list>

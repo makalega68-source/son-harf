@@ -31,63 +31,71 @@ internal fun MainSocialScreen(
     backend: OnlineGameBackend,
     onPlay: () -> Unit,
     onSiege: () -> Unit = onPlay,
+    initialTab: Int = 0,
+    onOpenSiege: (WordSiegeGameDto) -> Unit = { game -> WordSiegeLaunchConfig.open(game); onSiege() },
+    // The friend list is a PRO feature; requests and rivals stay open to everyone.
+    isPro: Boolean = true,
+    onPro: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
-    var tab by remember { mutableIntStateOf(0) }
-    var isPro by remember { mutableStateOf(false) }
-    var proChecked by remember { mutableStateOf(false) }
-    var vipDialog by remember { mutableStateOf(false) }
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
+    if (tab == 2) { LatestRivalsScreen(backend, onBack = { tab = 0 }, onOpenSiege = onOpenSiege); return }
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var friendships by remember { mutableStateOf<List<FriendshipDto>>(emptyList()) }
     var requests by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
-    var invites by remember { mutableStateOf<List<GameInviteDto>>(emptyList()) }
-    var siegeInvites by remember { mutableStateOf<List<WordSiegeInviteDto>>(emptyList()) }
-    var inviteProfiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
-    var rivals by remember { mutableStateOf<List<RivalHistoryDto>>(emptyList()) }
-    var matchHistory by remember { mutableStateOf<List<MatchHistoryDto>>(emptyList()) }
-    var archRival by remember { mutableStateOf<ArchRivalDto?>(null) }
     var loading by remember { mutableStateOf(true) }
     var busyKey by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<ProfileDto>>(emptyList()) }
+    // Requests sent in this session show as pending at once, even before the list reloads.
+    var sentRequests by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var autoTabDone by remember { mutableStateOf(false) }
+
+    fun friendRequestError(error: Throwable): String {
+        val raw = error.message.orEmpty()
+        return when {
+            "pro_friend_list_required" in raw -> {
+                sh("Arkadaşlık isteği şu anda gönderilemiyor.", "Friend request is currently unavailable.")
+            }
+            "blocked_relationship" in raw -> sh("Bu oyuncuyla engelleme olduğu için istek gönderilemiyor.", "You can't send a request because of a block.")
+            "cannot_friend_self" in raw -> sh("Kendine istek gönderemezsin.", "You can't add yourself.")
+            else -> sh("İstek gönderilemedi. Bağlantını kontrol edip tekrar dene.", "Request could not be sent. Check your connection and try again.")
+        }
+    }
 
     suspend fun reload() = coroutineScope {
         loading = true
-        val friendTask = async { runCatching { backend.getFriends() }.getOrDefault(emptyList()) }
-        val friendshipTask = async { runCatching { backend.getFriendships() }.getOrDefault(emptyList()) }
-        val requestTask = async { runCatching { backend.getIncomingFriendRequests() }.getOrDefault(emptyList()) }
-        val legacyInviteTask = async { runCatching { backend.getIncomingGameInvites() }.getOrDefault(emptyList()) }
-        val siegeInviteTask = async { runCatching { backend.getIncomingWordSiegeInvites() }.getOrDefault(emptyList()) }
-        val rivalTask = async { runCatching { backend.getRivalHistory(30) }.getOrDefault(emptyList()) }
-        val historyTask = async { runCatching { backend.getMatchHistory(30) }.getOrDefault(emptyList()) }
-        val archTask = async { runCatching { backend.getArchRival() }.getOrNull() }
-        friends = friendTask.await()
+        val friendTask = async { gameRequestResult { backend.getFriends() }.getOrDefault(friends) }
+        val friendshipTask = async {
+            gameRequestResult { backend.getFriendships() }
+                .onFailure { notice = sh("Arkadaş listesi yüklenemedi. Yenilemek için sayfayı tekrar aç.", "Friend list could not be loaded. Reopen the page to refresh.") }
+                .getOrDefault(emptyList())
+        }
+        val requestTask = async { gameRequestResult { backend.getIncomingFriendRequests() }.getOrDefault(emptyList()) }
+        friends = friendTask.await().sortedByDescending { it.second.isRecentlyOnline() }
         friendships = friendshipTask.await()
         requests = requestTask.await()
-        invites = legacyInviteTask.await()
-        siegeInvites = siegeInviteTask.await()
-        rivals = rivalTask.await()
-        matchHistory = historyTask.await()
-        archRival = archTask.await()
-        val senders = linkedMapOf<String, ProfileDto>()
-        (invites.map { it.senderId } + siegeInvites.map { it.senderId }).distinct().forEach { id ->
-            runCatching { backend.getProfile(id) }.getOrNull()?.let { senders[id] = it }
-        }
-        inviteProfiles = senders
         loading = false
+        // Someone waiting for an answer is the first thing to show.
+        if (!autoTabDone) {
+            autoTabDone = true
+            if (initialTab == 0 && requests.isNotEmpty()) tab = 1
+        }
     }
 
-    LaunchedEffect(Unit) {
-        isPro = runCatching {
-            backend.currentUserId()?.let { backend.getProfile(it).isVip } ?: false
-        }.getOrDefault(false)
-        proChecked = true
+    val foreground = rememberAppForeground()
+    LaunchedEffect(foreground) {
+        if (!foreground) return@LaunchedEffect
         reload()
+        while (true) {
+            kotlinx.coroutines.delay(30_000L)
+            if (busyKey == null) reload()
+        }
     }
 
-    val onlineCount = friends.count { it.second.presenceStatus == "online" }
-    val incomingCount = requests.size + invites.size + siegeInvites.size
+    val onlineCount = friends.count { it.second.isRecentlyOnline() }
+    val incomingCount = requests.size
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -96,84 +104,42 @@ internal fun MainSocialScreen(
     ) {
         item {
             MainScreenHeader(
-                title = sh("Sosyal", "Social"),
-                subtitle = sh("Arkadaşların, Kuşatma davetlerin ve ezeli rakiplerin", "Friends, Siege invitations and rivals"),
+                title = sh("Arkadaşlar", "Friends"),
+                subtitle = "",
+                actionIcon = Icons.Rounded.Refresh,
+                actionDescription = sh("Yenile", "Refresh"),
+                onAction = { if (!loading && busyKey == null) scope.launch { reload() } },
             )
         }
 
-        if (loading) {
-            item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = MainUi.Blue, trackColor = MainUi.BlueSoft) }
-        }
-
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MainMetricCard(friends.size.toString(), sh("Arkadaş", "Friends"), Modifier.weight(1f))
-                MainMetricCard(onlineCount.toString(), sh("Çevrimiçi", "Online"), Modifier.weight(1f))
-                MainMetricCard(incomingCount.toString(), sh("Yeni istek", "New requests"), Modifier.weight(1f))
-            }
-        }
-
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                Button(
-                    onClick = onSiege,
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(15.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                ) {
-                    Icon(Icons.Rounded.Shield, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(sh("KUŞATMA OYNA", "PLAY SIEGE"), fontWeight = FontWeight.Black, fontSize = 10.sp)
-                }
-                OutlinedButton(
-                    onClick = { tab = 0 },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(15.dp),
-                    border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f)),
-                ) {
-                    Icon(Icons.Rounded.GroupAdd, null, tint = MainUi.Gold, modifier = Modifier.size(17.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(sh("ARKADAŞ DAVETİ", "FRIEND INVITE"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 9.sp)
-                }
-            }
-        }
-
-        item {
-            ScrollableTabRow(
-                selectedTabIndex = tab,
-                edgePadding = 0.dp,
-                containerColor = Color.Transparent,
-                divider = {},
-            ) {
-                listOf(
-                    sh("ARKADAŞLAR", "FRIENDS"),
-                    sh("İSTEKLER", "REQUESTS"),
-                    sh("RAKİPLER", "RIVALS"),
-                ).forEachIndexed { index, label ->
-                    Tab(
-                        selected = tab == index,
-                        onClick = { tab = index },
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(label, color = if (tab == index) MainUi.Blue else MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                                if (index == 1 && incomingCount > 0) {
-                                    Spacer(Modifier.width(5.dp))
-                                    Surface(shape = CircleShape, color = MainUi.Red) {
-                                        Text(incomingCount.toString(), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Black)
-                                    }
-                                }
-                            }
-                        },
-                    )
-                }
-            }
+            LobbyTabs(
+                labels = listOf(sh("Arkadaşlar", "Friends"),
+                    sh("İstekler", "Requests") + if (incomingCount > 0) " ($incomingCount)" else "",
+                    sh("Rakipler", "Rivals")),
+                selected = tab, onSelect = { tab = it },
+            )
         }
 
         when (tab) {
-            0 -> {
-                if (proChecked && !isPro) {
-                    item { ProFriendListLock(onUpgrade = { vipDialog = true }) }
-                } else {
+            0 -> if (!isPro) {
+                item(key = "friends_pro") {
+                    LobbyCard(Modifier.fillMaxWidth(), borderColor = MainUi.Gold) {
+                        Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Icon(Icons.Rounded.WorkspacePremium, null, tint = MainUi.Gold, modifier = Modifier.size(40.dp))
+                            Text(sh("Arkadaş listesi PRO özelliğidir", "The friend list is a PRO feature"), color = MainUi.Text,
+                                fontWeight = FontWeight.Black, fontSize = 17.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Text(sh("İstekleri yine de kabul edebilir, rakiplerine rövanş atabilirsin.", "You can still accept requests and rematch your rivals."),
+                                color = MainUi.Muted, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Button(onClick = onPro, colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold, contentColor = Color.White)) {
+                                Text(sh("PRO'YU GÖR", "SEE PRO"), fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                }
+            } else {
+                run {
                 if (friends.isEmpty() && !loading) {
                     item {
                         MainSocialEmpty(
@@ -188,25 +154,26 @@ internal fun MainSocialScreen(
                 items(friends, key = { it.second.id }) { (_, friend) ->
                     MainFriendCard(
                         friend = friend,
-                        busy = busyKey == friend.id,
+                        busy = busyKey != null,
                         onInvite = {
                             if (busyKey != null) return@MainFriendCard
+                            busyKey = friend.id
                             scope.launch {
-                                busyKey = friend.id
-                                runCatching { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
-                                    .onSuccess {
-                                        notice = sh("${friend.displayName} Kelime Kuşatması'na davet edildi.", "${friend.displayName} was invited to Word Siege.")
+                                gameRequestResult { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
+                                    .onSuccess { invite ->
+                                        WordSiegeLaunchConfig.awaitInvite(invite.id)
+                                        notice = sh("${friend.displayName} Kelime Tahtı'na davet edildi.", "${friend.displayName} was invited to Word Throne.")
                                         SonHarfSoundFx.softNotify()
                                     }
-                                    .onFailure { notice = sh("Kuşatma daveti gönderilemedi veya bekleyen bir davet var.", "Siege invite could not be sent or one is already pending.") }
+                                    .onFailure { notice = sh("Oyun daveti gönderilemedi veya bekleyen bir davet var.", "Game invite could not be sent or one is already pending.") }
                                 busyKey = null
                             }
                         },
                         onRemove = {
                             if (busyKey != null) return@MainFriendCard
+                            busyKey = friend.id
                             scope.launch {
-                                busyKey = friend.id
-                                runCatching { backend.removeFriend(friend.id) }
+                                gameRequestResult { backend.removeFriend(friend.id) }
                                     .onSuccess { notice = sh("Arkadaş listesi güncellendi.", "Friend list updated."); reload() }
                                     .onFailure { notice = sh("Arkadaş kaldırılamadı.", "Friend could not be removed.") }
                                 busyKey = null
@@ -224,7 +191,7 @@ internal fun MainSocialScreen(
                                 friends.map { it.second }.sortedByDescending { it.rating }.take(8).forEachIndexed { index, friend ->
                                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                         Text("${index + 1}", color = MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(22.dp))
-                                        ProfilePhotoAvatar(friend.avatarPath, friend.displayName, 30.dp, visible = friend.avatarVisibility != "hidden", accent = if (friend.isVip) MainUi.Gold else MainUi.Blue)
+                                        ProfilePhotoAvatar(friend.avatarPath, friend.displayName, 30.dp, visible = friend.avatarVisibility != "hidden", accent = if (friend.isVip) MainUi.Gold else MainUi.Blue, gender = friend.gender, frameId = rememberPlayerFrame(friend.id))
                                         Spacer(Modifier.width(8.dp))
                                         Text(friend.displayName, color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
                                         Text(friend.rating.toString(), color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
@@ -238,6 +205,8 @@ internal fun MainSocialScreen(
             }
 
             1 -> {
+                item(key = "friend_code") { PlayerInviteCard(backend) }
+                item(key = "share_invite") { InviteFriendsCard(playerName = null) }
                 item {
                     Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -262,7 +231,7 @@ internal fun MainSocialScreen(
                                     if (query.trim().length < 2 || busyKey != null) return@Button
                                     scope.launch {
                                         busyKey = "search"
-                                        results = runCatching { backend.searchPlayers(query, 20) }.getOrDefault(emptyList())
+                                        results = gameRequestResult { backend.searchPlayers(query, 20) }.getOrDefault(emptyList())
                                         notice = if (results.isEmpty()) sh("Eşleşen oyuncu bulunamadı.", "No matching player found.") else null
                                         busyKey = null
                                     }
@@ -270,7 +239,7 @@ internal fun MainSocialScreen(
                                 enabled = query.trim().length >= 2 && busyKey == null,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(13.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue, contentColor = Color.White),
                             ) { Text(if (busyKey == "search") "…" else sh("ARA", "SEARCH"), fontWeight = FontWeight.Black) }
                         }
                     }
@@ -278,31 +247,36 @@ internal fun MainSocialScreen(
 
                 items(results, key = { it.id }) { player ->
                     val relation = friendships.firstOrNull { it.userId == player.id || it.friendId == player.id }
+                    val relationStatus = relation?.status ?: if (player.id in sentRequests) "pending" else null
                     Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = if (player.isVip) MainUi.Gold else MainUi.Blue, visible = player.avatarVisibility != "hidden")
+                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = if (player.isVip) MainUi.Gold else MainUi.Blue, visible = player.avatarVisibility != "hidden", userId = player.id)
                             Spacer(Modifier.width(9.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(player.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("${ratingLeagueProgress(player.rating).leagueName} • ${player.rating}", color = MainUi.Muted, fontSize = 9.sp)
+                                Text("${ratingLeagueProgress(player.rating).leagueName} • ${player.rating}", color = MainUi.Muted, fontSize = 11.sp)
                             }
                             Button(
                                 onClick = {
-                                    if (relation != null || busyKey != null) return@Button
+                                    if (relationStatus != null || busyKey != null) return@Button
                                     scope.launch {
                                         busyKey = player.id
-                                        runCatching { backend.sendFriendRequest(player.id) }
-                                            .onSuccess { notice = sh("Arkadaşlık isteği gönderildi.", "Friend request sent."); reload() }
-                                            .onFailure { notice = sh("İstek gönderilemedi.", "Request could not be sent.") }
+                                        gameRequestResult { backend.sendFriendRequest(player.id) }
+                                            .onSuccess {
+                                                sentRequests = sentRequests + player.id
+                                                notice = sh("İstek gönderildi.", "Request sent.")
+                                                reload()
+                                            }
+                                            .onFailure { notice = friendRequestError(it) }
                                         busyKey = null
                                     }
                                 },
-                                enabled = relation == null && busyKey == null,
+                                enabled = relationStatus == null && busyKey == null,
                                 shape = RoundedCornerShape(12.dp),
                                 contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp),
                             ) {
                                 Text(
-                                    when (relation?.status) {
+                                    when (relationStatus) {
                                         "accepted" -> sh("ARKADAŞ", "FRIEND")
                                         "pending" -> sh("BEKLİYOR", "PENDING")
                                         else -> if (busyKey == player.id) "…" else sh("EKLE", "ADD")
@@ -315,11 +289,20 @@ internal fun MainSocialScreen(
                     }
                 }
 
-                if (requests.isNotEmpty()) item { MainSectionTitle(sh("ARKADAŞLIK İSTEKLERİ", "FRIEND REQUESTS")) }
+                item { MainSectionTitle(sh("ARKADAŞLIK İSTEKLERİ", "FRIEND REQUESTS")) }
+                if (requests.isEmpty() && !loading) {
+                    item {
+                        Text(
+                            sh("Bekleyen istek yok.", "Friend requests you receive appear here. Once you accept, you are added to each other's friend list."),
+                            color = MainUi.Muted,
+                            fontSize = 10.sp,
+                        )
+                    }
+                }
                 items(requests, key = { it.second.id }) { (_, player) ->
                     Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .28f))) {
                         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = MainUi.Blue, visible = player.avatarVisibility != "hidden")
+                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = MainUi.Blue, visible = player.avatarVisibility != "hidden", userId = player.id)
                             Spacer(Modifier.width(9.dp))
                             Text(player.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f), maxLines = 1)
                             IconButton(
@@ -327,7 +310,9 @@ internal fun MainSocialScreen(
                                     if (busyKey != null) return@IconButton
                                     scope.launch {
                                         busyKey = player.id
-                                        runCatching { backend.respondFriendRequest(player.id, false) }
+                                        gameRequestResult { backend.respondFriendRequest(player.id, false) }
+                                            .onSuccess { notice = sh("İstek reddedildi.", "Request declined.") }
+                                            .onFailure { notice = sh("İşlem tamamlanamadı, tekrar dene.", "Could not complete, try again.") }
                                         reload()
                                         busyKey = null
                                     }
@@ -338,8 +323,9 @@ internal fun MainSocialScreen(
                                     if (busyKey != null) return@IconButton
                                     scope.launch {
                                         busyKey = player.id
-                                        runCatching { backend.respondFriendRequest(player.id, true) }
+                                        gameRequestResult { backend.respondFriendRequest(player.id, true) }
                                             .onSuccess { notice = sh("Arkadaşlık isteği kabul edildi.", "Friend request accepted.") }
+                                            .onFailure { notice = sh("İstek kabul edilemedi, tekrar dene.", "Request could not be accepted, try again.") }
                                         reload()
                                         busyKey = null
                                     }
@@ -349,206 +335,14 @@ internal fun MainSocialScreen(
                     }
                 }
 
-                if (siegeInvites.isNotEmpty()) item { MainSectionTitle(sh("KELİME TAHTI DAVETLERİ", "KELİME TAHTI INVITATIONS")) }
-                items(siegeInvites, key = { "siege:${it.id}" }) { invite ->
-                    val sender = inviteProfiles[invite.senderId]
-                    Surface(shape = RoundedCornerShape(17.dp), color = Color(0xFFE8F1EB), border = BorderStroke(1.dp, Color(0xFF567A64).copy(alpha = .35f))) {
-                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = Color(0xFF567A64))
-                                Spacer(Modifier.width(9.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(sender?.displayName ?: sh("Kuşatma daveti", "Siege invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                                    Text(sh("Kelime Tahtı • ", "Kelime Tahtı • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
-                                }
-                            }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        if (busyKey != null) return@OutlinedButton
-                                        scope.launch {
-                                            busyKey = "siege:${invite.id}"
-                                            runCatching { backend.respondWordSiegeInvite(invite.id, false) }
-                                            reload()
-                                            busyKey = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                ) { Text(sh("REDDET", "DECLINE"), color = MainUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                                Button(
-                                    onClick = {
-                                        if (busyKey != null) return@Button
-                                        scope.launch {
-                                            busyKey = "siege:${invite.id}"
-                                            runCatching { backend.respondWordSiegeInvite(invite.id, true) }
-                                                .onSuccess { game ->
-                                                    if (game != null) {
-                                                        notice = sh("Kuşatma maçı hazır.", "Siege match is ready.")
-                                                        onSiege()
-                                                    }
-                                                }
-                                                .onFailure { notice = sh("Kuşatma daveti artık kullanılamıyor.", "The Siege invite is no longer available."); reload() }
-                                            busyKey = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF567A64)),
-                                ) { Text(if (busyKey == "siege:${invite.id}") "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                            }
-                        }
-                    }
-                }
-
-                if (invites.isNotEmpty()) item { MainSectionTitle(sh("SON HARF DAVETLERİ", "LAST LETTER INVITATIONS")) }
-                items(invites, key = { "legacy:${it.id}" }) { invite ->
-                    val sender = inviteProfiles[invite.senderId]
-                    Surface(shape = RoundedCornerShape(17.dp), color = MainUi.BlueSoft, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .25f))) {
-                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = MainUi.Blue)
-                                Spacer(Modifier.width(9.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(sender?.displayName ?: sh("Son Harf daveti", "Last Letter invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                                    Text(sh("Son Harf • ", "Last Letter • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
-                                }
-                            }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        if (busyKey != null) return@OutlinedButton
-                                        scope.launch {
-                                            busyKey = "legacy:${invite.id}"
-                                            runCatching { backend.respondGameInvite(invite.id, false) }
-                                            reload()
-                                            busyKey = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                ) { Text(sh("REDDET", "DECLINE"), color = MainUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                                Button(
-                                    onClick = {
-                                        if (busyKey != null) return@Button
-                                        scope.launch {
-                                            busyKey = "legacy:${invite.id}"
-                                            runCatching { backend.respondGameInvite(invite.id, true) }
-                                                .onSuccess { room -> if (room != null) onPlay() }
-                                                .onFailure { notice = sh("Son Harf daveti artık kullanılamıyor.", "The Last Letter invite is no longer available."); reload() }
-                                            busyKey = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                                ) { Text(if (busyKey == "legacy:${invite.id}") "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                            }
-                        }
-                    }
-                }
-
-                if (requests.isEmpty() && invites.isEmpty() && siegeInvites.isEmpty() && results.isEmpty() && !loading) {
+                if (requests.isEmpty() && results.isEmpty() && !loading) {
                     item {
-                        Text(sh("Bekleyen istek veya davet yok.", "There are no pending requests or invitations."), Modifier.fillMaxWidth().padding(vertical = 12.dp), color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+                        Text(sh("Bekleyen arkadaşlık isteğin yok.", "No pending friend requests."), Modifier.fillMaxWidth().padding(vertical = 12.dp), color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
                     }
                 }
             }
 
-            else -> {
-                archRival?.let { rival ->
-                    item {
-                        Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .48f))) {
-                            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                                Text(sh("EZELİ RAKİP", "ARCH RIVAL"), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(shape = CircleShape, color = MainUi.Gold.copy(alpha = .12f)) {
-                                        Text("⚔", Modifier.padding(10.dp), fontSize = 23.sp)
-                                    }
-                                    Spacer(Modifier.width(10.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Text(rival.displayName, color = MainUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                                        Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L", color = MainUi.Muted, fontSize = 9.sp)
-                                    }
-                                    Text("${rival.myPoints}:${rival.theirPoints}", color = MainUi.Text, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (rivals.isNotEmpty()) item { MainSectionTitle(sh("RAKİP GEÇMİŞİ", "RIVAL HISTORY")) }
-                items(rivals, key = { it.opponentId }) { rival ->
-                    Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-                        Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(shape = CircleShape, color = if (rival.presenceStatus == "online") MainUi.Green.copy(alpha = .10f) else MainUi.SurfaceSoft) {
-                                Icon(Icons.Rounded.Person, null, tint = if (rival.presenceStatus == "online") MainUi.Green else MainUi.Muted, modifier = Modifier.padding(8.dp).size(20.dp))
-                            }
-                            Spacer(Modifier.width(9.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(rival.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1)
-                                Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L • ${rival.myPoints}:${rival.theirPoints}", color = MainUi.Muted, fontSize = 8.5.sp)
-                            }
-                            Button(
-                                onClick = {
-                                    if (busyKey != null) return@Button
-                                    scope.launch {
-                                        busyKey = rival.opponentId
-                                        if (rival.isFriend) {
-                                            runCatching { backend.inviteFriendToWordSiege(rival.opponentId, SonHarfUiState.language) }
-                                                .onSuccess { notice = sh("Kelime Tahtı rövanş daveti gönderildi.", "Kelime Tahtı rematch invite sent.") }
-                                                .onFailure { notice = sh("Rövanş daveti gönderilemedi veya bekleyen bir davet var.", "Rematch invite could not be sent or one is already pending.") }
-                                        } else {
-                                            runCatching { backend.sendFriendRequest(rival.opponentId) }
-                                                .onSuccess { notice = sh("Önce arkadaşlık isteği gönderildi.", "A friend request was sent first.") }
-                                                .onFailure { notice = sh("İstek gönderilemedi.", "Request could not be sent.") }
-                                        }
-                                        busyKey = null
-                                    }
-                                },
-                                enabled = busyKey == null,
-                                shape = RoundedCornerShape(11.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp),
-                            ) {
-                                Text(if (busyKey == rival.opponentId) "…" else sh("RÖVANŞ", "REMATCH"), fontSize = 8.sp, fontWeight = FontWeight.Black)
-                            }
-                        }
-                    }
-                }
-
-                if (matchHistory.isNotEmpty()) item { MainSectionTitle(sh("SON MAÇLAR", "RECENT MATCHES")) }
-                items(matchHistory.take(12), key = { it.matchId }) { match ->
-                    val won = match.result == "win"
-                    val draw = match.result == "draw"
-                    Surface(shape = RoundedCornerShape(16.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-                        Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(shape = RoundedCornerShape(10.dp), color = when { won -> MainUi.Green.copy(alpha = .11f); draw -> MainUi.Gold.copy(alpha = .11f); else -> MainUi.Red.copy(alpha = .09f) }) {
-                                Text(
-                                    when { won -> "G"; draw -> "B"; else -> "M" },
-                                    Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
-                                    color = when { won -> MainUi.Green; draw -> MainUi.Gold; else -> MainUi.Red },
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                )
-                            }
-                            Spacer(Modifier.width(9.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(match.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1)
-                                Text("${match.myScore}-${match.theirScore} • ${if (match.ratingDelta >= 0) "+" else ""}${match.ratingDelta} rating", color = MainUi.Muted, fontSize = 8.5.sp)
-                            }
-                            if (match.isFriend) Icon(Icons.Rounded.People, null, tint = MainUi.Blue, modifier = Modifier.size(17.dp))
-                        }
-                    }
-                }
-
-                if (rivals.isEmpty() && matchHistory.isEmpty() && !loading) {
-                    item {
-                        MainSocialEmpty(
-                            icon = Icons.Rounded.SportsKabaddi,
-                            title = sh("Rakip geçmişin henüz yok", "No rival history yet"),
-                            body = sh("İlk gerçek oyuncu maçından sonra rakiplerin burada görünür.", "Rivals appear here after your first real-player match."),
-                            action = sh("KUŞATMA OYNA", "PLAY SIEGE"),
-                            onAction = onSiege,
-                        )
-                    }
-                }
-            }
+            else -> Unit
         }
 
         notice?.let { message ->
@@ -561,55 +355,7 @@ internal fun MainSocialScreen(
         item { Spacer(Modifier.height(6.dp)) }
     }
 
-    if (vipDialog) {
-        VipPurchaseDialog(
-            onVerified = {
-                isPro = true
-                vipDialog = false
-            },
-            onDismiss = { vipDialog = false },
-        )
-    }
-}
 
-@Composable
-private fun ProFriendListLock(onUpgrade: () -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f))) {
-        Column(
-            Modifier.fillMaxWidth().padding(22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Surface(shape = CircleShape, color = MainUi.Gold.copy(alpha = .18f)) {
-                Icon(Icons.Rounded.Lock, null, tint = MainUi.Gold, modifier = Modifier.padding(14.dp).size(32.dp))
-            }
-            Text(
-                sh("Arkadaş listesi Pro'ya özel", "Friend list is Pro-only"),
-                color = MainUi.Text,
-                fontWeight = FontWeight.Black,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                sh(
-                    "Pro üyelikle arkadaşlarını kaydet, davet et ve haftalık sıralamada rakip ol.",
-                    "Save friends, invite them and race in the weekly ranking with Pro.",
-                ),
-                color = MainUi.Muted,
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
-            )
-            Button(
-                onClick = onUpgrade,
-                modifier = Modifier.fillMaxWidth().height(46.dp),
-                shape = RoundedCornerShape(15.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold),
-            ) {
-                Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(18.dp), tint = Color.White)
-                Spacer(Modifier.width(8.dp))
-                Text(sh("PRO'YA GEÇ", "GO PRO"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
-            }
-        }
-    }
 }
 
 @Composable
@@ -620,11 +366,12 @@ private fun MainFriendCard(
     onRemove: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
-    val online = friend.presenceStatus == "online"
+    val online = friend.isRecentlyOnline()
+    val playing = online && friend.presenceStatus == "in_game"
     Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, if (online) MainUi.Green.copy(alpha = .28f) else MainUi.Border)) {
         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
             Box {
-                ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 48.dp, accent = if (friend.isVip) MainUi.Gold else MainUi.Blue, visible = friend.avatarVisibility != "hidden")
+                ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 48.dp, accent = if (friend.isVip) MainUi.Gold else MainUi.Green, visible = friend.avatarVisibility != "hidden", frameId = rememberPlayerFrame(friend.id))
                 Box(
                     Modifier.align(Alignment.BottomEnd).size(12.dp).clip(CircleShape).background(if (online) MainUi.Green else MainUi.Muted),
                 )
@@ -635,11 +382,11 @@ private fun MainFriendCard(
                     Text(friend.displayName, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (friend.isVip) {
                         Spacer(Modifier.width(5.dp))
-                        Text("VIP", color = MainUi.Gold, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                        Text("PRO", color = MainUi.Gold, fontSize = 7.sp, fontWeight = FontWeight.Black)
                     }
                 }
                 Text(
-                    if (online) sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"),
+                    if (playing) sh("Oyunda", "Playing") else if (online) sh("Oynamaya hazır", "Ready to play") else sh("Çevrimdışı", "Offline"),
                     color = if (online) MainUi.Green else MainUi.Muted,
                     fontSize = 9.sp,
                 )
@@ -647,10 +394,11 @@ private fun MainFriendCard(
             }
             Button(
                 onClick = onInvite,
-                enabled = !busy,
+                enabled = !busy && !playing,
+                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Green, contentColor = androidx.compose.ui.graphics.Color.White),
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp),
-            ) { Text(if (busy) "…" else sh("KUŞAT", "SIEGE"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
+            ) { Text(if (busy) "…" else if (playing) sh("OYUNDA", "PLAYING") else sh("DAVET ET", "INVITE"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, sh("Daha fazla", "More"), tint = MainUi.Muted) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

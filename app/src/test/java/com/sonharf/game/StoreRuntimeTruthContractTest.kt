@@ -22,7 +22,7 @@ class StoreRuntimeTruthContractTest {
         listOf("name_cyan", "name_sapphire", "name_amethyst", "name_aurelia")
             .forEach { id -> assertTrue("Missing name style runtime for $id", cosmetics.contains(id)) }
 
-        assertTrue(economy.contains("supportedGameThemeIds = setOf(\"theme_black\", \"theme_dark_arena\")"))
+        assertTrue(economy.contains("supportedGameThemeIds = setOf(\"theme_black\", \"theme_dark_arena\", \"theme_walnut_ivory\")"))
     }
 
     @Test
@@ -62,8 +62,8 @@ class StoreRuntimeTruthContractTest {
         listOf("title", "badge", "nameplate", "word_effect", "victory_effect", "vs_intro", "final_style")
             .forEach { kind -> assertTrue("Season migration is missing $kind", migration.contains("'$kind'")) }
 
-        assertTrue(card.contains("daha fazla Son Coin"))
-        assertTrue(card.contains("more Son Coins"))
+        assertTrue(card.contains("daha fazla Altın"))
+        assertTrue(card.contains("more Gold"))
         assertFalse(card.contains("özel Style"))
         assertFalse(card.contains("exclusive Style"))
         assertFalse(card.contains("sezon unvanları"))

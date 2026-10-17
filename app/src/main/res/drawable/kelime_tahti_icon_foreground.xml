@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 72dp artwork fills the nominal launcher viewport inside the 108dp adaptive canvas.
+     Android masks the outer board; the upright central K remains in the safe zone. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android" android:inset="16.666667%">
+    <bitmap android:src="@drawable/kelime_tahti_launcher_centered" android:gravity="fill" android:filter="true" />
+</inset>

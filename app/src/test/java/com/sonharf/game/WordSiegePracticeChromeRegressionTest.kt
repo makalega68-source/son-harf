@@ -16,7 +16,7 @@ class WordSiegePracticeChromeRegressionTest {
         assertTrue(shell.contains("topBar = { SonHarfTopAdBanner(isPremium = isPro) }"))
         assertFalse(practice.contains(".statusBarsPadding().navigationBarsPadding()"))
         assertTrue(practice.contains("height(if (compact) 46.dp else 52.dp)"))
-        assertTrue(practice.contains("KELİME TAHTI"))
+        assertTrue(practice.contains("KELİME KUŞATMASI"))
         assertFalse(practice.contains("PracticeMapControlBar("))
         assertFalse(practice.contains("HARİTA KONTROLÜ"))
         assertFalse(practice.contains("PracticeStrategicZoneLegend"))

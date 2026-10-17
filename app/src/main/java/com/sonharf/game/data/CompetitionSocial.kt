@@ -205,7 +205,7 @@ suspend fun OnlineGameBackend.transferClubOwner(userId: String) {
 
 suspend fun OnlineGameBackend.getClubMessages(clubId: String): List<ClubMessageDto> =
     SupabaseProvider.client.from("club_messages")
-        .select { filter { eq("club_id", clubId) } }
+        .select { filter { eq("club_id", clubId); gte("created_at", java.time.Instant.now().minusSeconds(15L * 86400).toString()) } }
         .decodeList<ClubMessageDto>()
         .sortedBy { it.createdAt }
         .takeLast(100)

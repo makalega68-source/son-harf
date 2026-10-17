@@ -24,7 +24,7 @@ internal fun StoreDailyRewardCard(state: StorefrontDto?, busy: Boolean, onClaim:
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(sh("Günlük hediyen", "Your daily gift"), fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 19.sp)
-                Text(state?.let { "${it.dailyReward} Son Coin" } ?: sh("Yükleniyor…", "Loading…"), color = SonHarfMuted, fontSize = 12.sp, lineHeight = 17.sp)
+                Text(state?.let { "${it.dailyReward} ${goldUnit()}" } ?: sh("Yükleniyor…", "Loading…"), color = SonHarfMuted, fontSize = 12.sp, lineHeight = 17.sp)
             }
             TextButton(onClick = onClaim, enabled = state != null && !state.dailyClaimed && !busy) {
                 Text(if (state?.dailyClaimed == true) sh("Alındı", "Claimed") else sh("Ücretsiz al", "Claim free"))
@@ -56,7 +56,7 @@ internal fun StoreBundleCard(bundle: StoreBundleDto, ownedItems: Set<String>, bu
                         Text(sh("$end tarihine kadar", "Available until $end"), color = SonHarfMuted, fontSize = 11.sp, lineHeight = 15.sp)
                     }
                 }
-                Text("${bundle.diamondPrice} SC", color = SonHarfTheme.Primary, fontWeight = FontWeight.Bold)
+                Text("${bundle.diamondPrice} ${goldUnit()}", color = SonHarfTheme.Primary, fontWeight = FontWeight.Bold)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 bundle.items.forEach { product ->
@@ -77,19 +77,17 @@ internal fun StoreProBenefits() {
     val uri = LocalUriHandler.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(8.dp)) {
         listOf(
-            sh("Zorunlu reklamsız kullanım", "No mandatory ads"),
+            sh("Reklamsız deneyim", "Ad-free experience"),
             sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"),
-            sh("Gelişmiş maç analizi", "Advanced match analysis"),
-            sh("Özel odalar ve kayıtlı arkadaş listesi", "Private rooms and saved friends"),
+            sh("Özel masalar ve kayıtlı arkadaş listesi", "Private tables and saved friends"),
+            sh("Biten maçların ayrıntılı özeti", "Detailed recap of finished matches"),
+            sh("Konfor araçları: Hamle Önizleme ve Kalan Harfler", "Comfort tools: Move Preview and Letters Left"),
         ).forEach { benefit ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Check, null, Modifier.size(18.dp), tint = SonHarfTheme.Primary)
                 Spacer(Modifier.width(10.dp))
                 Text(benefit, fontSize = 13.sp, lineHeight = 18.sp, color = SonHarfText)
             }
-        }
-        TextButton(onClick = { uri.openUri("https://play.google.com/store/account/subscriptions?package=${BuildConfig.APPLICATION_ID}") }) {
-            Text(sh("Aboneliği yönet", "Manage subscription"))
         }
     }
 }

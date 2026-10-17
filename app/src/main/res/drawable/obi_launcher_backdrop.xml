@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher background: the dark tile, then Obi's orb drawn large so its glowing rim fills the
+     corners of every mask shape. The foreground orb sits on top of it, so only this rim and the
+     dark body show around it; its face stays hidden behind the foreground. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/kelime_tahti_mascot_icon_background" />
+    <item android:left="-8dp" android:top="-6dp" android:right="-8dp" android:bottom="-10dp">
+        <bitmap android:src="@drawable/obi_launcher_happy" android:gravity="fill" android:filter="true" />
+    </item>
+</layer-list>

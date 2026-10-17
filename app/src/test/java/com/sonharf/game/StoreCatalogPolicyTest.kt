@@ -10,12 +10,16 @@ class StoreCatalogPolicyTest {
 
     @Test fun onlyConnectedCosmeticsAreOffered() {
         assertTrue(item("theme_dark_arena", "game_theme").isRuntimeReadyStyle())
+        assertTrue(item(WALNUT_IVORY_THEME_ID, "game_theme").isRuntimeReadyStyle())
         assertFalse(item("theme_monster_blue", "game_theme").isRuntimeReadyStyle())
         assertTrue(item("name_sapphire", "name_style").isRuntimeReadyStyle())
         assertTrue(item("keyboard_crystal", "keyboard_theme").isRuntimeReadyStyle())
         assertTrue(item("keyboard_obsidian", "keyboard_theme").isRuntimeReadyStyle())
         assertFalse(item("keyboard_neon", "keyboard_theme").isRuntimeReadyStyle())
-        assertFalse(item("frame_round_ocean", "profile_frame").isRuntimeReadyStyle())
+        // Frames v2: new-artwork rings are coin items; legacy retired frames stay off sale.
+        assertTrue(item("frame_round_ocean", "profile_frame").isRuntimeReadyStyle())
+        assertFalse(item("frame_wing_gold", "profile_frame").isRuntimeReadyStyle())
+        assertFalse(item("frame_round_golden_avatar", "profile_frame").isRuntimeReadyStyle())
         assertTrue(item("victory_crown", "victory_effect").isRuntimeReadyStyle())
         assertTrue(item("emoji_vip", "emoji_pack").isRuntimeReadyStyle())
         assertFalse(item("unknown", "profile_frame").isRuntimeReadyStyle())
@@ -25,6 +29,7 @@ class StoreCatalogPolicyTest {
 
     @Test fun inactiveAndMismatchedProductsCannotBeOffered() {
         assertFalse(item("theme_dark_arena", "game_theme").copy(active = false).isRuntimeReadyStyle())
+        assertFalse(item(WALNUT_IVORY_THEME_ID, "game_theme").copy(active = false).isRuntimeReadyStyle())
         assertFalse(item("theme_dark_arena", "name_style").isRuntimeReadyStyle())
         assertFalse(item("victory_crown", "victory_effect").copy(active = false).isRuntimeReadyStyle())
         assertFalse(item("emoji_vip", "emoji_pack").copy(active = false).isRuntimeReadyStyle())
@@ -48,10 +53,13 @@ class StoreCatalogPolicyTest {
 
     @Test fun retiringSupportedItemsStopsSalesWhileFullyRetiredFramesStayHistoricalOnly() {
         assertFalse(item("frame_round_ocean", "profile_frame").copy(active = false).isRuntimeReadyStyle())
-        assertFalse(item("frame_round_ocean", "profile_frame").isSupportedOwnedStyle())
+        assertFalse(item("frame_wing_gold", "profile_frame").isSupportedOwnedStyle())
+        assertTrue(item("frame_round_ocean", "profile_frame").copy(active = false).isSupportedOwnedStyle())
+        assertTrue(item("frame_round_golden_avatar", "profile_frame").copy(active = false).isSupportedOwnedStyle())
 
         listOf(
             item("theme_dark_arena", "game_theme"),
+            item(WALNUT_IVORY_THEME_ID, "game_theme"),
             item("name_sapphire", "name_style"),
             item("keyboard_crystal", "keyboard_theme"),
             item("victory_crown", "victory_effect"),
@@ -69,7 +77,7 @@ class StoreCatalogPolicyTest {
 
     @Test fun ownershipNeverEnablesUnsupportedOrMismatchedRuntimeAssets() {
         assertFalse(item("unknown", "profile_frame").isSupportedOwnedStyle())
-        assertFalse(item("frame_round_ocean", "profile_frame").isSupportedOwnedStyle())
+        assertFalse(item("frame_wing_gold", "profile_frame").isSupportedOwnedStyle())
         assertFalse(item("frame_round_ocean", "game_theme").isSupportedOwnedStyle())
         assertTrue(item("victory_crown", "victory_effect").isSupportedOwnedStyle())
         assertTrue(item("emoji_vip", "emoji_pack").isSupportedOwnedStyle())

@@ -35,12 +35,15 @@ internal data class WordSiegePracticeMove(
     val formedWords: List<String>,
     val wordScore: Int,
     val capturedCells: Int,
+    val opponentCaptured: Int = 0,
 )
 
 internal class WordSiegePracticeError(val code: String) : IllegalArgumentException(code)
 
 /** Local practice rules backed by the same canonical dictionary service used by Son Harf. */
 internal object WordSiegePracticeEngine {
+    private const val PracticeInactivityLimit = 4
+    private const val PracticeInactivityBagThreshold = 20
     fun newGame(language: String = "tr", random: Random = Random.Default): WordSiegePracticeState {
         val lang = SharedDictionaryService.canonicalLanguage(language)
         val shuffled = WordSiegeBoardSpec.shuffledBag(lang, random)
@@ -49,9 +52,9 @@ internal object WordSiegePracticeEngine {
             board = List(WordSiegeBoardSpec.CellCount) { index ->
                 WordSiegeCellDto(bonus = bonuses[index])
             },
-            playerRack = shuffled.take(7),
-            botRack = shuffled.drop(7).take(7),
-            bag = shuffled.drop(14),
+            playerRack = shuffled.take(WordSiegeBoardSpec.RackSize),
+            botRack = shuffled.drop(WordSiegeBoardSpec.RackSize).take(WordSiegeBoardSpec.RackSize),
+            bag = shuffled.drop(WordSiegeBoardSpec.RackSize * 2),
             language = lang,
         )
     }
@@ -83,7 +86,7 @@ internal object WordSiegePracticeEngine {
         horizontal: Boolean,
     ): Pair<WordSiegePracticeState, WordSiegePracticeMove> {
         requireActiveTurn(state, owner)
-        if (placements.size !in 1..7) fail("word_siege_invalid_placements")
+        if (placements.size !in 1..WordSiegeBoardSpec.RackSize) fail("word_siege_invalid_placements")
         val rack = rackFor(state, owner)
         if (placements.keys.any { !WordSiegeBoardSpec.isValidIndex(it) }) fail("word_siege_invalid_cell")
         if (placements.values.distinct().size != placements.size || placements.values.any { it !in rack.indices }) {
@@ -126,7 +129,7 @@ internal object WordSiegePracticeEngine {
             }
             words += word
             if (primary == null) primary = word
-            score += scoreWord(state.board, placements, rack, cells)
+            score += scoreWord(state.board, placements, rack, cells, state.language)
             cells.forEach { index ->
                 val cell = board[index]
                 if (cell.letter != null && cell.owner !in setOf(0, owner) && captured.add(index)) {
@@ -146,7 +149,7 @@ internal object WordSiegePracticeEngine {
         if (words.isEmpty()) fail("word_siege_word_required")
         if (hasBoardLetter && !connected) fail("word_siege_move_must_connect")
 
-        // The Kelimelik-style three-star reward is a move bonus, not a word multiplier.
+        // The +25 surprise reward is a move bonus, not a word multiplier.
         // Count it once even when the placed tile also creates cross words.
         val starBonus = placements.keys.count { index ->
             val cell = state.board[index]
@@ -162,13 +165,18 @@ internal object WordSiegePracticeEngine {
             )
         }
         val remainingRack = rack.filterIndexed { index, _ -> index !in placements.values }
-        val drawCount = (7 - remainingRack.length).coerceAtLeast(0)
+        val drawCount = (WordSiegeBoardSpec.RackSize - remainingRack.length).coerceAtLeast(0)
         val draw = state.bag.take(drawCount)
         val nextRack = remainingRack + draw
         val nextBag = state.bag.drop(draw.length)
         val gainedCells = board.indices.count { index -> state.board[index].owner != owner && board[index].owner == owner }
+        val opponentCaptured = board.indices.count { index ->
+            state.board[index].owner == other(owner) && board[index].owner == owner
+        }
         val playerArea = board.count { it.owner == 1 }
         val botArea = board.count { it.owner == 2 }
+        val gainedPoints = WordSiegeFinalRules.cubeTransfer(gainedCells)
+        val rivalLoss = WordSiegeFinalRules.opponentCaptureLoss(opponentCaptured)
         val next = state.copy(
             board = board,
             bag = nextBag,
@@ -177,8 +185,16 @@ internal object WordSiegePracticeEngine {
             currentOwner = other(owner),
             playerWordScore = state.playerWordScore + if (owner == 1) score else 0,
             botWordScore = state.botWordScore + if (owner == 2) score else 0,
-            playerAreaScore = WordSiegeFinalRules.cubeTransfer(playerArea),
-            botAreaScore = WordSiegeFinalRules.cubeTransfer(botArea),
+            playerAreaScore = if (owner == 1) {
+                state.playerAreaScore + gainedPoints
+            } else {
+                (state.playerAreaScore - rivalLoss).coerceAtLeast(0)
+            },
+            botAreaScore = if (owner == 2) {
+                state.botAreaScore + gainedPoints
+            } else {
+                (state.botAreaScore - rivalLoss).coerceAtLeast(0)
+            },
             playerArea = playerArea,
             botArea = botArea,
             consecutivePasses = 0,
@@ -186,39 +202,42 @@ internal object WordSiegePracticeEngine {
             lastAction = "word:${primary.orEmpty()}",
         )
         val finished = if (nextBag.isEmpty() && nextRack.isEmpty()) finish(next, "rack_empty") else next
-        return finished to WordSiegePracticeMove(placements, horizontal, primary.orEmpty(), words, score, gainedCells)
+        return finished to WordSiegePracticeMove(
+            placements, horizontal, primary.orEmpty(), words, score, gainedCells, opponentCaptured,
+        )
     }
 
     fun pass(state: WordSiegePracticeState, owner: Int): WordSiegePracticeState {
         requireActiveTurn(state, owner)
         val next = state.copy(
             currentOwner = other(owner),
-            consecutivePasses = (state.consecutivePasses + 1).coerceAtMost(2),
+            consecutivePasses = (state.consecutivePasses + 1).coerceAtMost(PracticeInactivityLimit),
             moveCount = state.moveCount + 1,
             lastAction = "pass",
         )
-        return if (next.consecutivePasses >= 2) finish(next, "consecutive_passes") else next
+        return finishForInactivityIfNeeded(next)
     }
 
     fun exchange(state: WordSiegePracticeState, owner: Int, rackIndices: Set<Int>): WordSiegePracticeState {
         requireActiveTurn(state, owner)
         val rack = rackFor(state, owner)
-        if (rackIndices.isEmpty() || rackIndices.size > 7 || rackIndices.any { it !in rack.indices } || state.bag.length < rackIndices.size) {
+        if (rackIndices.isEmpty() || rackIndices.size > WordSiegeBoardSpec.RackSize || rackIndices.any { it !in rack.indices } || state.bag.length < rackIndices.size) {
             fail("word_siege_invalid_exchange")
         }
         val returned = rack.filterIndexed { index, _ -> index in rackIndices }
         val remain = rack.filterIndexed { index, _ -> index !in rackIndices }
         val draw = state.bag.take(rackIndices.size)
         val nextBag = (state.bag.drop(draw.length) + returned).toList().shuffled().joinToString("")
-        return state.copy(
+        val next = state.copy(
             bag = nextBag,
             playerRack = if (owner == 1) remain + draw else state.playerRack,
             botRack = if (owner == 2) remain + draw else state.botRack,
             currentOwner = other(owner),
-            consecutivePasses = 0,
+            consecutivePasses = (state.consecutivePasses + 1).coerceAtMost(PracticeInactivityLimit),
             moveCount = state.moveCount + 1,
             lastAction = "exchange",
         )
+        return finishForInactivityIfNeeded(next)
     }
 
     fun forfeit(state: WordSiegePracticeState, owner: Int): WordSiegePracticeState =
@@ -266,38 +285,81 @@ internal object WordSiegePracticeEngine {
         return ordered[choiceIndex]
     }
 
+    /**
+     * Mascot hint for the player: the strongest move their own rack can play right now (word points
+     * plus captured territory), with exact cells. Null when the rack has no legal move.
+     */
+    fun hintMove(state: WordSiegePracticeState): WordSiegePracticeMove? {
+        if (state.currentOwner != 1 || state.status != "playing") return null
+        val rack = state.playerRack
+        var best: WordSiegePracticeMove? = null
+        var bestValue = Int.MIN_VALUE
+        SharedDictionaryService.practiceCandidates(state.language, rack).forEach { word ->
+            listOf(true, false).forEach { horizontal ->
+                (0 until WordSiegeBoardSpec.CellCount).forEach startLoop@{ start ->
+                    val placements = placementsForWord(state, rack, word, start, horizontal) ?: return@startLoop
+                    val move = runCatching { applyMove(state, 1, placements) }.getOrNull()?.second ?: return@startLoop
+                    val value = move.wordScore + WordSiegeFinalRules.cubeTransfer(move.capturedCells)
+                    if (value > bestValue) {
+                        best = move
+                        bestValue = value
+                    }
+                }
+            }
+        }
+        return best
+    }
+
     internal fun botTargetPercentile(
         state: WordSiegePracticeState,
         playerRating: Int,
         playerWins: Int,
         playerLosses: Int,
+        aiWonLast: Boolean? = PracticeAiBalance.aiWonLast,
     ): Int {
         val wins = playerWins.coerceAtLeast(0)
         val losses = playerLosses.coerceAtLeast(0)
         val games = wins + losses
         val winRate = if (games == 0) 50 else (wins * 100) / games
+        // Strength follows the player's level: gentle for newcomers, sharp for strong players.
         var target = when {
-            games < 3 -> 32
-            playerRating < 900 -> 36
-            playerRating < 1050 -> 45
-            playerRating < 1200 -> 57
-            playerRating < 1400 -> 69
-            else -> 81
+            games < 3 -> 40
+            playerRating < 900 -> 42
+            playerRating < 1050 -> 50
+            playerRating < 1200 -> 58
+            playerRating < 1400 -> 66
+            else -> 74
+        }
+        if (games >= 5 && winRate >= 60) target += 5
+        if (games >= 5 && winRate <= 35) target -= 5
+
+        // Take turns: after the AI wins, it deliberately lets the player take the next one;
+        // after the player wins, it plays to win.
+        when (aiWonLast) {
+            true -> target -= 15
+            false -> target += 10
+            null -> Unit
         }
 
-        if (games >= 5 && winRate >= 60) target += 7
-        if (games >= 5 && winRate <= 35) target -= 7
-
+        // Keep the score close all game long: ease off when ahead, push when behind.
         val botLead = totalScore(state, 2) - totalScore(state, 1)
-        when {
-            botLead >= 16 -> target -= 14
-            botLead >= 8 -> target -= 8
-            botLead <= -16 -> target += 7
-            botLead <= -8 -> target += 4
+        target += when {
+            botLead >= 20 -> -25
+            botLead >= 10 -> -14
+            botLead >= 4 -> -6
+            botLead <= -20 -> 20
+            botLead <= -10 -> 12
+            botLead <= -4 -> 5
+            else -> 0
+        }
+        // Near the end, the side whose turn it is to win gets the last push.
+        if (state.bag.length <= 7) {
+            if (aiWonLast == true && botLead > 0) target -= 15
+            if (aiWonLast == false && botLead < 0) target += 10
         }
         if (state.moveCount < 4) target -= 5
 
-        return target.coerceIn(25, 90)
+        return target.coerceIn(12, 92)
     }
 
     /**
@@ -328,7 +390,7 @@ internal object WordSiegePracticeEngine {
         val crownControl = if (WordSiegeBoardSpec.CenterIndex in move.placements.keys) 4 else 0
         return move.wordScore +
             WordSiegeFinalRules.cubeTransfer(move.capturedCells) +
-            opponentTakeovers * WordSiegeFinalRules.CUBE_TRANSFER_POINTS +
+            opponentTakeovers * WordSiegeFinalRules.OPPONENT_CAPTURE_LOSS_POINTS +
             crownControl
     }
 
@@ -360,18 +422,83 @@ internal object WordSiegePracticeEngine {
         return placements.takeIf { it.isNotEmpty() }
     }
 
+    /**
+     * PRO move preview: the points the pending tiles would score (every word they form plus the
+     * star bonus), computed with the same rules as a real move but without a dictionary check or
+     * any change to the game. Null when the tiles do not yet form a straight, gap-free word.
+     */
+    fun previewScore(board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>): Int? =
+        previewScore(board, rack, placements, SonHarfUiState.language)
+
+    /** [previewScore] with the letter values of [language] (the game's, not the menu's). */
+    fun previewScore(board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>, language: String): Int? {
+        if (placements.isEmpty()) return null
+        if (placements.keys.any { !WordSiegeBoardSpec.isValidIndex(it) || board.getOrNull(it)?.letter != null }) return null
+        if (placements.values.any { it !in rack.indices }) return null
+        val horizontal = WordSiegeFinalRules.detectOrientation(board, placements.keys) == WordSiegeOrientation.HORIZONTAL
+        val indices = placements.keys.sorted()
+        val anchor = indices.first()
+        if (indices.size > 1) {
+            if (horizontal && indices.any { WordSiegeBoardSpec.row(it) != WordSiegeBoardSpec.row(anchor) }) return null
+            if (!horizontal && indices.any { WordSiegeBoardSpec.column(it) != WordSiegeBoardSpec.column(anchor) }) return null
+        }
+        fun letterAt(index: Int): Char? = placements[index]?.let(rack::getOrNull) ?: board[index].letter?.firstOrNull()
+        val mainCells = collectCells(anchor, if (horizontal) WordSiegeBoardSpec.HorizontalDelta else WordSiegeBoardSpec.VerticalDelta, ::letterAt)
+        if (!indices.all(mainCells::contains)) return null
+        var score = 0
+        var words = 0
+        if (mainCells.size > 1) {
+            score += scoreWord(board, placements, rack, mainCells, language)
+            words++
+        }
+        indices.forEach { index ->
+            val cross = collectCells(index, if (horizontal) WordSiegeBoardSpec.VerticalDelta else WordSiegeBoardSpec.HorizontalDelta, ::letterAt)
+            if (cross.size > 1) {
+                score += scoreWord(board, placements, rack, cross, language)
+                words++
+            }
+        }
+        if (words == 0) return null
+        val starBonus = placements.keys.count { index ->
+            val cell = board[index]
+            cell.letter == null && !cell.bonusUsed && cell.bonus == WordSiegeBoardSpec.StarBonus
+        } * WordSiegeBoardSpec.StarBonusPoints
+        return score + starBonus
+    }
+
+    /**
+     * The move's score when it is legal and every word it forms is in the dictionary; null otherwise.
+     * Drives the green check on the board before the player confirms.
+     */
+    fun previewValidScore(board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>, language: String): Int? {
+        val score = previewScore(board, rack, placements) ?: return null
+        val horizontal = WordSiegeFinalRules.detectOrientation(board, placements.keys) == WordSiegeOrientation.HORIZONTAL
+        val anchor = placements.keys.minOrNull() ?: return null
+        fun letterAt(index: Int): Char? = placements[index]?.let(rack::getOrNull) ?: board[index].letter?.firstOrNull()
+        val words = mutableListOf<String>()
+        val main = collectCells(anchor, if (horizontal) WordSiegeBoardSpec.HorizontalDelta else WordSiegeBoardSpec.VerticalDelta, ::letterAt)
+        if (main.size > 1) words += main.joinToString("") { letterAt(it)?.toString().orEmpty() }
+        placements.keys.forEach { index ->
+            val cross = collectCells(index, if (horizontal) WordSiegeBoardSpec.VerticalDelta else WordSiegeBoardSpec.HorizontalDelta, ::letterAt)
+            if (cross.size > 1) words += cross.joinToString("") { letterAt(it)?.toString().orEmpty() }
+        }
+        if (words.isEmpty() || words.any { !SharedDictionaryService.isValidWordBlocking(it, language) }) return null
+        return score
+    }
+
     private fun scoreWord(
         board: List<WordSiegeCellDto>,
         placements: Map<Int, Int>,
         rack: String,
         cells: List<Int>,
+        language: String,
     ): Int {
         var total = 0
         var multiplier = 1
         cells.forEach { index ->
             val cell = board[index]
             val letter = placements[index]?.let(rack::getOrNull)?.toString() ?: cell.letter.orEmpty()
-            var value = letterValue(letter)
+            var value = wordSiegeLetterValue(letter, language)
             val bonus = if (cell.letter == null && !cell.bonusUsed) cell.bonus else null
             if (bonus == "2H") value *= 2
             if (bonus == "3H") value *= 3
@@ -410,36 +537,37 @@ internal object WordSiegePracticeEngine {
         return result
     }
 
+    private fun finishForInactivityIfNeeded(state: WordSiegePracticeState): WordSiegePracticeState {
+        val eligible = state.bag.length < PracticeInactivityBagThreshold
+        return if (eligible && state.consecutivePasses >= PracticeInactivityLimit) {
+            finish(state, "consecutive_passes")
+        } else state
+    }
+
     private fun finish(state: WordSiegePracticeState, reason: String, forcedWinner: Int? = null): WordSiegePracticeState {
-        val winner = forcedWinner ?: when {
-            state.playerArea > state.botArea -> 1
-            state.botArea > state.playerArea -> 2
-            else -> null
+        val winner = forcedWinner ?: run {
+            val playerTotal = totalScore(state, 1)
+            val botTotal = totalScore(state, 2)
+            when {
+                playerTotal > botTotal -> 1
+                botTotal > playerTotal -> 2
+                state.playerArea > state.botArea -> 1
+                state.botArea > state.playerArea -> 2
+                else -> null
+            }
         }
         return state.copy(status = "finished", winnerOwner = winner, lastAction = reason)
     }
 
     fun totalScore(state: WordSiegePracticeState, owner: Int): Int = if (owner == 1) {
-        WordSiegeFinalRules.currentTerritoryScore(state.playerWordScore, state.playerArea)
+        WordSiegeFinalRules.scoreWithTerritoryLedger(state.playerWordScore, state.playerAreaScore)
     } else {
-        WordSiegeFinalRules.currentTerritoryScore(state.botWordScore, state.botArea)
+        WordSiegeFinalRules.scoreWithTerritoryLedger(state.botWordScore, state.botAreaScore)
     }
 
     private fun requireActiveTurn(state: WordSiegePracticeState, owner: Int) {
         if (state.status != "playing") fail("word_siege_not_playing")
         if (state.currentOwner != owner) fail("word_siege_not_your_turn")
-    }
-
-    private fun letterValue(letter: String): Int = when (letter.uppercase(Locale.forLanguageTag("tr-TR"))) {
-        "A", "E", "İ", "K", "L", "N", "R", "T" -> 1
-        "I", "M", "O", "S", "U" -> 2
-        "B", "D", "Ü", "Y" -> 3
-        "C", "Ç", "Ş", "Z" -> 4
-        "G", "H", "P" -> 5
-        "F", "Ö", "V" -> 7
-        "Ğ" -> 8
-        "J" -> 10
-        else -> 1
     }
 
     private fun other(owner: Int): Int = if (owner == 1) 2 else 1

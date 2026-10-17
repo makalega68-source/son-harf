@@ -10,6 +10,25 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object PlayPurchaseVerification {
+    suspend fun ensureAvailable() {
+        val accessToken = SupabaseProvider.client.auth.currentAccessTokenOrNull()
+            ?: error("No authenticated session")
+        withContext(Dispatchers.IO) {
+            val connection = (URL("${BuildConfig.SUPABASE_URL}/functions/v1/verify-play-purchase").openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 10_000
+                readTimeout = 10_000
+                setRequestProperty("Authorization", "Bearer $accessToken")
+                setRequestProperty("apikey", BuildConfig.SUPABASE_KEY)
+            }
+            try {
+                check(connection.responseCode in 200..299) { "purchase_service_unavailable" }
+                val body = connection.inputStream.bufferedReader().use { it.readText() }
+                check(JSONObject(body).optBoolean("available", false)) { "purchase_service_unavailable" }
+            } finally { connection.disconnect() }
+        }
+    }
+
     suspend fun verify(productId: String, purchaseToken: String) {
         require(productId.isNotBlank())
         require(purchaseToken.isNotBlank())

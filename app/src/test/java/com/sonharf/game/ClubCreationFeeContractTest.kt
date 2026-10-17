@@ -11,8 +11,8 @@ class ClubCreationFeeContractTest {
     fun androidShowsClubFeeAndBalanceFailure() {
         val source = projectFile("app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt").readText()
 
-        assertTrue(source.contains("KULÜP KURMA BEDELİ: 1.000 SON COIN"))
-        assertTrue(source.contains("1.000 SC İLE OLUŞTUR"))
+        assertTrue(source.contains("KULÜP KURMA BEDELİ: 1.000 ALTIN"))
+        assertTrue(source.contains("1.000 ALTIN İLE OLUŞTUR"))
         assertTrue(source.contains("insufficient_club_creation_balance"))
     }
 

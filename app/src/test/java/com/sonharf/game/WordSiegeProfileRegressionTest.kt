@@ -28,11 +28,11 @@ class WordSiegeProfileRegressionTest {
         assertTrue(practice.contains("botProfile = WordSiegePracticeBots.random()"))
         assertTrue(practice.contains("WordSiegeScoreCard("))
         assertTrue(scoreCard.contains("ProfilePhotoAvatarWithGender("))
-        assertTrue(scoreCard.contains("Text(\"BOT\""))
+        assertTrue(scoreCard.contains("• AI"))
 
         assertTrue(profileRuntime.contains("SyntheticProfilePortrait"))
-        assertTrue(profileRuntime.contains("Icons.Rounded.Face"))
-        assertTrue(profileRuntime.contains("FramelessGenderSymbol"))
+        assertTrue(profileRuntime.contains("DefaultProfilePortrait(gender, modifier)"))
+        org.junit.Assert.assertFalse(profileRuntime.contains("FramelessGenderSymbol"))
     }
 
     private fun projectFile(path: String): File {

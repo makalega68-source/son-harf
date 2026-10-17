@@ -8,8 +8,8 @@ import com.sonharf.game.data.ShopItemDto
  * presented as usable/equippable styles.
  */
 internal fun ShopItemDto.isSupportedOwnedStyle(): Boolean = when (kind) {
-    "game_theme" -> id in setOf("theme_black", "theme_dark_arena")
-    "profile_frame" -> false
+    "game_theme" -> id in setOf("theme_black", "theme_dark_arena", WALNUT_IVORY_THEME_ID)
+    "profile_frame" -> id in ProfileFrameCollection.allIds
     "name_style" -> id in setOf("name_cyan", "name_sapphire", "name_amethyst", "name_aurelia")
     "keyboard_theme" -> id in setOf(
         "keyboard_crystal",
@@ -20,5 +20,7 @@ internal fun ShopItemDto.isSupportedOwnedStyle(): Boolean = when (kind) {
     )
     "victory_effect" -> id == "victory_crown"
     "emoji_pack" -> id == "emoji_vip"
+    "mascot_hat" -> id in MascotHats.ids
+    "board_skin" -> id in WordSiegeBoardSkin.productIds
     else -> false
 }

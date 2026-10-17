@@ -8,11 +8,11 @@ Client and server normalization both use Unicode NFC canonicalization plus langu
 
 ### Turkish (`tr`)
 
-Primary production expansion source: `wooorm/dictionaries` normalized Turkish dictionary (`dictionary-tr`), source revision `8cfea406b505e4d7df52d5a19bce525df98c54ab`. The Turkish dictionary package declares the MIT license. Existing legacy Son Harf entries are retained for compatibility and tagged separately in `source_id`; no legacy rows are deleted by the V3 migration.
+Live source (verified in `public.dictionary_words`, 2026-10-04): `source_id = tdk-gts-autocomplete`, version "TDK GTS official 2026-09-16", the headword list of the Türk Dil Kurumu Güncel Türkçe Sözlük (`https://eski.sozluk.gov.tr/autocomplete.json`). 61,742 active rows; 60,643 of them are 2–15 letters and game-allowed, and the bundled `app/src/main/assets/dictionary/tr.txt` matches that set exactly (circumflexed letters folded to plain letters). 44 foreign entries that TDK lists without a Turkish spelling (e.g. `marketing`, `deadline`) are kept but not game-allowed. Proper nouns are not part of the headword list; a name that is also a meaningful TDK word (e.g. `deniz`, `çiçek`, `umut`) is valid as that word. Redistribution rights for the TDK list are not asserted by this repository.
 
 ### English (`en`)
 
-Primary production expansion source: normalized English dictionaries in `wooorm/dictionaries`, source revision `8cfea406b505e4d7df52d5a19bce525df98c54ab`, based on the English spelling/SCOWL ecosystem. The English dictionary package carries MIT and BSD licensing requirements. Existing legacy Son Harf entries are retained and provenance-tagged separately.
+Live source: `source_id = scowl-esdb-en-us`, version "SCOWL/ESDB 2026.02.25", the American English list of SCOWL (Spell Checker Oriented Word Lists) and the English Speller Database (`en-wl/wordlist-diff`, commit `71d7dd07676edb60ade43552e10b41314b7e9287`), under the SCOWL / ESDB source licences. 79,063 game-allowed rows, matching the bundled `en.txt`. English has no single official language academy comparable to TDK, so this open spelling standard is used.
 
 The project does not claim that any finite corpus contains every word that can exist in Turkish or English. The production goal is a broad, licensed, normalized canonical corpus with deterministic validation, offline snapshot support and explicit provenance.
 
