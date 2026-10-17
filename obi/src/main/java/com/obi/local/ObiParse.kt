@@ -57,9 +57,10 @@ internal object ObiParse {
     fun reminderNote(text: String): String = text
         .replace(Regex("(?i)\\d{1,3}\\s*(?:dakika|dk|saat)\\s+sonra"), "")
         .replace(Regex("(?i)(?:yarın|yarin|bugün|bugun)?\\s*(?:sabah|akşam|aksam|gece|öğlen|oglen)?\\s*(?:saat\\s*)?\\d{1,2}(?:[:.]\\d{2})?(?:\\s*[’']?(?:da|de|ta|te|a|e)(?!\\p{L}))?"), "")
-        .replace(Regex("(?i)(?:diye\\s+)?hatırlat(?:ır mısın|ir misin)?"), "")
+        // Whole command words go, never parts of words: "Hatırlatma oluştur imranı öp" → "imranı öp".
+        .replace(Regex("(?i)(?<!\\p{L})(?:hat[ıi]rlat\\p{L}*|an[ıi]msat\\p{L}*|diye|bana|l[üu]tfen|oluştur\\p{L}*|olustur\\p{L}*|kur(?:ar m[ıi]s[ıi]n|ar m[ıi]s[ıi]n|sana)?|ekle\\p{L}*|ayarla\\p{L}*|yap(?:ar m[ıi]s[ıi]n)?|bir|yeni)(?!\\p{L})"), "")
         .replace(Regex("\\s{2,}"), " ")
-        .trim(' ', ',', ':', '-', '’', '\'').ifBlank { "Hatırlatıcı" }
+        .trim(' ', ',', ':', '-', '’', '\'', '.').ifBlank { "Hatırlatıcı" }
 
     fun noteText(normalized: String, original: String): String? {
         val prefix = notePrefixes.firstOrNull { normalized.startsWith(it) } ?: return null

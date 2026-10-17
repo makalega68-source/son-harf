@@ -31,6 +31,9 @@ class ObiParseTest {
     @Test fun reminderNoteKeepsTheWords() {
         assertEquals("ilacını iç", ObiParse.reminderNote("10 dakika sonra ilacını iç diye hatırlat"))
         assertEquals("annemi ara", ObiParse.reminderNote("yarın saat 09.00 annemi ara diye hatırlat"))
+        assertEquals("İmranı öp", ObiParse.reminderNote("Hatırlatma oluştur 1 dakika sonra İmranı öp"))
+        assertEquals("ilacımı iç", ObiParse.reminderNote("bana 21'de ilacımı iç diye bir hatırlatıcı kur"))
+        assertEquals("toplantı", ObiParse.reminderNote("yeni hatırlatma ekle 10 dakika sonra toplantı"))
     }
 
     @Test fun everydaySentencesAreNotLocalCommands() {
