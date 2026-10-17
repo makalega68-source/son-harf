@@ -64,6 +64,8 @@ class ObiOverlayService : Service() {
         const val ACTION_SHOW = "com.obi.local.SHOW_OVERLAY"
         const val ACTION_OPEN_CHAT = "com.obi.local.OPEN_CHAT"
         const val ACTION_HIDE = "com.obi.local.HIDE_OVERLAY"
+        const val ACTION_MIC_READY = "com.obi.local.MIC_READY"
+        const val ACTION_LISTEN = "com.obi.local.LISTEN"
         const val ACTION_READY = "com.obi.local.OVERLAY_READY"
         const val ACTION_ERROR = "com.obi.local.OVERLAY_ERROR"
         private const val CHANNEL = "obi_companion"
@@ -267,6 +269,19 @@ class ObiOverlayService : Service() {
             setUserHidden(false)
             return START_NOT_STICKY
         }
+        if (intent?.action == ACTION_MIC_READY) {
+            if (mascot != null) {
+                runCatching { startForegroundNotification() }
+                if (intent.getBooleanExtra("granted", false)) {
+                    if (wakeWanted()) listener.startWakeMode() else showBubble("Mikrofon hazır! Beni basılı tutup konuşabilirsin 🎤")
+                } else showBubble("Mikrofon izni olmadan seni duyamam. İstersen yazarak devam edelim.")
+                return START_NOT_STICKY
+            }
+        }
+        if (intent?.action == ACTION_LISTEN && mascot != null) {
+            startPushToTalk()
+            return START_NOT_STICKY
+        }
         if (intent?.action == ACTION_HIDE && mascot != null) {
             setUserHidden(true)
             return START_NOT_STICKY
@@ -286,6 +301,7 @@ class ObiOverlayService : Service() {
                 handler.postDelayed(ambient, 8_000L)
                 handler.postDelayed({ fetchTouchPack() }, 1_200L)
                 handler.postDelayed({ greetToday() }, 2_000L)
+                if (wakeWanted() && listener.hasPermission()) handler.postDelayed({ listener.startWakeMode() }, 3_000L)
                 if (store.focusEnd() > 0L) startFocusView()
             }
             // Opening Obi from its icon, widget or notification always brings it back.
@@ -325,13 +341,92 @@ class ObiOverlayService : Service() {
                 else "Dokun: söz • Çift dokun: sohbet • Aşağıdaki ‘Gizle’ye sürükle: sakla")
             .setContentIntent(open)
             .addAction(Notification.Action.Builder(null, if (userHidden) "Obi'yi göster" else "Gizle", toggle).build())
+            .addAction(Notification.Action.Builder(null, "🎤 Konuş", PendingIntent.getService(
+                this, 4, Intent(this, ObiOverlayService::class.java).setAction(ACTION_LISTEN),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
             .addAction(Notification.Action.Builder(null, "Obi'yi kapat", stop).build())
             .setOngoing(true)
             .build()
         if (Build.VERSION.SDK_INT >= 34) {
-            startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            val special = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            val mic = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+            // The microphone type is only allowed while Obi was opened from the foreground; fall back without it.
+            val withMic = listener.hasPermission()
+            try {
+                startForeground(NOTIFICATION_ID, notification, if (withMic) special or mic else special)
+                micForeground = withMic
+            } catch (_: RuntimeException) {
+                startForeground(NOTIFICATION_ID, notification, special)
+                micForeground = false
+            }
         } else {
             startForeground(NOTIFICATION_ID, notification)
+            micForeground = true
+        }
+    }
+
+    // ---- Voice commands ---------------------------------------------------------------------------
+
+    private var micForeground = false
+    private var voicePending = false
+
+    private val listener by lazy {
+        ObiListener(this,
+            onCommand = { command -> handler.post { handleVoice(command) } },
+            onState = { state -> handler.post { onListenState(state) } })
+    }
+
+    private fun wakeWanted(): Boolean = localPrefs.getBoolean("wake_mode", false)
+
+    private fun onListenState(state: String) {
+        when (state) {
+            "listening" -> { animate(WordSiegeMascotAction.PEEK); if (panel == null) showBubble("Dinliyorum… 🎤") else thinking("Dinliyorum… 🎤") }
+            "idle" -> if (panel == null) hideBubble()
+            else -> if (panel == null) showBubble(state) else say(state)
+        }
+    }
+
+    /** Long-press on Obi, the notification's 🎤 or "Obi" in wake mode. */
+    private fun startPushToTalk() {
+        if (!listener.hasPermission()) { askMicPermission(); return }
+        if (!listener.available()) { showBubble("Bu telefonda konuşma tanıma bulunamadı. Google uygulamasını güncellemek gerekebilir."); return }
+        lastInteractionAt = System.currentTimeMillis()
+        listener.listenOnce()
+    }
+
+    private fun askMicPermission() {
+        showBubble("Seni duyabilmem için mikrofon izni gerekiyor 🎤")
+        runCatching { startActivity(Intent(this, ObiMicPermissionActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
+
+    private fun handleVoice(command: String) {
+        if (command.isBlank()) {
+            animate(WordSiegeMascotAction.WAVE)
+            if (panel == null) showBubble("Efendim? 🎤") else say("Efendim? 🎤")
+            playClip("listening")
+            return
+        }
+        voicePending = true
+        submit(command)
+    }
+
+    /** Plays one of Obi's ready-made Gemini lines through the overlay itself (no extra service). */
+    private fun playClip(key: String) {
+        if (!localPrefs.getBoolean("voice_alerts", true)) return
+        val voice = ObiGeminiVoice(this)
+        if (voice.has(key)) voice.play(key, ObiVoiceAlertService.pitch(this)) {}
+    }
+
+    private fun setWakeMode(on: Boolean): String {
+        if (on && !listener.hasPermission()) { localPrefs.edit().putBoolean("wake_mode", true).apply(); askMicPermission(); return "Mikrofon iznini verince seni dinlemeye başlayacağım 🎤" }
+        localPrefs.edit().putBoolean("wake_mode", on).apply()
+        return if (on) {
+            if (!micForeground) runCatching { startForegroundNotification() }
+            listener.startWakeMode()
+            "Tamam! ‘Obi’ diye başlayan cümleleri dinliyorum: ‘Obi, sabah 11'e alarm kur’. 🎤\nMikrofon açık kaldığı için telefonda mikrofon işareti görünür ve pil biraz daha çabuk biter. Kapatmak için ‘dinlemeyi kapat’."
+        } else {
+            listener.stopWakeMode()
+            "Dinlemeyi kapattım. Konuşmak istersen beni basılı tut 🎤"
         }
     }
 
@@ -384,6 +479,7 @@ class ObiOverlayService : Service() {
                 } else if (catchUntil == 0L) prefs.edit().putInt("x", params.x).putInt("y", params.y).apply()
             }
             setOnClickListener { onMascotTap(prefs) }
+            setOnLongClickListener { if (catchUntil == 0L) startPushToTalk(); true }
         }
         windows.addView(view, params)
         mascot = view
@@ -790,6 +886,7 @@ class ObiOverlayService : Service() {
             updateGame(null, false, 0, 0, 0, null, emptyList(), true, WordSiegeMascotEmotion.HAPPY)
             contentDescription = "Obi"
             setOnClickListener { animate(nextMove()) }
+            setOnLongClickListener { startPushToTalk(); true }
         }
         content.addView(avatar, LinearLayout.LayoutParams(dp(112), dp(112)))
         chatMascot = avatar
@@ -845,6 +942,7 @@ class ObiOverlayService : Service() {
         try {
             windows.addView(root, params)
             panel = root
+            if (listener.isWakeMode) listener.stopWakeMode()
         } catch (_: SecurityException) {
             return
         }
@@ -888,7 +986,15 @@ class ObiOverlayService : Service() {
     }
 
     /** Obi answers in the balloon and moves its mouth for a moment. */
-    private fun say(text: String, action: WordSiegeMascotAction? = null) = showReply(text, remember = true, action = action)
+    private fun say(text: String, action: WordSiegeMascotAction? = null) {
+        showReply(text, remember = true, action = action)
+        if (panel == null) showBubble(text)
+        if (voicePending) {
+            voicePending = false
+            // A spoken request gets a spoken "done" unless Obi is asking something back.
+            if (!text.contains("?") && !text.contains("anlayamadım") && !text.contains("yok")) playClip("done")
+        }
+    }
 
     private fun showReply(text: String, remember: Boolean, action: WordSiegeMascotAction? = null) {
         if (remember) lastReply = text
@@ -906,6 +1012,7 @@ class ObiOverlayService : Service() {
 
     private fun thinking(text: String = "…") {
         replyText?.text = text
+        if (panel == null) showBubble(text)
         animate(WordSiegeMascotAction.THINK)
     }
 
@@ -942,7 +1049,7 @@ class ObiOverlayService : Service() {
         "• geri sayım tatil 15 temmuz / annemin doğum günü 5 mart\n" +
         "• odaklan 25 dakika • oyun oynayalım • dolap / Pofi'yi giy / bere tak\n" +
         "• panodakini özetle / panodakini çevir • bugünün kelimeleri\n" +
-        "• sesini dene / sesini değiştir / sesini incelt / sesini kalınlaştır / ses durumu\n• sesli uyarıyı kapat\n• gizlen • küçül / büyü • alarm izni / bildirim izni\n• tam ekranda gizlenme / tam ekranda gizlen\n• su hatırlatıcısını aç • Gemini bağla"
+        "• sesini dene / sesini değiştir / sesini incelt / sesini kalınlaştır / ses durumu\n• sesli uyarıyı kapat\n• beni dinle / dinlemeyi kapat • Obi'yi basılı tut: sesli komut\n• gizlen • küçül / büyü • alarm izni / bildirim izni\n• tam ekranda gizlenme / tam ekranda gizlen\n• su hatırlatıcısını aç • Gemini bağla"
 
     private fun clipboardText(): String = runCatching {
         (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.takeIf { it.itemCount > 0 }
@@ -1094,6 +1201,8 @@ class ObiOverlayService : Service() {
 
         when {
             t.contains("gemini") && (t.contains("bağla") || t.contains("bagla") || t.contains("anahtar")) -> { openGeminiSetup(); return }
+            t.contains("dinlemeyi kapat") || t.contains("sesli komut kapat") || t.contains("sesli komutu kapat") || t.contains("beni dinleme") -> { say(setWakeMode(false)); return }
+            t.contains("beni dinle") || t.contains("sesli komut") || t.contains("dinlemeyi aç") || t.contains("dinlemeyi ac") || t.contains("obi modu") -> { say(setWakeMode(true)); return }
             t == "yardım" || t == "yardim" || t.contains("ne yapabilirsin") || t.contains("neler yapabilirsin") || t == "komutlar" -> { say(helpText); return }
             t.contains("odaklan") || t.contains("pomodoro") -> {
                 val minutes = Regex("(\\d{1,3})").find(t)?.groupValues?.get(1)?.toIntOrNull()?.coerceIn(5, 120) ?: 25
@@ -1350,6 +1459,7 @@ class ObiOverlayService : Service() {
     }
 
     private fun hidePanel() {
+        if (panel != null && wakeWanted() && listener.hasPermission()) handler.postDelayed({ if (panel == null) listener.startWakeMode() }, 600L)
         panel?.let { runCatching { windows.removeView(it) } }
         panel = null
         chatMascot = null
@@ -1370,6 +1480,7 @@ class ObiOverlayService : Service() {
     }
 
     override fun onDestroy() {
+        runCatching { listener.stop() }
         runCatching { unregisterReceiver(events) }
         runCatching { unregisterReceiver(phone) }
         handler.removeCallbacksAndMessages(null)

@@ -100,6 +100,8 @@ class ObiVoiceAlertService : Service() {
                 if (usePhone) speak(phrase, sound, startId) else stopSelfResult(startId)
             }
             else if (usePhone) speak(if (twice) "$phrase … $phrase" else phrase, sound, startId)
+            // Never stay silent on a real alert: the bundled Obi recording is the last resort.
+            else if (!preview) playRecording(sound, startId)
             else stopSelfResult(startId)
         }
         if (voice.has(key)) {
@@ -116,7 +118,7 @@ class ObiVoiceAlertService : Service() {
         }.start()
         else {
             if (preview) report("Gemini bağlı değil. ‘Gemini bağla’ yazarak bağlayabilirsin.")
-            if (usePhone) phoneVoice() else stopSelfResult(startId)
+            if (usePhone || !preview) phoneVoice() else stopSelfResult(startId)
         }
         handler.postDelayed({ if (activeStart == startId) stopSelfResult(startId) }, 75_000L)
         return START_NOT_STICKY

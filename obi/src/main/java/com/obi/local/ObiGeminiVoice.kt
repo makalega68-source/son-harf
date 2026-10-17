@@ -33,6 +33,8 @@ internal class ObiGeminiVoice(private val context: Context) {
             "alarm_morning" to "Günaydın! Sabah oldu, hadi uyan bakalım. Yeni bir gün seni bekliyor!",
             "alarm" to "Alarm zamanı geldi! Hadi bakalım, kalkıyoruz!",
             "reminder" to "Hatırlatma zamanı geldi!",
+            "done" to "Tamam, hallettim!",
+            "listening" to "Efendim?",
         )
 
         fun reminderLine(text: String) = "Hatırlatma var: ${text.trimEnd('.', '!')}."
