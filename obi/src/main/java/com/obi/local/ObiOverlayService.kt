@@ -69,8 +69,8 @@ class ObiOverlayService : Service() {
         private const val CHANNEL = "obi_companion"
         private const val NOTIFICATION_ID = 1201
         private const val PREFS = "obi_overlay"
-        private const val SIZE_DP = 112
-        private const val FOCUS_SIZE_DP = 78
+        private const val DEFAULT_SIZE_DP = 92
+        private const val FOCUS_SIZE_DP = 70
         private const val KELIME_TAHTI = "com.sonharf.game"
 
         fun isRunning(context: Context): Boolean =
@@ -334,7 +334,7 @@ class ObiOverlayService : Service() {
     // ---- The floating mascot -------------------------------------------------------------------
 
     private fun addMascot() {
-        val size = dp(SIZE_DP)
+        val size = dp(sizeDp())
         val bounds = resources.displayMetrics
         val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
         val savedTouches = prefs.getString("recent_touches", null)
@@ -389,6 +389,21 @@ class ObiOverlayService : Service() {
         showMascotIfAllowed()
         applyLook()
         prefs.edit().putBoolean("running", true).apply()
+    }
+
+    /** Floating Obi size, changeable from the chat with "küçül" / "büyü". */
+    private fun sizeDp(): Int = localPrefs.getInt("mascot_size_dp", DEFAULT_SIZE_DP).coerceIn(64, 140)
+
+    private fun resizeMascot(stepDp: Int): Int {
+        val next = (sizeDp() + stepDp).coerceIn(64, 140)
+        localPrefs.edit().putInt("mascot_size_dp", next).apply()
+        val params = mascotParams
+        val view = mascot
+        if (params != null && view != null && store.focusEnd() == 0L) {
+            params.width = dp(next); params.height = dp(next)
+            runCatching { windows.updateViewLayout(view, params) }
+        }
+        return next
     }
 
     private fun showMascotIfAllowed() {
@@ -664,8 +679,8 @@ class ObiOverlayService : Service() {
         timerLabel = null
         val params = mascotParams ?: return
         val view = mascot ?: return
-        if (params.width != dp(SIZE_DP)) {
-            params.width = dp(SIZE_DP); params.height = dp(SIZE_DP)
+        if (params.width != dp(sizeDp())) {
+            params.width = dp(sizeDp()); params.height = dp(sizeDp())
             runCatching { windows.updateViewLayout(view, params) }
         }
     }
@@ -772,7 +787,7 @@ class ObiOverlayService : Service() {
             contentDescription = "Obi"
             setOnClickListener { animate(nextMove()) }
         }
-        content.addView(avatar, LinearLayout.LayoutParams(dp(150), dp(150)))
+        content.addView(avatar, LinearLayout.LayoutParams(dp(112), dp(112)))
         chatMascot = avatar
 
         val field = EditText(this).apply {
@@ -923,7 +938,7 @@ class ObiOverlayService : Service() {
         "• geri sayım tatil 15 temmuz / annemin doğum günü 5 mart\n" +
         "• odaklan 25 dakika • oyun oynayalım • dolap / Pofi'yi giy / bere tak\n" +
         "• panodakini özetle / panodakini çevir • bugünün kelimeleri\n" +
-        "• sesini dene / sesini incelt / sesini kalınlaştır • sesli uyarıyı kapat\n• gizlen • tam ekranda gizlenme / tam ekranda gizlen\n• su hatırlatıcısını aç • Gemini bağla"
+        "• sesini dene / sesini incelt / sesini kalınlaştır • sesli uyarıyı kapat\n• gizlen • küçül / büyü • alarm izni / bildirim izni\n• tam ekranda gizlenme / tam ekranda gizlen\n• su hatırlatıcısını aç • Gemini bağla"
 
     private fun clipboardText(): String = runCatching {
         (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.takeIf { it.itemCount > 0 }
@@ -1102,7 +1117,21 @@ class ObiOverlayService : Service() {
             t == "gizlen" || t == "saklan" || t.contains("obi gizlen") || t.contains("kendini gizle") -> {
                 hidePanel(); setUserHidden(true); return
             }
-            t.contains("kesin alarm") -> { openExactAlarmSettings(); return }
+            (t.contains("izin") || t.contains("izni")) && t.contains("alarm") -> { openExactAlarmSettings(); return }
+            (t.contains("izin") || t.contains("izni")) && t.contains("bildirim") -> {
+                openSettings(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)); return
+            }
+            t == "izinler" || t == "izin" || t.contains("izinleri aç") || t.contains("uygulama ayarları") -> {
+                openSettings(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))); return
+            }
+            Regex("(?<!\\p{L})(?:küçül|küçült|kucul|kuçul)(?!\\p{L})").containsMatchIn(t) -> {
+                val size = resizeMascot(-12)
+                say(if (size <= 64) "Daha fazla küçülemem, minicik oldum! 🐣" else "Biraz küçüldüm. Böyle iyi mi? (‘biraz daha küçül’ ya da ‘büyü’)", WordSiegeMascotAction.SHY); return
+            }
+            Regex("(?<!\\p{L})(?:büyü|büyüt|buyu|buyut)(?!\\p{L})").containsMatchIn(t) -> {
+                val size = resizeMascot(12)
+                say(if (size >= 140) "Bundan büyük olamam! 💪" else "Biraz büyüdüm! Böyle iyi mi?", WordSiegeMascotAction.PROUD_POSE); return
+            }
             t.contains("bildirim izni") -> { openSettings(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)); return }
             t.contains("sesli uyarı") || t.contains("sesli uyari") -> {
                 val on = !t.contains("kapat")
