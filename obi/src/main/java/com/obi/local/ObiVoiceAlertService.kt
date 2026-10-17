@@ -91,10 +91,16 @@ class ObiVoiceAlertService : Service() {
         // The phone's own Turkish voice sounds poor, so it is only used when the user turns it on;
         // otherwise a failed Gemini clip leaves just the notification sound.
         val usePhone = getSharedPreferences("obi_local", MODE_PRIVATE).getBoolean("phone_voice", false)
-        val phoneVoice = {
+        // When this reminder's own clip could not be made, Obi still speaks with its Gemini voice
+        // using the general line ("Hatırlatma zamanı geldi!" / the alarm line); the words are in the notification.
+        val general = if (kind == "alarm") (if (morning) "alarm_morning" else "alarm") else "reminder"
+        val phoneVoice: () -> Unit = {
             if (preview) report(voice.lastStatus() + if (usePhone) "\nTelefonun sesiyle okuyorum." else "")
-            if (usePhone) speak(if (twice) "$phrase … $phrase" else phrase, sound, startId)
-            else { stopSelfResult(startId); Unit }
+            if (!preview && key != general && voice.has(general)) playGemini(voice, general, twice, startId) {
+                if (usePhone) speak(phrase, sound, startId) else stopSelfResult(startId)
+            }
+            else if (usePhone) speak(if (twice) "$phrase … $phrase" else phrase, sound, startId)
+            else stopSelfResult(startId)
         }
         if (voice.has(key)) {
             if (preview) report("Gemini sesi: ${voice.voiceName()}, ton ${String.format(Locale.ROOT, "%.2f", pitch(this))} ♪")

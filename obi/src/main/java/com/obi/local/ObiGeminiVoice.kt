@@ -98,13 +98,32 @@ internal class ObiGeminiVoice(private val context: Context) {
         return false
     }
 
+    /**
+     * Makes a clip in the background. The free Gemini voice allows only a few requests a minute,
+     * so a refused request ("429") is retried a few times with a pause instead of giving up.
+     */
     fun prepare(key: String, text: String, done: (Boolean) -> Unit = {}) {
-        Thread { val ok = runCatching { prepareBlocking(key, text) }.getOrDefault(false); done(ok) }.start()
+        Thread { done(prepareWithRetry(key, text)) }.start()
     }
 
-    /** Makes the fixed lines in the background, once a key is connected. */
+    private fun prepareWithRetry(key: String, text: String): Boolean {
+        repeat(5) { attempt ->
+            if (runCatching { prepareBlocking(key, text) }.getOrDefault(false)) return true
+            if (!lastStatus().contains("429") && !lastStatus().contains("bağlantı")) return false
+            Thread.sleep(25_000L * (attempt + 1))
+        }
+        return false
+    }
+
+    /** Makes the fixed lines one by one, slowly, so they do not use up the per-minute limit. */
     fun prepareFixed() {
-        Thread { FIXED.forEach { (key, text) -> runCatching { prepareBlocking(key, text) } } }.start()
+        Thread {
+            synchronized(ObiGeminiVoice::class.java) {
+                FIXED.forEach { (key, text) ->
+                    if (!has(key)) { prepareWithRetry(key, text); Thread.sleep(8_000L) }
+                }
+            }
+        }.start()
     }
 
     /** Model names containing "tts" that this key may call. */
