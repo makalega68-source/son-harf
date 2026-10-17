@@ -140,6 +140,10 @@ class ObiOverlayService : Service() {
             when (intent.action) {
                 ACTION_SHOW -> { showMascotIfAllowed(); fetchTouchPack() }
                 ObiStore.ACTION_LOOK_CHANGED -> applyLook()
+                ObiVoiceAlertService.ACTION_STATUS -> {
+                    val text = intent.getStringExtra("text") ?: return
+                    if (panel != null) say(text) else showBubble(text)
+                }
                 ObiStore.ACTION_ASK_MOOD -> {
                     askMoodNext = true
                     animate(WordSiegeMascotAction.WAVE)
@@ -237,7 +241,7 @@ class ObiOverlayService : Service() {
         super.onCreate()
         val own = IntentFilter().apply {
             addAction(ObiStore.ACTION_CELEBRATE); addAction(ACTION_SHOW); addAction(ObiStore.ACTION_NUDGE)
-            addAction(ObiStore.ACTION_ASK_MOOD); addAction(ObiStore.ACTION_LOOK_CHANGED)
+            addAction(ObiStore.ACTION_ASK_MOOD); addAction(ObiStore.ACTION_LOOK_CHANGED); addAction(ObiVoiceAlertService.ACTION_STATUS)
         }
         val system = IntentFilter().apply {
             addAction(Intent.ACTION_BATTERY_CHANGED); addAction(Intent.ACTION_POWER_CONNECTED)
@@ -938,7 +942,7 @@ class ObiOverlayService : Service() {
         "• geri sayım tatil 15 temmuz / annemin doğum günü 5 mart\n" +
         "• odaklan 25 dakika • oyun oynayalım • dolap / Pofi'yi giy / bere tak\n" +
         "• panodakini özetle / panodakini çevir • bugünün kelimeleri\n" +
-        "• sesini dene / sesini incelt / sesini kalınlaştır • sesli uyarıyı kapat\n• gizlen • küçül / büyü • alarm izni / bildirim izni\n• tam ekranda gizlenme / tam ekranda gizlen\n• su hatırlatıcısını aç • Gemini bağla"
+        "• sesini dene / sesini değiştir / sesini incelt / sesini kalınlaştır / ses durumu\n• sesli uyarıyı kapat\n• gizlen • küçül / büyü • alarm izni / bildirim izni\n• tam ekranda gizlenme / tam ekranda gizlen\n• su hatırlatıcısını aç • Gemini bağla"
 
     private fun clipboardText(): String = runCatching {
         (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.takeIf { it.itemCount > 0 }
@@ -1146,7 +1150,18 @@ class ObiOverlayService : Service() {
             }
             t.contains("sesini dene") || t.contains("sesini duy") -> {
                 runCatching { startForegroundService(Intent(this, ObiVoiceAlertService::class.java).setAction(ObiVoiceAlertService.ACTION_PREVIEW)) }
-                say("Obi, Obi! ♪", WordSiegeMascotAction.DANCE); return
+                say("Sesimi hazırlıyorum… ♪ (ilk seferde birkaç saniye sürebilir)", WordSiegeMascotAction.DANCE); return
+            }
+            t.contains("sesini değiştir") || t.contains("sesini degistir") || t.contains("başka ses") || t.contains("baska ses") -> {
+                val name = ObiGeminiVoice(this).nextVoice()
+                runCatching { startForegroundService(Intent(this, ObiVoiceAlertService::class.java).setAction(ObiVoiceAlertService.ACTION_PREVIEW)) }
+                say("Yeni sesim: $name. Dinle bakalım! (Beğenmezsen yine ‘sesini değiştir’ yaz.)", WordSiegeMascotAction.GIGGLE); return
+            }
+            t.contains("ses durumu") || t.contains("sesin neden") -> { say(ObiGeminiVoice(this).lastStatus()); return }
+            t.contains("telefon sesi") -> {
+                val on = !t.contains("kapat")
+                localPrefs.edit().putBoolean("phone_voice", on).apply()
+                say(if (on) "Gemini sesi alınamazsa telefonun kendi sesiyle okuyacağım." else "Telefonun sesini kullanmayacağım; Gemini sesi yoksa sadece bildirim gelir."); return
             }
             t.startsWith("ruh halim") || t.startsWith("bugün ") && ObiLife.moodScore(t.removePrefix("bugün ")) != null && t.split(" ").size <= 3 -> {
                 ObiLife.moodScore(t)?.let { say(store.logMood(it)); return }

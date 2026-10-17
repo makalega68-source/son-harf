@@ -29,15 +29,16 @@ class ObiVoiceAlertService : Service() {
     companion object {
         const val ACTION_PREVIEW = "com.obi.local.PREVIEW_VOICE"
         const val ACTION_STOP = "com.obi.local.STOP_VOICE"
+        const val ACTION_STATUS = "com.obi.local.VOICE_STATUS"
         private const val CHANNEL = "obi_voice_alert"
         private const val ID = 1302
         private val TURKISH = Locale("tr", "TR")
 
         /** Voice pitch (1.0 = engine default); Obi talks a little higher and brighter. */
-        fun pitch(context: Context): Float = context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).getFloat("voice_pitch", 1.6f)
+        fun pitch(context: Context): Float = context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).getFloat("voice_pitch2", 1.2f)
 
         fun setPitch(context: Context, value: Float) {
-            context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).edit().putFloat("voice_pitch", value.coerceIn(0.9f, 2.0f)).apply()
+            context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).edit().putFloat("voice_pitch2", value.coerceIn(0.8f, 2.0f)).apply()
         }
     }
 
@@ -86,19 +87,37 @@ class ObiVoiceAlertService : Service() {
             else -> "reminder" to ObiGeminiVoice.FIXED.getValue("reminder")
         }
         val voice = ObiGeminiVoice(this)
-        val phoneVoice = { speak(if (twice) "$phrase … $phrase" else phrase, sound, startId) }
-        if (voice.has(key)) playGemini(voice, key, twice, startId, phoneVoice)
+        val preview = intent?.action == ACTION_PREVIEW
+        // The phone's own Turkish voice sounds poor, so it is only used when the user turns it on;
+        // otherwise a failed Gemini clip leaves just the notification sound.
+        val usePhone = getSharedPreferences("obi_local", MODE_PRIVATE).getBoolean("phone_voice", false)
+        val phoneVoice = {
+            if (preview) report(voice.lastStatus() + if (usePhone) "\nTelefonun sesiyle okuyorum." else "")
+            if (usePhone) speak(if (twice) "$phrase … $phrase" else phrase, sound, startId)
+            else { stopSelfResult(startId); Unit }
+        }
+        if (voice.has(key)) {
+            if (preview) report("Gemini sesi: ${voice.voiceName()}, ton ${String.format(Locale.ROOT, "%.2f", pitch(this))} ♪")
+            playGemini(voice, key, twice, startId, phoneVoice)
+        }
         else if (ObiGemini(this).connected()) Thread {
             // Not made yet (e.g. a new phrase): try now, briefly; otherwise use the phone's voice.
             val ready = runCatching { voice.prepareBlocking(key, line) }.getOrDefault(false)
             handler.post {
                 if (activeStart != startId) return@post
-                if (ready) playGemini(voice, key, twice, startId, phoneVoice) else phoneVoice()
+                if (ready) { if (preview) report(voice.lastStatus()); playGemini(voice, key, twice, startId, phoneVoice) } else phoneVoice()
             }
         }.start()
-        else phoneVoice()
-        handler.postDelayed({ if (activeStart == startId) stopSelfResult(startId) }, 30_000L)
+        else {
+            if (preview) report("Gemini bağlı değil. ‘Gemini bağla’ yazarak bağlayabilirsin.")
+            if (usePhone) phoneVoice() else stopSelfResult(startId)
+        }
+        handler.postDelayed({ if (activeStart == startId) stopSelfResult(startId) }, 75_000L)
         return START_NOT_STICKY
+    }
+
+    private fun report(text: String) {
+        sendBroadcast(Intent(ACTION_STATUS).setPackage(packageName).putExtra("text", text))
     }
 
     private fun playGemini(voice: ObiGeminiVoice, key: String, twice: Boolean, startId: Int, fallback: () -> Unit) {

@@ -23,7 +23,8 @@ import org.json.JSONObject
 internal class ObiGeminiVoice(private val context: Context) {
     companion object {
         private val MODELS = listOf("gemini-2.5-flash-preview-tts", "gemini-2.5-flash-tts", "gemini-2.5-pro-preview-tts")
-        private const val VOICE = "Leda"
+        /** Gemini voices to try with "sesini değiştir"; the user's choice is remembered. */
+        val VOICES = listOf("Leda", "Zephyr", "Aoede", "Kore", "Puck", "Laomedeia", "Achernar")
         private const val DAILY_LIMIT = 40
 
         /** Fixed lines, made once and reused. */
@@ -40,6 +41,21 @@ internal class ObiGeminiVoice(private val context: Context) {
     private val prefs = context.getSharedPreferences("obi_gemini", Context.MODE_PRIVATE)
     private val dir = File(context.filesDir, "voice").apply { mkdirs() }
 
+    fun voiceName(): String = prefs.getString("voice_name", VOICES.first()) ?: VOICES.first()
+
+    /** Switches to the next voice and drops the clips made with the old one. */
+    fun nextVoice(): String {
+        val next = VOICES[(VOICES.indexOf(voiceName()) + 1).mod(VOICES.size)]
+        prefs.edit().putString("voice_name", next).apply()
+        dir.listFiles()?.forEach { it.delete() }
+        return next
+    }
+
+    /** What happened the last time a clip was requested, for "ses durumu". */
+    fun lastStatus(): String = prefs.getString("voice_status", "Henüz ses üretilmedi.") ?: ""
+
+    private fun status(text: String) = prefs.edit().putString("voice_status", text).apply()
+
     fun file(key: String) = File(dir, "$key.pcm")
     fun has(key: String) = file(key).length() > 1000
     fun forget(key: String) { file(key).delete() }
@@ -50,19 +66,35 @@ internal class ObiGeminiVoice(private val context: Context) {
         val apiKey = ObiGemini(context).apiKey() ?: return false
         val today = LocalDate.now().toString()
         val used = if (prefs.getString("voice_day", "") == today) prefs.getInt("voice_used", 0) else 0
-        if (used >= DAILY_LIMIT) return false
+        if (used >= DAILY_LIMIT) { status("Bugünlük ses hakkı doldu ($DAILY_LIMIT)."); return false }
         val preferred = prefs.getString("voice_model", null)
-        for (model in listOfNotNull(preferred) + MODELS.filter { it != preferred }) {
-            val result = runCatching { request(apiKey, model, text) }.getOrNull() ?: continue
-            if (result.first == 404 || result.first == 400) continue
-            val audio = result.second ?: return false
+        val candidates = (listOfNotNull(preferred) + MODELS).distinct().toMutableList()
+        var lastError = "bağlantı kurulamadı"
+        var discovered = false
+        var index = 0
+        while (index < candidates.size) {
+            val model = candidates[index++]
+            val result = runCatching { request(apiKey, model, text) }.getOrElse { lastError = it.javaClass.simpleName; null } ?: continue
+            val audio = result.second
+            if (audio == null) {
+                lastError = "kod ${result.first}${result.third?.let { ": $it" } ?: ""}"
+                // Unknown model: ask Google which text-to-speech models this key can use, once.
+                if ((result.first == 404 || result.first == 400) && !discovered) {
+                    discovered = true
+                    candidates += runCatching { ttsModels(apiKey) }.getOrDefault(emptyList()).filter { it !in candidates }
+                }
+                if (result.first == 429 || result.first == 401 || result.first == 403) break
+                continue
+            }
             prefs.edit().putString("voice_model", model).putString("voice_day", today).putInt("voice_used", used + 1).apply()
             DataOutputStream(file(key).outputStream().buffered()).use { out ->
                 out.writeInt(audio.second)
                 out.write(audio.first)
             }
+            status("Gemini sesi çalışıyor ✓ (ses: ${voiceName()}, model: $model)")
             return true
         }
+        status("Gemini sesi üretilemedi — $lastError")
         return false
     }
 
@@ -75,15 +107,28 @@ internal class ObiGeminiVoice(private val context: Context) {
         Thread { FIXED.forEach { (key, text) -> runCatching { prepareBlocking(key, text) } } }.start()
     }
 
-    /** Returns (status, (pcm bytes, sample rate)). */
-    private fun request(apiKey: String, model: String, text: String): Pair<Int, Pair<ByteArray, Int>?> {
+    /** Model names containing "tts" that this key may call. */
+    private fun ttsModels(apiKey: String): List<String> {
+        val connection = URL("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200").openConnection() as HttpURLConnection
+        try {
+            connection.connectTimeout = 8000; connection.readTimeout = 15000
+            connection.setRequestProperty("x-goog-api-key", apiKey)
+            if (connection.responseCode !in 200..299) return emptyList()
+            val models = JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONArray("models") ?: return emptyList()
+            return (0 until models.length()).mapNotNull { models.optJSONObject(it)?.optString("name")?.removePrefix("models/") }
+                .filter { it.contains("tts") }.sortedBy { if (it.contains("flash")) 0 else 1 }
+        } finally { connection.disconnect() }
+    }
+
+    /** Returns (status, (pcm bytes, sample rate), error message). */
+    private fun request(apiKey: String, model: String, text: String): Triple<Int, Pair<ByteArray, Int>?, String?> {
         val body = JSONObject()
             .put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text",
-                "Minik, tatlı, neşeli ve sevimli bir sesle, akıcı ve doğal Türkçe telaffuzla söyle: $text")))))
+                "Say in a cute, cheerful, bright little voice, with natural native Turkish pronunciation: $text")))))
             .put("generationConfig", JSONObject()
                 .put("responseModalities", JSONArray().put("AUDIO"))
                 .put("speechConfig", JSONObject().put("voiceConfig", JSONObject()
-                    .put("prebuiltVoiceConfig", JSONObject().put("voiceName", VOICE)))))
+                    .put("prebuiltVoiceConfig", JSONObject().put("voiceName", voiceName())))))
         val connection = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent").openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "POST"
@@ -94,15 +139,20 @@ internal class ObiGeminiVoice(private val context: Context) {
             connection.setRequestProperty("x-goog-api-key", apiKey)
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val status = connection.responseCode
-            if (status !in 200..299) return status to null
+            if (status !in 200..299) {
+                val message = runCatching {
+                    JSONObject(connection.errorStream.bufferedReader().use { it.readText() }).optJSONObject("error")?.optString("message")
+                }.getOrNull()?.take(120)
+                return Triple(status, null, message)
+            }
             val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
             val parts = root.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts")
             for (i in 0 until parts.length()) {
                 val inline = parts.getJSONObject(i).optJSONObject("inlineData") ?: continue
                 val rate = Regex("rate=(\\d+)").find(inline.optString("mimeType"))?.groupValues?.get(1)?.toIntOrNull() ?: 24000
-                return status to (Base64.decode(inline.getString("data"), Base64.DEFAULT) to rate)
+                return Triple(status, Base64.decode(inline.getString("data"), Base64.DEFAULT) to rate, null)
             }
-            return status to null
+            return Triple(status, null, "yanıtta ses yok")
         } finally { connection.disconnect() }
     }
 
