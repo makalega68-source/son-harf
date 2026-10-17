@@ -56,11 +56,11 @@ class ObiVoiceAlertService : Service() {
         val text = intent?.getStringExtra("text")?.takeIf { it.isNotBlank() && !it.startsWith("Obi alarmı") }
         val morning = Calendar.getInstance().get(Calendar.HOUR_OF_DAY) in 5..11
         val (phrase, sound) = when {
-            intent?.action == ACTION_PREVIEW -> "Merhaba! Ben Obi. Sesim böyle, beğendin mi?" to R.raw.obi_preview
-            kind == "alarm" && morning -> "Günaydın! Sabah oldu, hadi uyan bakalım. Yeni bir gün seni bekliyor!" to R.raw.obi_morning
-            kind == "alarm" -> "Alarm zamanı geldi! Hadi bakalım, kalkıyoruz!" to R.raw.obi_alarm
-            text != null -> "Hatırlatma var: ${text.trimEnd('.', '!')}." to R.raw.obi_reminder
-            else -> "Hatırlatma zamanı geldi!" to R.raw.obi_reminder
+            intent?.action == ACTION_PREVIEW -> "Merhaba! Ben Obi. Sesim böyle, beğendin mi?" to 0
+            kind == "alarm" && morning -> "Günaydın! Sabah oldu, hadi uyan bakalım. Yeni bir gün seni bekliyor!" to 0
+            kind == "alarm" -> "Alarm zamanı geldi! Hadi bakalım, kalkıyoruz!" to 0
+            text != null -> "Hatırlatma var: ${text.trimEnd('.', '!')}." to 0
+            else -> "Hatırlatma zamanı geldi!" to 0
         }
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Obi sesli uyarı", NotificationManager.IMPORTANCE_LOW))
@@ -177,21 +177,15 @@ class ObiVoiceAlertService : Service() {
             .firstOrNull()
     }.getOrNull()
 
+    /**
+     * The old English-accented recordings are gone: when no Gemini clip could be made, the alert
+     * stays a normal notification (with its sound) and the reason is kept for "ses durumu".
+     */
+    @Suppress("UNUSED_PARAMETER")
     private fun playRecording(sound: Int, startId: Int) {
-        stopSound()
-        val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
-        runCatching {
-            MediaPlayer.create(this, sound, attributes, 0)?.also { media ->
-                player = media
-                media.setOnCompletionListener { if (activeStart == startId) stopSelfResult(startId) }
-                media.setOnErrorListener { _, _, _ ->
-                    if (activeStart == startId) stopSelfResult(startId)
-                    true
-                }
-                media.start()
-            } ?: stopSelfResult(startId)
-        }.onFailure { stopSelfResult(startId) }
+        getSharedPreferences("obi_gemini", MODE_PRIVATE).edit()
+            .putString("voice_status", "Son uyarı Gemini sesi olmadan geldi. " + ObiGeminiVoice(this).lastStatus()).apply()
+        stopSelfResult(startId)
     }
 
     private fun stopSound() {

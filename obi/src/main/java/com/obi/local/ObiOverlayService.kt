@@ -1266,7 +1266,14 @@ class ObiOverlayService : Service() {
                 runCatching { startForegroundService(Intent(this, ObiVoiceAlertService::class.java).setAction(ObiVoiceAlertService.ACTION_PREVIEW)) }
                 say("Yeni sesim: $name. Dinle bakalım! (Beğenmezsen yine ‘sesini değiştir’ yaz.)", WordSiegeMascotAction.GIGGLE); return
             }
-            t.contains("ses durumu") || t.contains("sesin neden") -> { say(ObiGeminiVoice(this).lastStatus()); return }
+            t.contains("ses durumu") || t.contains("sesin neden") -> {
+                val voice = ObiGeminiVoice(this)
+                val ready = ObiGeminiVoice.FIXED.keys.count { voice.has(it) }
+                say("${voice.lastStatus()}\nHazır sesler: $ready/${ObiGeminiVoice.FIXED.size} (ses: ${voice.voiceName()})" +
+                    if (ready < ObiGeminiVoice.FIXED.size) "\nEksikleri şimdi hazırlıyorum." else "")
+                if (ready < ObiGeminiVoice.FIXED.size) voice.prepareFixed()
+                return
+            }
             t.contains("telefon sesi") -> {
                 val on = !t.contains("kapat")
                 localPrefs.edit().putBoolean("phone_voice", on).apply()

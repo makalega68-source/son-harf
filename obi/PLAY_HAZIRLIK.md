@@ -11,5 +11,4 @@ Play Console'da yapılması gerekenler (kodla yapılamaz):
 3. **Ekran üstü gösterme (SYSTEM_ALERT_WINDOW):** Mağaza açıklamasında Obi'nin neden diğer uygulamaların üzerinde durduğunu açıkça yaz.
 4. **Kesin alarm (SCHEDULE_EXACT_ALARM):** Kullanıcının kurduğu alarmlar için kullanılıyor; beyan formunda "kullanıcının ayarladığı alarm/hatırlatma" seçeneği.
 5. **Veri güvenliği formu:** Toplanan veri yok; Gemini kullanılırsa mesajlar kullanıcı isteğiyle Google'a iletilir (üçüncü taraf hizmet).
-6. **Ses dosyaları (`res/raw/obi_*.mp3`):** Higgsfield ile üretildi. Ticari kullanım lisansını Higgsfield hesabından doğrula; doğrulanmadan yayınlama.
-7. Uygulama kimliği şu an `com.obi.local`; mağazaya çıkmadan önce kalıcı bir kimlik seç (sonradan değiştirilemez).
+6. Uygulama kimliği şu an `com.obi.local`; mağazaya çıkmadan önce kalıcı bir kimlik seç (sonradan değiştirilemez).
