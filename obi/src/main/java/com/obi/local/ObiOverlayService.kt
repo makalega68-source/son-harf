@@ -315,6 +315,8 @@ class ObiOverlayService : Service() {
             // Opening Obi from its icon, widget or notification always brings it back.
             setUserHidden(false)
             if (intent?.action == ACTION_OPEN_CHAT) handler.post { showPanel(openChat = true) }
+            // Started by the assistant gesture or the quick setting: listen right away.
+            if (intent?.action == ACTION_LISTEN) handler.postDelayed({ startPushToTalk() }, 700L)
             notifyEntry(ACTION_READY)
         } catch (_: RuntimeException) {
             notifyEntry(ACTION_ERROR)
@@ -377,6 +379,7 @@ class ObiOverlayService : Service() {
 
     private var micForeground = false
     private var voicePending = false
+    private val phone by lazy { ObiPhone(this) { hidePanel() } }
 
     private val listener by lazy {
         ObiListener(this,
@@ -1051,6 +1054,8 @@ class ObiOverlayService : Service() {
     }
 
     private val helpText = "Bana yazman yeterli, örneğin:\n" +
+        "• YouTube aç / WhatsApp aç / kamerayı aç / feneri aç\n• ekran ışığını kıs / sesi kıs / wifi aç / ayarları aç\n" +
+        "• ekranı kilitle / ekran görüntüsü al • youtube'da tarkan aç / sezen aksu çal\n" +
         "• listeye süt ekmek ekle / listem\n• not al: faturayı öde / notlarım\n" +
         "• her gün 21'de ilacımı hatırlat / 10 dakika sonra alarm kur / alarmlarım\n" +
         "• Arnavutköy'de hava nasıl / şehrim İzmir\n• market 250 TL / harcamalarım\n" +
@@ -1179,8 +1184,28 @@ class ObiOverlayService : Service() {
             "wardrobe" -> say(wardrobeText())
             "mood" -> args.optInt("score").takeIf { it in 1..5 }?.let { say(store.logMood(it)) } ?: return false
             "words_today" -> say(store.handle("bugünün kelimeleri"))
+            "phone" -> {
+                val cmd = ObiPhoneParse.parse(args.optString("command")) ?: return false
+                if (!runPhone(cmd)) say("Bunu telefonda bulamadım 🤔")
+            }
             else -> return false
         }
+        return true
+    }
+
+    /** "YouTube aç", "feneri aç", "ekranı kilitle"…; false when nothing on the phone matched. */
+    private fun runPhone(cmd: PhoneCommand): Boolean {
+        val reply = phone.run(cmd)
+        if (reply == null) {
+            if (cmd !is PhoneCommand.OpenApp) return false
+            val name = ObiPhoneParse.stem(cmd.name)
+            say("‘$name’ adında bir uygulama bulamadım 🤔 Telefonda nasıl yazıyorsa öyle söyler misin?", WordSiegeMascotAction.SHRUG)
+            return true
+        }
+        // A screenshot must not catch Obi's own bubble.
+        if (cmd == PhoneCommand.Global("screenshot") && reply.startsWith("Ekran görüntüsü")) { voicePending = false; lastReply = reply; return true }
+        say(reply, if (cmd is PhoneCommand.Torch || cmd is PhoneCommand.Camera) WordSiegeMascotAction.SPARKLE else WordSiegeMascotAction.NOD)
+        reward(1)
         return true
     }
 
@@ -1316,6 +1341,7 @@ class ObiOverlayService : Service() {
             say("Nasıl oldum? ✨", WordSiegeMascotAction.PROUD_POSE); return
         }
         if (ObiLife.listCommand(t) == ObiLife.ListCommand.Show) { showList(); return }
+        ObiPhoneParse.parse(command)?.let { if (runPhone(it)) return }
 
         val wantsSchedule = (t.contains("hatırlat") || t.contains("hatirlat") || t.contains("alarm kur") || t.contains("uyandır") || t.contains("uyandir")) &&
             !t.contains("su hatırlat") && !t.contains("mola hatırlat") && !ObiLife.isAlarmList(t) && ObiLife.alarmToDelete(t) == null
@@ -1512,6 +1538,7 @@ class ObiOverlayService : Service() {
         runCatching { unregisterReceiver(events) }
         runCatching { unregisterReceiver(phone) }
         handler.removeCallbacksAndMessages(null)
+        runCatching { phone.release() }
         hideBubble()
         hidePanel()
         timerLabel?.let { runCatching { windows.removeView(it) } }

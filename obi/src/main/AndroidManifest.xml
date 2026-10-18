@@ -11,12 +11,19 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <!-- Only to change screen brightness when the user asks Obi to ("ekran ışığını kıs"). -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
     <queries>
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
         <package android:name="com.sonharf.game" />
         <intent><action android:name="android.intent.action.SET_ALARM" /></intent>
         <intent><action android:name="android.intent.action.SET_TIMER" /></intent>
         <intent><action android:name="android.speech.RecognitionService" /></intent>
+        <!-- "YouTube aç", "WhatsApp aç": Obi finds the app by its name on the home screen. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application
@@ -39,6 +46,40 @@
             android:exported="false"
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name=".ObiAssistActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:label="Obi"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name=".ObiTalkTile"
+            android:exported="true"
+            android:icon="@drawable/ic_obi_notification"
+            android:label="Obi konuş"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <service
+            android:name=".ObiAccessibilityService"
+            android:exported="false"
+            android:label="Obi telefon yardımcısı"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/obi_accessibility" />
+        </service>
         <activity
             android:name=".ObiGeminiSetupActivity"
             android:exported="false"

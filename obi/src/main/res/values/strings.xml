@@ -1,3 +1,4 @@
 <resources>
     <string name="obi_widget_description">Obi, sıradaki hatırlatman ve günün kelimesi</string>
+    <string name="obi_accessibility_description">Obi\'ye ‘ekranı kilitle’ ya da ‘ekran görüntüsü al’ dediğinde bunu yapabilmesi için. Obi ekrandaki içerikleri okumaz; yalnızca istediğin sistem işlemini yapar.</string>
 </resources>
