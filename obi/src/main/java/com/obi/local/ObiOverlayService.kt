@@ -427,7 +427,8 @@ class ObiOverlayService : Service() {
     private val listener by lazy {
         ObiListener(this,
             onCommand = { command -> handler.post { handleVoice(command) } },
-            onState = { state -> handler.post { onListenState(state) } })
+            onState = { state -> handler.post { onListenState(state) } },
+            onPartial = { words -> handler.post { if (panel == null) showBubble("🎤 $words…") else replyText?.text = "🎤 $words…" } })
     }
 
     private fun wakeWanted(): Boolean = localPrefs.getBoolean("wake_mode", false)

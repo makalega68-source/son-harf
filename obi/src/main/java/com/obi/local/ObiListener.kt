@@ -28,6 +28,8 @@ internal class ObiListener(
     private val onCommand: (String) -> Unit,
     /** Listening state for the mascot ("listening", "idle", or an error text). */
     private val onState: (String) -> Unit,
+    /** Words heard so far while a command is being spoken, for a live bubble. */
+    private val onPartial: (String) -> Unit = {},
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private var recognizer: SpeechRecognizer? = null
@@ -38,6 +40,13 @@ internal class ObiListener(
     private var lastHeard = ""
     private var lastProblem = ""
     private var sessions = 0
+
+    // A pause in the middle of a sentence ends Android's recognition turn. After a command is
+    // heard Obi listens a little longer; if the user goes on, the new words are added to it.
+    private var pendingCommand: String? = null
+    private var continuing = false
+    private var continuations = 0
+    private var speechBegan = false
 
     /** For "dinleme durumu": what the microphone is doing and what it last heard. */
     fun status(): String = buildString {
@@ -84,12 +93,16 @@ internal class ObiListener(
         val engine = runCatching { SpeechRecognizer.createSpeechRecognizer(context) }.getOrNull() ?: return
         recognizer = engine
         engine.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { if (oneShot || awaitingCommand) onState("listening") }
-            override fun onBeginningOfSpeech() = Unit
+            override fun onReadyForSpeech(params: Bundle?) { if ((oneShot || awaitingCommand) && !continuing) onState("listening") }
+            override fun onBeginningOfSpeech() { speechBegan = true }
             override fun onRmsChanged(rmsdB: Float) = Unit
             override fun onBufferReceived(buffer: ByteArray?) = Unit
             override fun onEndOfSpeech() = Unit
-            override fun onPartialResults(partialResults: Bundle?) = Unit
+            override fun onPartialResults(partialResults: Bundle?) {
+                if (!oneShot && !awaitingCommand && !continuing) return
+                val words = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim().orEmpty()
+                if (words.isNotEmpty()) onPartial(listOfNotNull(pendingCommand, words).joinToString(" "))
+            }
             override fun onEvent(eventType: Int, params: Bundle?) = Unit
 
             override fun onError(error: Int) {
@@ -106,6 +119,8 @@ internal class ObiListener(
                         else -> "konuşma tanıma hatası ($error)"
                     }
                 }
+                // Nothing more was said after a pause: the command is complete.
+                if (continuing) { deliver(); return }
                 val wasOneShot = oneShot
                 oneShot = false
                 if (wasOneShot) {
@@ -121,10 +136,14 @@ internal class ObiListener(
                 // Prefer an alternative that contains the wake word ("hobi" → "Obi").
                 val heard = (all.firstOrNull { wakeWord.containsMatchIn(ObiLife.lower(it)) } ?: all.firstOrNull()).orEmpty().trim()
                 if (heard.isNotBlank()) lastHeard = heard.take(60)
+                if (continuing) {
+                    pendingCommand = listOfNotNull(pendingCommand, heard.takeIf { it.isNotBlank() }).joinToString(" ")
+                    continueOrDeliver()
+                    return
+                }
                 val wasOneShot = oneShot
                 oneShot = false
-                handle(heard, wasOneShot)
-                restartLater()
+                if (!handle(heard, wasOneShot)) restartLater()
             }
         })
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -132,23 +151,56 @@ internal class ObiListener(
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "tr-TR")
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "tr-TR")
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            // Ask for longer pauses before the turn ends (some recognisers ignore these).
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2_500L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2_000L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 3_000L)
             .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
         sessions++
         runCatching { engine.startListening(intent) }.onFailure { onState("idle"); restartLater() }
     }
 
-    private fun handle(heard: String, wasOneShot: Boolean) {
-        if (heard.isBlank()) { if (wasOneShot) { awaitingCommand = false; onState("idle") }; return }
+    /** True when it started listening for the rest of the sentence (so no restart is needed). */
+    private fun handle(heard: String, wasOneShot: Boolean): Boolean {
+        if (heard.isBlank()) { if (wasOneShot) { awaitingCommand = false; onState("idle") }; return false }
         val lower = ObiLife.lower(heard)
         if (wasOneShot || awaitingCommand) {
             awaitingCommand = false
-            onCommand(stripWakeWord(heard))
-            return
+            val command = stripWakeWord(heard)
+            if (command.isBlank()) { onCommand(""); return false }
+            pendingCommand = command
+            continuations = 0
+            continueOrDeliver()
+            return true
         }
         // Wake mode: only sentences addressed to Obi count.
-        val wake = wakeWord.find(lower) ?: return
+        val wake = wakeWord.find(lower) ?: return false
         val rest = stripWakeWord(heard.substring(wake.range.first))
-        if (rest.isBlank()) { awaitingCommand = true; onCommand("") } else onCommand(rest)
+        if (rest.isBlank()) { awaitingCommand = true; onCommand(""); return false }
+        pendingCommand = rest
+        continuations = 0
+        continueOrDeliver()
+        return true
+    }
+
+    /** Listens ~2 more seconds for the rest of the sentence, at most twice; otherwise hands it over. */
+    private fun continueOrDeliver() {
+        if (continuations >= 2) { deliver(); return }
+        continuations++
+        continuing = true
+        speechBegan = false
+        start()
+        handler.postDelayed({ if (continuing && !speechBegan) deliver() }, 2_300L)
+    }
+
+    private fun deliver() {
+        val command = pendingCommand.orEmpty().trim()
+        pendingCommand = null
+        continuing = false
+        stop()
+        if (command.isNotEmpty()) onCommand(command)
+        restartLater()
     }
 
     private fun stripWakeWord(text: String): String =
