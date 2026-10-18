@@ -48,10 +48,20 @@ internal class ObiGeminiVoice(private val context: Context) {
         }
 
         private const val MAX_LINE_CLIPS = 80
+        private const val CLIP_VERSION = 3
     }
 
     private val prefs = context.getSharedPreferences("obi_gemini", Context.MODE_PRIVATE)
     private val dir = File(context.filesDir, "voice").apply { mkdirs() }
+
+    init {
+        // Clips up to v2 were asked for with an English style note, which newer voice models read
+        // aloud before the sentence; they are made again with the sentence alone.
+        if (prefs.getInt("clip_version", 0) < CLIP_VERSION) {
+            dir.listFiles()?.forEach { it.delete() }
+            prefs.edit().putInt("clip_version", CLIP_VERSION).apply()
+        }
+    }
 
     fun voiceName(): String = prefs.getString("voice_name", VOICES.first()) ?: VOICES.first()
 
@@ -221,8 +231,7 @@ internal class ObiGeminiVoice(private val context: Context) {
     /** Returns (status, (pcm bytes, sample rate), error message). */
     private fun request(apiKey: String, model: String, text: String): Triple<Int, Pair<ByteArray, Int>?, String?> {
         val body = JSONObject()
-            .put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text",
-                "Say in a cute, cheerful, bright little voice, with natural native Turkish pronunciation: $text")))))
+            .put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text", text)))))
             .put("generationConfig", JSONObject()
                 .put("responseModalities", JSONArray().put("AUDIO"))
                 .put("speechConfig", JSONObject().put("voiceConfig", JSONObject()
