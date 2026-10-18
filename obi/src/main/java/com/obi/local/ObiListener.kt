@@ -18,6 +18,10 @@ import android.speech.SpeechRecognizer
  * - [startWakeMode]: keeps listening; a sentence that starts with (or contains) "Obi" is a command.
  *   This keeps the microphone in use, so Android shows its microphone dot and it costs battery.
  */
+/** How the recogniser may write "Obi" in Turkish: "Obi", "obiş", "hobi", "o bi", "opi"… */
+private const val WAKE = "obi|obiş|obicim|obiciğim|ubi|obii|obby|obie|hobi|o bi|opi|ovi|oby"
+private val wakeWord = Regex("(?<!\\p{L})(?:$WAKE)(?!\\p{L})")
+
 internal class ObiListener(
     private val context: Context,
     /** A command heard, without the wake word; empty when only "Obi" was said. */
@@ -31,6 +35,18 @@ internal class ObiListener(
     private var oneShot = false
     private var awaitingCommand = false
     private var consecutiveErrors = 0
+    private var lastHeard = ""
+    private var lastProblem = ""
+    private var sessions = 0
+
+    /** For "dinleme durumu": what the microphone is doing and what it last heard. */
+    fun status(): String = buildString {
+        append(if (wakeMode) "‘Obi’ diye seslenmeni dinliyorum ✓" else "Sürekli dinleme kapalı (açmak için ‘beni dinle’).")
+        append("\nMikrofon izni: ${if (hasPermission()) "var" else "yok"} • Konuşma tanıma: ${if (available()) "var" else "yok"}")
+        if (sessions > 0) append("\nDinleme turu: $sessions")
+        if (lastHeard.isNotBlank()) append("\nSon duyduğum: “$lastHeard”")
+        if (lastProblem.isNotBlank()) append("\nSon sorun: $lastProblem")
+    }
 
     val isWakeMode: Boolean get() = wakeMode
 
@@ -77,7 +93,19 @@ internal class ObiListener(
             override fun onEvent(eventType: Int, params: Bundle?) = Unit
 
             override fun onError(error: Int) {
-                consecutiveErrors++
+                // Silence is not a fault: in a quiet room each turn ends with "no speech", and it must
+                // not slow down listening. Only real faults (network, busy, permission) back off.
+                val silence = error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                if (!silence) {
+                    consecutiveErrors++
+                    lastProblem = when (error) {
+                        SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "internet yok ya da yavaş"
+                        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "mikrofon izni yok"
+                        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "mikrofon başka bir uygulamada"
+                        SpeechRecognizer.ERROR_AUDIO -> "mikrofon açılamadı"
+                        else -> "konuşma tanıma hatası ($error)"
+                    }
+                }
                 val wasOneShot = oneShot
                 oneShot = false
                 if (wasOneShot) {
@@ -89,7 +117,10 @@ internal class ObiListener(
 
             override fun onResults(results: Bundle?) {
                 consecutiveErrors = 0
-                val heard = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty().trim()
+                val all = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
+                // Prefer an alternative that contains the wake word ("hobi" → "Obi").
+                val heard = (all.firstOrNull { wakeWord.containsMatchIn(ObiLife.lower(it)) } ?: all.firstOrNull()).orEmpty().trim()
+                if (heard.isNotBlank()) lastHeard = heard.take(60)
                 val wasOneShot = oneShot
                 oneShot = false
                 handle(heard, wasOneShot)
@@ -100,8 +131,9 @@ internal class ObiListener(
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "tr-TR")
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "tr-TR")
-            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+        sessions++
         runCatching { engine.startListening(intent) }.onFailure { onState("idle"); restartLater() }
     }
 
@@ -114,13 +146,13 @@ internal class ObiListener(
             return
         }
         // Wake mode: only sentences addressed to Obi count.
-        val wake = Regex("(?<!\\p{L})(?:obi|obiş|obicim|ubi|obii)(?!\\p{L})").find(lower) ?: return
+        val wake = wakeWord.find(lower) ?: return
         val rest = stripWakeWord(heard.substring(wake.range.first))
         if (rest.isBlank()) { awaitingCommand = true; onCommand("") } else onCommand(rest)
     }
 
     private fun stripWakeWord(text: String): String =
-        text.replace(Regex("(?i)^\\s*(?:hey\\s+|hadi\\s+)?(?:obi|obiş|obicim|ubi|obii)[,!.\\s]*"), "").trim()
+        text.replace(Regex("(?i)^\\s*(?:hey\\s+|hadi\\s+)?(?:$WAKE)[,!.\\s]*"), "").trim()
 
     private fun restartLater() {
         if (!wakeMode && !awaitingCommand) { stop(); return }

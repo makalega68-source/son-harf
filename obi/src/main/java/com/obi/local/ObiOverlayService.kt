@@ -386,8 +386,11 @@ class ObiOverlayService : Service() {
         val notification = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_obi_notification)
             .setContentTitle(if (userHidden) "Obi saklanıyor" else "Obi ekranında")
-            .setContentText(if (userHidden) "Göstermek için ‘Obi'yi göster’e dokun. Alarmlar yine çalışır."
-                else "Dokun: söz • Çift dokun: sohbet • Aşağıdaki ‘Gizle’ye sürükle: sakla")
+            .setContentText(when {
+                wakeWanted() -> "🎤 ‘Obi’ diye seslenebilirsin • Kapatmak için ‘dinlemeyi kapat’"
+                userHidden -> "Göstermek için ‘Obi'yi göster’e dokun. Alarmlar yine çalışır."
+                else -> "Dokun: söz • Çift dokun: sohbet • Aşağıdaki ‘Gizle’ye sürükle: sakla"
+            })
             .setContentIntent(open)
             .addAction(Notification.Action.Builder(null, if (userHidden) "Obi'yi göster" else "Gizle", toggle).build())
             .addAction(Notification.Action.Builder(null, "🎤 Konuş", PendingIntent.getService(
@@ -460,6 +463,10 @@ class ObiOverlayService : Service() {
         }
         voicePending = true
         submit(command)
+        if (!wakeWanted() && !localPrefs.getBoolean("wake_tip_shown", false)) {
+            localPrefs.edit().putBoolean("wake_tip_shown", true).apply()
+            handler.postDelayed({ showBubble("İpucu: ‘beni dinle’ dersen beni basılı tutmadan sadece ‘Obi, …’ diye seslenebilirsin 🎤") }, 6_000L)
+        }
     }
 
     /** Plays one of Obi's ready-made Gemini lines through the overlay itself (no extra service). */
@@ -472,8 +479,8 @@ class ObiOverlayService : Service() {
     private fun setWakeMode(on: Boolean): String {
         if (on && !listener.hasPermission()) { localPrefs.edit().putBoolean("wake_mode", true).apply(); askMicPermission(); return "Mikrofon iznini verince seni dinlemeye başlayacağım 🎤" }
         localPrefs.edit().putBoolean("wake_mode", on).apply()
+        runCatching { startForegroundNotification() }
         return if (on) {
-            if (!micForeground) runCatching { startForegroundNotification() }
             listener.startWakeMode()
             "Tamam! ‘Obi’ diye başlayan cümleleri dinliyorum: ‘Obi, sabah 11'e alarm kur’. 🎤\nMikrofon açık kaldığı için telefonda mikrofon işareti görünür ve pil biraz daha çabuk biter. Kapatmak için ‘dinlemeyi kapat’."
         } else {
@@ -1574,6 +1581,7 @@ class ObiOverlayService : Service() {
                 val count = if (on) ObiCalendar.remindToday(this) else 0
                 say(if (on) "Takvimindeki toplantılardan 10 dakika önce haber vereceğim ⏰" + (if (count > 0) " Bugün için $count hatırlatma kurdum." else "") else "Toplantı hatırlatmalarını kapattım."); return
             }
+            t.contains("dinleme durumu") || t.contains("beni duyuyor musun") || t.contains("neden duymuyorsun") -> { say(listener.status()); return }
             t.contains("dinlemeyi kapat") || t.contains("sesli komut kapat") || t.contains("sesli komutu kapat") || t.contains("beni dinleme") -> { say(setWakeMode(false)); return }
             t.contains("asistan") && (t.contains("yap") || t.contains("ayarla") || t.contains("seç") || t.contains("olsun") || t.contains("nasıl")) -> {
                 hidePanel()
