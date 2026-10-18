@@ -41,6 +41,21 @@ internal enum class WordSiegeMascotEmotion {
     PROUD, SPEAKING, TEARY, BOWED, JUMP,
 }
 
+/** Extra anime faces drawn over a base mood: heart eyes, star eyes, a light bulb idea… */
+internal enum class ObiFace(val base: WordSiegeMascotEmotion) {
+    HEART_EYES(WordSiegeMascotEmotion.HAPPY),
+    STAR_EYES(WordSiegeMascotEmotion.EXCITED),
+    DIZZY(WordSiegeMascotEmotion.SURPRISED),
+    CONFUSED(WordSiegeMascotEmotion.FOCUS),
+    IDEA(WordSiegeMascotEmotion.EXCITED),
+    SHOCKED(WordSiegeMascotEmotion.SURPRISED),
+    COOL(WordSiegeMascotEmotion.PROUD),
+    STEAM(WordSiegeMascotEmotion.ANGRY),
+    CRY(WordSiegeMascotEmotion.TEARY),
+    SAD(WordSiegeMascotEmotion.SAD),
+    LAUGH(WordSiegeMascotEmotion.LAUGH),
+}
+
 /** Whole-body moves; existing names remain compatible with the companion brain. */
 internal enum class WordSiegeMascotAction {
     HOP, DANCE, STRETCH, LOOK_AROUND, NOD, SPARKLE, CHEER, LAND, SHRUG, PEEK, FLINCH, YAWN,
@@ -740,6 +755,29 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
 
     private var jellyAt = 0L
 
+    private var extraFace: ObiFace? = null
+    private var faceStartedAt = 0L
+    private var faceUntil = 0L
+
+    /** Shows [next] for [millis]: its base mood owns the face and its marks are drawn on top. */
+    fun express(next: ObiFace, millis: Long = 3_400L) {
+        val now = SystemClock.uptimeMillis()
+        extraFace = next
+        faceStartedAt = now
+        faceUntil = now + millis
+        reaction = next.base
+        reactionStartedAt = now
+        reactionUntil = now + millis
+        if (next.base.hasBodyMotion()) startMotion(next.base, now)
+        when (next) {
+            ObiFace.HEART_EYES -> heartsStartedAt = now + 300L
+            ObiFace.STAR_EYES, ObiFace.COOL -> sparklesStartedAt = now
+            else -> Unit
+        }
+        markActive(now)
+        invalidate()
+    }
+
     fun reactToTap() {
         val now = SystemClock.uptimeMillis()
         jellyAt = now
@@ -1207,6 +1245,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         if (skin == WordSiegeMascotSkin.PINK) drawGirlLashes(canvas, RIGHT_EYE_X, EYE_Y, 122f, 126f, lid, 1f)
         val king = skin == WordSiegeMascotSkin.GOLD_KING
         if (!king) drawAnimeEyes(canvas, now, mood, lid, gazeX + tremor, gazeY)
+        drawFaceEyes(canvas, now)
 
         val browY = poseValue[P_BROW_Y] - lid * 6f - yawn * 22f - shrug * 26f
         val browTilt = Math.toDegrees(poseValue[P_BROW_TILT].toDouble()).toFloat()
@@ -1277,6 +1316,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
         if (sleeping) drawSleepZ(canvas, now)
         drawAnimeMarks(canvas, now, mood)
+        drawFaceMarks(canvas, now)
         drawSparkles(canvas, now)
         drawTwinkles(canvas, now)
         drawHearts(canvas, now)
@@ -1286,7 +1326,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             // Full-rate reactions; quiet, small companions need half as many draw passes.
             // This clock belongs to the View and never recomposes the game board.
             // Idle breathing and blinking are slow, so an idle companion draws far less often.
-            val reacting = now < actionUntil || now < motionUntil || flying || speaking
+            val reacting = now < actionUntil || now < motionUntil || flying || speaking || now < faceUntil
             when {
                 reacting -> postInvalidateOnAnimation()
                 sleeping -> postInvalidateDelayed(80L)
@@ -1971,6 +2011,147 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             animePaint.alpha = 255
             detailPaint.alpha = 255
         }
+    }
+
+    // ---- Extra faces (ObiFace) ---------------------------------------------------------------------
+
+    private val markText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        textSize = 190f
+    }
+
+    private fun faceAlpha(now: Long): Float =
+        min((now - faceStartedAt) / 220f, (faceUntil - now) / 320f).coerceIn(0f, 1f)
+
+    private fun heartPath(x: Float, y: Float, r: Float) {
+        path.rewind()
+        path.moveTo(x, y + r)
+        path.cubicTo(x - r * 2f, y - r * .1f, x - r, y - r * 1.5f, x, y - r * .38f)
+        path.cubicTo(x + r, y - r * 1.5f, x + r * 2f, y - r * .1f, x, y + r)
+        path.close()
+    }
+
+    /** Over the eyes, inside the face: hearts, stars, spirals, tiny shocked pupils or sunglasses. */
+    private fun drawFaceEyes(canvas: Canvas, now: Long) {
+        val current = extraFace?.takeIf { now < faceUntil } ?: return
+        val a = faceAlpha(now)
+        val alpha = (255f * a).toInt()
+        val pulse = 1f + .09f * sin(now / 140f)
+        val eyes = floatArrayOf(LEFT_EYE_X, RIGHT_EYE_X)
+        when (current) {
+            ObiFace.HEART_EYES -> for (cx in eyes) {
+                heartPath(cx, EYE_Y + 18f, 72f * pulse)
+                detailPaint.color = 0xFFFF3F7F.toInt(); detailPaint.alpha = alpha
+                canvas.drawPath(path, detailPaint)
+                detailPaint.color = 0xFFFFFFFF.toInt(); detailPaint.alpha = (200f * a).toInt()
+                canvas.drawCircle(cx - 42f, EYE_Y - 30f, 18f, detailPaint)
+            }
+            ObiFace.STAR_EYES -> for (cx in eyes) {
+                val spin = 1f + .14f * sin(now / 110f + cx)
+                drawStar(canvas, cx, EYE_Y, 128f * spin, 0xFFFFD447.toInt(), alpha)
+                drawStar(canvas, cx, EYE_Y, 58f * spin, 0xFFFFFFFF.toInt(), (230f * a).toInt())
+            }
+            ObiFace.DIZZY -> for (cx in eyes) {
+                detailPaint.color = 0xFFFFFFFF.toInt(); detailPaint.alpha = alpha
+                canvas.drawCircle(cx, EYE_Y, 104f, detailPaint)
+                animePaint.color = 0xFF3A2C6E.toInt(); animePaint.strokeWidth = 11f; animePaint.alpha = alpha
+                path.rewind()
+                val turn = now / 260f * (if (cx == LEFT_EYE_X) 1f else -1f)
+                for (i in 0..56) {
+                    val th = i / 56f * 4.2f * PI.toFloat()
+                    val r = 8f + i * 1.55f
+                    val x = cx + cos(th + turn) * r
+                    val y = EYE_Y + sin(th + turn) * r
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+                canvas.drawPath(path, animePaint)
+            }
+            ObiFace.SHOCKED -> for (cx in eyes) {
+                detailPaint.color = 0xFFFFFFFF.toInt(); detailPaint.alpha = alpha
+                canvas.drawCircle(cx, EYE_Y, 108f, detailPaint)
+                detailPaint.color = 0xFF1B1530.toInt(); detailPaint.alpha = alpha
+                canvas.drawCircle(cx + 6f * sin(now / 40f), EYE_Y + 6f, 24f, detailPaint)
+            }
+            ObiFace.COOL -> {
+                detailPaint.color = 0xFF131726.toInt(); detailPaint.alpha = (245f * a).toInt()
+                for (cx in eyes) {
+                    ovalRect.set(cx - 150f, EYE_Y - 92f, cx + 150f, EYE_Y + 96f)
+                    canvas.drawRoundRect(ovalRect, 70f, 80f, detailPaint)
+                }
+                animePaint.color = 0xFF131726.toInt(); animePaint.strokeWidth = 26f; animePaint.alpha = (245f * a).toInt()
+                canvas.drawLine(LEFT_EYE_X + 140f, EYE_Y - 50f, RIGHT_EYE_X - 140f, EYE_Y - 50f, animePaint)
+                // A glint sweeps across the lenses.
+                val sweep = ((now - faceStartedAt) % 1_600L) / 1_600f
+                animePaint.color = 0xFFFFFFFF.toInt(); animePaint.strokeWidth = 16f; animePaint.alpha = (150f * a * sin(sweep * PI.toFloat())).toInt()
+                for (cx in eyes) {
+                    val gx = cx - 120f + sweep * 240f
+                    canvas.drawLine(gx - 30f, EYE_Y + 50f, gx + 30f, EYE_Y - 50f, animePaint)
+                }
+            }
+            else -> Unit
+        }
+        detailPaint.alpha = 255
+        animePaint.alpha = 255
+    }
+
+    /** Around the head: "?", "!", a light bulb, orbiting dizzy stars or puffs of steam. */
+    private fun drawFaceMarks(canvas: Canvas, now: Long) {
+        val current = extraFace?.takeIf { now < faceUntil } ?: return
+        val a = faceAlpha(now)
+        val age = now - faceStartedAt
+        val markX = ORB_CX + 360f
+        val markY = 250f
+        when (current) {
+            ObiFace.CONFUSED -> for (i in 0 until 2) {
+                val bob = sin(now / 260f + i * 1.7f) * 16f
+                markText.color = if (i == 0) 0xFF8F7CFF.toInt() else 0xFFB7A9FF.toInt()
+                markText.alpha = (255f * a).toInt()
+                markText.textSize = if (i == 0) 190f else 120f
+                canvas.save()
+                canvas.rotate(if (i == 0) 12f else -10f, markX, markY)
+                canvas.drawText("?", markX + i * 120f, markY + bob - i * 90f, markText)
+                canvas.restore()
+            }
+            ObiFace.SHOCKED -> {
+                markText.color = 0xFFFF6A3D.toInt(); markText.alpha = (255f * a).toInt(); markText.textSize = 210f
+                val shake = sin(now / 30f) * 8f
+                canvas.drawText("!", markX + shake, markY, markText)
+            }
+            ObiFace.IDEA -> {
+                val bx = ORB_CX + 330f
+                val by = 170f - easeOut(min(1f, age / 400f)) * 30f
+                detailPaint.color = 0xFFFFE15C.toInt(); detailPaint.alpha = (90f * a).toInt()
+                canvas.drawCircle(bx, by, 120f + 10f * sin(now / 160f), detailPaint)
+                animePaint.color = 0xFFFFD53D.toInt(); animePaint.strokeWidth = 12f; animePaint.alpha = (255f * a).toInt()
+                for (i in 0 until 8) {
+                    val th = i / 8f * 2f * PI.toFloat() + now / 900f
+                    canvas.drawLine(bx + cos(th) * 100f, by + sin(th) * 100f, bx + cos(th) * 140f, by + sin(th) * 140f, animePaint)
+                }
+                detailPaint.color = 0xFFFFF3A6.toInt(); detailPaint.alpha = (255f * a).toInt()
+                canvas.drawCircle(bx, by, 64f, detailPaint)
+                detailPaint.color = 0xFFB9BDCB.toInt()
+                ovalRect.set(bx - 30f, by + 52f, bx + 30f, by + 100f)
+                canvas.drawRoundRect(ovalRect, 10f, 10f, detailPaint)
+            }
+            ObiFace.DIZZY -> for (i in 0 until 3) {
+                val th = now / 380f + i * 2f * PI.toFloat() / 3f
+                drawStar(canvas, ORB_CX + cos(th) * 300f, 230f + sin(th) * 60f, 36f, 0xFFFFE08A.toInt(), (255f * a).toInt())
+            }
+            ObiFace.STEAM -> for (side in 0 until 2) {
+                for (i in 0 until 3) {
+                    val p = (((age - i * 240L) % 1_100L) / 1_100f).takeIf { age - i * 240L > 0 } ?: continue
+                    val sx = if (side == 0) -1f else 1f
+                    val x = ORB_CX + sx * (360f + p * 120f)
+                    val y = 300f - p * 160f
+                    detailPaint.color = 0xFFF1F3F8.toInt(); detailPaint.alpha = (210f * a * (1f - p)).toInt()
+                    canvas.drawCircle(x, y, 34f + p * 46f, detailPaint)
+                }
+            }
+            else -> Unit
+        }
+        detailPaint.alpha = 255
+        animePaint.alpha = 255
     }
 
     private fun drawSweat(canvas: Canvas, now: Long) {

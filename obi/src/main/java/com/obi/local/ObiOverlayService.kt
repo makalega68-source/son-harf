@@ -379,7 +379,7 @@ class ObiOverlayService : Service() {
 
     private var micForeground = false
     private var voicePending = false
-    private val phone by lazy { ObiPhone(this) { hidePanel() } }
+    private val phoneActions by lazy { ObiPhone(this) { hidePanel() } }
 
     private val listener by lazy {
         ObiListener(this,
@@ -1195,7 +1195,7 @@ class ObiOverlayService : Service() {
 
     /** "YouTube aç", "feneri aç", "ekranı kilitle"…; false when nothing on the phone matched. */
     private fun runPhone(cmd: PhoneCommand): Boolean {
-        val reply = phone.run(cmd)
+        val reply = phoneActions.run(cmd)
         if (reply == null) {
             if (cmd !is PhoneCommand.OpenApp) return false
             val name = ObiPhoneParse.stem(cmd.name)
@@ -1538,7 +1538,7 @@ class ObiOverlayService : Service() {
         runCatching { unregisterReceiver(events) }
         runCatching { unregisterReceiver(phone) }
         handler.removeCallbacksAndMessages(null)
-        runCatching { phone.release() }
+        runCatching { phoneActions.release() }
         hideBubble()
         hidePanel()
         timerLabel?.let { runCatching { windows.removeView(it) } }
