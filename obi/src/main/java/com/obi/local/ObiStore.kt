@@ -461,7 +461,7 @@ internal class ObiStore(private val context: Context) {
             val voice = ObiGeminiVoice(context)
             if (kind == "alarm") voice.prepareFixed()
             else if (!voice.has("reminder")) voice.prepareFixed()
-            else if (!text.startsWith("Obi ")) voice.prepare("rem_$id", ObiGeminiVoice.reminderLine(text))
+            else if (!text.startsWith("Obi ")) ObiGeminiVoice.reminderLine(text).let { voice.prepare(voice.keyFor(it), it) }
         }
         ObiWidget.refresh(context)
         return id
@@ -490,7 +490,6 @@ internal class ObiStore(private val context: Context) {
     fun cancel(id: Int) {
         val alarm = alarms().firstOrNull { it.id == id }
         if (alarm != null) context.getSystemService(AlarmManager::class.java)?.cancel(pendingFor(id, alarm.text, alarm.kind))
-        ObiGeminiVoice(context).forget("rem_$id")
         forgetAlarm(id)
     }
 

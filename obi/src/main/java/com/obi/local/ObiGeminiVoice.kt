@@ -39,6 +39,15 @@ internal class ObiGeminiVoice(private val context: Context) {
         )
 
         fun reminderLine(text: String) = "Hatırlatma var: ${text.trimEnd('.', '!')}."
+
+        /** Clips are stored by their words (and voice), so the same sentence is never made twice. */
+        fun lineKey(line: String, voice: String): String {
+            val digest = java.security.MessageDigest.getInstance("SHA-1")
+                .digest("$voice|${line.trim().lowercase(java.util.Locale("tr", "TR"))}".toByteArray())
+            return "line_" + digest.take(10).joinToString("") { "%02x".format(it) }
+        }
+
+        private const val MAX_LINE_CLIPS = 80
     }
 
     private val prefs = context.getSharedPreferences("obi_gemini", Context.MODE_PRIVATE)
@@ -58,6 +67,14 @@ internal class ObiGeminiVoice(private val context: Context) {
     fun lastStatus(): String = prefs.getString("voice_status", "Henüz ses üretilmedi.") ?: ""
 
     private fun status(text: String) = prefs.edit().putString("voice_status", text).apply()
+
+    fun keyFor(line: String) = lineKey(line, voiceName())
+
+    /** Keeps the newest sentence clips (fixed lines are never removed). */
+    private fun trim() {
+        val clips = dir.listFiles { f -> f.name.startsWith("line_") }?.sortedByDescending { it.lastModified() } ?: return
+        clips.drop(MAX_LINE_CLIPS).forEach { it.delete() }
+    }
 
     fun file(key: String) = File(dir, "$key.pcm")
     fun has(key: String) = file(key).length() > 1000
@@ -107,6 +124,7 @@ internal class ObiGeminiVoice(private val context: Context) {
                 out.write(audio.first)
             }
             status("Gemini sesi çalışıyor ✓ (ses: ${voiceName()}, model: $model)")
+            trim()
             return true
         }
         status("Gemini sesi üretilemedi — $lastError")

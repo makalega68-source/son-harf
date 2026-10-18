@@ -83,7 +83,7 @@ class ObiVoiceAlertService : Service() {
             intent?.action == ACTION_PREVIEW -> "preview" to ObiGeminiVoice.FIXED.getValue("preview")
             kind == "alarm" && morning -> "alarm_morning" to ObiGeminiVoice.FIXED.getValue("alarm_morning")
             kind == "alarm" -> "alarm" to ObiGeminiVoice.FIXED.getValue("alarm")
-            text != null && id != 0 -> "rem_$id" to ObiGeminiVoice.reminderLine(text)
+            text != null -> ObiGeminiVoice.reminderLine(text).let { ObiGeminiVoice(this).keyFor(it) to it }
             else -> "reminder" to ObiGeminiVoice.FIXED.getValue("reminder")
         }
         val voice = ObiGeminiVoice(this)
@@ -130,9 +130,7 @@ class ObiVoiceAlertService : Service() {
 
     private fun playGemini(voice: ObiGeminiVoice, key: String, twice: Boolean, startId: Int, fallback: () -> Unit) {
         track = voice.play(key, pitch(this), if (twice) 2 else 1) {
-            // A one-off reminder's clip is no longer needed once it has been said.
-            val id = key.removePrefix("rem_").toIntOrNull()
-            if (id != null && ObiStore(this).alarms().none { it.id == id }) voice.forget(key)
+            // Clips stay on the phone, so the same sentence never costs another Gemini request.
             handler.post { if (activeStart == startId) stopSelfResult(startId) }
         }
         if (track == null) fallback()
