@@ -328,6 +328,8 @@ internal fun LaunchSplashFrame() {
  * Compose's setContent then crashes on getChildAt. Fall back to installing a ComposeView directly.
  */
 private fun ComponentActivity.safeSetContent(content: @Composable () -> Unit) {
+    // Phones that force dark mode on apps would recolour the board's letters; the game keeps its own colours.
+    if (android.os.Build.VERSION.SDK_INT >= 29) runCatching { window.decorView.isForceDarkAllowed = false }
     val frame = runCatching { window.decorView.findViewById<ViewGroup?>(android.R.id.content) }.getOrNull()
     if (frame == null) {
         setContentView(ComposeView(this).apply { setContent(content) })

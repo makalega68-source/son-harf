@@ -11,5 +11,7 @@
         <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowSplashScreenBackground">#E6ECF2</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_blank</item>
+        <!-- Keep the game's own colours when the phone forces dark mode on apps (see values-v29). -->
+        <item name="android:forceDarkAllowed">false</item>
     </style>
 </resources>
