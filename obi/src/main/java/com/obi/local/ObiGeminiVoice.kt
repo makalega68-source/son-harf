@@ -27,6 +27,13 @@ internal class ObiGeminiVoice(private val context: Context) {
         val VOICES = listOf("Leda", "Zephyr", "Aoede", "Kore", "Puck", "Laomedeia", "Achernar")
         private const val DAILY_LIMIT = 40
 
+        /** The app's own daily cap on new clips; Google's free allowance applies on top of it. */
+        fun dailyLimit(context: Context): Int =
+            context.getSharedPreferences("obi_gemini", Context.MODE_PRIVATE).getInt("voice_daily_limit", DAILY_LIMIT)
+
+        fun setDailyLimit(context: Context, value: Int) =
+            context.getSharedPreferences("obi_gemini", Context.MODE_PRIVATE).edit().putInt("voice_daily_limit", value).apply()
+
         /** Fixed lines, made once and reused. */
         val FIXED = mapOf(
             // Most needed first, so a small daily allowance goes to what is actually heard.
@@ -47,7 +54,7 @@ internal class ObiGeminiVoice(private val context: Context) {
             return "line_" + digest.take(10).joinToString("") { "%02x".format(it) }
         }
 
-        private const val MAX_LINE_CLIPS = 80
+        private const val MAX_LINE_CLIPS = 150
         private const val CLIP_VERSION = 3
     }
 
@@ -96,7 +103,8 @@ internal class ObiGeminiVoice(private val context: Context) {
         val apiKey = ObiGemini(context).apiKey() ?: return false
         val today = LocalDate.now().toString()
         val used = if (prefs.getString("voice_day", "") == today) prefs.getInt("voice_used", 0) else 0
-        if (used >= DAILY_LIMIT) { status("Bugünlük ses hakkı doldu ($DAILY_LIMIT)."); return false }
+        val limit = dailyLimit(context)
+        if (used >= limit) { status("Bugünlük ses hakkı bitti (Obi'nin günlük sınırı: $limit)."); return false }
         blockedUntil()?.let {
             status("Ücretsiz Gemini ses hakkı bugünlük bitti; ${clock(it)} civarında yenilenecek. Hazır sesler kullanılıyor.")
             return false

@@ -22,6 +22,10 @@ internal sealed class PhoneCommand {
     /** Needs Obi's accessibility helper: lock, screenshot, notifications, recents. */
     data class Global(val action: String) : PhoneCommand()
     object Home : PhoneCommand()
+    /** "annemi ara": [name] is still in the spoken form; [original] is the whole sentence for a web search fallback. */
+    data class Call(val name: String, val original: String) : PhoneCommand()
+    /** "Ali'ye WhatsApp'tan geliyorum yaz"; [app] is "whatsapp", "sms" or null (WhatsApp when installed). */
+    data class Message(val name: String, val text: String, val app: String?) : PhoneCommand()
 }
 
 /** How a spoken app name is found on the phone. */
@@ -58,7 +62,7 @@ internal object ObiPhoneParse {
         val t = lower(raw).trimEnd('.', '!', '?').replace(Regex("\\s+"), " ")
         if (t.isEmpty()) return null
         // A reminder or a note about something ("yarın feneri aç diye hatırlat") is not the action itself.
-        if (has(t, "hatırlat", "hatirlat", "alarm kur", " diye", "not al", "not et", "anımsat")) return null
+        if (has(t, "hatırlat", "hatirlat", "alarm kur", "not al", "not et", "anımsat")) return null
 
         if (word(t, "kilitle|kilitler misin|kilitleyebilir misin") || has(t, "tuş kilidi", "tus kilidi", "ekran kilidi")) {
             if (!has(t, "kilidi aç", "kilidini aç", "kilidi ac")) return PhoneCommand.Global("lock")
@@ -124,6 +128,12 @@ internal object ObiPhoneParse {
             if (q.isNotEmpty() && !has(q, "alarm", "zil", "oyun")) return PhoneCommand.PlayMusic(q)
         }
 
+        call.find(t)?.let { m ->
+            val name = m.groupValues[1].trim()
+            if (name.split(' ').size <= 3 && notOwnTarget(name)) return PhoneCommand.Call(name, t)
+        }
+        message(t)?.let { return it }
+
         openAtEnd.find(t)?.let { m ->
             val name = m.groupValues[1].trim().removePrefix("hey ").trim()
             if (name.split(' ').size > 3) return null
@@ -131,6 +141,46 @@ internal object ObiPhoneParse {
             return PhoneCommand.OpenApp(name)
         }
         return null
+    }
+
+    private val call = Regex("^(.{2,30}?)\\s+(?:ara|arar m[ıi]s[ıi]n|arayabilir mis[ıi]n|arasana|telefonla ara|ile görüş)$")
+    private val via = "(?:whatsapp|vatsap|watsap|wp|sms|mesaj)(?:['’]?(?:tan|dan|ten|den|la|le))?(?:\\s+ile)?"
+    private val messageEnd = Regex("^(.{2,30}?)['’]?(?:y?[ae])\\s+(?:($via)\\s+)?[\"“']?(.{1,200}?)[\"”']?\\s+(?:diye\\s+)?(?:yaz|yazar m[ıi]s[ıi]n|mesaj at|mesaj gönder|mesaj yolla|gönder|yolla|at)$")
+    private val messageStart = Regex("^(.{2,30}?)['’]?(?:y?[ae])\\s+(?:($via)\\s+)?(?:mesaj at|mesaj gönder|mesaj yolla|yaz)\\s*[:,]?\\s+[\"“']?(.{1,200}?)[\"”']?$")
+    private val notTargets = listOf("liste", "not", "deftere", "alarm", "takvim", "ajanda", "panoya", "google", "internet", "youtube", "obi", "kendime", "buraya", "oraya", "bana")
+
+    private fun notOwnTarget(name: String) = notTargets.none { name.startsWith(it) } && ownWords.none { name.startsWith(it) }
+
+    private fun message(t: String): PhoneCommand.Message? {
+        val m = messageStart.find(t) ?: messageEnd.find(t) ?: return null
+        val name = m.groupValues[1].trim()
+        val text = m.groupValues[3].trim().removeSuffix(" diye").trim(' ', '"', '“', '”', '\'')
+        if (text.isEmpty() || name.split(' ').size > 3 || !notOwnTarget(name)) return null
+        val app = m.groupValues[2].let { when { it.startsWith("sms") || it.startsWith("mesaj") -> "sms"; it.isEmpty() -> null; else -> "whatsapp" } }
+        return PhoneCommand.Message(name, text, app)
+    }
+
+    /** Spoken name → names to look for in the contacts: "annemi" → annem, anne; "Ali'ye" → ali. */
+    fun contactCandidates(spoken: String): List<String> {
+        val n = lower(spoken).replace('’', '\'')
+        val base = if (n.contains('\'')) n.substringBefore('\'') else
+            n.replace(Regex("(?:y[ıiuü]|y[ae]|n[ıiuü]|n[ae]|[ıiuü]|[ae])$"), "").takeIf { it.length >= 2 } ?: n
+        val out = mutableListOf(base)
+        // My mum: "annem" is often saved as "Anne", "Annem" or "Annecim".
+        if (base.endsWith("m") && base.length > 3) out += base.dropLast(1)
+        if (base.endsWith("cım") || base.endsWith("cim") || base.endsWith("cum") || base.endsWith("cüm")) out += base.dropLast(3)
+        if (n != base) out += n
+        return out.distinct()
+    }
+
+    /** Digits for wa.me in international form; Turkish numbers written 05xx… get the 90 prefix. */
+    fun internationalNumber(raw: String): String? {
+        val plus = raw.trim().startsWith("+")
+        var digits = raw.filter { it.isDigit() }
+        if (digits.startsWith("00")) digits = digits.drop(2)
+        else if (!plus && digits.length == 11 && digits.startsWith("0")) digits = "90" + digits.drop(1)
+        else if (!plus && digits.length == 10 && digits.startsWith("5")) digits = "90$digits"
+        return digits.takeIf { it.length in 8..15 }
     }
 
     private fun settingsPage(t: String): PhoneCommand? {

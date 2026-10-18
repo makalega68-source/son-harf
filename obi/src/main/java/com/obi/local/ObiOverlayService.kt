@@ -15,6 +15,9 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
@@ -55,6 +58,7 @@ internal sealed interface ChatGame
 internal class GuessGame(val answer: String, var tries: Int = 0) : ChatGame
 internal class RiddleGame(val riddle: ObiLife.Riddle, var misses: Int = 0) : ChatGame
 internal class QuizGame(val seed: Long, var index: Int = 0, var score: Int = 0) : ChatGame
+internal class MathGame(val seed: Long, var index: Int = 0, var score: Int = 0) : ChatGame
 
 /** User-started, user-stoppable overlay. No accessibility or screen-reading permission is used. */
 class ObiOverlayService : Service() {
@@ -66,6 +70,7 @@ class ObiOverlayService : Service() {
         const val ACTION_HIDE = "com.obi.local.HIDE_OVERLAY"
         const val ACTION_MIC_READY = "com.obi.local.MIC_READY"
         const val ACTION_LISTEN = "com.obi.local.LISTEN"
+        const val ACTION_PERMISSION_READY = "com.obi.local.PERMISSION_READY"
         const val ACTION_READY = "com.obi.local.OVERLAY_READY"
         const val ACTION_ERROR = "com.obi.local.OVERLAY_ERROR"
         private const val CHANNEL = "obi_companion"
@@ -150,6 +155,13 @@ class ObiOverlayService : Service() {
                     askMoodNext = true
                     animate(WordSiegeMascotAction.WAVE)
                     showBubble("Bugün nasıldın? Bana dokun, anlat 💜")
+                }
+                ObiNotificationListener.ACTION_MESSAGE -> {
+                    val text = intent.getStringExtra("text") ?: return
+                    if (mascot?.visibility != View.VISIBLE) return
+                    animate(WordSiegeMascotAction.PEEK)
+                    showBubble("💬 $text")
+                    if (voiceChatOn()) speak("Yeni mesaj. $text", listenAfter = false)
                 }
                 ObiStore.ACTION_NUDGE -> {
                     animate(runCatching { WordSiegeMascotAction.valueOf(intent.getStringExtra("action") ?: "BOUNCE") }.getOrDefault(WordSiegeMascotAction.BOUNCE))
@@ -248,6 +260,7 @@ class ObiOverlayService : Service() {
         val own = IntentFilter().apply {
             addAction(ObiStore.ACTION_CELEBRATE); addAction(ACTION_SHOW); addAction(ObiStore.ACTION_NUDGE)
             addAction(ObiStore.ACTION_ASK_MOOD); addAction(ObiStore.ACTION_LOOK_CHANGED); addAction(ObiVoiceAlertService.ACTION_STATUS)
+            addAction(ObiNotificationListener.ACTION_MESSAGE)
         }
         val system = IntentFilter().apply {
             addAction(Intent.ACTION_BATTERY_CHANGED); addAction(Intent.ACTION_POWER_CONNECTED)
@@ -262,6 +275,30 @@ class ObiOverlayService : Service() {
         }
         store.scheduleDaily()
         if (gemini.connected()) prepareVoiceWhenAllowed()
+        runCatching { getSystemService(AudioManager::class.java)?.registerAudioDeviceCallback(headsetWatch, handler) }
+    }
+
+    // ---- Headphones: "kulaklık modu" listens for "Obi…" while headphones are in -----------------------
+
+    private var headsetListening = false
+    private val headsetTypes = setOf(
+        AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+        AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_USB_HEADSET,
+    )
+    private val headsetWatch = object : AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
+            if (addedDevices.none { it.isSink && it.type in headsetTypes }) return
+            if (!localPrefs.getBoolean("headset_voice", false) || listener.isWakeMode || !listener.hasPermission()) return
+            headsetListening = true
+            listener.startWakeMode()
+            showBubble("Kulaklık takıldı 🎧 ‘Obi, …’ diye seslenebilirsin.")
+        }
+
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
+            if (!headsetListening || removedDevices.none { it.type in headsetTypes }) return
+            headsetListening = false
+            if (!wakeWanted()) listener.stopWakeMode()
+        }
     }
 
     /** Makes the missing fixed lines now, or right after the free daily allowance comes back. */
@@ -289,6 +326,12 @@ class ObiOverlayService : Service() {
                 } else showBubble("Mikrofon izni olmadan seni duyamam. İstersen yazarak devam edelim.")
                 return START_NOT_STICKY
             }
+        }
+        if (intent?.action == ACTION_PERMISSION_READY && mascot != null) {
+            val command = intent.getStringExtra(ObiPermissionActivity.EXTRA_COMMAND)
+            if (intent.getBooleanExtra("granted", false) && !command.isNullOrBlank()) handler.postDelayed({ submit(command) }, 300L)
+            else showBubble("İzin olmadan bunu yapamıyorum 🙁 İstersen tekrar söyle, izni yeniden sorarım.")
+            return START_NOT_STICKY
         }
         if (intent?.action == ACTION_LISTEN && mascot != null) {
             startPushToTalk()
@@ -403,7 +446,8 @@ class ObiOverlayService : Service() {
     }
 
     /** Long-press on Obi, the notification's 🎤 or "Obi" in wake mode. */
-    private fun startPushToTalk() {
+    private fun startPushToTalk(keepConversation: Boolean = false) {
+        if (!keepConversation) conversationTurns = 0
         if (!listener.hasPermission()) { askMicPermission(); return }
         if (!listener.available()) { showBubble("Bu telefonda konuşma tanıma bulunamadı. Google uygulamasını güncellemek gerekebilir."); return }
         lastInteractionAt = System.currentTimeMillis()
@@ -687,6 +731,7 @@ class ObiOverlayService : Service() {
         parts += "${store.daysTogether()} gündür arkadaşsınız, bağınız: ${ObiLife.bondLevel(store.bond())}"
         store.facts().forEach { (key, value) -> parts += "$key: $value" }
         store.moods().entries.maxByOrNull { it.key }?.let { parts += "son ruh hali puanı ${it.value}/5" }
+        if (childMode()) parts += "ÇOCUK MODU AÇIK: şu an bir çocukla konuşuyorsun; basit, nazik, güvenli ve eğitici ol, korkutucu ya da uygunsuz konulara girme, phone intent'i kullanma"
         return parts.joinToString("; ")
     }
 
@@ -928,7 +973,7 @@ class ObiOverlayService : Service() {
 
     // ---- The chat: a calm full-screen sheet with Obi, a speech balloon and the keyboard ---------------
 
-    private enum class Pending { NONE, CITY, LIST_ITEMS, MOOD, GAME_PICK }
+    private enum class Pending { NONE, CITY, LIST_ITEMS, MOOD, GAME_PICK, VOICE_CHAT }
 
     private var pending = Pending.NONE
     private var replyText: TextView? = null
@@ -1086,6 +1131,12 @@ class ObiOverlayService : Service() {
     private fun say(text: String, action: WordSiegeMascotAction? = null) {
         showReply(text, remember = true, action = action)
         if (panel == null) showBubble(text)
+        if (voiceChatOn() && (panel != null || voicePending)) {
+            val fromVoice = voicePending
+            voicePending = false
+            speak(text, listenAfter = fromVoice)
+            return
+        }
         if (voicePending) {
             voicePending = false
             // A spoken request gets a spoken "done" unless Obi is asking something back.
@@ -1143,6 +1194,10 @@ class ObiOverlayService : Service() {
         "• YouTube aç / WhatsApp aç / kamerayı aç / feneri aç\n• ekran ışığını kıs / sesi kıs / wifi aç / ayarları aç\n" +
         "• ekranı kilitle / ekran görüntüsü al • youtube'da tarkan aç / sezen aksu çal\n" +
         "• mimiklerini göster / kalp gözlü ol / gözlük tak • konfeti at / kar yağdır / havai fişek\n" +
+        "• annemi ara / Ali'ye WhatsApp'tan geliyorum yaz • mesajlarımı oku / mesajları sesli oku\n" +
+        "• bugün ne var / yarın ne var / toplantıları hatırlat • gece modu 23-7 • kulaklık modu\n" +
+        "• haftalık özet • çocuk modu / masal anlat / matematik oyunu • elma nasıl okunur\n" +
+        "• sesli konuşmayı aç / kapat • ses sınırı 100\n" +
         "• en sevdiğim renk mavi / kedimin adı Pamuk / hakkımda ne biliyorsun / kaç gündür arkadaşız\n" +
         "• listeye süt ekmek ekle / listem\n• not al: faturayı öde / notlarım\n" +
         "• her gün 21'de ilacımı hatırlat / 10 dakika sonra alarm kur / alarmlarım\n" +
@@ -1181,6 +1236,14 @@ class ObiOverlayService : Service() {
             answer.face?.let { expressFace(it) }
             answer.effect?.let { name -> ObiEffect.entries.firstOrNull { it.name == name }?.let { showEffect(it) } }
             say(answer.text, answer.action)
+            // Once: offer to answer out loud too.
+            if (localPrefs.getString("voice_chat", null) == null && panel != null) {
+                localPrefs.edit().putString("voice_chat", "asked").apply()
+                handler.postDelayed({
+                    pending = Pending.VOICE_CHAT
+                    say("${answer.text}\n\n🔊 Cevaplarımı sesli de söyleyeyim mi? (evet / hayır)")
+                }, 1_200L)
+            }
         }
     }
 
@@ -1283,9 +1346,117 @@ class ObiOverlayService : Service() {
         return true
     }
 
+    // ---- Voice chat: Obi says its answers with its Gemini voice -----------------------------------------
+
+    private var conversationTurns = 0
+    private var voiceQuotaNoticeDay = ""
+
+    private fun voiceChatOn(): Boolean = localPrefs.getString("voice_chat", null) == "on"
+
+    private fun setVoiceChat(on: Boolean): String {
+        localPrefs.edit().putString("voice_chat", if (on) "on" else "off").apply()
+        if (!on) return "Tamam, cevaplarımı yazıyla veririm. İstersen ‘sesli konuşmayı aç’ de."
+        if (!gemini.connected()) return "Sesli konuşma için önce Gemini'yi bağlamalısın: ‘Gemini bağla’."
+        val limit = ObiGeminiVoice.dailyLimit(this)
+        return "Sesli konuşma açık 🔊 Cevaplarımı sesimle de söyleyeceğim. Sesli sorarsan cevaptan sonra seni yine dinlerim.\n" +
+            "Not: Ücretsiz Gemini anahtarında sesli cevap hakkı günde az (birkaç düzine); bitince yazıyla devam ederim. " +
+            "Aynı cümleyi tekrar söylemek hak harcamaz. Günlük sınırım şu an $limit (‘ses sınırı 100’ ile değişir)."
+    }
+
+    /** Short, speakable form of a reply: no emoji or list marks, at most a few sentences. */
+    private fun speakable(text: String): String {
+        val clean = text.replace(Regex("[\\p{So}\\p{Sk}\\p{Cs}•✓✔︎️]"), " ").replace(Regex("\\s+"), " ").trim()
+        if (clean.length <= 260) return clean
+        val cut = clean.take(260)
+        return cut.substring(0, (cut.lastIndexOfAny(charArrayOf('.', '!', '?')) + 1).takeIf { it > 60 } ?: cut.length)
+    }
+
+    /** Speaks [text] with Obi's Gemini voice (made once, then kept); may listen again afterwards. */
+    private fun speak(text: String, listenAfter: Boolean) {
+        val line = speakable(text)
+        if (line.length < 2) return
+        val voice = ObiGeminiVoice(this)
+        val key = voice.keyFor(line)
+        fun play() {
+            voice.play(key, ObiVoiceAlertService.pitch(this)) {
+                handler.post {
+                    if (listenAfter && conversationTurns < 4) { conversationTurns++; startPushToTalk(keepConversation = true) }
+                }
+            }
+        }
+        if (voice.has(key)) { play(); return }
+        voice.prepare(key, line) { ok ->
+            handler.post {
+                if (ok) play()
+                else if (voiceQuotaNoticeDay != LocalDate.now().toString() && voice.lastStatus().contains("bitti")) {
+                    voiceQuotaNoticeDay = LocalDate.now().toString()
+                    showReply("${lastReply}\n\n(Bugünlük ücretsiz ses hakkı bitti; cevapları yazıyla veriyorum.)", remember = false)
+                }
+            }
+        }
+    }
+
+    private fun childMode(): Boolean = localPrefs.getBoolean("child_mode", false)
+
+    private fun tellTale(command: String) {
+        if (gemini.connected()) {
+            askGemini("Çocuklar için 6-8 cümlelik, sıcak, eğitici ve korkutucu olmayan kısa bir Türkçe masal anlat. Başlığı emojiyle başlasın. İstek: $command", tools = false)
+        } else {
+            say(ObiLife.tales.random(), WordSiegeMascotAction.SWAY)
+        }
+        expressFace(ObiFace.HEART_EYES, 2_000L)
+    }
+
+    private fun startMath() {
+        val g = MathGame(System.currentTimeMillis())
+        game = g
+        say("Matematik oyunu! 🔢 5 soru soracağım, cevabı yaz ya da söyle.\n\n1. soru: ${ObiLife.mathQuestion(g.seed, 0).text}", WordSiegeMascotAction.BOUNCE)
+    }
+
+    private fun nightCommand(t: String): String {
+        if (t.contains("kapat")) { store.setNight(false); return "Gece modunu kapattım ☀️" }
+        val range = ObiLife.nightRange(t)
+        store.setNight(true, range?.first, range?.second)
+        val missing = mutableListOf<String>()
+        if (!ObiNight.canQuiet(this)) {
+            runCatching { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            missing += "Rahatsız Etmeyin için açılan sayfada Obi'ye izin ver (yoksa telefonu titreşime alırım)"
+        }
+        if (!Settings.System.canWrite(this)) missing += "ekranı karartmam için ‘ekran ışığını kıs’ deyip iznini verebilirsin"
+        return "Gece modu açık 🌙 ${ObiLife.clock(store.nightStart())}–${ObiLife.clock(store.nightEnd())} arası telefonu sessize alır, ekranı karartırım; sabah geri açarım." +
+            if (missing.isEmpty()) "" else "\nNot: " + missing.joinToString("; ") + "."
+    }
+
+    private fun openNotificationAccess() {
+        hidePanel()
+        runCatching { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        showBubble("Mesajlarını görebilmem için açılan sayfada ‘Obi’ye bildirim erişimi ver. Mesajlar telefonda kalır, bir yere gönderilmez 🔒")
+    }
+
+    /** Says a word with Obi's Gemini voice and shows its syllables. */
+    private fun pronounce(word: String) {
+        val syllables = ObiLife.syllables(word)
+        val shown = if (syllables.size > 1 && word.none { it.isWhitespace() }) "\nHeceler: ${syllables.joinToString(" - ")}" else ""
+        if (!gemini.connected()) { say("‘$word’$shown\nSesli söylemem için Gemini bağlı olmalı."); return }
+        val voice = ObiGeminiVoice(this)
+        val key = voice.keyFor(word)
+        say("🔊 ‘$word’$shown", WordSiegeMascotAction.POINT)
+        if (voice.has(key)) { voice.play(key, ObiVoiceAlertService.pitch(this)) {}; return }
+        voice.prepare(key, word) { ok ->
+            handler.post {
+                if (ok) voice.play(key, ObiVoiceAlertService.pitch(this)) {}
+                else say("‘$word’$shown\n(Şu an sesini yapamadım: ${voice.lastStatus()})")
+            }
+        }
+    }
+
     /** "YouTube aç", "feneri aç", "ekranı kilitle"…; false when nothing on the phone matched. */
     private fun runPhone(cmd: PhoneCommand): Boolean {
-        val reply = phoneActions.run(cmd)
+        if (childMode() && cmd !is PhoneCommand.Camera && cmd !is PhoneCommand.Torch) {
+            say("Çocuk modundayken telefonun ayarlarına ve uygulamalarına dokunmuyorum 🙂 Masal ya da oyun ister misin?", WordSiegeMascotAction.SHY)
+            return true
+        }
+        val reply = phoneActions.run(cmd, lastUser)
         if (reply == null) {
             if (cmd !is PhoneCommand.OpenApp) return false
             val name = ObiPhoneParse.stem(cmd.name)
@@ -1318,6 +1489,11 @@ class ObiOverlayService : Service() {
             }
             Pending.MOOD -> ObiLife.moodScore(command)?.let { say(store.logMood(it), if (it >= 4) WordSiegeMascotAction.DANCE else WordSiegeMascotAction.NUZZLE); return }
             Pending.GAME_PICK -> if (startGameByName(t)) return
+            Pending.VOICE_CHAT -> {
+                val yes = Regex("^(evet|olur|tamam|aç|ac|isterim|evet aç|e)\\b").containsMatchIn(t)
+                val no = Regex("^(hayır|hayir|yok|istemem|kapat|gerek yok)\\b").containsMatchIn(t)
+                if (yes || no) { say(setVoiceChat(yes)); return }
+            }
             Pending.NONE -> Unit
         }
         game?.let { if (playGame(it, command)) return }
@@ -1365,6 +1541,60 @@ class ObiOverlayService : Service() {
 
         when {
             t.contains("gemini") && (t.contains("bağla") || t.contains("bagla") || t.contains("anahtar")) -> { openGeminiSetup(); return }
+            t.contains("sesli konuşma") || t.contains("sesli konusma") || t == "sesli konuş" || t == "yazılı konuş" || t == "yazili konus" -> {
+                val off = t.contains("kapat") || t.startsWith("yazılı") || t.startsWith("yazili") || t.contains("istemiyorum")
+                say(setVoiceChat(!off)); return
+            }
+            Regex("ses (?:sınırı|siniri|limiti)\\s*(\\d{1,3})").find(t) != null -> {
+                val n = Regex("(\\d{1,3})").find(t)!!.groupValues[1].toInt().coerceIn(5, 500)
+                ObiGeminiVoice.setDailyLimit(this, n)
+                say("Günlük ses sınırını $n yaptım. Google'ın kendi ücretsiz sınırı ayrıca geçerli; ücretli anahtarda bu sınır kadar ses yapılır."); return
+            }
+            t.contains("çocuk modu") || t.contains("cocuk modu") -> {
+                val on = !t.contains("kapat")
+                localPrefs.edit().putBoolean("child_mode", on).apply()
+                if (on) { expressFace(ObiFace.STAR_EYES); showEffect(ObiEffect.BUBBLES, asked = true) }
+                say(if (on) "Çocuk modu açık 🧸 Masal anlatırım, matematik oyunu ve bilmece oynarız. Telefonun ayarlarına ve uygulamalarına dokunmam.\n‘masal anlat’ • ‘matematik oyunu’ • ‘bilmece’"
+                    else "Çocuk modunu kapattım.", WordSiegeMascotAction.BOUNCE); return
+            }
+            t.contains("masal") || t.contains("hikaye anlat") || t.contains("hikâye anlat") || t.contains("uyku hikaye") -> { tellTale(command); return }
+            t.contains("matematik oyun") || t.contains("matematik oyna") || t.contains("toplama oyunu") || t.contains("hesap oyunu") || t.contains("sayı oyunu") -> { startMath(); return }
+            t.contains("haftalık özet") || t.contains("haftalik ozet") || t.contains("haftamı özetle") || t.contains("bu hafta nasıldı") -> {
+                say(store.weeklySummary(), WordSiegeMascotAction.NOD); return
+            }
+            t.contains("gece modu") -> { say(nightCommand(t)); return }
+            (t.contains("kulaklık modu") || t.contains("kulaklik modu") || t.contains("yol modu")) -> {
+                val on = !t.contains("kapat")
+                localPrefs.edit().putBoolean("headset_voice", on).apply()
+                if (on && !listener.hasPermission()) askMicPermission()
+                say(if (on) "Kulaklık modu açık 🎧 Kulaklık takınca ‘Obi, …’ diye seslenmeni dinlerim; çıkarınca dinlemeyi bırakırım."
+                    else "Kulaklık modunu kapattım."); return
+            }
+            ObiLife.pronounceWord(command) != null -> { pronounce(ObiLife.pronounceWord(command)!!); return }
+            (t.contains("mesaj") || t.contains("bildirim")) && (t.contains("sesli oku") || t.contains("bildir") && t.contains("gelince") || t.contains("okuma")) -> {
+                val on = !t.contains("kapat") && !t.contains("okuma")
+                if (on && !ObiNotificationListener.enabled(this)) { openNotificationAccess(); return }
+                localPrefs.edit().putBoolean("read_messages", on).apply()
+                say(if (on) "Tamam! Yeni mesaj gelince balonda gösteririm" + (if (voiceChatOn()) " ve sesli okurum" else "") + " 💬" else "Gelen mesajları göstermeyi kapattım."); return
+            }
+            t.contains("mesajlarımı oku") || t.contains("mesajlarimi oku") || t.contains("bildirimlerimi oku") || t.contains("son mesajlar") || t.contains("gelen mesajlar") -> {
+                if (!ObiNotificationListener.enabled(this)) { openNotificationAccess(); return }
+                val list = ObiNotificationListener.recentMessages().takeLast(5)
+                say(if (list.isEmpty()) "Ben açıldığından beri yeni mesaj gelmedi 📭" else "💬 Son mesajlar:\n" + list.joinToString("\n") { "• $it" }); return
+            }
+            (t.contains("takvim") || t.contains("toplantılarım") || t.contains("programım") || t.contains("bugün ne var") || t.contains("yarın ne var") || t.contains("etkinliklerim")) &&
+                !t.contains("hatırlat") && !t.contains("hatirlat") -> {
+                if (!ObiCalendar.allowed(this)) { ObiPermissionActivity.ask(this, arrayOf(android.Manifest.permission.READ_CALENDAR), command); say("Takvimine bakabilmem için izin gerekiyor 🗓"); return }
+                val tomorrow = t.contains("yarın") || t.contains("yarin")
+                say(ObiCalendar.describe(this, if (tomorrow) LocalDate.now().plusDays(1) else LocalDate.now(), if (tomorrow) "Yarın" else "Bugün"), WordSiegeMascotAction.NOD); return
+            }
+            (t.contains("toplantı") || t.contains("etkinlik")) && (t.contains("hatırlat") || t.contains("hatirlat")) -> {
+                val on = !t.contains("kapat")
+                if (on && !ObiCalendar.allowed(this)) { ObiPermissionActivity.ask(this, arrayOf(android.Manifest.permission.READ_CALENDAR), command); say("Takvimine bakabilmem için izin gerekiyor 🗓"); return }
+                localPrefs.edit().putBoolean("calendar_remind", on).apply()
+                val count = if (on) ObiCalendar.remindToday(this) else 0
+                say(if (on) "Takvimindeki toplantılardan 10 dakika önce haber vereceğim ⏰" + (if (count > 0) " Bugün için $count hatırlatma kurdum." else "") else "Toplantı hatırlatmalarını kapattım."); return
+            }
             t.contains("dinlemeyi kapat") || t.contains("sesli komut kapat") || t.contains("sesli komutu kapat") || t.contains("beni dinleme") -> { say(setWakeMode(false)); return }
             t.contains("asistan") && (t.contains("yap") || t.contains("ayarla") || t.contains("seç") || t.contains("olsun") || t.contains("nasıl")) -> {
                 hidePanel()
@@ -1554,6 +1784,7 @@ class ObiOverlayService : Service() {
                 is GuessGame -> "Kelime ‘${current.answer}’ idi. Bir dahakine! 🙂"
                 is RiddleGame -> "Cevap: ${current.riddle.answers.first()}. Güzel bilmeceydi, değil mi?"
                 is QuizGame -> "Testi bitirdik. Puanın: ${current.score}/3"
+                is MathGame -> "Oyunu bitirdik. Puanın: ${current.score}/5 ⭐"
             }
             game = null
             say(reveal, WordSiegeMascotAction.SHRUG)
@@ -1579,6 +1810,24 @@ class ObiOverlayService : Service() {
                     ObiLife.riddleCorrect(current.riddle, t) -> { game = null; say("Doğru! 🎉 Cevap: ${current.riddle.answers.first()}", WordSiegeMascotAction.CHEER); reward(3) }
                     ++current.misses >= 3 -> { game = null; say("Olmadı 🙂 Cevap: ${current.riddle.answers.first()}", WordSiegeMascotAction.GIGGLE) }
                     else -> say("Hmm, değil. Tekrar dene ya da ‘ipucu’ yaz.", WordSiegeMascotAction.SHRUG)
+                }
+            }
+            is MathGame -> {
+                val q = ObiLife.mathQuestion(current.seed, current.index)
+                val answer = ObiLife.numberAnswer(t) ?: return words <= 2 && t.any { it.isDigit() }.also { if (it) say("Bir sayı yaz ya da söyle 🙂") }
+                val right = answer == q.answer
+                if (right) current.score++
+                current.index++
+                if (right) expressFace(ObiFace.STAR_EYES, 1_600L) else animate(WordSiegeMascotAction.SHRUG)
+                val feedback = if (right) listOf("Doğru! 🌟", "Süpersin! ⭐", "Aferin! 🎉").random() else "Olmadı, doğrusu ${q.answer} 🙂"
+                if (current.index >= 5) {
+                    game = null
+                    say("$feedback\n\nOyun bitti! ${"⭐".repeat(current.score)} ${current.score}/5")
+                    if (current.score >= 4) showEffect(ObiEffect.STARS, asked = true)
+                    if (current.score > 0) reward(3)
+                } else {
+                    val next = ObiLife.mathQuestion(current.seed, current.index)
+                    say("$feedback\n\n${current.index + 1}. soru: ${next.text}", if (right) WordSiegeMascotAction.CLAP else null)
                 }
             }
             is QuizGame -> {
@@ -1678,6 +1927,7 @@ class ObiOverlayService : Service() {
         runCatching { unregisterReceiver(phone) }
         handler.removeCallbacksAndMessages(null)
         runCatching { phoneActions.release() }
+        runCatching { getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(headsetWatch) }
         hideBubble()
         hidePanel()
         timerLabel?.let { runCatching { windows.removeView(it) } }

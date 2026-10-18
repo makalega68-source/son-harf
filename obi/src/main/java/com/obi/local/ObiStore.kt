@@ -30,6 +30,8 @@ internal class ObiStore(private val context: Context) {
         const val ACTION_DAILY = "com.obi.local.DAILY"
         const val ACTION_EVENING = "com.obi.local.EVENING"
         const val ACTION_WATER = "com.obi.local.WATER"
+        const val ACTION_NIGHT_ON = "com.obi.local.NIGHT_ON"
+        const val ACTION_NIGHT_OFF = "com.obi.local.NIGHT_OFF"
         const val ACTION_SNOOZE = "com.obi.local.SNOOZE"
         const val ACTION_NUDGE = "com.obi.local.NUDGE"
         const val ACTION_ASK_MOOD = "com.obi.local.ASK_MOOD"
@@ -202,7 +204,7 @@ internal class ObiStore(private val context: Context) {
         ObiLife.expense(text)?.let { e ->
             val month = LocalDate.now().toString().take(7)
             val list = jsonList("expenses").filter { it.optString("month") >= previousMonth() }.toMutableList()
-            list += JSONObject().put("month", month).put("label", e.label).put("amount", e.amount)
+            list += JSONObject().put("month", month).put("day", LocalDate.now().toString()).put("label", e.label).put("amount", e.amount)
             putList("expenses", list)
             val total = list.filter { it.optString("month") == month }.sumOf { it.optDouble("amount") }
             return "${e.label}: ${ObiLife.money(e.amount)} yazdım 💸 Bu ay toplam ${ObiLife.money(total)}."
@@ -591,11 +593,56 @@ internal class ObiStore(private val context: Context) {
         if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
     }.timeInMillis
 
-    /** Morning message at 08:00, the evening check-in at 21:00 and, when on, the water reminders. */
+    /** Morning message at 08:00, the evening check-in at 21:00 and, when on, the water reminders and night mode. */
     fun scheduleDaily() {
         chain(ACTION_DAILY, 808, nextAt(8))
         chain(ACTION_EVENING, 809, nextAt(21))
         if (prefs.getBoolean("water_enabled", false)) scheduleWater()
+        scheduleNight()
+    }
+
+    // ---- Night mode ------------------------------------------------------------------------------
+
+    fun nightEnabled(): Boolean = prefs.getBoolean("night_enabled", false)
+    fun nightStart(): Int = prefs.getInt("night_start", 23 * 60)
+    fun nightEnd(): Int = prefs.getInt("night_end", 7 * 60)
+
+    fun setNight(on: Boolean, start: Int? = null, end: Int? = null) {
+        val edit = prefs.edit().putBoolean("night_enabled", on)
+        start?.let { edit.putInt("night_start", it) }
+        end?.let { edit.putInt("night_end", it) }
+        edit.apply()
+        if (!on) {
+            ObiNight.stop(context)
+            listOf(ACTION_NIGHT_ON to 811, ACTION_NIGHT_OFF to 812).forEach { (action, code) ->
+                PendingIntent.getBroadcast(context, code, Intent(context, ObiReminderReceiver::class.java).setAction(action),
+                    PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)?.let { context.getSystemService(AlarmManager::class.java)?.cancel(it) }
+            }
+            return
+        }
+        // Already inside the night hours: start right away.
+        val now = Calendar.getInstance().let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
+        if (ObiLife.isInRange(now, nightStart(), nightEnd())) ObiNight.start(context)
+        scheduleNight()
+    }
+
+    fun scheduleNight() {
+        if (!nightEnabled()) return
+        chain(ACTION_NIGHT_ON, 811, nextAtMinute(nightStart()))
+        chain(ACTION_NIGHT_OFF, 812, nextAtMinute(nightEnd()))
+    }
+
+    private fun nextAtMinute(minute: Int): Long = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, minute / 60); set(Calendar.MINUTE, minute % 60); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
+    }.timeInMillis
+
+    // ---- Weekly summary ----------------------------------------------------------------------------
+
+    fun weeklySummary(): String {
+        val weekAgo = LocalDate.now().minusDays(6).toString()
+        val spent = jsonList("expenses").filter { it.optString("day", "") >= weekAgo }.sumOf { it.optDouble("amount") }
+        return ObiLife.weeklySummary(ObiLife.weeklyMood(moods(), LocalDate.now()), spent, notes().size, daysTogether(), ObiLife.bondLevel(bond()))
     }
 
     fun scheduleWater() {
@@ -617,7 +664,11 @@ class ObiReminderReceiver : BroadcastReceiver() {
                     try {
                         val weather = store.city()?.takeIf { context.getSharedPreferences("obi_local", Context.MODE_PRIVATE).getBoolean("morning_enabled", false) }
                             ?.let { ObiWeather().blocking(listOf(it)) }
-                        val lines = store.morningLines(weather)
+                        val calendar = ObiCalendar.events(context, LocalDate.now()).filter { !it.allDay }
+                        ObiCalendar.remindToday(context)
+                        val lines = store.morningLines(weather) + listOfNotNull(calendar.firstOrNull()?.let {
+                            "Bugün ${calendar.size} etkinliğin var; ilki ${store.formatClock(it.start)}'de: ${it.title} 🗓"
+                        })
                         if (lines.isNotEmpty()) {
                             notify(context, lines.joinToString("\n"), "Obi günaydın diyor ☀️", null)
                             context.sendBroadcast(Intent(ObiStore.ACTION_CELEBRATE).setPackage(context.packageName).putExtra("text", lines.first()))
@@ -630,10 +681,24 @@ class ObiReminderReceiver : BroadcastReceiver() {
             }
             ObiStore.ACTION_EVENING -> {
                 if (!store.moodLoggedToday()) context.sendBroadcast(Intent(ObiStore.ACTION_ASK_MOOD).setPackage(context.packageName))
-                if (LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY && store.moods().isNotEmpty()) {
-                    notify(context, ObiLife.weeklyMood(store.moods(), LocalDate.now()), "Obi'den haftalık özet 💜", null)
+                if (LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY) {
+                    notify(context, store.weeklySummary(), "Obi'den haftalık özet 💜", null)
                 }
                 store.scheduleDaily()
+                return
+            }
+            ObiStore.ACTION_NIGHT_ON -> {
+                if (store.nightEnabled()) {
+                    ObiNight.start(context)
+                    context.sendBroadcast(Intent(ObiStore.ACTION_NUDGE).setPackage(context.packageName)
+                        .putExtra("text", "İyi geceler 🌙 Gece moduna geçtim, telefonu sessize aldım.").putExtra("action", "DOZE"))
+                }
+                store.scheduleNight()
+                return
+            }
+            ObiStore.ACTION_NIGHT_OFF -> {
+                ObiNight.stop(context)
+                store.scheduleNight()
                 return
             }
             ObiStore.ACTION_WATER -> {

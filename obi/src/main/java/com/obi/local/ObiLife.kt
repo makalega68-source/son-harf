@@ -522,4 +522,100 @@ internal object ObiLife {
             else -> null
         }
     }
+
+    // ---- Night mode ---------------------------------------------------------------------------
+
+    /** "gece modu 23-7", "gece modu 22:30 07:00" → (start, end) in minutes of the day; null when no times are given. */
+    fun nightRange(text: String): Pair<Int, Int>? {
+        val m = Regex("(\\d{1,2})(?:[:.](\\d{2}))?\\s*(?:-|–|ile|ila|'?(?:den|dan|ten|tan)|\\s)\\s*(\\d{1,2})(?:[:.](\\d{2}))?").find(lower(text)) ?: return null
+        val sh = m.groupValues[1].toInt(); val sm = m.groupValues[2].toIntOrNull() ?: 0
+        val eh = m.groupValues[3].toInt(); val em = m.groupValues[4].toIntOrNull() ?: 0
+        if (sh > 23 || eh > 23 || sm > 59 || em > 59) return null
+        return (sh * 60 + sm) to (eh * 60 + em)
+    }
+
+    fun isInRange(minute: Int, start: Int, end: Int): Boolean =
+        if (start <= end) minute in start until end else minute >= start || minute < end
+
+    fun clock(minutes: Int): String = String.format(tr, "%02d:%02d", minutes / 60, minutes % 60)
+
+    // ---- Children ---------------------------------------------------------------------------
+
+    data class MathQuestion(val text: String, val answer: Int)
+
+    /** Small sums for children: up to 10 at first, up to 20 later in the round. */
+    fun mathQuestion(seed: Long, index: Int): MathQuestion {
+        val r = java.util.Random(seed * 31 + index)
+        val top = if (index < 2) 10 else 20
+        val a = 1 + r.nextInt(top - 1)
+        val b = 1 + r.nextInt(top - 1)
+        return if (r.nextBoolean() || a == b) MathQuestion("$a + $b = ?", a + b)
+        else MathQuestion("${maxOf(a, b)} − ${minOf(a, b)} = ?", maxOf(a, b) - minOf(a, b))
+    }
+
+    /** Spoken or typed numbers for answers: "7", "yedi", "on iki". */
+    fun numberAnswer(text: String): Int? {
+        val t = lower(text).trim(' ', '.', '!')
+        t.toIntOrNull()?.let { return it }
+        val ones = listOf("sıfır", "bir", "iki", "üç", "dört", "beş", "altı", "yedi", "sekiz", "dokuz")
+        val parts = t.split(' ')
+        var total = 0
+        for (p in parts) {
+            when {
+                p == "on" -> total += 10
+                p == "yirmi" -> total += 20
+                p == "otuz" -> total += 30
+                ones.indexOf(p) >= 0 -> total += ones.indexOf(p)
+                else -> return null
+            }
+        }
+        return total
+    }
+
+    val tales = listOf(
+        "🌙 Uykucu Yıldız\nGökyüzünde Pırıl adında minik bir yıldız varmış. Her gece en son o yanarmış, çünkü hep uyuyakalırmış. Bir gece Obi ona bir ninni söylemiş ve demiş ki: ‘Erken uyursan erken parlarsın!’ Pırıl o gece erkenden uyumuş ve ertesi akşam gökyüzünün ilk yıldızı olmuş. Herkes ona el sallamış. Pırıl o kadar mutlu olmuş ki ışığı iki kat parlamış. ✨",
+        "🐢 Acelesi Olmayan Kaplumbağa\nTosbi adında bir kaplumbağa ormandaki yarışmaya katılmak istemiş. Herkes ‘Sen çok yavaşsın’ demiş. Tosbi yolda düşen bir kuş yavrusunu yuvasına taşımış, susayan bir çiçeği sulamış. Yarışı son bitirmiş ama orman ona ‘En iyi kalpli’ madalyasını vermiş. Tosbi öğrenmiş ki hız değil, iyilik insanı kazandırır. 🏅",
+        "☁️ Yağmur Olmak İsteyen Bulut\nPofuduk adında beyaz bir bulut, hep diğer bulutlar gibi yağmur olmak istermiş. Bir gün kuruyan bir tarlanın üstünden geçerken çiçeklerin üzgün olduğunu görmüş. Bütün gücüyle sıkmış kendini ve minik damlalar dökülmüş. Çiçekler başlarını kaldırıp teşekkür etmiş. O günden sonra Pofuduk her yaz o tarlaya uğrarmış. 🌷",
+        "🦊 Paylaşmayı Öğrenen Tilki\nKızıl Tilki bütün elmaları kendine saklarmış. Bir kış günü elmaları bitmiş ve çok acıkmış. Tavşan ona kendi havucunu uzatmış. Kızıl Tilki o kadar duygulanmış ki baharda topladığı elmaları bütün ormanla paylaşmış. Paylaştıkça arkadaşları çoğalmış, sofrası hiç boş kalmamış. 🍎",
+        "🚀 Obi Aya Gidiyor\nBir gece Obi pencereden Ay'a bakmış ve ‘Acaba orada da arkadaş var mı?’ diye merak etmiş. Kartondan bir roket yapmış, içine bir sepet kurabiye koymuş. Hayalinde Ay'a varınca yalnız bir Ay tavşanıyla tanışmış. Kurabiyeleri paylaşmışlar ve kraterlerde zıplamışlar. Sabah uyandığında Obi gülümsüyormuş: Arkadaşlık uzakta bile olsa insanı ısıtırmış. 🌕",
+    )
+
+    // ---- Pronunciation ----------------------------------------------------------------------
+
+    /** "elma nasıl okunur", "telaffuz: necessary", "strawberry nasıl söylenir" → the word(s). */
+    fun pronounceWord(text: String): String? {
+        val t = lower(text).trim().trimEnd('?', '.', '!')
+        Regex("^(?:telaffuz(?:u)?|seslendir|oku)\\s*[:]?\\s+(.{1,40})$").find(t)?.let { return it.groupValues[1].trim(' ', '"', '\'') }
+        Regex("^[\"']?(.{1,40}?)[\"']?(?:['’](?:[ıiuü]|y[ıiuü]|n[ıiuü]))?\\s+(?:nasıl\\s+(?:okunur|söylenir|telaffuz edilir)|kelimesini\\s+(?:oku|söyle|seslendir)|nasıl\\s+okunuyor)$").find(t)?.let {
+            return it.groupValues[1].trim(' ', '"', '\'').takeIf { w -> w.split(' ').size <= 4 }
+        }
+        return null
+    }
+
+    /** Turkish syllables: a consonant before a vowel starts a new syllable ("ar-ka-daş", "Türk-çe"). */
+    fun syllables(word: String): List<String> {
+        val vowels = "aeıioöuüâîû"
+        val w = lower(word).filter { it.isLetter() }
+        if (w.isEmpty()) return emptyList()
+        val out = mutableListOf<String>()
+        var start = 0
+        val vowelIdx = w.indices.filter { w[it] in vowels }
+        for (k in 1 until vowelIdx.size) {
+            val prev = vowelIdx[k - 1]; val cur = vowelIdx[k]
+            val cut = if (cur - prev == 1) cur else cur - 1
+            out += w.substring(start, cut); start = cut
+        }
+        out += w.substring(start)
+        return out.filter { it.isNotEmpty() }
+    }
+
+    // ---- Weekly summary -----------------------------------------------------------------------
+
+    fun weeklySummary(moodLine: String, spent: Double, notes: Int, days: Long, level: String): String = buildString {
+        append("📅 Haftalık özetin\n")
+        append("• Ruh hâli: $moodLine\n")
+        append("• Harcama (7 gün): ${if (spent > 0) money(spent) else "kayıt yok"}\n")
+        append("• Notların: $notes\n")
+        append("• $days gündür arkadaşız — $level")
+    }
 }

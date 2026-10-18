@@ -134,7 +134,7 @@ internal class ObiGemini(private val context: Context) {
             "countdown_add {label, date:\"YYYY-MM-DD\"}, countdowns_show {}, birthday_add {person, day, month}, focus {minutes}, " +
             "game {name: \"guess\"|\"riddle\"|\"quiz\"|\"catch\"}, wardrobe {}, mood {score:1-5}, words_today {}, " +
             "phone {command: kısa Türkçe komut} — uygulama açma, kamera, fener, ekran ışığı, ses, Wi-Fi/Bluetooth ayarı, ekran kilidi, ekran görüntüsü, YouTube'da arama, şarkı çalma için; " +
-            "command örnekleri: ‘youtube aç’, ‘whatsapp aç’, ‘kamerayı aç’, ‘feneri aç’, ‘ekran ışığını kıs’, ‘sesi kıs’, ‘wifi aç’, ‘ekranı kilitle’, ‘youtube'da tarkan aç’, ‘sezen aksu çal’. " +
+            "command örnekleri: ‘youtube aç’, ‘whatsapp aç’, ‘kamerayı aç’, ‘feneri aç’, ‘ekran ışığını kıs’, ‘sesi kıs’, ‘wifi aç’, ‘ekranı kilitle’, ‘youtube'da tarkan aç’, ‘sezen aksu çal’, ‘annemi ara’, ‘ali'ye geliyorum yaz’. " +
             "Örnek: ‘süt ekmek al’ → list_add; ‘listem’ / ‘listemi getir’ → list_show; ‘Arnavutköy'de hava’ → weather. " +
             "Bir iş yapıldığında text kısa bir onay olsun; sonucu uygulama gösterecek. Çeviri, sohbet ve sorular için intent none."
     }

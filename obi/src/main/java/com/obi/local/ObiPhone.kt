@@ -40,7 +40,9 @@ internal class ObiPhone(private val context: Context, private val beforeLaunch: 
 
     fun release() { runCatching { cameras?.unregisterTorchCallback(torchWatch) } }
 
-    fun run(command: PhoneCommand): String? = when (command) {
+    fun run(command: PhoneCommand, raw: String = ""): String? = when (command) {
+        is PhoneCommand.Call -> call(command, raw)
+        is PhoneCommand.Message -> message(command, raw)
         is PhoneCommand.OpenApp -> openApp(command.name)
         is PhoneCommand.AppSearch -> appSearch(command.app, command.query)
         is PhoneCommand.WebSearch -> webSearch(command.query)
@@ -121,6 +123,68 @@ internal class ObiPhone(private val context: Context, private val beforeLaunch: 
             .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")) ||
             launch(Intent(Intent.ACTION_SEARCH).setPackage("com.google.android.youtube").putExtra(SearchManager.QUERY, query))
         return if (done) "‘$query’ çalıyorum ♪" else "Müzik uygulaması bulamadım."
+    }
+
+    // ---- Calls and messages (the user always presses send; Obi never sends on its own) -----------------
+
+    private fun granted(permission: String) = context.checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    private fun contacts(): List<Pair<String, String>> = runCatching {
+        val out = LinkedHashMap<String, String>()
+        context.contentResolver.query(
+            android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER),
+            null, null, null,
+        )?.use { c -> while (c.moveToNext()) { val name = c.getString(0) ?: continue; val number = c.getString(1) ?: continue; out.putIfAbsent(name, number) } }
+        out.toList()
+    }.getOrDefault(emptyList())
+
+    /** The contact for a spoken name, as (saved name, number). */
+    private fun findContact(spoken: String): Pair<String, String>? {
+        val all = contacts()
+        val names = all.mapIndexed { i, (name, _) -> name to i.toString() }
+        for (candidate in ObiPhoneParse.contactCandidates(spoken)) {
+            ObiPhoneParse.bestMatch(candidate, names)?.toIntOrNull()?.let { return all[it] }
+        }
+        return null
+    }
+
+    private fun needContacts(raw: String, extra: String? = null): String {
+        ObiPermissionActivity.ask(context, listOfNotNull(android.Manifest.permission.READ_CONTACTS, extra).toTypedArray(), raw)
+        return "Rehberinden kişiyi bulabilmem için izin gerekiyor 📒 İzni verince hemen yapacağım."
+    }
+
+    private fun looksLikePerson(spoken: String) = spoken.split(' ').size <= 2 &&
+        (spoken.contains('\'') || spoken.contains('’') || Regex("(?:[ıiuü]|y[ıiuü]|m[ıiuü])$").containsMatchIn(spoken))
+
+    private fun call(command: PhoneCommand.Call, raw: String): String? {
+        if (!granted(android.Manifest.permission.READ_CONTACTS)) return needContacts(raw, android.Manifest.permission.CALL_PHONE)
+        val contact = findContact(command.name)
+        if (contact == null) {
+            // "kedi videoları ara" is a search, not a call.
+            if (!looksLikePerson(command.name)) return webSearch(command.original.removeSuffix(" ara").trim())
+            return "Rehberinde ‘${ObiPhoneParse.contactCandidates(command.name).first()}’ adında birini bulamadım 🤔 Rehberde nasıl kayıtlıysa öyle söyler misin?"
+        }
+        val uri = Uri.parse("tel:${Uri.encode(contact.second)}")
+        val direct = granted(android.Manifest.permission.CALL_PHONE)
+        if (!launch(Intent(if (direct) Intent.ACTION_CALL else Intent.ACTION_DIAL, uri))) return "Arama açılamadı."
+        return if (direct) "${contact.first} aranıyor 📞" else "${contact.first} numarası hazır, yeşil tuşa basman yeterli 📞"
+    }
+
+    private fun message(command: PhoneCommand.Message, raw: String): String? {
+        if (!granted(android.Manifest.permission.READ_CONTACTS)) return needContacts(raw)
+        val contact = findContact(command.name)
+            ?: return "Rehberinde ‘${ObiPhoneParse.contactCandidates(command.name).first()}’ adında birini bulamadım 🤔"
+        val whatsappInstalled = runCatching { context.packageManager.getPackageInfo("com.whatsapp", 0); true }.getOrDefault(false)
+        val useWhatsapp = command.app == "whatsapp" || (command.app == null && whatsappInstalled)
+        if (useWhatsapp) {
+            val number = ObiPhoneParse.internationalNumber(contact.second) ?: return "${contact.first} için geçerli bir numara bulamadım."
+            val link = Uri.parse("https://api.whatsapp.com/send?phone=$number&text=${Uri.encode(command.text)}")
+            if (launch(Intent(Intent.ACTION_VIEW, link).setPackage("com.whatsapp")) || launch(Intent(Intent.ACTION_VIEW, link)))
+                return "WhatsApp'ta ${contact.first} için yazdım: “${command.text}” — Gönder'e basman yeterli ✉️"
+        }
+        val sms = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${Uri.encode(contact.second)}")).putExtra("sms_body", command.text)
+        return if (launch(sms)) "${contact.first} için mesajı hazırladım: “${command.text}” — Gönder'e basman yeterli ✉️" else "Mesaj uygulaması açılamadı."
     }
 
     // ---- Camera, torch, screen, sound ----------------------------------------------------------------
