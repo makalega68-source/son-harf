@@ -3,12 +3,9 @@ package com.obi.local
 import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.CalendarContract
 import android.provider.Settings
-import android.service.notification.NotificationListenerService
-import android.service.notification.StatusBarNotification
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -111,45 +108,5 @@ internal object ObiNight {
         }
         p.edit().putBoolean("night_active", false).remove("night_prev_filter").remove("night_prev_ringer")
             .remove("night_prev_level").remove("night_prev_mode").apply()
-    }
-}
-
-/**
- * Sees new message notifications (WhatsApp, SMS, Telegram…) only after the user turns it on in
- * Android's "notification access" settings. Keeps the last few on the phone for "mesajlarımı oku".
- */
-class ObiNotificationListener : NotificationListenerService() {
-    companion object {
-        const val ACTION_MESSAGE = "com.obi.local.MESSAGE"
-        private val recent = ArrayDeque<String>()
-
-        fun recentMessages(): List<String> = synchronized(recent) { recent.toList() }
-
-        fun enabled(context: Context): Boolean =
-            (Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners") ?: "").contains(context.packageName)
-
-        private val messaging = setOf(
-            "com.whatsapp", "com.whatsapp.w4b", "org.telegram.messenger", "com.google.android.apps.messaging",
-            "com.samsung.android.messaging", "com.android.mms", "com.facebook.orca", "com.instagram.android", "com.discord",
-        )
-    }
-
-    override fun onNotificationPosted(sbn: StatusBarNotification) {
-        val n = sbn.notification ?: return
-        if (sbn.packageName == packageName || sbn.isOngoing) return
-        if (n.flags and android.app.Notification.FLAG_GROUP_SUMMARY != 0) return
-        if (sbn.packageName !in messaging && n.category != android.app.Notification.CATEGORY_MESSAGE) return
-        val title = n.extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString()?.trim().orEmpty()
-        val text = n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString()?.trim().orEmpty()
-        if (text.isBlank()) return
-        val line = if (title.isNotBlank()) "$title: $text" else text
-        synchronized(recent) {
-            if (recent.lastOrNull() == line) return
-            recent.addLast(line.take(200))
-            while (recent.size > 15) recent.removeFirst()
-        }
-        if (getSharedPreferences("obi_local", MODE_PRIVATE).getBoolean("read_messages", false)) {
-            sendBroadcast(Intent(ACTION_MESSAGE).setPackage(packageName).putExtra("text", line.take(200)))
-        }
     }
 }

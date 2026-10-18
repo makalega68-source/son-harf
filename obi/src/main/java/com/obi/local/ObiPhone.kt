@@ -1,6 +1,5 @@
 package com.obi.local
 
-import android.accessibilityservice.AccessibilityService
 import android.app.NotificationManager
 import android.app.SearchManager
 import android.content.Context
@@ -13,7 +12,6 @@ import android.os.Build
 import android.provider.AlarmClock
 import android.provider.MediaStore
 import android.provider.Settings
-import android.view.accessibility.AccessibilityEvent
 
 /**
  * Carries out [PhoneCommand]s on the phone. Each call returns Obi's reply, or null when the
@@ -284,45 +282,16 @@ internal class ObiPhone(private val context: Context, private val beforeLaunch: 
         }
     }
 
-    // ---- Lock screen, screenshot… (Obi's accessibility helper) ------------------------------------------
+    // ---- Lock screen, screenshot… ------------------------------------------------------------------------
 
-    private fun global(action: String): String {
-        val helper = ObiAccessibilityService.instance
-        if (helper == null) {
-            launch(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            return "Bunu yapabilmem için Erişilebilirlik ayarlarında ‘Obi telefon yardımcısı’nı açman gerekiyor (bir kez). " +
-                "Açtıktan sonra ‘ekranı kilitle’ dediğinde kilitlerim 🔒"
-        }
-        val code = when (action) {
-            "lock" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN else null
-            "screenshot" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT else null
-            "notifications" -> AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS
-            else -> AccessibilityService.GLOBAL_ACTION_RECENTS
-        } ?: return "Bu Android sürümünde bunu yapamıyorum."
-        beforeLaunch()
-        // A short pause so Obi's chat window is gone before the screen is locked or captured.
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ helper.performGlobalAction(code) }, 350L)
-        return when (action) {
-            "lock" -> "Ekranı kilitliyorum 🔒"
-            "screenshot" -> "Ekran görüntüsü alıyorum 📸"
-            "notifications" -> "Bildirimleri açtım."
-            else -> "Son uygulamalar."
-        }
+    /**
+     * Locking the screen or taking a screenshot needs Android's accessibility access, which Play
+     * Protect blocks in apps installed outside the Play Store, so this build does not ask for it.
+     */
+    private fun global(action: String): String = when (action) {
+        "lock" -> "Ekranı kilitlemek için Android'in özel bir izni (erişilebilirlik) gerekiyor; Play Protect bu izni isteyen uygulamaları engellediği için bu sürümde yok 🔒 Güç tuşuna kısa basman yeterli."
+        "screenshot" -> "Ekran görüntüsünü bu sürümde alamıyorum 📸 Güç + ses kısma tuşuna birlikte basabilirsin."
+        "notifications" -> "Bildirimleri açmak için ekranın üstünden aşağı kaydırabilirsin."
+        else -> "Son uygulamalar için alttaki kare tuşa ya da ekranın altından yukarı kaydırıp beklemeye basabilirsin."
     }
-}
-
-/**
- * Obi's phone helper: only performs the system actions the user asks for by voice or chat
- * (lock screen, screenshot, notifications). It does not read the screen or any app's content.
- */
-class ObiAccessibilityService : AccessibilityService() {
-    companion object {
-        @Volatile var instance: ObiAccessibilityService? = null
-    }
-
-    override fun onServiceConnected() { instance = this }
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
-    override fun onInterrupt() = Unit
-    override fun onUnbind(intent: Intent?): Boolean { instance = null; return super.onUnbind(intent) }
-    override fun onDestroy() { instance = null; super.onDestroy() }
 }

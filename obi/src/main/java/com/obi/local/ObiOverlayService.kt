@@ -156,13 +156,6 @@ class ObiOverlayService : Service() {
                     animate(WordSiegeMascotAction.WAVE)
                     showBubble("Bugün nasıldın? Bana dokun, anlat 💜")
                 }
-                ObiNotificationListener.ACTION_MESSAGE -> {
-                    val text = intent.getStringExtra("text") ?: return
-                    if (mascot?.visibility != View.VISIBLE) return
-                    animate(WordSiegeMascotAction.PEEK)
-                    showBubble("💬 $text")
-                    if (voiceChatOn()) speak("Yeni mesaj. $text", listenAfter = false)
-                }
                 ObiStore.ACTION_NUDGE -> {
                     animate(runCatching { WordSiegeMascotAction.valueOf(intent.getStringExtra("action") ?: "BOUNCE") }.getOrDefault(WordSiegeMascotAction.BOUNCE))
                     showBubble(intent.getStringExtra("text") ?: "Buradayım!")
@@ -260,7 +253,6 @@ class ObiOverlayService : Service() {
         val own = IntentFilter().apply {
             addAction(ObiStore.ACTION_CELEBRATE); addAction(ACTION_SHOW); addAction(ObiStore.ACTION_NUDGE)
             addAction(ObiStore.ACTION_ASK_MOOD); addAction(ObiStore.ACTION_LOOK_CHANGED); addAction(ObiVoiceAlertService.ACTION_STATUS)
-            addAction(ObiNotificationListener.ACTION_MESSAGE)
         }
         val system = IntentFilter().apply {
             addAction(Intent.ACTION_BATTERY_CHANGED); addAction(Intent.ACTION_POWER_CONNECTED)
@@ -1192,9 +1184,9 @@ class ObiOverlayService : Service() {
 
     private val helpText = "Bana yazman yeterli, örneğin:\n" +
         "• YouTube aç / WhatsApp aç / kamerayı aç / feneri aç\n• ekran ışığını kıs / sesi kıs / wifi aç / ayarları aç\n" +
-        "• ekranı kilitle / ekran görüntüsü al • youtube'da tarkan aç / sezen aksu çal\n" +
+        "• youtube'da tarkan aç / sezen aksu çal\n" +
         "• mimiklerini göster / kalp gözlü ol / gözlük tak • konfeti at / kar yağdır / havai fişek\n" +
-        "• annemi ara / Ali'ye WhatsApp'tan geliyorum yaz • mesajlarımı oku / mesajları sesli oku\n" +
+        "• annemi ara / Ali'ye WhatsApp'tan geliyorum yaz\n" +
         "• bugün ne var / yarın ne var / toplantıları hatırlat • gece modu 23-7 • kulaklık modu\n" +
         "• haftalık özet • çocuk modu / masal anlat / matematik oyunu • elma nasıl okunur\n" +
         "• sesli konuşmayı aç / kapat • ses sınırı 100\n" +
@@ -1427,12 +1419,6 @@ class ObiOverlayService : Service() {
             if (missing.isEmpty()) "" else "\nNot: " + missing.joinToString("; ") + "."
     }
 
-    private fun openNotificationAccess() {
-        hidePanel()
-        runCatching { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-        showBubble("Mesajlarını görebilmem için açılan sayfada ‘Obi’ye bildirim erişimi ver. Mesajlar telefonda kalır, bir yere gönderilmez 🔒")
-    }
-
     /** Says a word with Obi's Gemini voice and shows its syllables. */
     private fun pronounce(word: String) {
         val syllables = ObiLife.syllables(word)
@@ -1571,16 +1557,9 @@ class ObiOverlayService : Service() {
                     else "Kulaklık modunu kapattım."); return
             }
             ObiLife.pronounceWord(command) != null -> { pronounce(ObiLife.pronounceWord(command)!!); return }
-            (t.contains("mesaj") || t.contains("bildirim")) && (t.contains("sesli oku") || t.contains("bildir") && t.contains("gelince") || t.contains("okuma")) -> {
-                val on = !t.contains("kapat") && !t.contains("okuma")
-                if (on && !ObiNotificationListener.enabled(this)) { openNotificationAccess(); return }
-                localPrefs.edit().putBoolean("read_messages", on).apply()
-                say(if (on) "Tamam! Yeni mesaj gelince balonda gösteririm" + (if (voiceChatOn()) " ve sesli okurum" else "") + " 💬" else "Gelen mesajları göstermeyi kapattım."); return
-            }
-            t.contains("mesajlarımı oku") || t.contains("mesajlarimi oku") || t.contains("bildirimlerimi oku") || t.contains("son mesajlar") || t.contains("gelen mesajlar") -> {
-                if (!ObiNotificationListener.enabled(this)) { openNotificationAccess(); return }
-                val list = ObiNotificationListener.recentMessages().takeLast(5)
-                say(if (list.isEmpty()) "Ben açıldığından beri yeni mesaj gelmedi 📭" else "💬 Son mesajlar:\n" + list.joinToString("\n") { "• $it" }); return
+            t.contains("mesajlarımı oku") || t.contains("mesajlarimi oku") || t.contains("bildirimlerimi oku") || t.contains("son mesajlar") ||
+                t.contains("gelen mesajlar") || (t.contains("mesaj") && t.contains("sesli oku")) -> {
+                say("Mesajları okuyabilmem için Android'in bildirim erişimi gerekiyor; Play Protect bu izni isteyen uygulamaları engellediği için bu sürümde kaldırdım 🔒"); return
             }
             (t.contains("takvim") || t.contains("toplantılarım") || t.contains("programım") || t.contains("bugün ne var") || t.contains("yarın ne var") || t.contains("etkinliklerim")) &&
                 !t.contains("hatırlat") && !t.contains("hatirlat") -> {

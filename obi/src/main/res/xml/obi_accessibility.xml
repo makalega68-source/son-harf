@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Obi only performs system actions the user asks for (lock screen, screenshot); it never reads the screen. -->
-<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeAnnouncement"
-    android:accessibilityFeedbackType="feedbackGeneric"
-    android:canRetrieveWindowContent="false"
-    android:description="@string/obi_accessibility_description"
-    android:notificationTimeout="1000"
-    android:isAccessibilityTool="false" />
