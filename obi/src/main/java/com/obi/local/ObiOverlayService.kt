@@ -1283,6 +1283,18 @@ class ObiOverlayService : Service() {
                 ObiLife.moodScore(t)?.let { say(store.logMood(it)); return }
             }
         }
+        // "şapka tak" without naming one: wear the newest unlocked hat, or say none is open yet.
+        if (t.contains("şapka") && Regex("(?<!\\p{L})tak\\p{L}*").containsMatchIn(t) && ObiLife.wear(t)?.hat == null) {
+            val hats = ObiLife.unlocked(store.bond()).mapNotNull { it.hat }
+            if (hats.isEmpty()) {
+                val first = ObiLife.unlocks.first { it.hat != null }
+                say("Henüz şapkam yok 🥺 Bağımız ${first.points} ♥ olunca ${first.name} açılacak. Şu an: ${store.bond()} ♥\nBenimle konuştukça ve oyun oynadıkça bağımız büyür.")
+            } else {
+                store.wear(hat = hats.last())
+                say("${ObiLife.hatName(hats.last())} taktım! Nasıl oldum? ✨\nDiğerleri: ${hats.joinToString(", ") { ObiLife.hatName(it) }}", WordSiegeMascotAction.PROUD_POSE)
+            }
+            return
+        }
         ObiLife.wear(t)?.let { wear ->
             val open = ObiLife.unlocked(store.bond())
             val skinOk = wear.skin == null || open.any { it.skin == wear.skin }
