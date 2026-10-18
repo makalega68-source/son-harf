@@ -407,4 +407,119 @@ internal object ObiLife {
             else -> null
         }
     }
+
+    // ---- Friendship ---------------------------------------------------------------------------
+
+    fun bondLevel(points: Int): String = when {
+        points >= 500 -> "Ayrılmaz ikili 💞"
+        points >= 200 -> "Can dostu 💜"
+        points >= 80 -> "Yakın arkadaş 🤝"
+        points >= 20 -> "Arkadaş 🙂"
+        else -> "Yeni tanıştık 👋"
+    }
+
+    fun friendMilestone(days: Long): String? = when {
+        days == 7L -> "Tam 1 haftadır arkadaşız! 🎉"
+        days == 30L -> "1 aydır birlikteyiz! Seni tanımak çok güzel 💜"
+        days == 100L -> "100 gündür arkadaşız! 🎆 Yanımda olduğun için teşekkürler."
+        days >= 365L && days % 365L == 0L -> "Bugün arkadaşlığımızın ${days / 365L}. yılı! 🎂"
+        else -> null
+    }
+
+    /** Something the user told about themselves: shown back as "en sevdiğin renk: mavi". */
+    data class Fact(val key: String, val value: String)
+
+    private val questionWords = setOf("ne", "neydi", "nedir", "hangisi", "hangi", "kim", "neresi", "kaç", "biliyor", "musun", "mi", "mı")
+
+    fun fact(text: String): Fact? {
+        val t = lower(text).trim().trimEnd('.', '!')
+        if (t.endsWith("?") || t.split(' ').any { it in questionWords }) return null
+        Regex("^(?:benim\\s+)?en sevdiğim\\s+(\\p{L}{2,20})\\s+(.{2,40})$").find(t)?.let {
+            return Fact("en sevdiğin ${it.groupValues[1]}", it.groupValues[2].removeSuffix("dır").removeSuffix("dir").trim())
+        }
+        Regex("^(?:benim\\s+)?(memleketim|mesleğim|takımım|burcum)\\s+(.{2,30})$").find(t)?.let {
+            val key = mapOf("memleketim" to "memleketin", "mesleğim" to "mesleğin", "takımım" to "takımın", "burcum" to "burcun")
+            return Fact(key.getValue(it.groupValues[1]), it.groupValues[2].trim())
+        }
+        Regex("^(\\d{1,3})\\s+yaşındayım$").find(t)?.let { return Fact("yaşın", it.groupValues[1]) }
+        Regex("^(kedimin|köpeğimin|kuşumun|balığımın)\\s+adı\\s+(\\p{L}{2,20})$").find(t)?.let {
+            val owner = mapOf("kedimin" to "kedinin", "köpeğimin" to "köpeğinin", "kuşumun" to "kuşunun", "balığımın" to "balığının")
+                .getValue(it.groupValues[1])
+            return Fact("$owner adı", it.groupValues[2].replaceFirstChar { c -> c.titlecase(tr) })
+        }
+        Regex("^(?:ben\\s+)?(.{2,30}?)\\s+(?:çok\\s+)?(?:severim|seviyorum|bayılırım)$").find(t)?.let {
+            val what = it.groupValues[1].trim()
+            if (what in setOf("seni", "sizi", "obi", "obiyi", "obi'yi", "onu")) return null
+            return Fact("sevdiğin", what)
+        }
+        Regex("^(?:ben\\s+)?(.{2,30}?)\\s+(?:hiç\\s+)?(?:sevmem|sevmiyorum|nefret ederim)$").find(t)?.let {
+            return Fact("sevmediğin", it.groupValues[1].trim())
+        }
+        return null
+    }
+
+    /** "en sevdiğim renk ne?" → "en sevdiğin renk"; "hakkımda ne biliyorsun" → "*" (everything). */
+    fun factQuestion(text: String): String? {
+        val t = lower(text).trim()
+        if (listOf("hakkımda ne biliyorsun", "beni ne kadar tanıyorsun", "beni tanıyor musun", "benim hakkımda", "neleri hatırlıyorsun").any(t::contains)) return "*"
+        Regex("en sevdiğim\\s+(\\p{L}{2,20})\\s+(?:ne|neydi|nedir|hangisi)").find(t)?.let { return "en sevdiğin ${it.groupValues[1]}" }
+        if (t.contains("memleketim") && (t.contains("neresi") || t.contains("ne"))) return "memleketin"
+        if (t.contains("kaç yaşındayım")) return "yaşın"
+        if (t.contains("burcum ne")) return "burcun"
+        return null
+    }
+
+    enum class Feeling { LOVE, HUG, PRAISE, THANKS, SAD, ANGRY, BORED, TIRED, HAPPY }
+
+    fun feeling(text: String): Feeling? {
+        val t = lower(text)
+        fun any(vararg words: String) = words.any(t::contains)
+        return when {
+            any("seni seviyorum", "seni çok seviyorum", "seni sevdim", "canımsın", "bir tanesin", "seni seviyom", "love you") -> Feeling.LOVE
+            any("sarıl", "kucakla", "sarilalim", "sarilir") -> Feeling.HUG
+            any("aferin", "harikasın", "süpersin", "akıllısın", "çok iyisin", "tatlısın", "çok tatlı", "en iyisisin") -> Feeling.PRAISE
+            any("teşekkür", "sağ ol", "sağol", "eyvallah", "tşk") -> Feeling.THANKS
+            any("moralim bozuk", "canım sıkkın", "kötü hissediyorum", "ağlıyorum", "mutsuzum", "yalnızım", "çok üzgünüm", "üzgünüm bugün", "kötüyüm", "keyfim yok") -> Feeling.SAD
+            any("sinirliyim", "kızgınım", "çok sinirlendim", "delirdim", "sinir oldum") -> Feeling.ANGRY
+            any("sıkıldım", "sıkılıyorum", "canım sıkıldı") -> Feeling.BORED
+            any("yorgunum", "çok yoruldum", "uykum var", "uykum geldi", "bitkinim") -> Feeling.TIRED
+            any("çok mutluyum", "mutluyum", "başardım", "sevinçliyim", "harika bir gün", "çok iyiyim") -> Feeling.HAPPY
+            else -> null
+        }
+    }
+
+    /** Full-screen effect asked for by name ("konfeti at", "kar yağdır"), as an ObiEffect name. */
+    fun effectCommand(text: String): String? {
+        val t = lower(text)
+        return when {
+            t.contains("konfeti") -> "CONFETTI"
+            t.contains("havai fişek") || t.contains("havai fisek") -> "FIREWORKS"
+            t.contains("kalp yağdır") || t.contains("kalp yagdir") || t.contains("kalpler") -> "HEARTS"
+            t.contains("yıldız yağdır") || t.contains("yıldızlar") || t.contains("yildiz yagdir") -> "STARS"
+            t.contains("kar yağdır") || t.contains("kar yagdir") || t == "kar yağsın" -> "SNOW"
+            t.contains("baloncuk") -> "BUBBLES"
+            t.contains("çiçek yağdır") || t.contains("yaprak yağdır") || t.contains("çiçekler") -> "PETALS"
+            t.contains("şov yap") || t.contains("sov yap") || t.contains("animasyon yap") || t.contains("bir şov") || t.contains("beni eğlendir") -> "RANDOM"
+            else -> null
+        }
+    }
+
+    /** Asking Obi to make a face ("kalp gözlü ol", "gözlük tak", "mimiklerini göster"), as an ObiFace name. */
+    fun faceCommand(text: String): String? {
+        val t = lower(text)
+        return when {
+            t.contains("mimik") || t.contains("yüz ifade") || t.contains("surat yap") -> "ALL"
+            t.contains("kalp göz") -> "HEART_EYES"
+            t.contains("yıldız göz") -> "STAR_EYES"
+            t.contains("gözlük tak") || t.contains("havalı ol") || t.contains("güneş gözlüğü") -> "COOL"
+            t.contains("başın dönsün") || t.contains("sersemle") -> "DIZZY"
+            t == "şaşır" || t.contains("şaşırmış") -> "SHOCKED"
+            t == "sinirlen" || t.contains("kızgın ol") || t.contains("sinirli ol") -> "STEAM"
+            t == "ağla" || t.contains("ağlar mısın") -> "CRY"
+            t == "düşün" || t.contains("kafan karış") -> "CONFUSED"
+            t == "gül" || t.contains("kahkaha") -> "LAUGH"
+            t.contains("fikir bul") || t.contains("aklına bir şey") -> "IDEA"
+            else -> null
+        }
+    }
 }

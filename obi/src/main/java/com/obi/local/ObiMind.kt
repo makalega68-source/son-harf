@@ -116,6 +116,10 @@ internal data class ObiReply(
     /** A phone task Gemini recognised in free text (see [ObiGemini.TOOLS]); the app performs it locally. */
     val intent: String? = null,
     val args: JSONObject? = null,
+    /** An extra anime face for this answer (heart eyes, idea…), when Gemini picks one. */
+    val face: ObiFace? = null,
+    /** A full-screen effect name (ObiEffect) for special moments only. */
+    val effect: String? = null,
 )
 
 internal class ObiGemini(private val context: Context) {
@@ -245,7 +249,7 @@ internal class ObiGemini(private val context: Context) {
         String(cipher.doFinal(Base64.decode(encoded, Base64.NO_WRAP)))
     }.getOrNull()
 
-    fun ask(prompt: String, tools: Boolean = false, done: (ObiReply) -> Unit) {
+    fun ask(prompt: String, tools: Boolean = false, profile: String = "", done: (ObiReply) -> Unit) {
         val key = readKey() ?: return done(ObiReply("Gemini bağlanmadı. ‘Gemini bağla’ düğmesine bas."))
         val today = LocalDate.now().toString()
         val used = if (prefs.getString("day", "") == today) prefs.getInt("used", 0) else 0
@@ -257,7 +261,11 @@ internal class ObiGemini(private val context: Context) {
                 contents.put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", prompt.take(1500)))))
                 val body = JSONObject()
                     .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text",
-                        "Adın Obi. Türkçe yazışan şirin bir telefon maskotusun. Uygulama hatırlatma ve alarmları zamanı gelince Obi'nin sesiyle sesli okur, sesli komut da alır; bunları yapamadığını asla söyleme, hatırlatma istenirse reminder intent'iyle kur. Sohbet cevaplarını yazıyla verirsin. Şapka, kıyafet ya da karakter değiştirme istenirse bunu yaptığını söyleme; intent \"wardrobe\" kullan, uygulama halleder. Kullanıcının bağlamını önceki konuşmadan izle; farklı, doğal ve somut yanıtlar ver. Çeviri, açıklama, özetleme, yazı yazma, fikir üretme ve sohbet isteklerini karşıla. Sadece sohbet dışında telefondaki eylemleri yaptığını iddia etme; not/alarm/hatırlatıcıyı uygulama yerel olarak ele alır. Ekranı gördüğünü söyleme. Uygulama açma, kamera, fener, ekran ışığı, ses ve ayarlar istenirse yapamadığını söyleme; phone intent'ini kullan, uygulama yapar. JSON nesnesi dön: text kullanıcıya yanıt, action ise yanıtın duygusuna uygun tek bir hareket. action değerleri: NOD, THINK, CHEER, DANCE, WAVE, LOVE, GIGGLE, SHY, WINK, SPARKLE, CLAP, SHRUG, YAWN, DOZE, POINT, BOUNCE. Kısa bir sohbet yanıtında da eylemi duyguya göre değiştir. Yanıtların kısa ve konuşma balonuna sığacak gibi olsun." +
+                        "Adın Obi. Türkçe yazışan şirin bir telefon maskotusun. Uygulama hatırlatma ve alarmları zamanı gelince Obi'nin sesiyle sesli okur, sesli komut da alır; bunları yapamadığını asla söyleme, hatırlatma istenirse reminder intent'iyle kur. Sohbet cevaplarını yazıyla verirsin. Şapka, kıyafet ya da karakter değiştirme istenirse bunu yaptığını söyleme; intent \"wardrobe\" kullan, uygulama halleder. Kullanıcının bağlamını önceki konuşmadan izle; farklı, doğal ve somut yanıtlar ver. Çeviri, açıklama, özetleme, yazı yazma, fikir üretme ve sohbet isteklerini karşıla. Sadece sohbet dışında telefondaki eylemleri yaptığını iddia etme; not/alarm/hatırlatıcıyı uygulama yerel olarak ele alır. Ekranı gördüğünü söyleme. Uygulama açma, kamera, fener, ekran ışığı, ses ve ayarlar istenirse yapamadığını söyleme; phone intent'ini kullan, uygulama yapar. JSON nesnesi dön: text kullanıcıya yanıt, action ise yanıtın duygusuna uygun tek bir hareket. action değerleri: NOD, THINK, CHEER, DANCE, WAVE, LOVE, GIGGLE, SHY, WINK, SPARKLE, CLAP, SHRUG, YAWN, DOZE, POINT, BOUNCE. Kısa bir sohbet yanıtında da eylemi duyguya göre değiştir. " +
+                        "İsteğe bağlı face alanı yüz ifadesidir: HEART_EYES, STAR_EYES, CONFUSED, IDEA, SHOCKED, COOL, DIZZY, CRY, SAD, LAUGH, STEAM; duyguya gerçekten uyuyorsa koy. " +
+                        "İsteğe bağlı effect alanı ekran efektidir: CONFETTI, HEARTS, STARS, SNOW, BUBBLES, FIREWORKS, PETALS; sadece kutlama, sevgi ya da başarı gibi özel anlarda kullan. " +
+                        "Kullanıcıyla sıcak, samimi bir arkadaşlık kur: adını ve anlattıklarını hatırla, yeri gelince bunlara değin, nasıl olduğunu sor, ama abartma. Yanıtların kısa ve konuşma balonuna sığacak gibi olsun." +
+                        (if (profile.isNotBlank()) " Kullanıcı hakkında bildiklerin: $profile." else "") +
                         (if (tools) " Şu an ${java.time.LocalDateTime.now().withSecond(0).withNano(0)} (${java.time.LocalDate.now().dayOfWeek}). " + TOOLS else "")))))
                     .put("contents", contents)
                     .put("generationConfig", JSONObject().put("maxOutputTokens", 900).put("temperature", 0.8)
@@ -291,7 +299,9 @@ internal class ObiGemini(private val context: Context) {
                     }
                     saveHistory()
                     prefs.edit().putString("day", today).putInt("used", used + 1).apply()
-                    ObiReply(reply, action, intent, parsed?.optJSONObject("args"))
+                    val face = parsed?.optString("face")?.uppercase(Locale.ROOT)?.let { name -> ObiFace.entries.firstOrNull { it.name == name } }
+                    val effect = parsed?.optString("effect")?.uppercase(Locale.ROOT)?.takeIf { it in setOf("CONFETTI", "HEARTS", "STARS", "SNOW", "BUBBLES", "FIREWORKS", "PETALS") }
+                    ObiReply(reply, action, intent, parsed?.optJSONObject("args"), face, effect)
                 } finally { connection.disconnect() }
             }.getOrElse { ObiReply("Bağlantı kurulamadı. İnterneti kontrol edip yeniden dene.", WordSiegeMascotAction.SHRUG) }
             android.os.Handler(android.os.Looper.getMainLooper()).post { done(answer) }

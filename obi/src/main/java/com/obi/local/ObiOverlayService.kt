@@ -220,6 +220,10 @@ class ObiOverlayService : Service() {
                     else -> listOf(WordSiegeMascotAction.LOOK_AROUND, WordSiegeMascotAction.SWAY, WordSiegeMascotAction.WAVE).random()
                 }
                 animate(action)
+                // Now and then a little face of its own while idling.
+                if (action != WordSiegeMascotAction.DOZE && !focusing && Random.nextFloat() < .2f) handler.postDelayed({
+                    expressFace(listOf(ObiFace.IDEA, ObiFace.CONFUSED, ObiFace.STAR_EYES, ObiFace.COOL, ObiFace.LAUGH, ObiFace.HEART_EYES).random(), 2_600L)
+                }, mascotActionMillis(action))
                 maybeSuggestBreak(focusing)
             }
             handler.postDelayed(this, 30_000L)
@@ -379,6 +383,7 @@ class ObiOverlayService : Service() {
 
     private var micForeground = false
     private var voicePending = false
+    private var dragTravel = 0f
     private val phoneActions by lazy { ObiPhone(this) { hidePanel() } }
 
     private val listener by lazy {
@@ -466,8 +471,9 @@ class ObiOverlayService : Service() {
             isClickable = true
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
             updateGame(null, false, 0, 0, 0, null, emptyList(), true, WordSiegeMascotEmotion.HAPPY)
-            dragStarted = { showHideTarget() }
+            dragStarted = { showHideTarget(); dragTravel = 0f }
             dragMoved = { delta ->
+                dragTravel += kotlin.math.hypot(delta.x, delta.y)
                 val width = resources.displayMetrics.widthPixels
                 val height = resources.displayMetrics.heightPixels
                 params.x = (params.x + delta.x.roundToInt()).coerceIn(0, (width - params.width).coerceAtLeast(0))
@@ -487,7 +493,14 @@ class ObiOverlayService : Service() {
                     runCatching { windows.updateViewLayout(this, params) }
                     placeTimer()
                     setUserHidden(true)
-                } else if (catchUntil == 0L) prefs.edit().putInt("x", params.x).putInt("y", params.y).apply()
+                } else if (catchUntil == 0L) {
+                    prefs.edit().putInt("x", params.x).putInt("y", params.y).apply()
+                    // Swung all over the screen: Obi gets dizzy.
+                    if (dragTravel > resources.displayMetrics.widthPixels * 3f) {
+                        expressFace(ObiFace.DIZZY, 3_000L)
+                        showBubble(listOf("Başım döndü! 😵‍💫", "Vııın! Dünya dönüyor…", "Biraz yavaş, midem bulandı 🙃").random())
+                    }
+                }
             }
             setOnClickListener { onMascotTap(prefs) }
             setOnLongClickListener { if (catchUntil == 0L) startPushToTalk(); true }
@@ -654,11 +667,73 @@ class ObiOverlayService : Service() {
         }, mascotActionMillis(action))
     }
 
+    /** An anime face on both the floating Obi and the chat Obi. */
+    private fun expressFace(face: ObiFace, millis: Long = 3_400L) {
+        mascot?.express(face, millis)
+        chatMascot?.express(face, millis)
+    }
+
+    /** A few seconds of confetti, hearts, snow… over the whole screen; touches pass through. */
+    private fun showEffect(effect: ObiEffect, asked: Boolean = false) {
+        // Unasked moments never cover a full-screen game or video.
+        if (!asked && (fullscreenHidden || userHidden)) return
+        ObiEffectView.show(this, windows, effect)
+    }
+
+    /** What Obi knows about the user, handed to Gemini so its answers feel personal. */
+    private fun profileText(): String {
+        val parts = mutableListOf<String>()
+        localPrefs.getString("name", null)?.takeIf { it.isNotBlank() }?.let { parts += "adı $it" }
+        parts += "${store.daysTogether()} gündür arkadaşsınız, bağınız: ${ObiLife.bondLevel(store.bond())}"
+        store.facts().forEach { (key, value) -> parts += "$key: $value" }
+        store.moods().entries.maxByOrNull { it.key }?.let { parts += "son ruh hali puanı ${it.value}/5" }
+        return parts.joinToString("; ")
+    }
+
+    /** Hearts for love, a hug, cheering up when sad… Returns Obi's own line for when Gemini is off. */
+    private fun reactToFeeling(feeling: ObiLife.Feeling): String {
+        val name = localPrefs.getString("name", null)?.takeIf { it.isNotBlank() }
+        val you = name?.let { "$it, " } ?: ""
+        return when (feeling) {
+            ObiLife.Feeling.LOVE -> { expressFace(ObiFace.HEART_EYES); animate(WordSiegeMascotAction.LOVE); showEffect(ObiEffect.HEARTS, asked = true); reward(3)
+                listOf("Ben de seni çok seviyorum ${name ?: ""}! 💜", "Kalbim pır pır etti! 💞", "Sen benim en sevdiğim insansın 🥰").random() }
+            ObiLife.Feeling.HUG -> { expressFace(ObiFace.HEART_EYES, 2_600L); animate(WordSiegeMascotAction.NUZZLE); reward(2)
+                listOf("Kocaman sarılıyorum! 🤗", "Gel buraya! Sımsıkı sarıldım 💜").random() }
+            ObiLife.Feeling.PRAISE -> { expressFace(ObiFace.STAR_EYES); animate(WordSiegeMascotAction.SHY); reward(2)
+                listOf("Utandırdın beni! ☺️", "Sen de harikasın! ✨", "Yaa, teşekkür ederim! 🥹").random() }
+            ObiLife.Feeling.THANKS -> { animate(WordSiegeMascotAction.SHY); reward(1)
+                listOf("Ne demek, her zaman! 💜", "Rica ederim ${you}ben buradayım.", "Senin için seve seve! ✨").random() }
+            ObiLife.Feeling.SAD -> { expressFace(ObiFace.SAD, 2_400L); handler.postDelayed({ animate(WordSiegeMascotAction.NUZZLE) }, 2_400L)
+                "${you}üzüldüğünü duyunca ben de üzüldüm 🥺 Anlatmak ister misin? Buradayım, istersen sana sarılayım 💜" }
+            ObiLife.Feeling.ANGRY -> { expressFace(ObiFace.STEAM, 2_200L)
+                "Off, sinir bozucu bir şey olmuş belli 😤 Derin bir nefes alalım mı? Birlikte: içeri… dışarı… Anlatırsan dinlerim." }
+            ObiLife.Feeling.BORED -> { expressFace(ObiFace.IDEA); pending = Pending.GAME_PICK
+                "Aklıma bir fikir geldi! 💡 Oyun oynayalım mı? kelime tahmini, bilmece, kelime testi ya da yakala!" }
+            ObiLife.Feeling.TIRED -> { animate(WordSiegeMascotAction.YAWN)
+                "${you}biraz dinlenmeyi hak ettin 😴 İstersen 10 dakika sonra seni uyandırayım: ‘10 dakika sonra alarm kur’ de." }
+            ObiLife.Feeling.HAPPY -> { expressFace(ObiFace.STAR_EYES); animate(WordSiegeMascotAction.DANCE); showEffect(ObiEffect.CONFETTI, asked = true); reward(1)
+                "Yaşasın! Senin mutluluğun benim mutluluğum! 🎉" }
+        }
+    }
+
+    private fun factsText(): String {
+        val facts = store.facts()
+        val name = localPrefs.getString("name", null)?.takeIf { it.isNotBlank() }
+        if (facts.isEmpty() && name == null) return "Seni daha yeni tanıyorum 🙂 Bana kendinden bahset: ‘en sevdiğim renk mavi’, ‘kedimin adı Pamuk’, ‘kahve severim’ gibi."
+        return buildString {
+            append("Senin hakkında bildiklerim 💜\n")
+            name?.let { append("• Adın: $it\n") }
+            facts.forEach { (key, value) -> append("• ${key.replaceFirstChar { it.titlecase(java.util.Locale("tr", "TR")) }}: $value\n") }
+            append("• ${store.daysTogether()} gündür arkadaşız (${ObiLife.bondLevel(store.bond())})")
+        }
+    }
+
     /** Bond points for everyday moments; a new skin or hat is announced with a sparkle. */
     private fun reward(points: Int) {
         val unlock = store.addBond(points) ?: return
         handler.postDelayed({
             animate(WordSiegeMascotAction.SPARKLE)
+            showEffect(ObiEffect.CONFETTI)
             showBubble("Yeni bir şey açıldı: ${unlock.name}! 🎁 Menüde ‘Dolap’tan giyebilirim.")
         }, 1_600L)
     }
@@ -705,11 +780,14 @@ class ObiOverlayService : Service() {
     private fun greetToday() {
         val today = LocalDate.now().toString()
         if (localPrefs.getString("greeted_day", "") == today) return
+        val milestone = ObiLife.friendMilestone(store.daysTogether())
         val line = when {
             store.isBirthdayToday() -> "İyi ki doğdun! Bugün taç bende, kutlama sende 👑🎂"
+            milestone != null -> milestone
             else -> ObiLife.celebration(LocalDate.now())?.message
         } ?: return
         localPrefs.edit().putString("greeted_day", today).apply()
+        showEffect(if (store.isBirthdayToday() || milestone != null) ObiEffect.FIREWORKS else ObiEffect.CONFETTI)
         animate(WordSiegeMascotAction.DANCE)
         showBubble(line)
     }
@@ -720,6 +798,14 @@ class ObiOverlayService : Service() {
         val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
         if (ObiLife.isNight(hour * 60 + calendar.get(java.util.Calendar.MINUTE), store.bedtime())) return
         lastGreetAt = now
+        val away = store.daysAwayAndMarkSeen()
+        if (away >= 2) {
+            expressFace(ObiFace.HEART_EYES)
+            animate(WordSiegeMascotAction.NUZZLE)
+            showBubble("Seni çok özledim! 🥺 $away gündür görüşmüyorduk. Neler yaptın?")
+            greetToday()
+            return
+        }
         animate(WordSiegeMascotAction.WAVE)
         showBubble(when (hour) {
             in 5..10 -> listOf("Günaydın! Seni gördüğüme sevindim ☀️", "Hoş geldin! Bugün harika olacak.").random()
@@ -1056,6 +1142,8 @@ class ObiOverlayService : Service() {
     private val helpText = "Bana yazman yeterli, örneğin:\n" +
         "• YouTube aç / WhatsApp aç / kamerayı aç / feneri aç\n• ekran ışığını kıs / sesi kıs / wifi aç / ayarları aç\n" +
         "• ekranı kilitle / ekran görüntüsü al • youtube'da tarkan aç / sezen aksu çal\n" +
+        "• mimiklerini göster / kalp gözlü ol / gözlük tak • konfeti at / kar yağdır / havai fişek\n" +
+        "• en sevdiğim renk mavi / kedimin adı Pamuk / hakkımda ne biliyorsun / kaç gündür arkadaşız\n" +
         "• listeye süt ekmek ekle / listem\n• not al: faturayı öde / notlarım\n" +
         "• her gün 21'de ilacımı hatırlat / 10 dakika sonra alarm kur / alarmlarım\n" +
         "• Arnavutköy'de hava nasıl / şehrim İzmir\n• market 250 TL / harcamalarım\n" +
@@ -1087,9 +1175,11 @@ class ObiOverlayService : Service() {
         requestId++
         val current = requestId
         thinking()
-        gemini.ask(prompt, tools) { answer ->
+        gemini.ask(prompt, tools, profileText()) { answer ->
             if (current != requestId) return@ask
             if (answer.intent != null && runIntent(answer.intent, answer.args ?: JSONObject(), answer.text)) return@ask
+            answer.face?.let { expressFace(it) }
+            answer.effect?.let { name -> ObiEffect.entries.firstOrNull { it.name == name }?.let { showEffect(it) } }
             say(answer.text, answer.action)
         }
     }
@@ -1232,9 +1322,58 @@ class ObiOverlayService : Service() {
         }
         game?.let { if (playGame(it, command)) return }
 
+        // Faces, screen effects and getting to know each other.
+        ObiLife.faceCommand(t)?.let { name ->
+            if (name == "ALL") {
+                ObiFace.entries.forEachIndexed { i, face -> handler.postDelayed({ expressFace(face, 2_000L) }, i * 2_100L) }
+                say("Mimiklerimi göstereyim! 🎭 Kalp gözler, yıldız gözler, şaşkın, havalı, sersem…", WordSiegeMascotAction.BOUNCE)
+            } else {
+                expressFace(ObiFace.valueOf(name), 4_000L)
+                say(listOf("Nasıl? 😄", "Tam böyle mi? ✨", "İşte! 🎭").random())
+            }
+            return
+        }
+        ObiLife.effectCommand(t)?.let { name ->
+            val effect = if (name == "RANDOM") ObiEffect.entries.random() else ObiEffect.valueOf(name)
+            if (!ObiEffectView.show(this, windows, effect)) { say("Şu an ekrana efekt çizemedim 🥺"); return }
+            animate(WordSiegeMascotAction.DANCE)
+            say("${effect.label.replaceFirstChar { it.titlecase(java.util.Locale("tr", "TR")) }}! ✨"); return
+        }
+        ObiLife.factQuestion(command)?.let { key ->
+            if (key == "*") { say(factsText(), WordSiegeMascotAction.NUZZLE); return }
+            store.facts()[key]?.let { say("${key.replaceFirstChar { it.titlecase(java.util.Locale("tr", "TR")) }}: $it 😊 Unutmadım!", WordSiegeMascotAction.PROUD_POSE); return }
+        }
+        if (t.contains("kaç gündür arkadaş") || t.contains("ne zamandır arkadaş") || t.contains("kaç gündür tanış")) {
+            say("${store.daysTogether()} gündür arkadaşız! Bağımız: ${ObiLife.bondLevel(store.bond())} (${store.bond()} ♥)", WordSiegeMascotAction.NUZZLE); return
+        }
+        if (t.contains("beni unut") || t.contains("bildiklerini unut")) { store.forgetFacts(); say("Tamam, anlattıklarını unuttum. Adın aklımda kaldı 🙂"); return }
+        ObiLife.fact(command)?.let { fact ->
+            store.remember(fact)
+            reward(2)
+            expressFace(ObiFace.IDEA, 2_200L)
+            say(when (fact.key) {
+                "sevdiğin" -> "Not ettim: ${fact.value} seviyorsun 💜"
+                "sevmediğin" -> "Anladım, ${fact.value} sevmiyorsun. Aklımda!"
+                else -> "Aklımda tutacağım: ${fact.key} ${fact.value} ✨"
+            }, WordSiegeMascotAction.NOD)
+            return
+        }
+        ObiLife.feeling(command)?.let { feeling ->
+            val line = reactToFeeling(feeling)
+            if (!gemini.connected() || feeling == ObiLife.Feeling.BORED) { say(line); return }
+        }
+
         when {
             t.contains("gemini") && (t.contains("bağla") || t.contains("bagla") || t.contains("anahtar")) -> { openGeminiSetup(); return }
             t.contains("dinlemeyi kapat") || t.contains("sesli komut kapat") || t.contains("sesli komutu kapat") || t.contains("beni dinleme") -> { say(setWakeMode(false)); return }
+            t.contains("asistan") && (t.contains("yap") || t.contains("ayarla") || t.contains("seç") || t.contains("olsun") || t.contains("nasıl")) -> {
+                hidePanel()
+                val opened = runCatching { startActivity(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }.getOrDefault(false) ||
+                    runCatching { startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }.getOrDefault(false)
+                showBubble((if (opened) "Açılan sayfada ‘Dijital asistan uygulaması’nı Obi yap. " else "Ayarlar › Uygulamalar › Varsayılan uygulamalar › Dijital asistan › Obi. ") +
+                    "Sonra ana ekran tuşunu basılı tutunca ya da köşeden kaydırınca ben dinlerim 🎤 Not: o zaman ‘Hey Google’ çalışmaz.")
+                return
+            }
             t.contains("beni dinle") || t.contains("sesli komut") || t.contains("dinlemeyi aç") || t.contains("dinlemeyi ac") || t.contains("obi modu") -> { say(setWakeMode(true)); return }
             t == "yardım" || t == "yardim" || t.contains("ne yapabilirsin") || t.contains("neler yapabilirsin") || t == "komutlar" -> { say(helpText); return }
             t.contains("odaklan") || t.contains("pomodoro") -> {

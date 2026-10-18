@@ -12,8 +12,8 @@ android {
         applicationId = "com.obi.local"
         minSdk = 26
         targetSdk = 36
-        versionCode = 28
-        versionName = "0.10.7"
+        versionCode = 29
+        versionName = "0.11.0"
     }
 
     buildFeatures { compose = true }

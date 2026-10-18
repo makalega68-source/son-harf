@@ -367,6 +367,38 @@ internal class ObiStore(private val context: Context) {
         return ObiLife.justUnlocked(before, before + gain)
     }
 
+    // ---- What Obi remembers about the user (on the phone only) ----------------------------------
+
+    fun facts(): Map<String, String> = runCatching {
+        val json = JSONObject(prefs.getString("facts", "{}") ?: "{}")
+        json.keys().asSequence().associateWith { json.getString(it) }
+    }.getOrDefault(emptyMap())
+
+    /** Keeps [fact]; likes and dislikes collect up to five items each. */
+    fun remember(fact: ObiLife.Fact) {
+        val all = JSONObject(facts())
+        val value = if (fact.key == "sevdiğin" || fact.key == "sevmediğin") {
+            (all.optString(fact.key).split(", ").filter { it.isNotBlank() && it != fact.value } + fact.value).takeLast(5).joinToString(", ")
+        } else fact.value
+        all.put(fact.key, value)
+        prefs.edit().putString("facts", all.toString()).apply()
+    }
+
+    fun forgetFacts() = prefs.edit().remove("facts").apply()
+
+    /** Days since Obi and the user first met (the day is set the first time it is asked). */
+    fun daysTogether(): Long {
+        val first = prefs.getString("first_met", null) ?: LocalDate.now().toString().also { prefs.edit().putString("first_met", it).apply() }
+        return runCatching { java.time.temporal.ChronoUnit.DAYS.between(LocalDate.parse(first), LocalDate.now()) }.getOrDefault(0L)
+    }
+
+    /** Days since the user last talked to Obi; also marks today as seen. */
+    fun daysAwayAndMarkSeen(): Long {
+        val last = prefs.getString("last_seen", null)
+        prefs.edit().putString("last_seen", LocalDate.now().toString()).apply()
+        return last?.let { runCatching { java.time.temporal.ChronoUnit.DAYS.between(LocalDate.parse(it), LocalDate.now()) }.getOrNull() } ?: 0L
+    }
+
     fun skin(): WordSiegeMascotSkin = WordSiegeMascotSkin.fromId(prefs.getString("skin", null))
         ?.takeIf { s -> ObiLife.unlocked(bond()).any { it.skin == s } } ?: WordSiegeMascotSkin.ORB
 
