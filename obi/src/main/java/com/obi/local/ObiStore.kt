@@ -460,6 +460,7 @@ internal class ObiStore(private val context: Context) {
         if (prefs.getBoolean("voice_alerts", true)) {
             val voice = ObiGeminiVoice(context)
             if (kind == "alarm") voice.prepareFixed()
+            else if (!voice.has("reminder")) voice.prepareFixed()
             else if (!text.startsWith("Obi ")) voice.prepare("rem_$id", ObiGeminiVoice.reminderLine(text))
         }
         ObiWidget.refresh(context)

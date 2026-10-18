@@ -1264,7 +1264,7 @@ class ObiOverlayService : Service() {
             t.contains("sesini değiştir") || t.contains("sesini degistir") || t.contains("başka ses") || t.contains("baska ses") -> {
                 val name = ObiGeminiVoice(this).nextVoice()
                 runCatching { startForegroundService(Intent(this, ObiVoiceAlertService::class.java).setAction(ObiVoiceAlertService.ACTION_PREVIEW)) }
-                say("Yeni sesim: $name. Dinle bakalım! (Beğenmezsen yine ‘sesini değiştir’ yaz.)", WordSiegeMascotAction.GIGGLE); return
+                say("Yeni sesim: $name. Dinle bakalım! (Not: her ses değişiminde hazır cümleler yeniden üretilir ve günlük ücretsiz ses hakkından yer.)", WordSiegeMascotAction.GIGGLE); return
             }
             t.contains("ses durumu") || t.contains("sesin neden") -> {
                 val voice = ObiGeminiVoice(this)

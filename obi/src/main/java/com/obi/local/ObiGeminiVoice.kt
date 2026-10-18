@@ -29,12 +29,13 @@ internal class ObiGeminiVoice(private val context: Context) {
 
         /** Fixed lines, made once and reused. */
         val FIXED = mapOf(
-            "preview" to "Merhaba! Ben Obi. Sesim böyle, beğendin mi?",
-            "alarm_morning" to "Günaydın! Sabah oldu, hadi uyan bakalım. Yeni bir gün seni bekliyor!",
-            "alarm" to "Alarm zamanı geldi! Hadi bakalım, kalkıyoruz!",
+            // Most needed first, so a small daily allowance goes to what is actually heard.
             "reminder" to "Hatırlatma zamanı geldi!",
             "done" to "Tamam, hallettim!",
+            "preview" to "Merhaba! Ben Obi. Sesim böyle, beğendin mi?",
             "listening" to "Efendim?",
+            "alarm" to "Alarm zamanı geldi! Hadi bakalım, kalkıyoruz!",
+            "alarm_morning" to "Günaydın! Sabah oldu, hadi uyan bakalım. Yeni bir gün seni bekliyor!",
         )
 
         fun reminderLine(text: String) = "Hatırlatma var: ${text.trimEnd('.', '!')}."
@@ -69,6 +70,11 @@ internal class ObiGeminiVoice(private val context: Context) {
         val today = LocalDate.now().toString()
         val used = if (prefs.getString("voice_day", "") == today) prefs.getInt("voice_used", 0) else 0
         if (used >= DAILY_LIMIT) { status("Bugünlük ses hakkı doldu ($DAILY_LIMIT)."); return false }
+        val blockedUntil = prefs.getLong("voice_blocked_until", 0L)
+        if (System.currentTimeMillis() < blockedUntil) {
+            status("Ücretsiz Gemini ses hakkı bugünlük bitti; ${clock(blockedUntil)} civarında yenilenecek. Hazır sesler kullanılıyor.")
+            return false
+        }
         val preferred = prefs.getString("voice_model", null)
         val candidates = (listOfNotNull(preferred) + MODELS).distinct().toMutableList()
         var lastError = "bağlantı kurulamadı"
@@ -84,6 +90,13 @@ internal class ObiGeminiVoice(private val context: Context) {
                 if ((result.first == 404 || result.first == 400) && !discovered) {
                     discovered = true
                     candidates += runCatching { ttsModels(apiKey) }.getOrDefault(emptyList()).filter { it !in candidates }
+                }
+                if (result.first == 429 && (result.third ?: "").contains("quota", ignoreCase = true)) {
+                    // The free daily allowance is used up: stop asking until Google resets it
+                    // (midnight Pacific time), so no requests are wasted.
+                    prefs.edit().putLong("voice_blocked_until", nextQuotaReset()).apply()
+                    status("Ücretsiz Gemini ses hakkı bugünlük bitti; ${clock(nextQuotaReset())} civarında yenilenecek. Hazır sesler kullanılıyor.")
+                    return false
                 }
                 if (result.first == 429 || result.first == 401 || result.first == 403) break
                 continue
@@ -111,6 +124,7 @@ internal class ObiGeminiVoice(private val context: Context) {
     private fun prepareWithRetry(key: String, text: String): Boolean {
         repeat(5) { attempt ->
             if (runCatching { prepareBlocking(key, text) }.getOrDefault(false)) return true
+            if (lastStatus().contains("bitti")) return false
             if (!lastStatus().contains("429") && !lastStatus().contains("bağlantı")) return false
             Thread.sleep(25_000L * (attempt + 1))
         }
@@ -127,6 +141,15 @@ internal class ObiGeminiVoice(private val context: Context) {
             }
         }.start()
     }
+
+    private fun nextQuotaReset(): Long {
+        val pacific = java.time.ZoneId.of("America/Los_Angeles")
+        return java.time.ZonedDateTime.now(pacific).toLocalDate().plusDays(1).atStartOfDay(pacific)
+            .plusMinutes(5).toInstant().toEpochMilli()
+    }
+
+    private fun clock(time: Long): String = java.time.Instant.ofEpochMilli(time).atZone(java.time.ZoneId.systemDefault())
+        .let { "${if (it.toLocalDate() == LocalDate.now()) "bugün" else "yarın"} ${String.format(java.util.Locale.ROOT, "%02d:%02d", it.hour, it.minute)}" }
 
     /** Model names containing "tts" that this key may call. */
     private fun ttsModels(apiKey: String): List<String> {
