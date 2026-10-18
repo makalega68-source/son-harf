@@ -257,7 +257,15 @@ class ObiOverlayService : Service() {
             registerReceiver(phone, system)
         }
         store.scheduleDaily()
-        if (gemini.connected()) ObiGeminiVoice(this).prepareFixed()
+        if (gemini.connected()) prepareVoiceWhenAllowed()
+    }
+
+    /** Makes the missing fixed lines now, or right after the free daily allowance comes back. */
+    private fun prepareVoiceWhenAllowed() {
+        val voice = ObiGeminiVoice(this)
+        val until = voice.blockedUntil()
+        if (until == null) voice.prepareFixed()
+        else handler.postDelayed({ prepareVoiceWhenAllowed() }, until - System.currentTimeMillis() + 60_000L)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -1269,9 +1277,10 @@ class ObiOverlayService : Service() {
             t.contains("ses durumu") || t.contains("sesin neden") -> {
                 val voice = ObiGeminiVoice(this)
                 val ready = ObiGeminiVoice.FIXED.keys.count { voice.has(it) }
+                val later = voice.blockedText()
                 say("${voice.lastStatus()}\nHazır sesler: $ready/${ObiGeminiVoice.FIXED.size} (ses: ${voice.voiceName()})" +
-                    if (ready < ObiGeminiVoice.FIXED.size) "\nEksikleri şimdi hazırlıyorum." else "")
-                if (ready < ObiGeminiVoice.FIXED.size) voice.prepareFixed()
+                    if (ready == ObiGeminiVoice.FIXED.size) "" else "\n" + (later ?: "Eksikleri şimdi hazırlıyorum."))
+                if (ready < ObiGeminiVoice.FIXED.size && later == null) voice.prepareFixed()
                 return
             }
             t.contains("telefon sesi") -> {

@@ -87,13 +87,21 @@ internal class ObiGeminiVoice(private val context: Context) {
         val today = LocalDate.now().toString()
         val used = if (prefs.getString("voice_day", "") == today) prefs.getInt("voice_used", 0) else 0
         if (used >= DAILY_LIMIT) { status("Bugünlük ses hakkı doldu ($DAILY_LIMIT)."); return false }
-        val blockedUntil = prefs.getLong("voice_blocked_until", 0L)
-        if (System.currentTimeMillis() < blockedUntil) {
-            status("Ücretsiz Gemini ses hakkı bugünlük bitti; ${clock(blockedUntil)} civarında yenilenecek. Hazır sesler kullanılıyor.")
+        blockedUntil()?.let {
+            status("Ücretsiz Gemini ses hakkı bugünlük bitti; ${clock(it)} civarında yenilenecek. Hazır sesler kullanılıyor.")
+            return false
+        }
+        val waitUntil = prefs.getLong("voice_wait_until", 0L)
+        if (System.currentTimeMillis() < waitUntil) {
+            status("Gemini dakikalık ses sınırı (429); ${(waitUntil - System.currentTimeMillis()) / 1000 + 1} sn sonra tekrar deniyorum.")
             return false
         }
         val preferred = prefs.getString("voice_model", null)
-        val candidates = (listOfNotNull(preferred) + MODELS).distinct().toMutableList()
+        val now = System.currentTimeMillis()
+        // A model whose own daily allowance is used up is skipped until the reset; the others may still have theirs.
+        val candidates = (listOfNotNull(preferred) + MODELS).distinct().filter { prefs.getLong("day_block_$it", 0L) <= now }.toMutableList()
+        if (candidates.isEmpty()) { prefs.edit().putLong("voice_blocked_until", nextQuotaReset()).apply(); return prepareBlocking(key, text) }
+        var dailyRefused = 0
         var lastError = "bağlantı kurulamadı"
         var discovered = false
         var index = 0
@@ -102,20 +110,29 @@ internal class ObiGeminiVoice(private val context: Context) {
             val result = runCatching { request(apiKey, model, text) }.getOrElse { lastError = it.javaClass.simpleName; null } ?: continue
             val audio = result.second
             if (audio == null) {
-                lastError = "kod ${result.first}${result.third?.let { ": $it" } ?: ""}"
+                lastError = "kod ${result.first}${result.third?.let { ": ${errorMessage(it)}" } ?: ""}"
                 // Unknown model: ask Google which text-to-speech models this key can use, once.
                 if ((result.first == 404 || result.first == 400) && !discovered) {
                     discovered = true
                     candidates += runCatching { ttsModels(apiKey) }.getOrDefault(emptyList()).filter { it !in candidates }
                 }
-                if (result.first == 429 && (result.third ?: "").contains("quota", ignoreCase = true)) {
-                    // The free daily allowance is used up: stop asking until Google resets it
-                    // (midnight Pacific time), so no requests are wasted.
-                    prefs.edit().putLong("voice_blocked_until", nextQuotaReset()).apply()
-                    status("Ücretsiz Gemini ses hakkı bugünlük bitti; ${clock(nextQuotaReset())} civarında yenilenecek. Hazır sesler kullanılıyor.")
-                    return false
+                if (result.first == 429) {
+                    val error = result.third.orEmpty()
+                    if (Regex("per ?day|daily", RegexOption.IGNORE_CASE).containsMatchIn(error)) {
+                        // This model's free daily allowance is used up: skip it until Google resets it
+                        // (midnight Pacific time) and try the next model, which has its own allowance.
+                        prefs.edit().putLong("day_block_$model", nextQuotaReset()).apply()
+                        dailyRefused++
+                        continue
+                    }
+                    // Only the per-minute limit: wait as long as Google asks (or a minute) and try again then.
+                    val delay = Regex("retry in ([\\d.]+)s|\"retryDelay\"\\s*:\\s*\"(\\d+)", RegexOption.IGNORE_CASE).find(error)
+                        ?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.toDoubleOrNull()?.toLong() ?: 60L
+                    prefs.edit().putLong("voice_wait_until", System.currentTimeMillis() + (delay + 2) * 1000L).apply()
+                    lastError = "kod 429: dakikalık sınır, ${delay + 2} sn sonra"
+                    break
                 }
-                if (result.first == 429 || result.first == 401 || result.first == 403) break
+                if (result.first == 401 || result.first == 403) break
                 continue
             }
             prefs.edit().putString("voice_model", model).putString("voice_day", today).putInt("voice_used", used + 1).apply()
@@ -126,6 +143,12 @@ internal class ObiGeminiVoice(private val context: Context) {
             status("Gemini sesi çalışıyor ✓ (ses: ${voiceName()}, model: $model)")
             trim()
             return true
+        }
+        if (dailyRefused > 0 && index >= candidates.size) {
+            // Every model that answered is out of its daily allowance.
+            prefs.edit().putLong("voice_blocked_until", nextQuotaReset()).apply()
+            status("Ücretsiz Gemini ses hakkı bugünlük bitti; ${clock(nextQuotaReset())} civarında yenilenecek. Hazır sesler kullanılıyor.")
+            return false
         }
         status("Gemini sesi üretilemedi — $lastError")
         return false
@@ -144,7 +167,8 @@ internal class ObiGeminiVoice(private val context: Context) {
             if (runCatching { prepareBlocking(key, text) }.getOrDefault(false)) return true
             if (lastStatus().contains("bitti")) return false
             if (!lastStatus().contains("429") && !lastStatus().contains("bağlantı")) return false
-            Thread.sleep(25_000L * (attempt + 1))
+            val wait = prefs.getLong("voice_wait_until", 0L) - System.currentTimeMillis()
+            Thread.sleep(maxOf(wait + 500L, 20_000L * (attempt + 1)))
         }
         return false
     }
@@ -160,6 +184,15 @@ internal class ObiGeminiVoice(private val context: Context) {
         }.start()
     }
 
+    /** When the free daily allowance comes back, or null when Obi may ask for clips now. */
+    fun blockedUntil(): Long? {
+        // Older versions also stopped for the per-minute limit; forget that guess once, so one request tells.
+        if (!prefs.getBoolean("block_v2", false)) prefs.edit().putBoolean("block_v2", true).remove("voice_blocked_until").apply()
+        return prefs.getLong("voice_blocked_until", 0L).takeIf { it > System.currentTimeMillis() }
+    }
+
+    fun blockedText(): String? = blockedUntil()?.let { "Eksik sesleri ${clock(it)} civarında, hak yenilenince kendim hazırlarım." }
+
     private fun nextQuotaReset(): Long {
         val pacific = java.time.ZoneId.of("America/Los_Angeles")
         return java.time.ZonedDateTime.now(pacific).toLocalDate().plusDays(1).atStartOfDay(pacific)
@@ -168,6 +201,9 @@ internal class ObiGeminiVoice(private val context: Context) {
 
     private fun clock(time: Long): String = java.time.Instant.ofEpochMilli(time).atZone(java.time.ZoneId.systemDefault())
         .let { "${if (it.toLocalDate() == LocalDate.now()) "bugün" else "yarın"} ${String.format(java.util.Locale.ROOT, "%02d:%02d", it.hour, it.minute)}" }
+
+    private fun errorMessage(body: String): String =
+        (runCatching { JSONObject(body).optJSONObject("error")?.optString("message") }.getOrNull() ?: body).take(120)
 
     /** Model names containing "tts" that this key may call. */
     private fun ttsModels(apiKey: String): List<String> {
@@ -203,8 +239,8 @@ internal class ObiGeminiVoice(private val context: Context) {
             val status = connection.responseCode
             if (status !in 200..299) {
                 val message = runCatching {
-                    JSONObject(connection.errorStream.bufferedReader().use { it.readText() }).optJSONObject("error")?.optString("message")
-                }.getOrNull()?.take(120)
+                    connection.errorStream.bufferedReader().use { it.readText() }
+                }.getOrNull()
                 return Triple(status, null, message)
             }
             val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
