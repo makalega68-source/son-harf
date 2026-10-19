@@ -145,6 +145,7 @@ internal object TickerMotion { var enabled = true }
  */
 @Composable
 internal fun WorkshopPodiumTicker(modifier: Modifier = Modifier) {
+    if (!GameAvailability.wordWorkshop) return
     var event by remember { mutableStateOf<AtelierTournament?>(null) }
     var showPodium by remember { mutableStateOf(false) }
     val foreground = rememberAppForeground()
@@ -204,6 +205,26 @@ internal fun throneHourBoundary(nowMillis: Long): Long {
 
 @Composable
 internal fun HomeEventPanel(onOpenEvents: () -> Unit, onPlay: () -> Unit, modifier: Modifier = Modifier) {
+    if (!GameAvailability.wordWorkshop) {
+        Surface(modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp),
+            onClick = onOpenEvents,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp), color = LobbyBrand.Band,
+            border = androidx.compose.foundation.BorderStroke(1.dp, LobbyBrand.Gold.copy(alpha = .58f))) {
+            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(sh("SON HARF · TAHT SAATİ", "LAST LETTER · THRONE HOUR"),
+                        color = LobbyBrand.Gold, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Her akşam 19.00–22.00 · ×2 XP", "Every evening 19:00–22:00 · ×2 XP"),
+                        color = Color.White, fontSize = 12.sp)
+                }
+                Surface(onClick = onPlay, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), color = LobbyBrand.Gold) {
+                    Text(sh("OYNA", "PLAY"), Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        color = LobbyBrand.NavBar, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+        return
+    }
     var event by remember { mutableStateOf<AtelierTournament?>(null) }
     val foreground = rememberAppForeground()
     LaunchedEffect(foreground) {

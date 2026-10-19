@@ -36,6 +36,12 @@ Kesin kurallar:
 
 ## 0. Oyun yapısı (7 Ekim 2026 kararı)
 
+**19 Ekim 2026 ilk yayın kararı:** Yalnız Son Harf oynanabilir. Kelime Kuşatması ve
+Kelime Atölyesi küçük, etkileşimsiz **Yakında / Coming soon** kartları olarak kalır.
+Güncel kapsam, sonraki geliştirmeler ve kontrol listesi: `docs/ILK_YAYIN_KAPSAMI.md`.
+Oyunları yeniden açmak için `GameAvailability.kt` ve ilgili tüm giriş yolları birlikte
+doğrulanmalıdır. Bu karar aşağıdaki eski "Diğer Oyunlar" erişim notlarının önündedir.
+
 - Uygulamanın adı **Kelime Tahtı** olarak kalır.
 - **Ana oyun Son Harf'tir.** Ana sayfadaki büyük "Yeni Oyun" düğmesi Son Harf'i açar; oyun merkezinde
   ve yardımda Son Harf ilk sıradadır.

@@ -118,7 +118,9 @@ internal fun UnifiedProVipScreen(
                 }
                 Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     ProFeature(Icons.Rounded.Groups,sh("Arkadaş listesi","Friend list"),sh("Arkadaşlarını gör, çevrimiçi olanı davet et.","See your friends and invite whoever is online."),Modifier.weight(1f))
-                    ProFeature(Icons.Rounded.Bolt,sh("Hızlı Düello","Quick Duel"),sh("3, 5 veya 10 dakikalık hızlı maçlar.","Fast matches with 3, 5 or 10 minute turns."),Modifier.weight(1f))
+                    ProFeature(Icons.Rounded.Bolt,sh("Hızlı Düello","Quick Duel"),
+                        if (GameAvailability.wordSiege) sh("3, 5 veya 10 dakikalık hızlı maçlar.","Fast matches with 3, 5 or 10 minute turns.")
+                        else sh("Kuşatma ile birlikte yakında açılacak.", "Coming soon with Word Siege."),Modifier.weight(1f))
                 }
             }
         }
@@ -128,7 +130,7 @@ internal fun UnifiedProVipScreen(
                 Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
                     Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(sh("PRO ARAÇLARI", "PRO TOOLS"), color = UProText, fontWeight = FontWeight.Black)
-                        if (e?.seriesGameAccess == true) OutlinedButton(onClick = onQuickDuel, modifier = Modifier.fillMaxWidth()) {
+                        if (GameAvailability.wordSiege && e?.seriesGameAccess == true) OutlinedButton(onClick = onQuickDuel, modifier = Modifier.fillMaxWidth()) {
                             Text(sh("HIZLI DÜELLO", "QUICK DUEL"), color = UProGold)
                         }
                         if (e?.postMatchAnalysis == true) {

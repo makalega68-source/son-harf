@@ -196,8 +196,9 @@ private fun EconomyCatalogScreen(
                 val equippedTask = async { b.getEquippedCosmetics() }
                 val storefrontTask = async { runCatching { b.getStorefront() }.getOrNull() }
                 profile = profileTask.await()
-                items = itemsTask.await().filter { it.isRuntimeReadyStyle() }
                 owned = ownedTask.await()
+                items = itemsTask.await().filter { it.isRuntimeReadyStyle() &&
+                    (it.kind != "board_skin" || GameAvailability.wordSiege || it.id in owned) }
                 equipped = equippedTask.await()
                 storefront = storefrontTask.await()
             }
@@ -267,7 +268,9 @@ private fun EconomyCatalogScreen(
         6 -> items.filter { it.kind == "keyboard_theme" || it.kind == "name_style" }
         else -> emptyList()
     }
-    val bundles = storefront?.bundles.orEmpty().filter { b -> b.items.isNotEmpty() && b.items.all { it.isRuntimeReadyStyle() } }
+    val bundles = storefront?.bundles.orEmpty().filter { b -> b.items.isNotEmpty() && b.items.all {
+        it.isRuntimeReadyStyle() && (it.kind != "board_skin" || GameAvailability.wordSiege)
+    } }
 
     LazyColumn(
         Modifier.fillMaxSize(),

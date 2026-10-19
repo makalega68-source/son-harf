@@ -138,7 +138,7 @@ internal fun throneMissionText(m:ThroneMission)=when(m.id){
   }
   if(section==1) {
   item { Text(sh("HAFTALIK GÖREVLER","WEEKLY MISSIONS"),color=LobbyPalette.Ink,fontWeight=FontWeight.Bold) }
-  items(week?.missions.orEmpty(),key={"${it.game}:${it.id}"}){m->Surface(shape=RoundedCornerShape(18.dp),color=LobbyPalette.Paper,border=BorderStroke(1.dp,SonHarfTheme.PremiumGold.copy(alpha=.4f))){Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+  items(week?.missions.orEmpty().filter { GameAvailability.isAvailable(it.game) },key={"${it.game}:${it.id}"}){m->Surface(shape=RoundedCornerShape(18.dp),color=LobbyPalette.Paper,border=BorderStroke(1.dp,SonHarfTheme.PremiumGold.copy(alpha=.4f))){Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
     Icon(if(m.awarded)Icons.Rounded.Verified else Icons.Rounded.Flag,null,tint=SonHarfTheme.Primary,modifier=Modifier.size(28.dp))
     Column(Modifier.weight(1f)){Text(throneGameName(m.game).uppercase(),color=LobbyPalette.Muted,fontSize=9.sp,fontWeight=FontWeight.Black);Text(throneMissionText(m),color=LobbyPalette.Ink,fontSize=13.sp,fontWeight=FontWeight.Bold)}

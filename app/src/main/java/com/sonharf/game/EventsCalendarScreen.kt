@@ -44,7 +44,7 @@ internal fun EventsCalendarScreen(onBack: () -> Unit, onAtelier: () -> Unit, onT
     var elapsed by remember { mutableLongStateOf(0L) }
     val foreground = rememberAppForeground()
     LaunchedEffect(foreground, retry) {
-        if (!foreground) return@LaunchedEffect
+        if (!foreground || !GameAvailability.wordWorkshop) return@LaunchedEffect
         while (true) {
             coroutineScope {
                 val event = async { gameRequestResult { ThroneBackend.tournament() } }
@@ -65,11 +65,12 @@ internal fun EventsCalendarScreen(onBack: () -> Unit, onAtelier: () -> Unit, onT
         item { MainScreenHeader(sh("Etkinlikler", "Events"), sh("Türkiye saati", "Istanbul time"), onBack = onBack) }
         item { ActivityTile(sh("Taht Saati", "Throne Hour")) {
             Text(sh("Her akşam 19.00–22.00", "Every evening, 19:00–22:00"), color = LobbyPalette.Ink, fontWeight = FontWeight.Bold)
-            Text(sh("Kuşatma, Son Harf ve Atölye'de ×2 XP. Atölye bonusuyla birleşmez.", "×2 XP in Siege, Last Letter and Workshop. It does not stack with the Workshop bonus."), color = LobbyPalette.Muted)
+            Text(if (GameAvailability.wordWorkshop) sh("Kuşatma, Son Harf ve Atölye'de ×2 XP. Atölye bonusuyla birleşmez.", "×2 XP in Siege, Last Letter and Workshop. It does not stack with the Workshop bonus.")
+                else sh("Son Harf maçlarında ×2 XP kazan.", "Earn ×2 XP in Last Letter matches."), color = LobbyPalette.Muted)
             Button(onClick=onThrone) { Text(sh("Tahtı aç", "Open Throne")) }
         } }
         if (failed) item { TextButton(onClick = { retry++ }) { Text(sh("Takvim güncellenemedi · Yenile", "Calendar unavailable · Retry"), color = Hf.Red) } }
-        if (tournament == null && !failed) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Green) }
+        if (GameAvailability.wordWorkshop && tournament == null && !failed) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Green) }
         tournament?.let { event ->
             item(key="atelier_tournament") {
                 val next=if(now>0)atelierCalendar(now).firstOrNull() else null
@@ -82,8 +83,8 @@ internal fun EventsCalendarScreen(onBack: () -> Unit, onAtelier: () -> Unit, onT
                 }
             }
         }
-        item { Text(sh("Günün bulmacaları", "Daily puzzles"),color=LobbyPalette.Ink,fontWeight=FontWeight.Bold) }
-        DailyWordEvent.entries.forEach { event -> item(key=event.name) {
+        if (GameAvailability.dailyPuzzles) item { Text(sh("Günün bulmacaları", "Daily puzzles"),color=LobbyPalette.Ink,fontWeight=FontWeight.Bold) }
+        DailyWordEvent.entries.filter { GameAvailability.dailyPuzzles }.forEach { event -> item(key=event.name) {
             val answers=prefs.getString(eventProgressKey(user,day,SonHarfUiState.isEnglish,event),"").orEmpty()
             ActivityTile(dailyEventTitle(event)) {
                 Text(dailyEventHint(event),color=LobbyPalette.Muted)

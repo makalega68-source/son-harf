@@ -49,15 +49,43 @@ internal fun IncomingSocialWatcher(
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
     onAcceptedSiege: (WordSiegeGameDto) -> Unit = {},
+    onAcceptedLastLetter: (GameRoomDto) -> Unit = {},
 ) {
     var seen by remember { mutableStateOf<Set<String>?>(null) }
     var banner by remember { mutableStateOf<String?>(null) }
     val openAccepted by androidx.compose.runtime.rememberUpdatedState(onAcceptedSiege)
+    val openLastLetter by androidx.compose.runtime.rememberUpdatedState(onAcceptedLastLetter)
+    val foreground = rememberAppForeground()
+
+    LaunchedEffect(enabled, foreground, LastLetterInvitations.revision) {
+        if (!enabled || !foreground || !SupabaseProvider.configured) return@LaunchedEffect
+        val me = backend.currentUserId() ?: return@LaunchedEffect
+        while (currentCoroutineContext().isActive && backend.currentUserId() == me) {
+            val pending = LastLetterInvitations.pendingFor(me)
+            if (pending.isEmpty()) return@LaunchedEffect
+            gameRequestResult { backend.getOutgoingGameInvites(pending) }.onSuccess { invites ->
+                for (invite in invites) {
+                    if (invite.status in setOf("declined", "expired", "cancelled")) LastLetterInvitations.remove(invite.id)
+                    if (invite.status == "accepted" && invite.roomId != null) {
+                        val room = gameRequestResult { backend.getRoom(invite.roomId) }.getOrNull() ?: continue
+                        if (backend.currentUserId() != me) return@onSuccess
+                        if (me !in listOf(room.hostId, room.guestId)) continue
+                        LastLetterInvitations.remove(invite.id)
+                        if (room.status in setOf("waiting", "playing", "quiz", "final", "sudden_death", "paused")) {
+                            openLastLetter(room)
+                            break
+                        }
+                    }
+                }
+            }
+            delay(2_000)
+        }
+    }
 
     // The sender also enters the room when their friend accepts. Watching only incoming
     // invitations left the sender in the lobby while the server marked both as in-game.
-    LaunchedEffect(enabled, WordSiegeLaunchConfig.awaitedInviteRevision) {
-        if (!enabled || !SupabaseProvider.configured) return@LaunchedEffect
+    LaunchedEffect(enabled, foreground, WordSiegeLaunchConfig.awaitedInviteRevision) {
+        if (!enabled || !foreground || !SupabaseProvider.configured || !GameAvailability.wordSiege) return@LaunchedEffect
         while (currentCoroutineContext().isActive) {
             val outgoing = runCatching { backend.getOutgoingWordSiegeInvites() }.getOrNull()
             val series = runCatching { backend.getOutgoingWordSiegeSeriesInvites() }.getOrNull()
@@ -81,13 +109,13 @@ internal fun IncomingSocialWatcher(
         }
     }
 
-    LaunchedEffect(enabled) {
-        if (!enabled || !SupabaseProvider.configured) return@LaunchedEffect
+    LaunchedEffect(enabled, foreground) {
+        if (!enabled || !foreground || !SupabaseProvider.configured) return@LaunchedEffect
         while (currentCoroutineContext().isActive) {
             if (backend.currentUserId() != null) {
                 val requests = runCatching { backend.getIncomingFriendRequests() }.getOrNull()
-                val invites = runCatching { backend.getIncomingWordSiegeInvites() }.getOrNull()
-                val fastInvites = runCatching { backend.getIncomingWordSiegeSeriesInvites() }.getOrNull()
+                val invites = if (GameAvailability.wordSiege) runCatching { backend.getIncomingWordSiegeInvites() }.getOrNull() else emptyList()
+                val fastInvites = if (GameAvailability.wordSiege) runCatching { backend.getIncomingWordSiegeSeriesInvites() }.getOrNull() else emptyList()
                 val lastLetterInvites = runCatching { backend.getIncomingGameInvites() }.getOrNull()
                 if (requests != null || invites != null || fastInvites != null || lastLetterInvites != null) {
                     val requestKeys = requests.orEmpty().associate { (friendship, profile) ->

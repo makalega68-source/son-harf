@@ -313,7 +313,7 @@ fun RewardCenterScreen() {
                 }
             }
             // Quick Duel is a paid mode: a video opens five games to try it.
-            if (!seriesAccess || (passes?.quickGamesLeft ?: 0) > 0) item {
+            if (GameAvailability.wordSiege && (!seriesAccess || (passes?.quickGamesLeft ?: 0) > 0)) item {
                 RewardVideoCard(
                     icon = "⚡",
                     title = sh("5 HIZLI DÜELLO", "5 QUICK DUELS"),
@@ -330,7 +330,11 @@ fun RewardCenterScreen() {
                     Triple(RewardKeys.HINTS_SON_HARF, "🔤", sh("SON HARF • +2 İPUCU", "LAST LETTER • +2 HINTS")),
                     Triple(RewardKeys.HINTS_SIEGE, "🏰", sh("KUŞATMA • +2 İPUCU", "SIEGE • +2 HINTS")),
                     Triple(RewardKeys.HINTS_WORKSHOP, "🛠", sh("KELİME ATÖLYESİ • +2 İPUCU", "WORD WORKSHOP • +2 HINTS")),
-                ).forEach { (key, icon, title) ->
+                ).filter { (key, _, _) -> when (key) {
+                    RewardKeys.HINTS_SIEGE -> GameAvailability.wordSiege
+                    RewardKeys.HINTS_WORKSHOP -> GameAvailability.wordWorkshop
+                    else -> true
+                } }.forEach { (key, icon, title) ->
                     item(key = key) {
                         RewardVideoCard(
                             icon = icon,

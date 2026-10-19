@@ -34,7 +34,7 @@ internal fun SocialInboxHistory(backend: OnlineGameBackend, onOpen: (String, Str
     val foreground=rememberAppForeground()
     suspend fun reload() {
         gameRequestResult { backend.getSocialInbox() }.onSuccess { fetched ->
-            rows=fetched; ready=true; error=false
+            rows=fetched.filter { it.targetKind !in setOf("siege", "series", "son_harf") || GameAvailability.isAvailable(it.targetKind) }; ready=true; error=false
             fetched.mapNotNull { it.actorId }.distinct().filterNot(names::containsKey).forEach { id ->
                 gameRequestResult { backend.getProfile(id) }.getOrNull()?.let { names=names+(id to it.displayName) }
             }

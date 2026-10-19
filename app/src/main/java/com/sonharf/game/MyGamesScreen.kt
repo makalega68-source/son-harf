@@ -74,8 +74,8 @@ internal fun MyGamesScreen(backend: OnlineGameBackend, onOpen: (String, String) 
         if (!foreground) return@LaunchedEffect
         while (true) {
             coroutineScope {
-                val a = async { gameRequestResult { backend.getWordSiegeGameSummaries("classic") } }
-                val b = async { gameRequestResult { backend.getWordSiegeGameSummaries("series") } }
+                val a = async { if (GameAvailability.wordSiege) gameRequestResult { backend.getWordSiegeGameSummaries("classic") } else Result.success(emptyList<WordSiegeGameDto>()) }
+                val b = async { if (GameAvailability.wordSiege) gameRequestResult { backend.getWordSiegeGameSummaries("series") } else Result.success(emptyList<WordSiegeGameDto>()) }
                 val c = async { gameRequestResult { backend.getLastLetterRooms() } }
                 val classic=a.await(); val series=b.await(); val last=c.await()
                 games=classic.getOrElse { games.filter { it.gameMode != "series" } } + series.getOrElse { games.filter { it.gameMode == "series" } }
@@ -168,8 +168,8 @@ internal fun GameInvitesScreen(backend: OnlineGameBackend, onOpen: (String,Strin
         while(true) {
             gameRequestResult { coroutineScope {
                 // The three invite lists load together; sender profiles come in one batched query.
-                val siege=async { backend.getIncomingWordSiegeInvites().map { Invite(it.id,"siege",it.senderId) } }
-                val series=async { backend.getIncomingWordSiegeSeriesInvites().map { Invite(it.id,"series",it.senderId) } }
+                val siege=async { if (GameAvailability.wordSiege) backend.getIncomingWordSiegeInvites().map { Invite(it.id,"siege",it.senderId) } else emptyList() }
+                val series=async { if (GameAvailability.wordSiege) backend.getIncomingWordSiegeSeriesInvites().map { Invite(it.id,"series",it.senderId) } else emptyList() }
                 val last=async { backend.getIncomingGameInvites().map { Invite(it.id,"son_harf",it.senderId) } }
                 val next=siege.await()+series.await()+last.await()
                 val missing=next.map { it.sender }.distinct().filterNot(profiles::containsKey)

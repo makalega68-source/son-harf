@@ -66,7 +66,8 @@ internal fun HomePlayTogether(profile: ProfileDto?, onSocial: () -> Unit) {
                             inviting = friend.id
                             scope.launch {
                                 try {
-                                    gameRequestResult { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
+                                    if (GameAvailability.wordSiege) {
+                                        gameRequestResult { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
                                         .onSuccess { invite ->
                                             WordSiegeLaunchConfig.awaitInvite(invite.id)
                                             notice = sh("Davet gönderildi; kabul edilince maça gireceksiniz.", "Invite sent; you'll enter the match when accepted.")
@@ -74,6 +75,14 @@ internal fun HomePlayTogether(profile: ProfileDto?, onSocial: () -> Unit) {
                                         }.onFailure {
                                             notice = sh("Davet gönderilemedi. Arkadaşlar bölümünden kontrol et.", "Invite could not be sent. Check the Friends page.")
                                         }
+                                    } else {
+                                        gameRequestResult { backend.inviteFriend(friend.id, SonHarfUiState.language) }
+                                            .onSuccess { invite ->
+                                                LastLetterInvitations.await(invite)
+                                                notice = sh("Son Harf daveti gönderildi; kabul edilince maça gireceksiniz.", "Last Letter invite sent; you'll enter the match when accepted.")
+                                                SonHarfSoundFx.softNotify()
+                                            }.onFailure { notice = sh("Davet gönderilemedi. Arkadaşlar bölümünden kontrol et.", "Invite could not be sent. Check the Friends page.") }
+                                    }
                                 } finally { inviting = null }
                             }
                         }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 3.dp),

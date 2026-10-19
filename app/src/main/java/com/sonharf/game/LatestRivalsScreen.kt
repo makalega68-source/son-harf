@@ -49,10 +49,11 @@ internal fun LatestRivalsScreen(backend: OnlineGameBackend, onBack: (() -> Unit)
         if(!foreground) return@LaunchedEffect
         while(true) {
             gameRequestResult { coroutineScope {
-                val classic=async { backend.getWordSiegeGameSummaries("classic") }
-                val series=async { backend.getWordSiegeGameSummaries("series") }
+                val classic=async { if (GameAvailability.wordSiege) backend.getWordSiegeGameSummaries("classic") else emptyList() }
+                val series=async { if (GameAvailability.wordSiege) backend.getWordSiegeGameSummaries("series") else emptyList() }
                 val history=async { backend.getMatchHistory(50) }
                 rows=latestRivalMatches(classic.await()+series.await(),history.await(),backend.currentUserId())
+                    .filter { GameAvailability.isAvailable(it.mode) }
                 loading=false
                 // Cached rival profiles are reused; each refresh only asks for rivals not seen yet.
                 val nextProfiles=profiles.toMutableMap()
@@ -88,9 +89,15 @@ internal fun LatestRivalsScreen(backend: OnlineGameBackend, onBack: (() -> Unit)
                         if(row.siege!=null && onOpenSiege!=null) onOpenSiege(row.siege)
                         else scope.launch {
                             busy=row.opponentId
-                            gameRequestResult { backend.inviteFriendToWordSiege(row.opponentId,SonHarfUiState.language) }
-                                .onSuccess { notice=sh("Rövanş daveti gönderildi.","Rematch invitation sent.") }
-                                .onFailure { notice=sh("Davet gönderilemedi. Arkadaşlığınızı ve bekleyen davetlerini kontrol et.","Could not invite. Check friendship and pending invitations.") }
+                            if (GameAvailability.wordSiege && row.mode in setOf("siege", "series")) {
+                                gameRequestResult { backend.inviteFriendToWordSiege(row.opponentId,SonHarfUiState.language) }
+                                    .onSuccess { WordSiegeLaunchConfig.awaitInvite(it.id); notice=sh("Rövanş daveti gönderildi.","Rematch invitation sent.") }
+                                    .onFailure { notice=sh("Davet gönderilemedi. Arkadaşlığınızı ve bekleyen davetlerini kontrol et.","Could not invite. Check friendship and pending invitations.") }
+                            } else {
+                                gameRequestResult { backend.inviteFriend(row.opponentId, SonHarfUiState.language) }
+                                    .onSuccess { LastLetterInvitations.await(it); notice=sh("Son Harf rövanş daveti gönderildi.", "Last Letter rematch invitation sent.") }
+                                    .onFailure { notice=sh("Davet gönderilemedi. Arkadaşlığınızı ve bekleyen davetlerini kontrol et.","Could not invite. Check friendship and pending invitations.") }
+                            }
                             busy=null
                         }
                     }) { Text(if(row.siege!=null && onOpenSiege!=null) sh("Sonuç","Result") else sh("Rövanş","Rematch"),fontSize=12.sp) }

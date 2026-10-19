@@ -47,6 +47,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var settingsReturn by remember { mutableStateOf(PremiumDestination.HOME) }
     var isPro by remember { mutableStateOf(false) }
     var startQuickDuel by remember { mutableStateOf(false) }
+    var unavailableGame by remember { mutableStateOf<String?>(null) }
     var gameLaunchRevision by remember { mutableIntStateOf(0) }
     val homeRequest = SonHarfUiState.homeRequest
     val defaultGameLanguage = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
@@ -64,6 +65,15 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         RewardPassState.refresh()
     }
     fun openGame(target: PremiumDestination, language: String, quickDuel: Boolean = false) {
+        val closedTitle = when {
+            target == PremiumDestination.SIEGE && !GameAvailability.wordSiege -> sh("Kelime Kuşatması", "Word Siege")
+            target == PremiumDestination.WORD_WORKSHOP && !GameAvailability.wordWorkshop -> sh("Kelime Atölyesi", "Word Workshop")
+            else -> null
+        }
+        if (closedTitle != null) {
+            unavailableGame = closedTitle
+            return
+        }
         gameReturn = if (destination == PremiumDestination.MY_GAMES) PremiumDestination.MY_GAMES else PremiumDestination.HOME
         gameLaunchRevision++
         startQuickDuel = quickDuel
@@ -90,6 +100,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     "social" -> destination = PremiumDestination.SOCIAL
                     "activity" -> destination = PremiumDestination.ACTIVITY
                     "siege", "series" -> {
+                        if (!GameAvailability.wordSiege) {
+                            unavailableGame = sh("Kelime Kuşatması", "Word Siege")
+                            return@launch
+                        }
                         val game = backend.getWordSiegeGame(requireNotNull(id))
                         val me = backend.currentUserId()
                         check(me != null && (me == game.playerOneId || me == game.playerTwoId))
@@ -159,7 +173,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     )
     val topLevel = destination in setOf(
         PremiumDestination.HOME, PremiumDestination.MY_GAMES, PremiumDestination.EVENTS,
-        PremiumDestination.SHOP, PremiumDestination.PROFILE,
+        PremiumDestination.SHOP, PremiumDestination.PROFILE, PremiumDestination.SOCIAL, PremiumDestination.RIVALS,
     )
     var incomingSocialCount by remember { mutableIntStateOf(0) }
     LaunchedEffect(destination) { if (destination == PremiumDestination.SOCIAL) incomingSocialCount = 0 }
@@ -240,7 +254,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 val tab = lobbyTabs.indexOf(destination)
                 if (!inGame) Column {
                     if (destination == PremiumDestination.HOME) {
-                        HomeEventPanel(onOpenEvents = { destination = PremiumDestination.EVENTS }, onPlay = { destination = PremiumDestination.GAMES })
+                        HomeEventPanel(onOpenEvents = { destination = PremiumDestination.EVENTS }, onPlay = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) })
                     } else WorkshopPodiumTicker()
                     // The Arkadaşlar tab carries the count of new friend requests and invitations.
                     if (tab >= 0) LobbyBottomBar(selected = tab, badges = mapOf(3 to incomingSocialCount)) { index ->
@@ -387,7 +401,19 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         com.sonharf.game.data.WordSiegeLaunchConfig.open(game)
                         openGame(PremiumDestination.SIEGE, game.language)
                     },
+                    onAcceptedLastLetter = { room ->
+                        SonHarfLaunchConfig.pendingRoomId = room.id
+                        openGame(PremiumDestination.LAST_LETTER, room.language)
+                    },
                 )
+                unavailableGame?.let { title ->
+                    AlertDialog(
+                        onDismissRequest = { unavailableGame = null },
+                        title = { Text(title, fontWeight = FontWeight.Bold) },
+                        text = { Text(sh("Yakında. Yeni oyunlar güncellemelerle açılacak.", "Coming soon. New games will open in future updates.")) },
+                        confirmButton = { TextButton(onClick = { unavailableGame = null }) { Text(sh("Tamam", "OK")) } },
+                    )
+                }
             }
         }
     }
@@ -454,6 +480,7 @@ private fun PremiumGameCenter(
                 subtitle = sh("Taktik alan savaşı", "Tactical territory battle"),
                 language = siegeLanguage,
                 onLanguageChange = onSiegeLanguage,
+                available = GameAvailability.wordSiege,
                 onClick = onSiege,
             )
         }
@@ -465,6 +492,7 @@ private fun PremiumGameCenter(
                 subtitle = sh("7 harf, 3 görev, 60 saniye", "7 letters, 3 tasks, 60 seconds"),
                 language = workshopLanguage,
                 onLanguageChange = onWorkshopLanguage,
+                available = GameAvailability.wordWorkshop,
                 onClick = onWorkshop,
             )
         }
@@ -480,6 +508,7 @@ private fun PremiumGameCard(
     artRes: Int? = null,
     onLanguageChange: (String) -> Unit,
     primary: Boolean = false,
+    available: Boolean = true,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -515,7 +544,7 @@ private fun PremiumGameCard(
                 }
             }
             Spacer(Modifier.height(13.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            if (available) Row(verticalAlignment = Alignment.CenterVertically) {
                 PremiumLanguageChoice(
                     language = language,
                     onLanguageChange = onLanguageChange,
@@ -533,6 +562,9 @@ private fun PremiumGameCard(
                 ) {
                     Text(sh("ARENA'YA GİR", "ENTER"), fontWeight = FontWeight.Black, fontSize = 10.sp)
                 }
+            } else {
+                Text(sh("YAKINDA", "COMING SOON"), color = SonHarfTheme.PremiumGold,
+                    fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
     }

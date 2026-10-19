@@ -387,6 +387,14 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
             .filter { it.status == "pending" }
     }
 
+    suspend fun getOutgoingGameInvites(inviteIds: Set<String>): List<GameInviteDto> {
+        val me = currentUserId() ?: return emptyList()
+        if (inviteIds.isEmpty()) return emptyList()
+        return supabase.from("game_invites")
+            .select { filter { eq("sender_id", me); isIn("id", inviteIds.toList()) } }
+            .decodeList<GameInviteDto>()
+    }
+
     suspend fun respondGameInvite(inviteId: String, accept: Boolean): GameRoomDto? {
         supabase.postgrest.rpc(
             "respond_game_invite",

@@ -70,13 +70,17 @@ private val welcomeSteps = listOf(
         WordSiegeMascotAction.HOP, WordSiegeMascotEmotion.EXCITED,
     ),
     WelcomeStep(
-        "Diğer Oyunlar'da Kelime Kuşatması var: harflerini tahtaya diz, küpleri ele geçir, rakibini geç!",
-        "More Games has Word Siege: place your letters, capture cubes and get ahead of your rival!",
+        if (GameAvailability.wordSiege) "Diğer Oyunlar'da Kelime Kuşatması var: harflerini tahtaya diz, küpleri ele geçir, rakibini geç!"
+        else "Arkadaşlarını Son Harf'e davet edebilir, Oyunlarım'dan maçlarını ve gelen davetleri takip edebilirsin.",
+        if (GameAvailability.wordSiege) "More Games has Word Siege: place your letters, capture cubes and get ahead of your rival!"
+        else "Invite friends to Last Letter and follow your matches and incoming invitations in My Games.",
         WordSiegeMascotAction.POINT, WordSiegeMascotEmotion.FOCUS,
     ),
     WelcomeStep(
-        "Kelime Atölyesi'nde harflerden kelime kurar, görevleri bitirirsin. Turnuvada kürsüye çıkmak senin elinde!",
-        "In the Word Workshop you build words from letters and finish tasks. The tournament podium is yours to take!",
+        if (GameAvailability.wordWorkshop) "Kelime Atölyesi'nde harflerden kelime kurar, görevleri bitirirsin. Turnuvada kürsüye çıkmak senin elinde!"
+        else "Maskot sahiplerine her maçta 3 ipucu sunuyorum. Yeni oyunlarımız da güncellemelerle açılacak.",
+        if (GameAvailability.wordWorkshop) "In the Word Workshop you build words from letters and finish tasks. The tournament podium is yours to take!"
+        else "Mascot owners get 3 hints every match. More games will open in future updates.",
         WordSiegeMascotAction.THINK, WordSiegeMascotEmotion.FOCUS,
     ),
     WelcomeStep(

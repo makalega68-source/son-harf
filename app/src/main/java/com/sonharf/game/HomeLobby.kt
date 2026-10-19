@@ -89,7 +89,7 @@ internal fun HomeLobbyScreen(
     remember { EveOwnership.restore(lobbyContext) }
     LaunchedEffect(me, foreground) { if (foreground) EveOwnership.refresh(lobbyContext, me) }
     val eveHere = EveOwnership.showOnHome(me)
-    val workshopStatus = rememberWorkshopStatus()
+    val workshopStatus = if (GameAvailability.wordWorkshop) rememberWorkshopStatus() else sh("Yakında", "Coming soon")
 
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
@@ -108,10 +108,10 @@ internal fun HomeLobbyScreen(
         if (me == null || !foreground) return@LaunchedEffect
         while (true) {
             coroutineScope {
-                val classic = async { gameRequestResult { backend.getWordSiegeGameSummaries("classic", finishedLimit = 0) }.getOrNull() }
-                val series = async { gameRequestResult { backend.getWordSiegeGameSummaries("series", finishedLimit = 0) }.getOrNull() }
+                val classic = async { if (GameAvailability.wordSiege) gameRequestResult { backend.getWordSiegeGameSummaries("classic", finishedLimit = 0) }.getOrNull() else emptyList() }
+                val series = async { if (GameAvailability.wordSiege) gameRequestResult { backend.getWordSiegeGameSummaries("series", finishedLimit = 0) }.getOrNull() else emptyList() }
                 val rooms = async { gameRequestResult { backend.getLastLetterRooms() }.getOrNull() }
-                val inv1 = async { gameRequestResult { backend.getIncomingWordSiegeInvites().map { "si:${it.id}" } }.getOrDefault(emptyList()) }
+                val inv1 = async { if (GameAvailability.wordSiege) gameRequestResult { backend.getIncomingWordSiegeInvites().map { "si:${it.id}" } }.getOrDefault(emptyList()) else emptyList() }
                 val inv2 = async { gameRequestResult { backend.getIncomingGameInvites().map { "gi:${it.id}" } }.getOrDefault(emptyList()) }
                 val rows = matchListRows(classic.await().orEmpty() + series.await().orEmpty(), rooms.await().orEmpty(), me)
                 // Each waiting turn is keyed by its deadline, so a new turn in the same game counts again.
@@ -239,9 +239,10 @@ internal fun HomeLobbyScreen(
                 textAlign = TextAlign.Center)
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 LobbyGameCard(R.drawable.kelime_tahti_game_icon, sh("Kelime Kuşatması", "Word Siege"),
-                    sh("Kelimelerle tahtayı fethet", "Conquer the board with words"), onNewGame)
+                    if (GameAvailability.wordSiege) sh("Kelimelerle tahtayı fethet", "Conquer the board with words") else sh("Yakında", "Coming soon"),
+                    onClick = onNewGame, enabled = GameAvailability.wordSiege)
                 LobbyGameCard(R.drawable.kelime_atolyesi_game_icon, sh("Kelime Atölyesi", "Word Workshop"),
-                    workshopStatus, onWorkshop)
+                    workshopStatus, onClick = onWorkshop, enabled = GameAvailability.wordWorkshop)
             }
             // Room to scroll the last card clear of the home friend at the bottom.
             Spacer(Modifier.height(if (eveHere) 140.dp else 96.dp))
@@ -331,8 +332,8 @@ private fun HomeSecureAccountBanner(userId: String?) {
 
 /** A game row: icon on the left, name and one live line in the middle, an arrow on the right. */
 @Composable
-private fun LobbyGameCard(icon: Int, title: String, detail: String, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth().height(76.dp), shape = RoundedCornerShape(18.dp),
+private fun LobbyGameCard(icon: Int, title: String, detail: String, onClick: () -> Unit, enabled: Boolean = true) {
+    Surface(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth().height(76.dp), shape = RoundedCornerShape(18.dp),
         color = LobbyBrand.Band, border = BorderStroke(1.dp, LobbyBrand.Grid)) {
         Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -344,7 +345,8 @@ private fun LobbyGameCard(icon: Int, title: String, detail: String, onClick: () 
                 Text(detail, color = LobbyBrand.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = .8f), modifier = Modifier.size(26.dp))
+            Icon(if (enabled) Icons.Rounded.ChevronRight else Icons.Rounded.Schedule, null,
+                tint = if (enabled) Color.White.copy(alpha = .8f) else LobbyBrand.Gold, modifier = Modifier.size(26.dp))
         }
     }
 }

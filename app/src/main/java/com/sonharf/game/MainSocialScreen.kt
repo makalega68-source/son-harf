@@ -159,13 +159,22 @@ internal fun MainSocialScreen(
                             if (busyKey != null) return@MainFriendCard
                             busyKey = friend.id
                             scope.launch {
-                                gameRequestResult { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
+                                if (GameAvailability.wordSiege) {
+                                    gameRequestResult { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
                                     .onSuccess { invite ->
                                         WordSiegeLaunchConfig.awaitInvite(invite.id)
                                         notice = sh("${friend.displayName} Kelime Tahtı'na davet edildi.", "${friend.displayName} was invited to Word Throne.")
                                         SonHarfSoundFx.softNotify()
                                     }
                                     .onFailure { notice = sh("Oyun daveti gönderilemedi veya bekleyen bir davet var.", "Game invite could not be sent or one is already pending.") }
+                                } else {
+                                    gameRequestResult { backend.inviteFriend(friend.id, SonHarfUiState.language) }
+                                        .onSuccess { invite ->
+                                            LastLetterInvitations.await(invite)
+                                            notice = sh("${friend.displayName} Son Harf'e davet edildi.", "${friend.displayName} was invited to Last Letter.")
+                                            SonHarfSoundFx.softNotify()
+                                        }.onFailure { notice = sh("Oyun daveti gönderilemedi veya bekleyen bir davet var.", "Game invite could not be sent or one is already pending.") }
+                                }
                                 busyKey = null
                             }
                         },

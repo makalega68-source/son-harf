@@ -46,6 +46,7 @@ internal object MatchNotifications {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager?.activeNotifications?.filter { it.notification.channelId == CHANNEL }?.forEach { manager.cancel(it.id) }
         SonHarfInvite.playerCode = null
+        LastLetterInvitations.clear()
     }
     internal fun notificationLink(event: SocialActivityDto): String = when {
         event.targetKind in setOf("siege", "series", "son_harf") && event.targetId != null -> "kelimetahti://${event.targetKind}/${event.targetId}"
@@ -72,7 +73,8 @@ internal object MatchNotifications {
         val seen = prefs.getStringSet(seenKey, emptySet()).orEmpty().toMutableSet()
         val inbox = backend.getSocialInbox()
         val events = inbox.filter { event ->
-            eligible(event, Instant.now()) && event.id !in seen && when(event.kind) {
+            eligible(event, Instant.now()) && event.id !in seen &&
+                (event.targetKind !in setOf("siege", "series", "son_harf") || GameAvailability.isAvailable(event.targetKind)) && when(event.kind) {
                 "challenge", "rematch" -> SonHarfPreferences.gameInviteNotificationsEnabled(context)
                 "friend_request", "friend_accepted" -> SonHarfPreferences.friendRequestNotificationsEnabled(context)
                 else -> SonHarfPreferences.systemNotificationsEnabled(context)

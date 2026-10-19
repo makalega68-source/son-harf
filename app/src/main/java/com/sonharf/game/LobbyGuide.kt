@@ -56,8 +56,10 @@ internal fun lobbyGuideTopics(): List<LobbyGuideTopic> = listOf(
             "Practice games against the AI do not change your rating."),
     )),
     LobbyGuideTopic("throne", Icons.Rounded.EmojiEvents, sh("Taht", "Throne"), listOf(
-        sh("Taht, üç oyunun tamamını kapsayan haftalık yarıştır. Kelime Kuşatması, Son Harf ve Kelime Atölyesi'nde kazandığın tecrübe puanı (XP) tek bir sıralamada toplanır.",
-            "The Throne is a weekly race across all three games. Experience (XP) earned in Word Siege, Last Letter and Word Workshop adds up in one ranking."),
+        if (GameAvailability.wordSiege || GameAvailability.wordWorkshop) sh("Taht, üç oyunun tamamını kapsayan haftalık yarıştır. Kelime Kuşatması, Son Harf ve Kelime Atölyesi'nde kazandığın tecrübe puanı (XP) tek bir sıralamada toplanır.",
+            "The Throne is a weekly race across all three games. Experience (XP) earned in Word Siege, Last Letter and Word Workshop adds up in one ranking.")
+        else sh("Taht, haftalık rekabet alanıdır. Son Harf maçlarında tecrübe puanı (XP) kazanır, haftanın sıralamasında yükselirsin.",
+            "The Throne is your weekly competition. Earn experience (XP) in Last Letter matches and climb the weekly ranking."),
         sh("Haftalık görevleri tamamlayarak ek puan kazanırsın. Hafta sonunda zirvedeki oyuncu tahta oturur: 7 gün boyunca altın çerçeve, 1 numara rozeti ve yanında Altın Kral maskotu onundur; Taht sayfasında gösterilir.",
             "Weekly missions give extra points. The leader at the end of the week takes the throne: for 7 days they get the gold frame, the No. 1 badge and the Golden King mascot, and are shown on the Throne page."),
         sh("Haftanın ilk üçü Eve parçası kazanır: 1.'ye 3, 2.'ye 2, 3.'ye 1 parça. 12 parçayı toplayan, 3B orman dostu Eve'in sahibi olur.",
@@ -91,7 +93,11 @@ internal fun lobbyGuideTopics(): List<LobbyGuideTopic> = listOf(
         sh("İngilizcede de özel isimler, kısaltmalar ve tek başına harfler geçersizdir.",
             "In English too, proper nouns, abbreviations and single letters are invalid."),
     )),
-)
+).filter { topic -> when (topic.id) {
+    "siege" -> GameAvailability.wordSiege
+    "workshop" -> GameAvailability.wordWorkshop
+    else -> true
+} }
 
 @Composable
 internal fun LobbyGuideDialog(topic: LobbyGuideTopic, onDismiss: () -> Unit) {
