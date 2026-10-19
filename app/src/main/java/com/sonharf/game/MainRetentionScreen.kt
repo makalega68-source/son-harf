@@ -32,7 +32,7 @@ internal fun MainRetentionScreen(
     onDailyChallenge: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(OwnProfile.snapshot()) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
     var meta by remember { mutableStateOf<MetaProgressV2Dto?>(null) }
     var missions by remember { mutableStateOf<List<UnifiedMissionDto>>(emptyList()) }
@@ -152,7 +152,7 @@ internal fun MainRetentionScreen(
                                 scope.launch {
                                     busyKey = "checkin"
                                     val reward = runCatching { backend.claimDailyCheckin() }.getOrDefault(0)
-                                    notice = if (reward > 0) sh("+$reward Son Coin kazandın.", "You earned +$reward Son Coins.")
+                                    notice = if (reward > 0) sh("+$reward Altın kazandın.", "You earned +$reward Gold.")
                                     else sh("Günlük ödül daha önce alındı.", "Daily reward was already claimed.")
                                     reload()
                                     busyKey = null
@@ -163,7 +163,7 @@ internal fun MainRetentionScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold, contentColor = Color(0xFF3C2700)),
                             shape = RoundedCornerShape(14.dp),
                         ) {
-                            Text(if (g?.dailyClaimed == true) "✓ ${sh("ALINDI", "CLAIMED")}" else "🎁 +${g?.dailyReward ?: 40} SC", fontWeight = FontWeight.Black, fontSize = 10.sp)
+                            Text(if (g?.dailyClaimed == true) "✓ ${sh("ALINDI", "CLAIMED")}" else "🎁 +${g?.dailyReward ?: 5} ${goldUnit()}", fontWeight = FontWeight.Black, fontSize = 10.sp)
                         }
                         OutlinedButton(
                             onClick = onDailyChallenge,
@@ -192,7 +192,7 @@ internal fun MainRetentionScreen(
                                 scope.launch {
                                     busyKey = "daily_challenge"
                                     val reward = runCatching { backend.claimDailyChallenge() }.getOrDefault(0)
-                                    notice = if (reward > 0) sh("+$reward Son Coin kazandın.", "You earned +$reward Son Coins.")
+                                    notice = if (reward > 0) sh("+$reward Altın kazandın.", "You earned +$reward Gold.")
                                     else sh("Görev henüz tamamlanmadı veya ödül alındı.", "Mission is incomplete or already claimed.")
                                     reload()
                                     busyKey = null
@@ -204,7 +204,7 @@ internal fun MainRetentionScreen(
                             shape = RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp),
                         ) {
-                            Text(if (g?.dailyChallengeClaimed == true) sh("ALINDI", "CLAIMED") else "+30 SC", fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text(if (g?.dailyChallengeClaimed == true) sh("ALINDI", "CLAIMED") else "+15 ${goldUnit()}", fontSize = 9.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -262,7 +262,7 @@ internal fun MainRetentionScreen(
                         busyKey = mission.missionId
                         runCatching { backend.claimUnifiedMission(mission.missionId) }
                             .onSuccess {
-                                notice = sh("+${it.rewardCoins} Son Coin alındı.", "+${it.rewardCoins} Son Coins claimed.")
+                                notice = sh("+${it.rewardCoins} Altın alındı.", "+${it.rewardCoins} Gold claimed.")
                                 SonHarfSoundFx.missionComplete()
                                 reload()
                             }
@@ -284,7 +284,7 @@ internal fun MainRetentionScreen(
                         scope.launch {
                             busyKey = goal.id
                             val reward = runCatching { backend.claimGoal(goal.id) }.getOrDefault(0)
-                            notice = if (reward > 0) sh("+$reward Son Coin alındı.", "+$reward Son Coins claimed.")
+                            notice = if (reward > 0) sh("+$reward Altın alındı.", "+$reward Gold claimed.")
                             else sh("Görev ödülü alınamadı.", "Mission reward could not be claimed.")
                             reload()
                             busyKey = null
@@ -316,7 +316,7 @@ internal fun MainRetentionScreen(
                             Text(if (SonHarfUiState.isEnglish) milestone.titleEn else milestone.titleTr, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
                             Text(if (SonHarfUiState.isEnglish) milestone.descriptionEn else milestone.descriptionTr, color = MainUi.Muted, fontSize = 9.sp)
                         }
-                        Text("+${milestone.rewardCoins} SC", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        Text("+${milestone.rewardCoins} ${goldUnit()}", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
                     }
                     LinearProgressIndicator(
                         progress = { (milestone.progress.toFloat() / milestone.target.coerceAtLeast(1)).coerceIn(0f, 1f) },
@@ -331,7 +331,7 @@ internal fun MainRetentionScreen(
                                 scope.launch {
                                     busyKey = milestone.id
                                     val reward = runCatching { backend.claimMasteryReward(milestone.id) }.getOrDefault(0)
-                                    notice = if (reward > 0) sh("+$reward Son Coin alındı.", "+$reward Son Coins claimed.") else sh("Ödül alınamadı.", "Reward could not be claimed.")
+                                    notice = if (reward > 0) sh("+$reward Altın alındı.", "+$reward Gold claimed.") else sh("Ödül alınamadı.", "Reward could not be claimed.")
                                     reload()
                                     busyKey = null
                                 }
@@ -379,8 +379,10 @@ internal fun MainRetentionScreen(
             item {
                 MainSectionTitle(sh("KİŞİSEL REKORLAR", "PERSONAL RECORDS"))
                 Spacer(Modifier.height(8.dp))
+                // The longest word gets its own full-width card: a long word never fits a third of a row.
+                MainMetricCard(r.longestWord.ifBlank { "—" }.uppercase(), sh("En uzun kelime", "Longest word"), Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MainMetricCard(r.longestWord.ifBlank { "—" }.uppercase(), sh("En uzun kelime", "Longest word"), Modifier.weight(1f))
                     MainMetricCard(r.bestClassicScore.toString(), sh("En iyi skor", "Best score"), Modifier.weight(1f))
                     MainMetricCard(r.realPvpMatches.toString(), sh("Gerçek PvP", "Real PvP"), Modifier.weight(1f))
                 }
@@ -432,7 +434,7 @@ private fun MainUnifiedMissionCard(
                     Text(if (SonHarfUiState.isEnglish) mission.titleEn else mission.titleTr, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
                     Text(mission.scope.uppercase(), color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
-                Text("+${mission.rewardCoins} SC", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text("+${mission.rewardCoins} ${goldUnit()}", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
             }
             LinearProgressIndicator(
                 progress = { (mission.progress.toFloat() / mission.target.coerceAtLeast(1)).coerceIn(0f, 1f) },
@@ -464,7 +466,7 @@ private fun MainLegacyGoalCard(
         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(if (SonHarfUiState.isEnglish) goal.titleEn else goal.titleTr, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
-                Text("+${goal.rewardDiamonds} SC", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text("+${goal.rewardDiamonds} ${goldUnit()}", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
             }
             Text(if (SonHarfUiState.isEnglish) goal.descriptionEn else goal.descriptionTr, color = MainUi.Muted, fontSize = 9.sp)
             LinearProgressIndicator(

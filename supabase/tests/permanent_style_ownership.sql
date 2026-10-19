@@ -1,6 +1,6 @@
 -- Permanent ownership policy after store_runtime_equip_parity.
 -- Store rotation may retire a product from sale without revoking an owned runtime-supported style.
--- Globally retired runtime classes (profile frames, mascots, unsupported themes) remain blocked.
+-- Retired mascots/unsupported themes remain blocked. The current PRO frame is a supported membership reward.
 begin;
 set local lock_timeout='2s';
 set local statement_timeout='10s';
@@ -18,9 +18,10 @@ begin
   if not public.is_runtime_supported_shop_item_v1('theme_black','game_theme') then
     raise exception 'current_black_theme_not_supported';
   end if;
-  if public.is_runtime_supported_shop_item_v1('frame_round_golden_avatar','profile_frame') then
-    raise exception 'retired_profile_frame_runtime_reopened';
+  if not public.is_runtime_supported_shop_item_v1('frame_round_golden_avatar','profile_frame') then
+    raise exception 'current_pro_frame_runtime_missing';
   end if;
+  if exists(select 1 from public.shop_items where id='frame_round_golden_avatar' and active) then raise exception 'pro_reward_for_sale';end if;
   if public.is_runtime_supported_shop_item_v1('mascot_chibi_wizard','mascot') then
     raise exception 'retired_mascot_runtime_reopened';
   end if;

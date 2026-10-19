@@ -111,7 +111,7 @@ private fun RetentionGoalsPanel(backend: OnlineGameBackend?) {
             val title=if(SonHarfUiState.isEnglish)g.titleEn else g.titleTr; val desc=if(SonHarfUiState.isEnglish)g.descriptionEn else g.descriptionTr; val done=g.progress>=g.target
             Card(colors=CardDefaults.cardColors(containerColor=SonHarfSurface),shape=RoundedCornerShape(18.dp)){
                 Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(title,fontWeight=FontWeight.Black);Text("◈ ${g.rewardDiamonds} SC",color=SonHarfCyan,fontWeight=FontWeight.Black)}
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(title,fontWeight=FontWeight.Black);Text("◈ ${g.rewardDiamonds} ${goldUnit()}",color=SonHarfCyan,fontWeight=FontWeight.Black)}
                     Text(desc,color=SonHarfMuted,fontSize=10.sp)
                     LinearProgressIndicator(progress={g.progress.toFloat()/g.target.coerceAtLeast(1)},modifier=Modifier.fillMaxWidth())
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
@@ -156,7 +156,7 @@ private fun RetentionGamesPanel(backend: OnlineGameBackend?) {
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
         item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf(sh("Aktif","Active"),sh("Biten","Finished"),sh("Tümü","All")).forEachIndexed{i,s->FilterChip(selected=filter==i,onClick={filter=i},label={Text(s)})}}}
         if(shown.isEmpty())item{Text(sh("Bu bölümde maç yok.","No matches here."),Modifier.fillMaxWidth().padding(28.dp),textAlign=TextAlign.Center,color=SonHarfMuted)}
-        items(shown.take(80),key={it.id}){r-> Card(colors=CardDefaults.cardColors(containerColor=SonHarfSurface),shape=RoundedCornerShape(16.dp)){Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Column{Text(if(r.isBot)"🤖 ${r.botName?:"BOT"}" else "⚔ ${r.code}",fontWeight=FontWeight.Black);Text("${r.language.uppercase()} • ${r.status.uppercase()} • ${r.gameModeLabel()}",color=SonHarfMuted,fontSize=8.sp)};Text("${r.hostScore} - ${r.guestScore}",fontSize=18.sp,fontWeight=FontWeight.Black)}}}
+        items(shown.take(80),key={it.id}){r-> Card(colors=CardDefaults.cardColors(containerColor=SonHarfSurface),shape=RoundedCornerShape(16.dp)){Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Column{Text(if(r.isBot)"🤖 ${r.botName?:"AI"}" else "⚔ ${r.code}",fontWeight=FontWeight.Black);Text("${r.language.uppercase()} • ${r.status.uppercase()} • ${r.gameModeLabel()}",color=SonHarfMuted,fontSize=8.sp)};Text("${r.hostScore} - ${r.guestScore}",fontSize=18.sp,fontWeight=FontWeight.Black)}}}
     }
 }
 
@@ -166,12 +166,11 @@ private fun GameRoomDto.gameModeLabel():String = if(roundWordCount>10 || roundNo
 private fun RetentionGuidePanel(backend: OnlineGameBackend?) {
     var news by remember{mutableStateOf<List<AppNewsDto>>(emptyList())}; LaunchedEffect(Unit){news=runCatching{backend?.getAppNews().orEmpty()}.getOrDefault(emptyList())}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-        item{HubInfo("⚔",sh("30 SANİYEDE ÖĞREN","LEARN IN 30 SECONDS"),sh("Rakibin kelimesinin son harfiyle başlayan geçerli bir kelime yaz. Hızlı ol, serini bozma, 3 round sonunda öne geç.","Enter a valid word starting with the last letter of your opponent's word. Be quick, protect your streak and lead after 3 rounds."))}
+        item{HubInfo("⚔",sh("30 SANİYEDE ÖĞREN","LEARN IN 30 SECONDS"),sh("Rakibin kelimesinin son harfiyle başlayan geçerli bir kelime yaz. Hızlı ol, serini bozma; iki raundu alan maçı kazanır, her raund serbest kelimeyle sıfırdan başlar.","Enter a valid word starting with the last letter of your opponent's word. Be quick and protect your streak; win two rounds to win the match, and every round starts fresh with a free word."))}
         item{HubInfo("🔥",sh("SERİ & COMBO","STREAK & COMBO"),sh("Arka arkaya doğru hamleler seri oluşturur. Uzun seriler profilinde ve kariyerinde görünür.","Consecutive correct moves build streaks shown in your profile and career."))}
-        item{HubInfo("👑",sh("UZMAN MODU","EXPERT MODE"),sh("15/15/15 kelime. 1. round son 1 harf, 2. round son 2 harf ×2, 3. round son 3 harf ×3.","15/15/15 words. Round 1 last 1 letter, round 2 last 2 letters ×2, round 3 last 3 letters ×3."))}
+        item{HubInfo("👑",sh("UZMAN MODU","EXPERT MODE"),sh("15/15/15 kelime. 1. round son 1 harf; 2. round son 2 harf, puan 2 kat; 3. round son 3 harf, puan 3 kat.","15/15/15 words. Round 1: last 1 letter; round 2: last 2 letters, double points; round 3: last 3 letters, triple points."))}
         item{HubInfo("👥",sh("ARKADAŞ DÜELLOSU","FRIEND DUEL"),sh("Oyna ekranından çevrimiçi arkadaşını seç, Düello butonuna bas veya paylaşım bağlantısı gönder.","Choose an online friend from Play, tap Duel or send a shared challenge."))}
         item{HubInfo("🎁",sh("ÖDÜLLER","REWARDS"),sh("Kariyer bölümünden günlük giriş ödülünü al. Günlük 3 maç meydan okumasını ve haftalık hedefleri tamamla.","Claim daily check-in rewards, complete the 3-match daily challenge and weekly goals."))}
-        item{HubInfo("⚖",sh("PREMIUM ADİL KALIR","PREMIUM STAYS FAIR"),sh("Premium Style ve konfor sağlar; kelime gücü, skor, süre, rating veya lig avantajı vermez.","Premium adds Style and convenience, never word power, score, time, rating or league advantage."))}
         items(news.take(5)){n->HubInfo("📰",if(SonHarfUiState.isEnglish)n.titleEn else n.titleTr,if(SonHarfUiState.isEnglish)n.bodyEn else n.bodyTr)}
     }
 }
@@ -183,9 +182,8 @@ private fun RetentionSettingsPanel(backend: OnlineGameBackend?) {
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         item{HubBanner("⚙",sh("OYUN AYARLARI","GAME SETTINGS"),sh("Her ayar anında uygulanır ve cihazında saklanır.","Every setting applies immediately and is saved on your device."),SonHarfCyan)}
         item{SettingsCard(sh("Oyun modu","Game mode")){Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FilterChip(selected=mode=="normal",onClick={mode="normal";SonHarfGameModeState.mode="normal";scope.launch{runCatching{backend?.setPreferredGameMode("normal")}}},label={Text("NORMAL")});FilterChip(selected=mode=="expert",onClick={mode="expert";SonHarfGameModeState.mode="expert";scope.launch{runCatching{backend?.setPreferredGameMode("expert")}}},label={Text(sh("UZMAN","EXPERT"))})}}}
-        item{SettingsCard(sh("Bot zorluğu","Bot difficulty")){Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("easy" to sh("KOLAY","EASY"),"normal" to sh("NORMAL","NORMAL"),"hard" to sh("ZOR","HARD")).forEach{(v,t)->FilterChip(selected=bot==v,onClick={bot=v;SonHarfPreferences.setBotDifficulty(context,v)},label={Text(t,fontSize=9.sp)})}};Text(sh("Kolay bot daha yavaş, zor bot daha hızlı cevap verir.","Easy bot replies slower; hard bot replies faster."),color=SonHarfMuted,fontSize=8.sp)}}
+        item{SettingsCard(sh("AI zorluğu","AI difficulty")){Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("easy" to sh("KOLAY","EASY"),"normal" to sh("NORMAL","NORMAL"),"hard" to sh("ZOR","HARD")).forEach{(v,t)->FilterChip(selected=bot==v,onClick={bot=v;SonHarfPreferences.setBotDifficulty(context,v)},label={Text(t,fontSize=9.sp)})}};Text(sh("Kolay AI daha yavaş, zor AI daha hızlı cevap verir.","Easy AI replies slower; hard AI replies faster."),color=SonHarfMuted,fontSize=8.sp)}}
         item{ToggleSetting(sh("Ses efektleri","Sound effects"),sound){sound=it;SonHarfPreferences.setSoundEnabled(context,it)}}
-        item{ToggleSetting(sh("Titreşim","Vibration"),vibration){vibration=it;SonHarfPreferences.setVibrationEnabled(context,it)}}
         item{HubInfo("◌",sh("CANLI ARENA GÖRÜNÜMÜ","LIVE ARENA APPEARANCE"),sh("Açık zemin, elektrik mavisi, mercan rakip rengi ve kontrollü altın prestij vurguları kullanılır.","The interface uses a light base, electric blue, coral rival accents and controlled gold prestige highlights."))}
     }
 }

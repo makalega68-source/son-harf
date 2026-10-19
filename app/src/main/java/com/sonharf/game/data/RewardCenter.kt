@@ -9,8 +9,8 @@ import kotlinx.serialization.json.put
 @Serializable
 data class RewardCenterStatusDto(
     @SerialName("coin_ads_used") val coinAdsUsed: Int = 0,
-    @SerialName("coin_ads_limit") val coinAdsLimit: Int = 3,
-    @SerialName("coin_per_ad") val coinPerAd: Int = 10,
+    @SerialName("coin_ads_limit") val coinAdsLimit: Int = 6,
+    @SerialName("coin_per_ad") val coinPerAd: Int = 5,
     @SerialName("trial_ads_used") val trialAdsUsed: Int = 0,
     @SerialName("trial_ads_limit") val trialAdsLimit: Int = 1,
     @SerialName("trial_item_id") val trialItemId: String? = null,
@@ -33,6 +33,8 @@ data class RewardClaimDto(
     @SerialName("trial_matches_remaining") val trialMatchesRemaining: Int? = null,
     @SerialName("trial_expires_at") val trialExpiresAt: String? = null,
     @SerialName("bonus_sc") val bonusSc: Int = 0,
+    /** Hints or Quick Duels granted by a rewarded pass (or the doubled gift's coins). */
+    val amount: Int = 0,
     val diamonds: Int? = null,
     val balance: Int? = null,
 )

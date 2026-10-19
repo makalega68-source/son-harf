@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SonHarf" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowBackground">#E6ECF2</item>
+        <item name="android:statusBarColor">#E6ECF2</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <!-- Some phones (MIUI and others) recolour apps in system dark mode: dark letters on the
+             cream tiles turn light and disappear. The game draws its own colours, so opt out. -->
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+</resources>

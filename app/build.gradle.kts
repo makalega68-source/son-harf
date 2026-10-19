@@ -24,8 +24,8 @@ android {
         applicationId = "com.sonharf.game"
         minSdk = 26
         targetSdk = 36
-        versionCode = 31
-        versionName = "0.9.15"
+        versionCode = 59
+        versionName = "1.0.22"
 
         val supabaseUrl = providers.gradleProperty("SON_HARF_SUPABASE_URL")
             .orElse("https://bzdtftzdjtjoqhtcqtxb.supabase.co")
@@ -38,6 +38,14 @@ android {
         val bannerAdUnitId = bannerAdUnitIdProvider.get()
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
+        // Google sign-in (Credential Manager) needs the Google Cloud "Web application" OAuth client
+        // ID that Supabase's Google provider also uses. Empty hides the Google buttons.
+        val googleWebClientId = providers.gradleProperty("SON_HARF_GOOGLE_WEB_CLIENT_ID")
+            .orElse(providers.environmentVariable("SON_HARF_GOOGLE_WEB_CLIENT_ID"))
+            // The Web client ID is public (it ships inside every app build); not a secret.
+            .orElse("825154787424-bde1htajsoljn9vhbf9c4c8n65kob9nb.apps.googleusercontent.com")
+            .get()
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", "\"$rewardedAdUnitId\"")
         buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", "\"$bannerAdUnitId\"")
         manifestPlaceholders["ADMOB_APP_ID"] = admobAppId
@@ -73,8 +81,19 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            // Store build: R8 drops library code the app never calls (e.g. the unused part of the
+            // icon set) and resource shrinking drops unused resources. App classes are kept whole.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
+        }
+        // Same shrunk build as the store release, signed with the debug key: CI builds it on every
+        // push so R8/resource-shrinking problems show up before the real store upload.
+        create("releaseCheck") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
         }
     }
 
@@ -86,23 +105,36 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    // Eve's 3D model is read straight from the APK by Filament; keep it uncompressed.
+    androidResources {
+        noCompress += "glb"
+    }
 }
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.08.00"))
+    // Real-time 3D (Filament via SceneView) for Eve, the home screen friend.
+    implementation("io.github.sceneview:sceneview:4.31.0")
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.2")
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")
 
     implementation(platform("io.github.jan-tennert.supabase:bom:3.7.0"))
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
     implementation("io.ktor:ktor-client-okhttp:3.5.1")
+    // Google sign-in through the system account picker.
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     implementation("com.android.billingclient:billing-ktx:8.0.0")
     implementation("com.google.android.gms:play-services-ads:24.5.0")

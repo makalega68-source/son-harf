@@ -1,0 +1,120 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Usually granted through USE_EXACT_ALARM; declared on every version so the "Alarms & reminders" switch can be turned on if a phone did not grant it. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <!-- Only to change screen brightness when the user asks Obi to ("ekran ışığını kıs"). -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <!-- Asked only when the user says "annemi ara" / "Ali'ye … yaz" / "bugün ne var". -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <!-- Night mode: Do Not Disturb when the user allows it. -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <queries>
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+        <package android:name="com.sonharf.game" />
+        <package android:name="com.whatsapp" />
+        <intent><action android:name="android.intent.action.SET_ALARM" /></intent>
+        <intent><action android:name="android.intent.action.SET_TIMER" /></intent>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+        <!-- "YouTube aç", "WhatsApp aç": Obi finds the app by its name on the home screen. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:label="Obi"
+        android:icon="@mipmap/ic_obi"
+        android:roundIcon="@mipmap/ic_obi"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Obi">
+        <activity
+            android:name=".ObiEntryActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".ObiMicPermissionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name=".ObiAssistActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:label="Obi"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name=".ObiTalkTile"
+            android:exported="true"
+            android:icon="@drawable/ic_obi_notification"
+            android:label="Obi konuş"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <activity
+            android:name=".ObiPermissionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name=".ObiGeminiSetupActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <receiver
+            android:name=".ObiReminderReceiver"
+            android:exported="false" />
+        <receiver android:name=".ObiBootReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <service
+            android:name=".ObiOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse|microphone">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-enabled, persistent, draggable animated companion overlay with a tap-to-write panel" />
+        </service>
+        <receiver
+            android:name=".ObiWidget"
+            android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/obi_widget_info" />
+        </receiver>
+        <service
+            android:name=".ObiVoiceAlertService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+    </application>
+</manifest>

@@ -17,9 +17,9 @@ object SonHarfUiState {
 /**
  * Shared UI localization.
  *
- * Kelime Kuşatması is the canonical user-visible product brand. Older source strings may still
+ * Kelime Tahtı is the canonical user-visible product brand. Older source strings may still
  * contain the previous Kelime Tahtı / Word Throne labels for compatibility with untouched screens,
- * but they are normalized here before rendering. Technical identifiers (WordSiege, package names,
+ * and game-mode names stay distinct when rendering. Technical identifiers (WordSiege, package names,
  * database contracts and deep links) are intentionally unaffected.
  */
 fun sh(tr: String, en: String): String {
@@ -40,11 +40,8 @@ fun sh(tr: String, en: String): String {
         return "PLAY • Place your tiles, build your word"
     }
 
+    // Product: Kelime Tahtı. Game mode: Kelime Kuşatması / Word Siege.
     return localized
-        .replace("KELİME TAHTI", "KELİME KUŞATMASI")
-        .replace("Kelime Tahtı", "Kelime Kuşatması")
-        .replace("WORD THRONE", "KELİME KUŞATMASI")
-        .replace("Word Throne", "Kelime Kuşatması")
-        .replace("TAHT SENİN!", "KUŞATMA SENİN!")
-        .replace("THE THRONE IS YOURS!", "SIEGE WON!")
+        .replace("KUŞATMA SENİN!", "TAHT SENİN!")
+        .replace("SIEGE WON!", "THE THRONE IS YOURS!")
 }

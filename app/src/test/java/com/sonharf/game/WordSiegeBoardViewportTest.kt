@@ -30,6 +30,13 @@ class WordSiegeBoardViewportTest {
     }
 
     @Test
+    fun `online close scale shows about seven and a half cells across on a 390dp phone`() {
+        val scale = wordSiegeOnlineCloseScale(390f, 500f, boardPx)
+        assertEquals(1.00f, scale, tolerance)
+        assertEquals(wordSiegeFitScale(390f, 500f, boardPx) * 2f, scale, tolerance)
+    }
+
+    @Test
     fun `fit scale uses exact minimum viewport ratio and centers the full board`() {
         val transform = wordSiegeBoardTransform(
             mode = WordSiegeBoardViewportMode.FIT,

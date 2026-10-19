@@ -1,13 +1,15 @@
 package com.sonharf.game
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,14 +19,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntSize
@@ -34,26 +41,26 @@ import com.sonharf.game.data.WordSiegeCellDto
 import kotlinx.coroutines.delay
 
 private val PracticeSiegeCellSize = 52.dp
-private val PracticeSiegeTile = Color(0xFFF4F7F5)
-private val PracticeSiegeTileBorder = Color(0xFF8EA697)
-internal val PracticeSiegeBoardSurface = Color(0xFFE5EAE5)
-internal val PracticeSiegeNeutral = Color(0xFFFAF7EF)
-private val PracticeSiegeEmpty = Color(0xFFFAF7EF)
-private val PracticeSiegeMine = Color(0xFFA8D5B5)
-private val PracticeSiegeRival = Color(0xFFE4AEAA)
-private val PracticeSiegeMineBorder = Color(0xFF3F7C53)
-private val PracticeSiegeRivalBorder = Color(0xFF9B4D4A)
+private val PracticeSiegeTile get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.ivory else Color(0xFFF7E3A6)
+private val PracticeSiegeTileBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bevel else Color(0xFFC9A560)
+internal val PracticeSiegeBoardSurface = Color(0xFFD5CEBD)
+internal val PracticeSiegeNeutral get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.empty else Color(0xFFF3EEDF)
+private val PracticeSiegeEmpty get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.empty else Color(0xFFF3EEDF)
+private val PracticeSiegeMine get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF2E9E54)
+private val PracticeSiegeRival get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFD83B35)
+private val PracticeSiegeMineBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.mine else Color(0xFF58C07A)
+private val PracticeSiegeRivalBorder get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.rival else Color(0xFFEE6F69)
 private val PracticeSiegeThreat = Color(0xFFD8903D)
-private val PracticeSiegeLightTileText = Color(0xFF17372C)
-private val PracticeZoneWatch = Color(0xFFDCEAF2)
-private val PracticeZoneCritical = Color(0xFFDCEAF2)
-private val PracticeZoneFort = Color(0xFFEAE2F0)
-private val PracticeZoneSiege = Color(0xFFEAE2F0)
-private val PracticeZoneCrown = Color(0xFFE7DDBB)
-private val PracticeZoneReward = Color(0xFFEAD59B)
-private val PracticeLastMove = Color(0xFFE7B95E)
+private val PracticeSiegeLightTileText = Color(0xFF4A3217)
+private val PracticeZoneWatch get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2H else Color(0xFFE0F3EF)
+private val PracticeZoneCritical get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3H else Color(0xFFC3E7DF)
+private val PracticeZoneFort get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus2K else Color(0xFFFFF0D3)
+private val PracticeZoneSiege get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus3K else Color(0xFFF6D596)
+private val PracticeZoneCrown get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonus4K else Color(0xFFF3E8CD)
+private val PracticeZoneReward get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusStar else Color(0xFFFBEBB5)
+private val PracticeLastMove = Color(0xFFE0A82E)
 private val PracticeDefinitionBadge = Color(0xFF5C8299)
-private val PracticeSiegeBonusLabel = Color(0xFF68716D)
+private val PracticeSiegeBonusLabel get() = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.bonusLabel else Color(0xFF3F4A5A)
 
 internal data class PracticeResolvedWord(
     val word: String,
@@ -68,9 +75,31 @@ internal fun WordSiegePracticeBoard(
     myOwner: Int,
     enabled: Boolean,
     moveEventKey: Int? = null,
+    lastMoveMine: Boolean = false,
+    moveScore: Int = 0,
+    capturedCells: Int = 0,
+    opponentCaptured: Int = 0,
+    moveCell: Int? = null,
     resolvedIndices: Set<Int> = emptySet(),
+    captureEffect: WordSiegeCaptureEffect? = null,
     language: String = SonHarfUiState.language,
     modifier: Modifier = Modifier,
+    mascotSignal: WordSiegeMascotSignal? = null,
+    mascotOutcome: WordSiegeMascotOutcome? = null,
+    playerName: String? = null,
+    playerGender: String? = null,
+    /** A mascot hint to show now (key, text). */
+    hint: Pair<Int, String>? = null,
+    /** Cells of the mascot's hint move: it flies there while it says the word. */
+    hintCells: List<Int> = emptyList(),
+    onViewportModeChange: (WordSiegeBoardViewportMode) -> Unit = {},
+    /** Finger dragging of tiles (rack → board, board → board/rack). */
+    tileDrag: WordSiegeTileDrag? = null,
+    onTileDrop: (rackIndex: Int, fromCell: Int?, target: Int?) -> Unit = { _, _, _ -> },
+    /** The pending tiles form a valid move: a green check sits on the last tile. */
+    pendingValid: Boolean = false,
+    /** What the pending move scores, shown above the word (null hides it). */
+    pendingScore: Int? = null,
     onCell: (Int) -> Unit,
 ) {
     val density = LocalDensity.current
@@ -78,24 +107,40 @@ internal fun WordSiegePracticeBoard(
     val boardPx = tilePx * WordSiegeBoardSpec.Size
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     var closePan by remember { mutableStateOf(Offset.Zero) }
-    var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_CLOSE_SCALE) }
+    var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE) }
     var initialized by remember { mutableStateOf(false) }
+    var viewportOriginInWindow by remember { mutableStateOf(Offset.Unspecified) }
+    val mascotTouches = remember { WordSiegeMascotTouchState() }
+    // The board always pans and pinches freely; "FIT" is simply the most zoomed-out scale.
     var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
-    val transform by remember(mode, viewport, boardPx, closePan, closeScale) {
+    // The classic light board is the default; a bought skin replaces it; Walnut/Black themes keep their own.
+    val boardSkin = WordSiegeBoardSkins.active
+    val fitScale = remember(viewport, boardPx, boardSkin) {
+        wordSiegeSkinnedFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx, boardSkin)
+    }
+    val minScale = minOf(fitScale, WORD_SIEGE_PRACTICE_MAX_SCALE)
+    // Read only where it is used (draw layer, gestures, the small overlays), never in this body:
+    // a pinch then redraws the board layer instead of recomposing all 225 cells every frame.
+    val transformState = remember(viewport, boardPx, boardSkin) {
         derivedStateOf {
-            wordSiegeBoardTransform(
-                mode = mode,
-                viewportWidthPx = viewport.width.toFloat(),
-                viewportHeightPx = viewport.height.toFloat(),
-                boardWidthPx = boardPx,
-                closeScale = closeScale,
-                closePan = closePan,
+            // Pan limits include the skin's frame, so the frame can be seen and never covers cells.
+            WordSiegeBoardTransform(
+                scale = closeScale,
+                pan = clampWordSiegeSkinnedPan(closePan, viewport.width.toFloat(), viewport.height.toFloat(), boardPx, closeScale, boardSkin),
+                renderedWidthPx = boardPx * closeScale,
+                renderedHeightPx = boardPx * closeScale,
             )
         }
     }
+    // The gesture handler is never restarted mid-pinch; it reads the latest values instead.
+    val gestureMin by rememberUpdatedState(minScale)
+    val gestureViewport by rememberUpdatedState(viewport)
+    val gestureSkin by rememberUpdatedState(boardSkin)
     var consumedHighlightKey by remember { mutableStateOf(moveEventKey) }
     var highlightedIndices by remember { mutableStateOf<Set<Int>>(emptySet()) }
     val highlightAlpha = remember { Animatable(0f) }
+    // True while a finger is moving the board (read only by the board's draw layer).
+    var boardMoving by remember { mutableStateOf(false) }
 
     LaunchedEffect(moveEventKey, resolvedIndices) {
         val key = moveEventKey
@@ -105,7 +150,7 @@ internal fun WordSiegePracticeBoard(
             highlightAlpha.snapTo(0f)
             highlightAlpha.animateTo(1f, tween(WORD_SIEGE_LAST_MOVE_ENTER_MS))
             delay(WORD_SIEGE_LAST_MOVE_HOLD_MS.toLong())
-            highlightAlpha.animateTo(0.42f, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
+            highlightAlpha.animateTo(WORD_SIEGE_LAST_MOVE_REST_ALPHA, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
         }
     }
 
@@ -117,12 +162,13 @@ internal fun WordSiegePracticeBoard(
 
     val actionVfxEvents = emptyList<PurchasedBoardVfxEvent>()
 
-    fun clampClosePan(candidate: Offset): Offset = clampWordSiegeBoardPan(
+    fun clampClosePan(candidate: Offset): Offset = clampWordSiegeSkinnedPan(
         candidate,
         viewport.width.toFloat(),
         viewport.height.toFloat(),
         boardPx,
         closeScale,
+        boardSkin,
     )
 
     fun centerClose(): Offset = wordSiegeCenteredClosePan(
@@ -134,48 +180,87 @@ internal fun WordSiegePracticeBoard(
         scale = closeScale,
     )
 
-    fun toggleMode() {
-        val nextMode = mode.toggle()
-        if (nextMode == WordSiegeBoardViewportMode.CLOSE) closePan = centerClose()
-        mode = nextMode
+    // Zooming in folds the screen's header and score cards into a slim strip so the board gets the
+    // room (as in online matches); zooming back out restores them. Only the player's own pinch
+    // decides this (never a layout change), and two thresholds stop flicker.
+    val viewportModeCallback by rememberUpdatedState(onViewportModeChange)
+    val gestureFit by rememberUpdatedState(fitScale)
+    fun reportZoom(scale: Float) {
+        val fit = gestureFit
+        if (fit <= 0f) return
+        val ratio = scale / fit
+        val next = when {
+            mode == WordSiegeBoardViewportMode.FIT && ratio > 1.3f -> WordSiegeBoardViewportMode.CLOSE
+            mode == WordSiegeBoardViewportMode.CLOSE && ratio < 1.1f -> WordSiegeBoardViewportMode.FIT
+            else -> mode
+        }
+        if (next != mode) {
+            mode = next
+            viewportModeCallback(next)
+        }
+    }
+    WordSiegeRegisterBoardHitTest(tileDrag, viewportOriginInWindow, viewport, { transformState.value }, tilePx)
+    // Only the hovered cell matters, so the board recomposes when it changes, not every finger move.
+    val dragHover by remember(tileDrag) { derivedStateOf { tileDrag?.hoverCell } }
+    val hiddenCells: Set<Int> = buildSet {
+        tileDrag?.fromCell?.let { add(it) }
+        tileDrag?.flyingCells?.let { addAll(it) }
     }
 
     LaunchedEffect(viewport, boardPx) {
         if (!initialized && viewport.width > 0 && viewport.height > 0) {
+            // Start with the whole board in view, as before.
+            closeScale = fitScale.coerceAtMost(WORD_SIEGE_PRACTICE_MAX_SCALE)
             closePan = centerClose()
             initialized = true
         } else if (initialized) {
+            // While the whole board is shown, keep it fitted as the space around it changes.
+            if (mode == WordSiegeBoardViewportMode.FIT) closeScale = fitScale.coerceAtMost(WORD_SIEGE_PRACTICE_MAX_SCALE)
             closePan = clampClosePan(closePan)
         }
     }
 
     Surface(
         modifier = modifier,
-        color = PracticeSiegeBoardSurface,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, WordSiegeGameUi.Border.copy(alpha = .70f)),
-        shadowElevation = 1.dp,
+        color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frame else Color.White,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(if (boardSkin != null) 0.dp else 2.dp, if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.frameEdge else Color(0xFFD2DBE5)),
+        shadowElevation = if (WordSiegeWalnutIvory.enabled) 7.dp else 12.dp,
     ) {
+      WordSiegeSkinnedBoard(boardSkin, Modifier.fillMaxSize()) { viewportModifier ->
         Box(
-            Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(14.dp))
+            viewportModifier
+                .then(
+                    if (boardSkin != null) Modifier.clip(RoundedCornerShape(6.dp))
+                    else Modifier
+                        .padding(4.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.boardGrain else Brush.linearGradient(listOf(Color(0xFFD6CFC1), Color(0xFFD1CABB), Color(0xFFD6CFC1), Color(0xFFCEC6B6)))),
+                )
                 .clipToBounds()
-                .onGloballyPositioned { viewport = it.size }
-                .pointerInput(mode, viewport, boardPx, closeScale) {
-                    if (mode == WordSiegeBoardViewportMode.CLOSE) {
-                        detectTransformGestures { centroid, pan, zoom, _ ->
+                .onGloballyPositioned {
+                    viewport = it.size
+                    viewportOriginInWindow = it.localToWindow(Offset.Zero)
+                }
+                .wordSiegeMascotTouchWatcher(mascotTouches)
+                // One finger pans, two fingers pinch to zoom; no double tap.
+                .pointerInput(Unit) {
+                    run {
+                        // The header folds only once the fingers lift, so the board never jumps mid-pinch.
+                        detectWordSiegeBoardGestures(onEnd = { boardMoving = false; reportZoom(closeScale) }) { centroid, pan, zoom ->
+                            boardMoving = true
                             val oldScale = closeScale
-                            val newScale = (oldScale * zoom).coerceIn(WORD_SIEGE_PRACTICE_MIN_SCALE, WORD_SIEGE_PRACTICE_MAX_SCALE)
+                            val newScale = (oldScale * zoom).coerceIn(gestureMin, WORD_SIEGE_PRACTICE_MAX_SCALE)
                             val ratio = if (oldScale > 0f) newScale / oldScale else 1f
-                            val candidate = centroid + (closePan - centroid) * ratio + pan
+                            val candidate = centroid + (transformState.value.pan - centroid) * ratio + pan
                             closeScale = newScale
-                            closePan = clampWordSiegeBoardPan(
+                            closePan = clampWordSiegeSkinnedPan(
                                 candidate,
-                                viewport.width.toFloat(),
-                                viewport.height.toFloat(),
+                                gestureViewport.width.toFloat(),
+                                gestureViewport.height.toFloat(),
                                 boardPx,
                                 newScale,
+                                gestureSkin,
                             )
                         }
                     }
@@ -186,18 +271,35 @@ internal fun WordSiegePracticeBoard(
                     .wrapContentSize(Alignment.TopStart, unbounded = true)
                     .requiredSize(PracticeSiegeCellSize * WordSiegeBoardSpec.Size)
                     .graphicsLayer {
+                        val transform = transformState.value
                         translationX = transform.pan.x
                         translationY = transform.pan.y
                         scaleX = transform.scale
                         scaleY = transform.scale
                         transformOrigin = TransformOrigin(0f, 0f)
-                    },
+                        // Cached as one picture while a finger moves it (see the online board).
+                        compositingStrategy = if (boardMoving) CompositingStrategy.Offscreen else CompositingStrategy.Auto
+                    }
+                    // The skin's slab belongs to the board: it zooms and pans with the cells.
+                    .wordSiegeBoardFrame(boardSkin, LocalWordSiegePlate.current),
             ) {
+                // The mascot's answer tiles pulse gold while they sit on the board, so it is clear
+                // which letters the hint placed.
+                val hintSet = if (hint != null && hintCells.isNotEmpty() && placements.keys.containsAll(hintCells)) hintCells.toSet() else emptySet()
+                // The pulse runs only while a hint is on the board and is read at draw time, so the
+                // board is not recomposed every frame.
+                val hintPulse = remember { Animatable(.35f) }
+                LaunchedEffect(hintSet.isNotEmpty()) {
+                    if (hintSet.isNotEmpty()) {
+                        hintPulse.animateTo(1f, androidx.compose.animation.core.infiniteRepeatable(tween(650), androidx.compose.animation.core.RepeatMode.Reverse))
+                    } else hintPulse.snapTo(.35f)
+                }
                 repeat(WordSiegeBoardSpec.Size) { row ->
                     Row {
                         repeat(WordSiegeBoardSpec.Size) { column ->
                             val index = WordSiegeBoardSpec.index(row, column)
-                            val pendingRackIndex = placements[index]
+                            val placedRackIndex = placements[index]
+                            val pendingRackIndex = placedRackIndex?.takeIf { index !in hiddenCells }
                             val cell = board.getOrElse(index) { WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index)) }
                             WordSiegePracticeBoardCell(
                                 cell = cell,
@@ -205,18 +307,40 @@ internal fun WordSiegePracticeBoard(
                                 pending = pendingRackIndex != null,
                                 myOwner = myOwner,
                                 enabled = enabled,
-                                overview = mode == WordSiegeBoardViewportMode.FIT,
+                                overview = closeScale <= fitScale * 1.3f,
                                 threatened = false,
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
                                 showDefinitionBadge = resolvedWord?.badgeIndex == index,
                                 onDefinitionClick = { resolvedWord?.word?.let { definitionWord = it } },
                                 onClick = { onCell(index) },
-                                onDoubleClick = ::toggleMode,
+                                hintGlow = if (index in hintSet) ({ hintPulse.value }) else null,
+                                dropTarget = dragHover == index && (cell.letter == null),
+                                // Keyed on the placed tile, not the shown one: the tile hides while it is being
+                                // carried and the gesture must survive that.
+                                dragSource = if (placedRackIndex != null) {
+                                    Modifier.wordSiegeTileDragSource(
+                                        drag = tileDrag,
+                                        enabled = enabled,
+                                        rackIndex = placedRackIndex,
+                                        fromCell = index,
+                                        letter = rack.getOrNull(placedRackIndex) ?: ' ',
+                                        onDrop = onTileDrop,
+                                    )
+                                } else Modifier,
                             )
                         }
                     }
                 }
             }
+
+            WithBoardTransform(transformState) { transform ->
+            WordSiegePendingMoveBadges(
+                cells = placements.keys.filter { it !in hiddenCells }.takeIf { it.size == placements.size }.orEmpty(),
+                transform = transform,
+                cellSizePx = tilePx,
+                valid = pendingValid,
+                score = pendingScore,
+            )
 
             PurchasedBoardActionVfxOverlay(
                 events = actionVfxEvents,
@@ -224,7 +348,81 @@ internal fun WordSiegePracticeBoard(
                 cellSizePx = tilePx,
                 modifier = Modifier.matchParentSize(),
             )
+
+            captureEffect?.let { effect ->
+                val sourcePositions = effect.batch.indices.associateWith { index ->
+                    wordSiegeCaptureCellCenterInWindow(
+                        index = index,
+                        transform = transform,
+                        cellSizePx = tilePx,
+                        viewportOriginInWindow = viewportOriginInWindow,
+                    )
+                }
+                WordSiegeCaptureFlightOverlay(
+                    effect = effect,
+                    sourcePositionsInWindow = sourcePositions,
+                    anchorOriginInWindow = viewportOriginInWindow,
+                )
+            }
+            WordSiegeMascotCompanion(
+                anchors = WordSiegeBoardMascotPerches,
+                mascotSize = 76.dp,
+                moveId = moveEventKey?.toLong(),
+                lastMoveMine = lastMoveMine,
+                playerTurn = enabled,
+                modifier = Modifier.matchParentSize().padding(3.dp),
+                moveScore = moveScore,
+                capturedCells = capturedCells,
+                opponentCaptured = opponentCaptured,
+                moveCell = moveCell,
+                pendingCells = placements.keys,
+                signal = mascotSignal,
+                outcome = mascotOutcome,
+                playerName = playerName,
+                playerGender = playerGender,
+                touches = mascotTouches,
+                hint = hint,
+                visit = when {
+                    // A requested hint: fly to the exact spot of the answer word.
+                    hint != null && hintCells.isNotEmpty() && placements.keys.containsAll(hintCells) ->
+                        wordSiegeMascotCellVisit(
+                            key = "hintmove:${hint.first}",
+                            indices = hintCells,
+                            transform = transform,
+                            cellSizePx = tilePx,
+                            viewportWidthPx = viewport.width.toFloat(),
+                            viewportHeightPx = viewport.height.toFloat(),
+                            kind = WordSiegeMascotVisitKind.ANSWER,
+                        )
+                    // Fresh territory after the player's own strong move.
+                    moveEventKey != null && lastMoveMine && capturedCells >= 2 && moveCell != null ->
+                        wordSiegeMascotCellVisit(
+                            key = "cap:$moveEventKey",
+                            indices = listOf(moveCell),
+                            transform = transform,
+                            cellSizePx = tilePx,
+                            viewportWidthPx = viewport.width.toFloat(),
+                            viewportHeightPx = viewport.height.toFloat(),
+                            kind = WordSiegeMascotVisitKind.CAPTURE,
+                        )
+                    // Practice only: a gentle pointer to a playable bonus square if the player is stuck.
+                    enabled && placements.isEmpty() -> practiceBonusHint(board)?.let { index ->
+                        wordSiegeMascotCellVisit(
+                            key = "hint:$index:${moveEventKey ?: 0}",
+                            indices = listOf(index),
+                            transform = transform,
+                            cellSizePx = tilePx,
+                            viewportWidthPx = viewport.width.toFloat(),
+                            viewportHeightPx = viewport.height.toFloat(),
+                            kind = WordSiegeMascotVisitKind.HINT,
+                        )
+                    }
+                    else -> null
+                },
+            )
+            }
         }
+      }
     }
 
     definitionWord?.let { word ->
@@ -249,7 +447,9 @@ private fun WordSiegePracticeBoardCell(
     showDefinitionBadge: Boolean,
     onDefinitionClick: () -> Unit,
     onClick: () -> Unit,
-    onDoubleClick: () -> Unit,
+    hintGlow: (() -> Float)? = null,
+    dropTarget: Boolean = false,
+    dragSource: Modifier = Modifier,
 ) {
     val owner = if (pending) myOwner else cell.owner
     val territory = when {
@@ -272,59 +472,98 @@ private fun WordSiegePracticeBoardCell(
 
     // Territory is the primary visual layer. Strategic-zone tint is only dominant on neutral cells.
     val cellColor = when {
-        pending -> PracticeSiegeTile
+        pending -> if (WordSiegeWalnutIvory.enabled) territory else PracticeSiegeTile
         letter != null -> territory
         zoneSurface != null -> zoneSurface
         else -> PracticeSiegeEmpty
     }
+    val displayCellColor = if (pending && !WordSiegeWalnutIvory.enabled) Color(0xFFE3D6B0) else cellColor
     val borderColor = when {
         threatened && owner != 0 -> PracticeSiegeThreat
         pending -> PracticeSiegeTileBorder
         owner == myOwner -> PracticeSiegeMineBorder
         owner != 0 -> PracticeSiegeRivalBorder
-        activeZone == WordSiegeBoardSpec.CenterBonus || activeZone == WordSiegeBoardSpec.StarBonus -> Color(0xFF8D7438)
+        activeZone == WordSiegeBoardSpec.CenterBonus || activeZone == WordSiegeBoardSpec.StarBonus -> Color(0xFFB07F1E)
         activeZone != null -> WordSiegeGameUi.Border.copy(alpha = .8f)
         else -> WordSiegeGameUi.Border.copy(alpha = .45f)
     }
     val regionGap = 1.25.dp
+    val skinPlate = LocalWordSiegePlate.current
+    val cellInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    // Board squares are not buttons: no press animation (225 of them used to track touches and
+    // shrink even while the board was being panned). A tap still places a tile.
 
     Box(
         Modifier
             .size(PracticeSiegeCellSize)
-            .padding(regionGap)
-            .clip(RoundedCornerShape(8.dp))
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.lerp(cellColor, Color.White, .12f), cellColor)))
-            .border(
-                width = when {
-                    lastMoveHighlight > 0f -> 1.7.dp
-                    threatened && owner != 0 -> 1.5.dp
-                    else -> .55.dp
-                },
-                color = if (lastMoveHighlight > 0f) {
-                    PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
-                } else borderColor,
-                shape = RoundedCornerShape(8.dp),
-            )
+            .then(dragSource)
             .combinedClickable(
+                interactionSource = cellInteraction,
+                indication = null,
+                // No double tap: a single tap places at once, zoom is a two-finger pinch.
                 onClick = {
                     dispatchWordSiegeBoardTap(
                         WordSiegeBoardTapAction.PLACE,
                         canPlace,
                         onClick,
-                        onDoubleClick,
+                        {},
                     )
                 },
-                onDoubleClick = {
-                    dispatchWordSiegeBoardTap(
-                        WordSiegeBoardTapAction.TOGGLE_VIEWPORT,
-                        canPlace,
-                        onClick,
-                        onDoubleClick,
+            )
+            .drawBehind {
+                // Hint glow: a soft gold halo around the answer tile.
+                if (hintGlow != null) {
+                    drawRoundRect(
+                        color = Color(0xFFFFD54F).copy(alpha = .55f * hintGlow()),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(9.dp.toPx()),
                     )
+                }
+            }
+            .padding(regionGap)
+            // Raised stones cast a short soft shadow; empty recesses cast none.
+            .shadow(if (letter != null && !WordSiegeWalnutIvory.enabled) 2.dp else 0.dp, RoundedCornerShape(8.dp), clip = false)
+            .clip(RoundedCornerShape(8.dp))
+            .then(
+                // On a board skin an empty cell is a stone plate of that skin, bonus tint on top.
+                if (skinPlate != null && letter == null) Modifier.wordSiegePlateTexture(skinPlate).background(wordSiegeSkinCellOverlay(zoneSurface)).wordSiegeCellBevel(WordSiegeBoardSkins.active?.dark == true)
+                else Modifier.background(wordSiegeCellBrush(displayCellColor, raised = letter != null, walnut = WordSiegeWalnutIvory.enabled))
+                    // Classic board: empty and bonus squares are soft framed tiles.
+                    .then(if (letter == null && !pending && !WordSiegeWalnutIvory.enabled) Modifier.wordSiegeClassicTileRim(displayCellColor) else Modifier)
+                    .then(if (letter != null && !pending && !WordSiegeWalnutIvory.enabled) Modifier.wordSiegeCellBevel(dark = false) else Modifier),
+            )
+            .border(
+                width = if (dropTarget) 3.dp else if (hintGlow != null) 2.2.dp else if (lastMoveHighlight > 0f) 2.5.dp + 1.dp * lastMoveHighlight else .45.dp,
+                color = if (dropTarget) {
+                    Color(0xFF2FB36A)
+                } else if (hintGlow != null) {
+                    Color(0xFFFFE082)
+                } else if (lastMoveHighlight > 0f) {
+                    PracticeLastMove.copy(alpha = .6f + .4f * lastMoveHighlight)
+                } else if (letter == null) {
+                    // Empty cells have no outline: the recess shading separates them without a grid of lines.
+                    Color.Transparent
+                } else if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.emptyEdge else if (pending) Color(0xFFCDBF9F) else {
+                    // Placed stones have no outline: their colour and bevel separate them.
+                    Color.Transparent
                 },
+                shape = RoundedCornerShape(8.dp),
             ),
         contentAlignment = Alignment.Center,
     ) {
+        if (WordSiegeWalnutIvory.enabled && letter != null) {
+            Box(
+                Modifier.matchParentSize()
+                    .padding(if (owner != 0) 4.dp else .75.dp)
+                    .shadow(1.5.dp, RoundedCornerShape(7.dp))
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(WordSiegeWalnutIvory.tile)
+                    .border(
+                        if (pending) 1.6.dp else .65.dp,
+                        if (pending) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel,
+                        RoundedCornerShape(7.dp),
+                    ),
+            )
+        }
         if (lastMoveHighlight > 0f) {
             Box(Modifier.matchParentSize().background(PracticeLastMove.copy(alpha = .045f * lastMoveHighlight)))
         }
@@ -332,19 +571,26 @@ private fun WordSiegePracticeBoardCell(
         if (owner != 0 && !pending) {
             Box(
                 Modifier
-                    .align(Alignment.TopStart)
-                    .padding(4.dp)
-                    .size(6.dp)
-                    .clip(CircleShape)
+                    .align(if (WordSiegeWalnutIvory.enabled && owner != myOwner) Alignment.TopEnd else Alignment.TopStart)
+                    .padding(if (WordSiegeWalnutIvory.enabled) 3.dp else 4.dp)
+                    .size(if (WordSiegeWalnutIvory.enabled) 7.dp else 6.dp)
+                    .clip(if (WordSiegeWalnutIvory.enabled && owner != myOwner) RoundedCornerShape(1.dp) else CircleShape)
                     .background(if (owner == myOwner) PracticeSiegeMineBorder else PracticeSiegeRivalBorder),
             )
         }
 
         if (letter != null) {
-            Text(letter, color = PracticeSiegeLightTileText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+            Text(
+                letter,
+                color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.ink else if (!pending && owner != 0) Color.White else PracticeSiegeLightTileText,
+                fontSize = if (overview) 24.sp else 22.sp,
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Black,
+                letterSpacing = if (overview) .10.sp else .25.sp,
+            )
             Text(
                 practiceLetterValue(letter),
-                color = PracticeSiegeLightTileText.copy(alpha = .78f),
+                color = if (WordSiegeWalnutIvory.enabled) WordSiegeWalnutIvory.secondaryInk else (if (!pending && owner != 0) Color.White else PracticeSiegeLightTileText).copy(alpha = .78f),
                 fontSize = WordSiegeBoardAccessibility.BoardLetterPoint,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
@@ -363,26 +609,8 @@ private fun WordSiegePracticeBoardCell(
                 }
             }
         } else if (activeZone != null) {
-            Text(
-                androidx.compose.ui.text.buildAnnotatedString {
-                    val label = WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)
-                    val parts = label.split("\n")
-                    if (parts.size > 1 && overview) {
-                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 20.sp)) {
-                            append(parts.first().take(1)); append(parts.last())
-                        }
-                    } else if (parts.size > 1) {
-                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 10.sp)) { append(parts.first()) }
-                        append("\n")
-                        append(parts.last())
-                    } else append(label)
-                },
-                color = PracticeSiegeBonusLabel,
-                fontSize = WordSiegeBoardAccessibility.BoardBonus,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 17.sp,
-                fontWeight = FontWeight.Light,
-            )
+            val label = WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)
+            WordSiegeBonusMark(activeZone, label, overview, PracticeSiegeBonusLabel, WordSiegeBoardAccessibility.BoardBonus)
         }
     }
 }
@@ -396,27 +624,34 @@ internal fun WordSiegePracticeRackTile(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(if (pressed) .95f else 1f, tween(if (pressed) 65 else 150), label = "practice rack press")
     Surface(
-        modifier = modifier.height(48.dp).combinedClickable(onClick = onClick, enabled = enabled),
+        modifier = modifier.height(48.dp).graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .combinedClickable(interactionSource = interaction, indication = null, onClick = onClick, enabled = enabled),
         color = when {
             used -> WordSiegeGameUi.SurfaceSoft
-            selected -> Color(0xFFE1ECE4)
-            else -> PracticeSiegeTile
+            WordSiegeWalnutIvory.enabled -> WordSiegeWalnutIvory.ivory
+            selected -> Color(0xFFD6C38D)
+            else -> Color(0xFFE3D6B0)
         },
-        shape = RoundedCornerShape(11.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PracticeSiegeMineBorder else PracticeSiegeTileBorder.copy(alpha = .7f)),
-        shadowElevation = if (selected) 4.dp else 2.dp,
+        shape = RoundedCornerShape(9.dp),
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (WordSiegeWalnutIvory.enabled) (if (selected) WordSiegeWalnutIvory.selection else WordSiegeWalnutIvory.bevel) else (if (selected) PracticeSiegeMineBorder else PracticeSiegeTileBorder.copy(alpha = .7f))),
+        shadowElevation = if (pressed) 0.dp else if (selected) 3.dp else 1.5.dp,
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(if (WordSiegeWalnutIvory.enabled) Modifier.background(WordSiegeWalnutIvory.tile) else Modifier, contentAlignment = Alignment.Center) {
             Text(
                 letter.toString(),
-                color = if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else PracticeSiegeLightTileText,
-                fontSize = 20.sp,
+                color = if (WordSiegeWalnutIvory.enabled) (if (used) WordSiegeWalnutIvory.ink.copy(alpha = .35f) else WordSiegeWalnutIvory.ink) else (if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else PracticeSiegeLightTileText),
+                fontSize = 22.sp,
+                fontFamily = FontFamily.SansSerif,
                 fontWeight = FontWeight.Black,
+                letterSpacing = .35.sp,
             )
             Text(
                 practiceLetterValue(letter.toString()),
-                color = if (used) WordSiegeGameUi.Muted.copy(alpha = .55f) else PracticeSiegeLightTileText.copy(alpha = .72f),
+                color = if (WordSiegeWalnutIvory.enabled) (if (used) WordSiegeWalnutIvory.secondaryInk.copy(alpha = .45f) else WordSiegeWalnutIvory.secondaryInk) else (if (used) WordSiegeGameUi.Muted.copy(alpha = .55f) else PracticeSiegeLightTileText.copy(alpha = .72f)),
                 fontSize = WordSiegeBoardAccessibility.RackPoint,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
@@ -494,14 +729,63 @@ private fun practiceCellThreatened(board: List<WordSiegeCellDto>, index: Int, ow
     }
 }
 
-private fun practiceLetterValue(letter: String): String = when (letter) {
-    "A", "E", "İ", "K", "L", "N", "R", "T" -> "1"
-    "I", "M", "O", "S", "U" -> "2"
-    "B", "D", "Ü", "Y" -> "3"
-    "C", "Ç", "Ş", "Z" -> "4"
-    "G", "H", "P" -> "5"
-    "F", "Ö", "V" -> "7"
-    "Ğ" -> "8"
-    "J" -> "10"
-    else -> "1"
+/** The value shown on a tile, in the language of the game being played. */
+internal fun practiceLetterValue(letter: String): String =
+    wordSiegeLetterValue(letter, SonHarfUiState.language).toString()
+
+/**
+ * Siege letter values, identical to the server's private.word_siege_letter_value_v1:
+ * the Turkish table, and the English one for English games.
+ */
+internal fun wordSiegeLetterValue(letter: String, language: String): Int =
+    if (com.sonharf.game.data.SharedDictionaryService.canonicalLanguage(language) == "en") when (letter.uppercase(java.util.Locale.ROOT)) {
+        "A", "E", "I", "L", "N", "O", "R", "S", "T", "U" -> 1
+        "D", "G" -> 2
+        "B", "C", "M", "P" -> 3
+        "F", "H", "V", "W", "Y" -> 4
+        "K" -> 5
+        "J", "X" -> 8
+        "Q", "Z" -> 10
+        else -> 1
+    } else when (letter.uppercase(java.util.Locale.forLanguageTag("tr-TR"))) {
+        "A", "E", "İ", "K", "L", "N", "R", "T" -> 1
+        "I", "M", "O", "S", "U" -> 2
+        "B", "D", "Ü", "Y" -> 3
+        "C", "Ç", "Ş", "Z" -> 4
+        "G", "H", "P" -> 5
+        "F", "Ö", "V" -> 7
+        "Ğ" -> 8
+        "J" -> 10
+        else -> 1
+    }
+
+/** The most valuable empty bonus square that touches an existing letter, if any. */
+private fun practiceBonusHint(board: List<WordSiegeCellDto>): Int? {
+    val rank = mapOf("3K" to 4, "3H" to 3, "2K" to 2, "2H" to 1)
+    return board.indices
+        .filter { index ->
+            val cell = board[index]
+            val bonus = cell.bonus ?: WordSiegeBoardSpec.bonusAt(index)
+            cell.letter == null && !cell.bonusUsed && bonus in rank && practiceHasLetterNeighbour(board, index)
+        }
+        .maxByOrNull { rank[board[it].bonus ?: WordSiegeBoardSpec.bonusAt(it)] ?: 0 }
+}
+
+private fun practiceHasLetterNeighbour(board: List<WordSiegeCellDto>, index: Int): Boolean {
+    val row = WordSiegeBoardSpec.row(index)
+    val column = WordSiegeBoardSpec.column(index)
+    return listOf(row - 1 to column, row + 1 to column, row to column - 1, row to column + 1).any { (r, c) ->
+        r in 0 until WordSiegeBoardSpec.Size && c in 0 until WordSiegeBoardSpec.Size &&
+            board.getOrNull(WordSiegeBoardSpec.index(r, c))?.letter != null
+    }
+}
+
+/** Runs [content] in its own small recomposition scope, so reading the board transform there
+ * (which changes every frame of a pinch) never recomposes the board's cells. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.WithBoardTransform(
+    state: androidx.compose.runtime.State<WordSiegeBoardTransform>,
+    content: @Composable androidx.compose.foundation.layout.BoxScope.(WordSiegeBoardTransform) -> Unit,
+) {
+    content(state.value)
 }

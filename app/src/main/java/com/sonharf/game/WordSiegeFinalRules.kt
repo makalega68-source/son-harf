@@ -2,11 +2,12 @@ package com.sonharf.game
 
 import com.sonharf.game.data.WordSiegeCellDto
 
-/** Final Kelime Kuşatması rules shared by online UI and local BOT practice. */
+/** Final Kelime Tahtı rules shared by online UI and local BOT practice. */
 internal enum class WordSiegeOrientation { HORIZONTAL, VERTICAL }
 
 internal object WordSiegeFinalRules {
     const val CUBE_TRANSFER_POINTS: Int = 2
+    const val OPPONENT_CAPTURE_LOSS_POINTS: Int = 1
 
     fun detectOrientation(
         board: List<WordSiegeCellDto>,
@@ -47,6 +48,12 @@ internal object WordSiegeFinalRules {
     fun currentTerritoryScore(wordScore: Int, ownedCubes: Int): Int =
         wordScore + cubeTransfer(ownedCubes)
 
+    fun opponentCaptureLoss(cubesLost: Int): Int =
+        cubesLost.coerceAtLeast(0) * OPPONENT_CAPTURE_LOSS_POINTS
+
+    fun scoreWithTerritoryLedger(wordScore: Int, territoryScore: Int): Int =
+        wordScore.coerceAtLeast(0) + territoryScore.coerceAtLeast(0)
+
     /**
      * Word points are permanent. Territory contributes only the value of cubes the player owns now.
      * The opponent value is kept in the signature for source compatibility with existing callers.
@@ -64,14 +71,14 @@ internal object WordSiegeFinalRules {
      */
     fun earnedCubePoints(moves: Iterable<com.sonharf.game.data.WordSiegeMoveDto>, playerId: String?): Int {
         if (playerId == null) return 0
-        var ownedCubes = 0
+        var territoryScore = 0
         moves.forEach { move ->
             if (move.playerId == playerId) {
-                ownedCubes += move.neutralCaptured + move.opponentCaptured
+                territoryScore += cubeTransfer(move.neutralCaptured + move.opponentCaptured)
             } else {
-                ownedCubes -= move.opponentCaptured
+                territoryScore -= opponentCaptureLoss(move.opponentCaptured)
             }
         }
-        return cubeTransfer(ownedCubes)
+        return territoryScore.coerceAtLeast(0)
     }
 }

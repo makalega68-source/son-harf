@@ -41,7 +41,7 @@ data class GrowthDashboardDto(
     val losses: Int = 0,
     @SerialName("valid_words") val validWords: Int = 0,
     @SerialName("matches_today") val matchesToday: Int = 0,
-    @SerialName("daily_reward") val dailyReward: Int = 40,
+    @SerialName("daily_reward") val dailyReward: Int = 5,
     @SerialName("daily_claimed") val dailyClaimed: Boolean = false,
     @SerialName("daily_challenge_claimed") val dailyChallengeClaimed: Boolean = false,
     @SerialName("league_name") val leagueName: String = "BRONZ",

@@ -1,0 +1,313 @@
+package com.obi.local
+
+import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
+import android.media.PlaybackParams
+import android.util.Base64
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import java.time.LocalDate
+import org.json.JSONArray
+import org.json.JSONObject
+
+/**
+ * Obi's voice from Gemini text-to-speech: native Turkish, then pitched up (without speeding up)
+ * so it sounds small, like a kitten. Clips are made ahead of time and kept on the phone, so an
+ * alarm still speaks without internet.
+ */
+internal class ObiGeminiVoice(private val context: Context) {
+    companion object {
+        private val MODELS = listOf("gemini-2.5-flash-preview-tts", "gemini-2.5-flash-tts", "gemini-2.5-pro-preview-tts")
+        /** Gemini voices to try with "sesini değiştir"; the user's choice is remembered. */
+        val VOICES = listOf("Leda", "Zephyr", "Aoede", "Kore", "Puck", "Laomedeia", "Achernar")
+        private const val DAILY_LIMIT = 40
+
+        /** The app's own daily cap on new clips; Google's free allowance applies on top of it. */
+        fun dailyLimit(context: Context): Int =
+            context.getSharedPreferences("obi_gemini", Context.MODE_PRIVATE).getInt("voice_daily_limit", DAILY_LIMIT)
+
+        fun setDailyLimit(context: Context, value: Int) =
+            context.getSharedPreferences("obi_gemini", Context.MODE_PRIVATE).edit().putInt("voice_daily_limit", value).apply()
+
+        /** Fixed lines, made once and reused. */
+        val FIXED = mapOf(
+            // Most needed first, so a small daily allowance goes to what is actually heard.
+            "reminder" to "Hatırlatma zamanı geldi!",
+            "done" to "Tamam, hallettim!",
+            "preview" to "Merhaba! Ben Obi. Sesim böyle, beğendin mi?",
+            "listening" to "Efendim?",
+            "alarm" to "Alarm zamanı geldi! Hadi bakalım, kalkıyoruz!",
+            "alarm_morning" to "Günaydın! Sabah oldu, hadi uyan bakalım. Yeni bir gün seni bekliyor!",
+        )
+
+        fun reminderLine(text: String) = "Hatırlatma var: ${text.trimEnd('.', '!')}."
+
+        /** Clips are stored by their words (and voice), so the same sentence is never made twice. */
+        fun lineKey(line: String, voice: String): String {
+            val digest = java.security.MessageDigest.getInstance("SHA-1")
+                .digest("$voice|${line.trim().lowercase(java.util.Locale("tr", "TR"))}".toByteArray())
+            return "line_" + digest.take(10).joinToString("") { "%02x".format(it) }
+        }
+
+        private const val MAX_LINE_CLIPS = 150
+        private const val CLIP_VERSION = 3
+    }
+
+    private val prefs = context.getSharedPreferences("obi_gemini", Context.MODE_PRIVATE)
+    private val dir = File(context.filesDir, "voice").apply { mkdirs() }
+
+    init {
+        // Clips up to v2 were asked for with an English style note, which newer voice models read
+        // aloud before the sentence; they are made again with the sentence alone.
+        if (prefs.getInt("clip_version", 0) < CLIP_VERSION) {
+            dir.listFiles()?.forEach { it.delete() }
+            prefs.edit().putInt("clip_version", CLIP_VERSION).apply()
+        }
+    }
+
+    fun voiceName(): String = prefs.getString("voice_name", VOICES.first()) ?: VOICES.first()
+
+    /** Switches to the next voice and drops the clips made with the old one. */
+    fun nextVoice(): String {
+        val next = VOICES[(VOICES.indexOf(voiceName()) + 1).mod(VOICES.size)]
+        prefs.edit().putString("voice_name", next).apply()
+        dir.listFiles()?.forEach { it.delete() }
+        return next
+    }
+
+    /** What happened the last time a clip was requested, for "ses durumu". */
+    fun lastStatus(): String = prefs.getString("voice_status", "Henüz ses üretilmedi.") ?: ""
+
+    private fun status(text: String) = prefs.edit().putString("voice_status", text).apply()
+
+    fun keyFor(line: String) = lineKey(line, voiceName())
+
+    /** Keeps the newest sentence clips (fixed lines are never removed). */
+    private fun trim() {
+        val clips = dir.listFiles { f -> f.name.startsWith("line_") }?.sortedByDescending { it.lastModified() } ?: return
+        clips.drop(MAX_LINE_CLIPS).forEach { it.delete() }
+    }
+
+    fun file(key: String) = File(dir, "$key.pcm")
+    fun has(key: String) = file(key).length() > 1000
+    fun forget(key: String) { file(key).delete() }
+
+    /** Makes the clip if it is missing. Blocking; call from a background thread. */
+    fun prepareBlocking(key: String, text: String): Boolean {
+        if (has(key)) return true
+        val apiKey = ObiGemini(context).apiKey() ?: return false
+        val today = LocalDate.now().toString()
+        val used = if (prefs.getString("voice_day", "") == today) prefs.getInt("voice_used", 0) else 0
+        val limit = dailyLimit(context)
+        if (used >= limit) { status("Bugünlük ses hakkı bitti (Obi'nin günlük sınırı: $limit)."); return false }
+        blockedUntil()?.let {
+            status("Ücretsiz Gemini ses hakkı bugünlük bitti; ${clock(it)} civarında yenilenecek. Hazır sesler kullanılıyor.")
+            return false
+        }
+        val waitUntil = prefs.getLong("voice_wait_until", 0L)
+        if (System.currentTimeMillis() < waitUntil) {
+            status("Gemini dakikalık ses sınırı (429); ${(waitUntil - System.currentTimeMillis()) / 1000 + 1} sn sonra tekrar deniyorum.")
+            return false
+        }
+        val preferred = prefs.getString("voice_model", null)
+        val now = System.currentTimeMillis()
+        // A model whose own daily allowance is used up is skipped until the reset; the others may still have theirs.
+        val candidates = (listOfNotNull(preferred) + MODELS).distinct().filter { prefs.getLong("day_block_$it", 0L) <= now }.toMutableList()
+        if (candidates.isEmpty()) { prefs.edit().putLong("voice_blocked_until", nextQuotaReset()).apply(); return prepareBlocking(key, text) }
+        var dailyRefused = 0
+        var lastError = "bağlantı kurulamadı"
+        var discovered = false
+        var index = 0
+        while (index < candidates.size) {
+            val model = candidates[index++]
+            val result = runCatching { request(apiKey, model, text) }.getOrElse { lastError = it.javaClass.simpleName; null } ?: continue
+            val audio = result.second
+            if (audio == null) {
+                lastError = "kod ${result.first}${result.third?.let { ": ${errorMessage(it)}" } ?: ""}"
+                // Unknown model: ask Google which text-to-speech models this key can use, once.
+                if ((result.first == 404 || result.first == 400) && !discovered) {
+                    discovered = true
+                    candidates += runCatching { ttsModels(apiKey) }.getOrDefault(emptyList()).filter { it !in candidates }
+                }
+                if (result.first == 429) {
+                    val error = result.third.orEmpty()
+                    if (Regex("per ?day|daily", RegexOption.IGNORE_CASE).containsMatchIn(error)) {
+                        // This model's free daily allowance is used up: skip it until Google resets it
+                        // (midnight Pacific time) and try the next model, which has its own allowance.
+                        prefs.edit().putLong("day_block_$model", nextQuotaReset()).apply()
+                        dailyRefused++
+                        continue
+                    }
+                    // Only the per-minute limit: wait as long as Google asks (or a minute) and try again then.
+                    val delay = Regex("retry in ([\\d.]+)s|\"retryDelay\"\\s*:\\s*\"(\\d+)", RegexOption.IGNORE_CASE).find(error)
+                        ?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.toDoubleOrNull()?.toLong() ?: 60L
+                    prefs.edit().putLong("voice_wait_until", System.currentTimeMillis() + (delay + 2) * 1000L).apply()
+                    lastError = "kod 429: dakikalık sınır, ${delay + 2} sn sonra"
+                    break
+                }
+                if (result.first == 401 || result.first == 403) break
+                continue
+            }
+            prefs.edit().putString("voice_model", model).putString("voice_day", today).putInt("voice_used", used + 1).apply()
+            DataOutputStream(file(key).outputStream().buffered()).use { out ->
+                out.writeInt(audio.second)
+                out.write(audio.first)
+            }
+            status("Gemini sesi çalışıyor ✓ (ses: ${voiceName()}, model: $model)")
+            trim()
+            return true
+        }
+        if (dailyRefused > 0 && index >= candidates.size) {
+            // Every model that answered is out of its daily allowance.
+            prefs.edit().putLong("voice_blocked_until", nextQuotaReset()).apply()
+            status("Ücretsiz Gemini ses hakkı bugünlük bitti; ${clock(nextQuotaReset())} civarında yenilenecek. Hazır sesler kullanılıyor.")
+            return false
+        }
+        status("Gemini sesi üretilemedi — $lastError")
+        return false
+    }
+
+    /**
+     * Makes a clip in the background. The free Gemini voice allows only a few requests a minute,
+     * so a refused request ("429") is retried a few times with a pause instead of giving up.
+     */
+    fun prepare(key: String, text: String, done: (Boolean) -> Unit = {}) {
+        Thread { done(prepareWithRetry(key, text)) }.start()
+    }
+
+    private fun prepareWithRetry(key: String, text: String): Boolean {
+        repeat(5) { attempt ->
+            if (runCatching { prepareBlocking(key, text) }.getOrDefault(false)) return true
+            if (lastStatus().contains("bitti")) return false
+            if (!lastStatus().contains("429") && !lastStatus().contains("bağlantı")) return false
+            val wait = prefs.getLong("voice_wait_until", 0L) - System.currentTimeMillis()
+            Thread.sleep(maxOf(wait + 500L, 20_000L * (attempt + 1)))
+        }
+        return false
+    }
+
+    /** Makes the fixed lines one by one, slowly, so they do not use up the per-minute limit. */
+    fun prepareFixed() {
+        Thread {
+            synchronized(ObiGeminiVoice::class.java) {
+                FIXED.forEach { (key, text) ->
+                    if (!has(key)) { prepareWithRetry(key, text); Thread.sleep(8_000L) }
+                }
+            }
+        }.start()
+    }
+
+    /** When the free daily allowance comes back, or null when Obi may ask for clips now. */
+    fun blockedUntil(): Long? {
+        // Older versions also stopped for the per-minute limit; forget that guess once, so one request tells.
+        if (!prefs.getBoolean("block_v2", false)) prefs.edit().putBoolean("block_v2", true).remove("voice_blocked_until").apply()
+        return prefs.getLong("voice_blocked_until", 0L).takeIf { it > System.currentTimeMillis() }
+    }
+
+    fun blockedText(): String? = blockedUntil()?.let { "Eksik sesleri ${clock(it)} civarında, hak yenilenince kendim hazırlarım." }
+
+    private fun nextQuotaReset(): Long {
+        val pacific = java.time.ZoneId.of("America/Los_Angeles")
+        return java.time.ZonedDateTime.now(pacific).toLocalDate().plusDays(1).atStartOfDay(pacific)
+            .plusMinutes(5).toInstant().toEpochMilli()
+    }
+
+    private fun clock(time: Long): String = java.time.Instant.ofEpochMilli(time).atZone(java.time.ZoneId.systemDefault())
+        .let { "${if (it.toLocalDate() == LocalDate.now()) "bugün" else "yarın"} ${String.format(java.util.Locale.ROOT, "%02d:%02d", it.hour, it.minute)}" }
+
+    private fun errorMessage(body: String): String =
+        (runCatching { JSONObject(body).optJSONObject("error")?.optString("message") }.getOrNull() ?: body).take(120)
+
+    /** Model names containing "tts" that this key may call. */
+    private fun ttsModels(apiKey: String): List<String> {
+        val connection = URL("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200").openConnection() as HttpURLConnection
+        try {
+            connection.connectTimeout = 8000; connection.readTimeout = 15000
+            connection.setRequestProperty("x-goog-api-key", apiKey)
+            if (connection.responseCode !in 200..299) return emptyList()
+            val models = JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONArray("models") ?: return emptyList()
+            return (0 until models.length()).mapNotNull { models.optJSONObject(it)?.optString("name")?.removePrefix("models/") }
+                .filter { it.contains("tts") }.sortedBy { if (it.contains("flash")) 0 else 1 }
+        } finally { connection.disconnect() }
+    }
+
+    /** Returns (status, (pcm bytes, sample rate), error message). */
+    private fun request(apiKey: String, model: String, text: String): Triple<Int, Pair<ByteArray, Int>?, String?> {
+        val body = JSONObject()
+            .put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text", text)))))
+            .put("generationConfig", JSONObject()
+                .put("responseModalities", JSONArray().put("AUDIO"))
+                .put("speechConfig", JSONObject().put("voiceConfig", JSONObject()
+                    .put("prebuiltVoiceConfig", JSONObject().put("voiceName", voiceName())))))
+        val connection = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent").openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod = "POST"
+            connection.connectTimeout = 8000
+            connection.readTimeout = 30000
+            connection.doOutput = true
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.setRequestProperty("x-goog-api-key", apiKey)
+            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                val message = runCatching {
+                    connection.errorStream.bufferedReader().use { it.readText() }
+                }.getOrNull()
+                return Triple(status, null, message)
+            }
+            val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+            val parts = root.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts")
+            for (i in 0 until parts.length()) {
+                val inline = parts.getJSONObject(i).optJSONObject("inlineData") ?: continue
+                val rate = Regex("rate=(\\d+)").find(inline.optString("mimeType"))?.groupValues?.get(1)?.toIntOrNull() ?: 24000
+                return Triple(status, Base64.decode(inline.getString("data"), Base64.DEFAULT) to rate, null)
+            }
+            return Triple(status, null, "yanıtta ses yok")
+        } finally { connection.disconnect() }
+    }
+
+    /**
+     * Plays a stored clip, pitched up by [pitch] at normal speed. [done] runs on the playing
+     * thread when the clip ends or fails; returns false when there is nothing to play.
+     */
+    fun play(key: String, pitch: Float, repeat: Int = 1, done: () -> Unit): AudioTrack? {
+        val file = file(key)
+        if (!has(key)) return null
+        val (rate, pcm) = runCatching {
+            DataInputStream(file.inputStream().buffered()).use { input -> input.readInt() to input.readBytes() }
+        }.getOrNull() ?: return null
+        val track = runCatching {
+            AudioTrack.Builder()
+                .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .setSampleRate(rate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .setBufferSizeInBytes(AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT) * 4)
+                .build()
+        }.getOrNull() ?: return null
+        runCatching { track.playbackParams = PlaybackParams().setPitch(pitch.coerceIn(0.8f, 2.2f)).setSpeed(1.0f) }
+        Thread {
+            runCatching {
+                track.play()
+                repeat(repeat.coerceAtLeast(1)) { round ->
+                    track.write(pcm, 0, pcm.size)
+                    if (round < repeat - 1) track.write(ByteArray(rate), 0, rate) // half a second of quiet
+                }
+                // Wait for the queued audio to drain before reporting the end.
+                val frames = pcm.size / 2 * repeat + (repeat - 1) * rate / 2
+                val deadline = System.currentTimeMillis() + frames * 1000L / rate + 3_000L
+                while (track.playbackHeadPosition < frames - rate / 10 && System.currentTimeMillis() < deadline &&
+                    track.playState == AudioTrack.PLAYSTATE_PLAYING) Thread.sleep(100)
+            }
+            runCatching { track.stop(); track.release() }
+            done()
+        }.start()
+        return track
+    }
+}

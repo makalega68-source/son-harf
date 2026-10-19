@@ -18,10 +18,11 @@ class PremiumStoreProContractTest {
     }
 
     @Test
-    fun `premium store has no restore purchases ui and uses text free runtime artwork`() {
+    fun `premium store restores purchases and uses text free runtime artwork`() {
         val store = repoFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
-        assertFalse(store.contains("Satın Almaları Geri Yükle", ignoreCase = true))
-        assertFalse(store.contains("Restore Purchases", ignoreCase = true))
+        assertTrue(store.contains("SATIN ALIMLARI GERİ YÜKLE"))
+        assertTrue(store.contains("Restore Purchases", ignoreCase = true))
+        assertTrue(store.contains("manager.restorePurchases(ProductCatalog.permanentPremiumProducts)"))
         assertTrue(store.contains("R.drawable.premium_series_game"))
         assertTrue(store.contains("R.drawable.premium_letter_table"))
         assertTrue(store.contains("R.drawable.premium_score_calculator"))
@@ -31,12 +32,14 @@ class PremiumStoreProContractTest {
             "premium_series_game.xml",
             "premium_letter_table.xml",
             "premium_score_calculator.xml",
-            "premium_pro.xml",
         ).forEach { name ->
             val vector = repoFile("app/src/main/res/drawable/$name").readText()
             assertTrue(vector.contains("<vector"))
             assertFalse("Decorative premium asset must not bake text", vector.contains("<text"))
         }
+        // The PRO emblem is the text-free painted store image (shield, crown and laurels).
+        assertTrue(repoFile("app/src/main/res/drawable-nodpi/premium_pro.png").isFile)
+        assertFalse(File("src/main/res/drawable/premium_pro.xml").exists() || File("app/src/main/res/drawable/premium_pro.xml").exists())
     }
 
     @Test
@@ -82,8 +85,8 @@ class PremiumStoreProContractTest {
         assertTrue(history.contains("game_words_participant_history_v1"))
 
         val screen = repoFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
-        assertTrue(screen.contains("PRO • Tüm oynanan kelimeler"))
-        assertTrue(screen.contains("val ordered = if (isPro) words.reversed()"))
+        // The played-words strip was removed from the arena; the word list still guards repeats.
+        assertFalse(screen.contains("PremierWordTrail("))
     }
 
     @Test
@@ -100,7 +103,7 @@ class PremiumStoreProContractTest {
     }
 
     @Test
-    fun `friend list is pro gated while Series gets only entitlement scoped invite candidates`() {
+    fun `friend list is a PRO feature while requests stay open and Series keeps entitlement scoped invites`() {
         val friends = repoFile("supabase/migrations/20260919120000_pro_friend_list_rls_v1.sql").readText()
         assertTrue(friends.contains("can_use_pro_friend_list_v1"))
         assertTrue(friends.contains("friendships pro accepted read v1"))
@@ -116,9 +119,22 @@ class PremiumStoreProContractTest {
         assertTrue(v2.contains("status = 'accepted'"))
         assertTrue(v2.contains("(select auth.uid())"))
 
-        val profile = repoFile("app/src/main/java/com/sonharf/game/MainPlayerProfileScreen.kt").readText()
-        assertTrue(profile.contains("if (loadedProfile?.isVip == true)"))
-        assertTrue(profile.contains("PRO ile arkadaş listesi ve yönetimi"))
+        // Later migration makes the basic friend list free for every signed-in player.
+        val free = repoFile("supabase/migrations/20261002203108_social_inbox_and_free_friends_v1.sql").readText()
+        assertTrue(free.contains("drop policy if exists \"friendships pro accepted read v1\""))
+        assertTrue(free.contains("friendships participant read v3"))
+
+        // The app presents the friend list as PRO: listed on the PRO page, locked on the home
+        // shortcut, and replaced by a PRO card for non-members; requests still work for everyone.
+        val pro = repoFile("app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt").readText()
+        assertTrue(pro.contains("sh(\"Arkadaş listesi\",\"Friend list\")"))
+        val social = repoFile("app/src/main/java/com/sonharf/game/MainSocialScreen.kt").readText()
+        assertTrue(social.contains("0 -> if (!isPro) {"))
+        assertTrue(social.contains("Arkadaş listesi PRO özelliğidir"))
+        val lobby = repoFile("app/src/main/java/com/sonharf/game/HomeLobby.kt").readText()
+        assertTrue(lobby.contains("sh(\"Arkadaşlar\", \"Friends\") + if (isPro) \"\" else \" · PRO\""))
+        val shell = repoFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        assertTrue(shell.contains("isPro = isPro,\n                        onPro = { proReturn = PremiumDestination.SOCIAL; destination = PremiumDestination.PRO },"))
     }
 
     @Test

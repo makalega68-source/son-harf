@@ -1,0 +1,35 @@
+begin;
+do $test$
+declare u uuid;v jsonb;e timestamptz:=now()-interval '5 minutes';n integer;regular timestamptz;special timestamptz;
+begin
+ select id into u from public.profiles limit 1;
+ perform set_config('request.jwt.claim.sub',u::text,true);
+ regular:=private.atelier_event_start('2026-10-02T18:59:59+03');
+ if regular<>'2026-10-02T18:00:00+03'::timestamptz then raise exception 'regular_schedule';end if;
+ if private.atelier_event_next('2026-10-02T18:00:00+03')<>'2026-10-02T19:00:00+03'::timestamptz then raise exception 'special_next';end if;
+ if private.atelier_event_next('2026-10-02T19:00:00+03')<>'2026-10-02T20:00:00+03'::timestamptz then raise exception 'regular_after_special';end if;
+ if private.atelier_event_next('2026-10-02T22:00:00+03')<>'2026-10-03T00:00:00+03'::timestamptz then raise exception 'midnight';end if;
+ if private.atelier_event_start('2026-10-02T22:00:00+03')<>'2026-10-02T22:00:00+03'::timestamptz then raise exception '22_special';end if;
+ perform private.throne_award_xp(u,'test','dedup','siege',35,1,0);
+ perform private.throne_award_xp(u,'test','dedup','siege',35,1,0);
+ select count(*) into n from public.throne_xp_events where user_id=u and source='test' and source_id='dedup';
+ if n<>1 then raise exception 'xp_duplicate';end if;
+ for n in 1..5 loop perform private.throne_award_xp(u,'test','mission-'||n,'last_letter',120,1,1);end loop;
+ if not exists(select 1 from public.throne_xp_events where user_id=u and source='mission' and game='last_letter' and source_id like '%:rounds') then raise exception 'rounds_mission';end if;
+ if not exists(select 1 from public.throne_xp_events where user_id=u and source='mission' and game='last_letter' and source_id like '%:mastery') then raise exception 'wins_mission';end if;
+ v:=public.get_throne_week_v1();
+ if jsonb_array_length(v->'missions')<>9 or jsonb_array_length(v->'breakdown')<>3 then raise exception 'weekly_structure';end if;
+ if (v->>'reset_at')::timestamptz <> ((date_trunc('week',now() at time zone 'Europe/Istanbul')::date+7)::timestamp at time zone 'Europe/Istanbul') then raise exception 'week_boundary';end if;
+ insert into public.atelier_tournament_runs(user_id,event_start,language,stage,started_at)values(u,e,'tr',1,now());
+ begin perform public.finish_atelier_tournament_v1(e,1,30,1,0,array['kal']); raise exception 'accepted_early';
+ exception when others then if sqlerrm<>'round_not_finished' then raise;end if;end;
+ update public.atelier_tournament_runs set started_at=now()-interval '61 seconds' where user_id=u and event_start=e;
+ begin perform public.finish_atelier_tournament_v1(e,1,30,1,0,array['zzz']);raise exception 'accepted_bad_word';
+ exception when others then if sqlerrm<>'invalid_transcript' then raise;end if;end;
+ v:=public.finish_atelier_tournament_v1(e,1,30,1,0,array['kal']);
+ if (v->>'xp')::int<52 then raise exception 'xp_multiplier';end if;
+ v:=public.finish_atelier_tournament_v1(e,1,30,1,0,array['kal']);
+ if not (v->>'already_saved')::boolean then raise exception 'finish_idempotency';end if;
+ if has_function_privilege('anon','public.get_throne_week_v1()','execute') or has_function_privilege('authenticated','private.throne_award_xp(uuid,text,text,text,integer,integer,integer,integer)','execute') then raise exception 'permissions';end if;
+end $test$;
+rollback;

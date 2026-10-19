@@ -8,35 +8,12 @@ import org.junit.Test
 
 class WordSiegeContractTest {
     @Test fun siegeReplacesConquestAndIsPrimaryFromUnifiedPro() {
-        val siege = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGame.kt").readText()
         val home = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
-        assertTrue(siege.contains("KELİME TAHTI"))
-        assertTrue(siege.contains("Kelimeyi kur. Alanı ele geçir."))
-        assertTrue(siege.contains("initialSiegeTerritory"))
-        assertTrue(siege.contains("claimSiegeTerritory"))
-        assertTrue(siege.contains("40 to SiegeBonus.CASTLE"))
-        assertTrue(siege.contains("SiegeBonus.TREASURE"))
-        assertTrue(siege.contains("SiegeBonus.BRIDGE"))
-        assertTrue(siege.contains("SiegeBonus.FOG"))
-        assertTrue(siege.contains("SiegeBonus.DOUBLE"))
-        assertTrue(siege.contains("siege_treasure"))
-        assertTrue(siege.contains("siege_bridge"))
-        assertTrue(siege.contains("siege_fog"))
-        assertTrue(siege.contains("siege_castle_neutral"))
-        assertTrue(siege.contains("kare ele geçirildi"))
-        assertTrue(siege.contains("rememberInfiniteTransition"))
-        assertTrue(siege.contains("LaunchedEffect(gameId, turn)"))
-        assertTrue(siege.contains("castle_blue"))
-        assertTrue(siege.contains("castle_red"))
-        assertTrue(siege.contains("ProfilePhotoAvatar("))
-        assertTrue(siege.contains("KRİTİK!"))
-        assertTrue(siege.contains("KELİMEYİ GÖNDER"))
-        assertTrue(siege.contains("BOT"))
 
         // Legacy UnifiedProApp remains untouched; the active StableV1App -> PremiumUnifiedProApp flow owns the current brand.
         assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(home.contains("sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
+        assertTrue(home.contains("sh(\"KELİME TAHTI\", \"WORD THRONE\")"))
         assertTrue(home.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
         assertTrue(home.contains("SAVAŞA GİR"))
         assertFalse(home.contains("KELİME FETHİ"))

@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.Obi" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#111827</item>
+        <item name="android:navigationBarColor">#111827</item>
+        <!-- Obi draws its own colours; a phone-forced dark mode would hide its text. -->
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+</resources>

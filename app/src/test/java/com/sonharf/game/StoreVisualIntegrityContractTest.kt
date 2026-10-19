@@ -16,7 +16,7 @@ class StoreVisualIntegrityContractTest {
 
         assertTrue(economy.contains("StoreProductPreview("))
         assertTrue(styleStore.contains("StoreProductPreview("))
-        assertTrue(preview.contains("PurchasedProfileFrameOverlay("))
+        assertTrue(preview.contains("ProfileFrameArt("))
         assertTrue(preview.contains("R.drawable.store_art_theme_black"))
         assertTrue(preview.contains("R.drawable.store_art_keyboard_crystal"))
         assertTrue(preview.contains("R.drawable.store_art_keyboard_obsidian"))
@@ -26,7 +26,7 @@ class StoreVisualIntegrityContractTest {
         assertTrue(preview.contains("R.drawable.store_art_victory_crown"))
         assertTrue(preview.contains("R.drawable.store_art_emoji_vip"))
         assertTrue(runtime.contains("fun keyboardPaletteFor(themeId: String?)"))
-        assertTrue(runtime.contains("gameThemeId in setOf(\"theme_black\", \"theme_dark_arena\")"))
+        assertTrue(runtime.contains("activeThemeId in setOf(\"theme_black\", \"theme_dark_arena\")"))
 
         assertFalse(economy.contains("Text(\"A\""))
         assertFalse(economy.contains("👑  ⚡  😎  🔥"))

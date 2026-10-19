@@ -1,0 +1,49 @@
+name: Bundle dictionaries
+
+# Writes the game dictionaries (Turkish and English) into the app as plain text assets, one
+# normalized word per line, so the app never downloads them. Re-run by editing
+# .github/triggers/dictionary-export.txt after the dictionary changes on the server.
+on:
+  push:
+    paths:
+      - .github/triggers/dictionary-export.txt
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and write the dictionaries
+        env:
+          SUPABASE_URL: https://bzdtftzdjtjoqhtcqtxb.supabase.co
+          SUPABASE_KEY: sb_publishable_e0SbZKPDCfEcRlxaJsXC7g_D9xkaDjf
+        run: |
+          mkdir -p app/src/main/assets/dictionary
+          for lang in tr en; do
+            curl -sS --fail --max-time 120 -X POST "$SUPABASE_URL/rest/v1/rpc/get_dictionary_snapshot_v5" \
+              -H "apikey: $SUPABASE_KEY" -H "Content-Type: application/json" \
+              -d "{\"p_language\":\"$lang\"}" -o "/tmp/$lang.json"
+            python3 - "$lang" <<'PY'
+          import json, sys
+          lang = sys.argv[1]
+          data = json.load(open(f"/tmp/{lang}.json", encoding="utf-8"))
+          assert data["language"] == lang, data.get("language")
+          words = sorted(set(w for w in data["words"] if w))
+          assert len(words) > 20000, len(words)
+          with open(f"app/src/main/assets/dictionary/{lang}.txt", "w", encoding="utf-8", newline="\n") as f:
+              f.write("\n".join(words) + "\n")
+          print(lang, len(words))
+          PY
+          done
+          ls -la app/src/main/assets/dictionary
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/dictionary
+          git diff --cached --quiet && { echo "No change"; exit 0; }
+          git commit -m "Bundle the Turkish and English dictionaries as app assets"
+          git push origin HEAD:${GITHUB_REF_NAME}

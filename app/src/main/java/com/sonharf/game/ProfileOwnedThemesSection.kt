@@ -2,10 +2,12 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.EquippedCosmeticsDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ShopItemDto
+import com.sonharf.game.data.equipDefaultCosmetic
 import com.sonharf.game.data.equipDefaultGameTheme
 import com.sonharf.game.data.equipShopItem
 import com.sonharf.game.data.getEquippedCosmetics
@@ -41,12 +44,35 @@ private const val BlackThemeId = "theme_black"
 private const val LegacyDarkArenaThemeId = "theme_dark_arena"
 private val DarkThemeIds = setOf(BlackThemeId, LegacyDarkArenaThemeId)
 
+/** Slots the player can return to the free built-in look from the profile. */
+private val ResettableKinds = listOf("board_skin", "profile_frame", "mascot_hat", "victory_effect", "keyboard_theme", "name_style")
+
+private fun EquippedCosmeticsDto?.slotFor(kind: String): String? = when (kind) {
+    "keyboard_theme" -> this?.keyboardThemeId
+    "name_style" -> this?.nameStyleId
+    "mascot_hat" -> this?.mascotHatId
+    "profile_frame" -> this?.profileFrameId
+    "victory_effect" -> this?.victoryEffectId
+    // Board skins are chosen on the device; no server slot.
+    "board_skin" -> WordSiegeBoardSkins.selectedId
+    else -> null
+}
+
+private fun defaultStyleTitle(kind: String) = when (kind) {
+    "keyboard_theme" -> sh("Standart Klavye", "Standard Keyboard")
+    "mascot_hat" -> sh("Şapkasız Obi", "Obi, no hat")
+    "profile_frame" -> sh("Çerçevesiz", "No frame")
+    "victory_effect" -> sh("Standart Zafer", "Standard Victory")
+    "board_skin" -> sh("Klasik Tahta", "Classic Board")
+    else -> sh("Standart İsim Rengi", "Standard Name Color")
+}
+
 /**
  * Owned Style collection. Store rotation may stop new sales, but supported purchased visuals remain
  * available to their owner. Network failures never publish a partial result over the cached look.
  */
 @Composable
-internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
+internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend, category: String? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -54,6 +80,8 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
     var collection by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
+    // Which card is being applied: only that card shows progress; the others keep their colours.
+    var pendingId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     suspend fun reloadCollection() {
@@ -87,7 +115,14 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
 
     fun equipStyle(itemId: String?) {
         if (busy || loading) return
+        if (itemId != null && itemId !in owned) return
+        if (itemId != null && itemId in WordSiegeBoardSkin.productIds) {
+            WordSiegeBoardSkins.select(context, itemId)
+            notice = sh("Tahta uygulandı.", "Board applied.")
+            return
+        }
         busy = true
+        pendingId = itemId ?: "default_theme"
         notice = null
         scope.launch {
             try {
@@ -107,6 +142,40 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
                 )
             } finally {
                 busy = false
+                pendingId = null
+            }
+        }
+    }
+
+    /** Back to the free default look for one slot; ownership of bought items is untouched. */
+    fun resetSlot(kind: String) {
+        if (busy || loading) return
+        if (kind == "board_skin") {
+            WordSiegeBoardSkins.select(context, null)
+            notice = sh("Klasik tahtaya dönüldü.", "Back to the classic board.")
+            return
+        }
+        busy = true
+        pendingId = "default_$kind"
+        notice = null
+        scope.launch {
+            try {
+                val nextEquipped = withTimeout(ProfileThemeTimeoutMs) {
+                    backend.equipDefaultCosmetic(kind)
+                    backend.getEquippedCosmetics()
+                }
+                equipped = nextEquipped
+                SonHarfCosmetics.applyAndPersist(context, nextEquipped)
+                notice = sh("Varsayılan görünüme dönüldü.", "Back to the default look.")
+            } catch (error: Exception) {
+                if (error is CancellationException && error !is TimeoutCancellationException) throw error
+                notice = sh(
+                    "İşlem doğrulanamadı. Görünümünü yenileyip kontrol et.",
+                    "Could not confirm the change. Refresh to check your equipped style.",
+                )
+            } finally {
+                busy = false
+                pendingId = null
             }
         }
     }
@@ -124,83 +193,130 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
     }
     val darkActive = activeDarkThemeId != null
     val showBlackTheme = ownedDarkThemeId != null
+    val walnutItem = collection.firstOrNull { it.id == WALNUT_IVORY_THEME_ID && it.id in owned && it.isSupportedOwnedStyle() }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Palette, null, tint = MainUi.Blue, modifier = Modifier.size(19.dp))
-            Spacer(Modifier.width(7.dp))
-            Text(sh("KOLEKSİYONUM", "MY COLLECTION"), color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.weight(1f))
-            if (loading || busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp, color = MainUi.Blue)
+    // Historical ownership stays safely on the server, but products with no live game
+    // integration must not occupy the player's visible profile collection. Theme aliases are
+    // represented by the single canonical theme card to avoid duplicate equipped states.
+    val styles = collection.filter { it.id !in DarkThemeIds && it.id != WALNUT_IVORY_THEME_ID && it.isSupportedOwnedStyle() }
+    // The Obi tab also holds the victory crown, since Obi wears it when you win.
+    fun inCategory(kind: String) = kind == category || (category == "mascot_hat" && kind == "victory_effect")
+    val shown = if (category == null) styles else styles.filter { inCategory(it.kind) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (category == null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Palette, null, tint = Hf.Gold, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(sh("Koleksiyonum", "My collection"), color = Hf.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                if (loading || busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp, color = Hf.Gold)
+            }
+        } else if (loading || busy) {
+            LinearProgressIndicator(Modifier.fillMaxWidth(), color = Hf.Gold, trackColor = Hf.Surface)
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ProfileThemeCard(
-                title = sh("Ana Tema", "Main Theme"),
-                subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
-                active = !darkActive,
-                enabled = !busy && !loading,
-                blackVariant = false,
-                modifier = Modifier.weight(1f),
-                onClick = { equipStyle(null) },
-            )
-            if (showBlackTheme) {
-                ProfileThemeCard(
-                    title = "Black Theme",
-                    subtitle = sh("Koleksiyonunda", "In your collection"),
-                    active = darkActive,
-                    enabled = !busy && !loading,
-                    blackVariant = true,
-                    modifier = Modifier.weight(1f),
-                    onClick = { equipStyle(ownedDarkThemeId ?: BlackThemeId) },
-                )
+        if (category == null || category == "game_theme") {
+            val themeTiles = buildList<@Composable (Modifier) -> Unit> {
+                add { m ->
+                    ProfileThemeCard(
+                        title = sh("Ana Tema", "Main Theme"),
+                        subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
+                        active = SonHarfCosmetics.gameThemeId == null,
+                        enabled = true,
+                        blackVariant = false,
+                        modifier = m,
+                        onClick = { equipStyle(null) },
+                    )
+                }
+                if (showBlackTheme) add { m ->
+                    ProfileThemeCard(
+                        title = "Black Theme",
+                        subtitle = sh("Koleksiyonunda", "In your collection"),
+                        active = darkActive,
+                        enabled = true,
+                        blackVariant = true,
+                        modifier = m,
+                        preview = {
+                            androidx.compose.foundation.Image(
+                                painter = androidx.compose.ui.res.painterResource(R.drawable.store_art_theme_black),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize().padding(4.dp),
+                            )
+                        },
+                        onClick = { equipStyle(ownedDarkThemeId ?: BlackThemeId) },
+                    )
+                }
+                if (walnutItem != null) add { m ->
+                    OwnedStyleCard(
+                        item = walnutItem,
+                        active = equipped.isEquipped(walnutItem),
+                        enabled = true,
+                        pending = pendingId == walnutItem.id,
+                        modifier = m,
+                        onEquip = { equipStyle(walnutItem.id) },
+                    )
+                }
             }
+            CollectionGrid(themeTiles)
         }
 
         notice?.let {
-            Text(it, color = MainUi.Muted, fontSize = 13.sp)
+            Text(it, color = Hf.TextMuted, fontSize = 13.sp)
             TextButton(
                 onClick = { scope.launch { reloadCollection() } },
                 enabled = !busy && !loading,
             ) {
-                Text(sh("YENİLE", "REFRESH"))
+                Text(sh("YENİLE", "REFRESH"), color = Hf.Gold)
             }
         }
 
-        // Historical ownership stays safely on the server, but products with no live game
-        // integration must not occupy the player's visible profile collection. Theme aliases are
-        // represented by the single canonical theme card above to avoid duplicate equipped states.
-        val styles = collection.filter { it.id !in DarkThemeIds && it.isSupportedOwnedStyle() }
-        Text(
-            sh("STYLE KOLEKSİYONUM", "MY STYLE COLLECTION"),
-            color = MainUi.Text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Black,
-        )
-        Text(
-            sh(
-                "Satın aldıkların burada kalır; vitrin değişse de sahipliğin korunur.",
-                "Your purchases stay here; ownership is preserved when the storefront changes.",
-            ),
-            color = MainUi.Muted,
-            fontSize = 13.sp,
-        )
-        if (!loading && notice == null && styles.isEmpty()) {
-            Text(
-                sh("Yeni Style ürünlerini mağazada keşfet.", "Discover new Style items in the store."),
-                color = MainUi.Muted,
-                fontSize = 13.sp,
-            )
-        }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(styles, key = { it.id }) { item ->
-                OwnedStyleCard(
-                    item = item,
-                    active = equipped.isEquipped(item),
-                    enabled = !loading && !busy,
-                    onEquip = { equipStyle(item.id) },
-                )
+        if (category == null || category == "mascot_hat") OwnedMascotsPicker()
+
+        if (category != "game_theme") {
+            // Every slot the player can dress up also offers the free standard look to go back to.
+            val defaultKinds = if (category == null) ResettableKinds.filter { kind -> styles.any { it.kind == kind } } else ResettableKinds.filter { kind -> inCategory(kind) && (kind == category || styles.any { it.kind == kind }) }
+            if (!loading && notice == null && shown.isEmpty()) {
+                HfCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        sh("Bu kategoride ürünün yok. Yenilerini mağazada keşfet.", "Nothing here yet. Discover new items in the store."),
+                        Modifier.fillMaxWidth().padding(18.dp),
+                        color = Hf.TextMuted,
+                        fontSize = 13.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
             }
+            // The free standard look sits in the same grid as the owned items, first in line.
+            val tiles = buildList<@Composable (Modifier) -> Unit> {
+                defaultKinds.forEach { kind ->
+                    add { m ->
+                        ProfileThemeCard(
+                            title = defaultStyleTitle(kind),
+                            subtitle = sh("Varsayılan • Ücretsiz", "Default • Free"),
+                            active = if (kind == "board_skin") WordSiegeBoardSkins.selectedId == null else equipped != null && equipped.slotFor(kind) == null,
+                            enabled = true,
+                            blackVariant = false,
+                            modifier = m,
+                            preview = { DefaultSlotPreview(kind) },
+                            onClick = { resetSlot(kind) },
+                        )
+                    }
+                }
+                shown.forEach { item ->
+                    add { m ->
+                        OwnedStyleCard(
+                            item = item,
+                            active = equipped.isEquipped(item),
+                            enabled = true,
+                            pending = pendingId == item.id,
+                            modifier = m,
+                            onEquip = { equipStyle(item.id) },
+                        )
+                    }
+                }
+            }
+            CollectionGrid(tiles)
         }
     }
 }
@@ -213,43 +329,148 @@ private fun ProfileThemeCard(
     enabled: Boolean,
     blackVariant: Boolean,
     modifier: Modifier = Modifier,
+    preview: (@Composable BoxScope.() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    val border = if (active) MainUi.Green else MainUi.Border
     Surface(
-        modifier = modifier.clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = MainUi.Surface,
-        border = BorderStroke(if (active) 2.dp else 1.dp, border),
+        modifier = modifier.clickable(enabled = enabled && !active, onClick = onClick),
+        shape = Hf.CardShape,
+        color = Hf.Ground,
+        border = BorderStroke(if (active) 2.dp else 1.5.dp, if (active) Hf.Green else Hf.Gold.copy(alpha = .75f)),
     ) {
-        Column(Modifier.padding(9.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(
-                Modifier.fillMaxWidth().height(68.dp).background(
+                Modifier.fillMaxWidth().height(72.dp).background(
                     brush = if (blackVariant) {
                         Brush.linearGradient(listOf(Color(0xFF050608), Color(0xFF111318), Color(0xFF20242B)))
                     } else {
-                        Brush.linearGradient(
-                            listOf(
-                                KelimeKusatmasiPalette.MonsterBlack,
-                                KelimeKusatmasiPalette.MonsterSurface,
-                                KelimeKusatmasiPalette.MonsterPink.copy(alpha = .72f),
-                            )
-                        )
+                        Brush.linearGradient(listOf(Hf.Ground, Hf.Surface, Hf.Gold.copy(alpha = .45f)))
                     },
                     shape = RoundedCornerShape(12.dp),
                 ),
             ) {
+                preview?.invoke(this)
                 if (active) {
                     Icon(
                         Icons.Rounded.CheckCircle,
                         null,
-                        tint = if (blackVariant) SonHarfTheme.PremiumGold else SonHarfTheme.Primary,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(20.dp),
+                        tint = Hf.GreenLight,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(22.dp),
                     )
                 }
             }
-            Text(title, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            Text(subtitle, color = MainUi.Muted, fontSize = 12.sp)
+            Text(title, color = Hf.Text, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(subtitle, color = Hf.TextMuted, fontSize = 10.sp, lineHeight = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Spacer(Modifier.weight(1f))
+            ProfileUseButton(active = active, enabled = enabled, onClick = onClick)
+        }
+    }
+}
+
+/** Bought mascots are chosen here (the store only sells them): the pick follows the player everywhere. */
+@Composable
+private fun OwnedMascotsPicker() {
+    val owned = WordSiegeMascotOwnership.owned.sortedBy { it.ordinal }
+    if (owned.isEmpty()) return
+    val context = LocalContext.current
+    val bond = remember { WordSiegeMascotBond(context) }
+    var chosen by remember { mutableStateOf(bond.skinChoice?.takeIf { it in owned } ?: owned.first()) }
+    val scope = rememberCoroutineScope()
+    Text(sh("MASKOTLARIM", "MY MASCOTS"), color = Hf.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+    CollectionGrid(owned.map { skin ->
+        @Composable { m: Modifier ->
+            val active = chosen == skin
+            Surface(
+                modifier = m,
+                shape = Hf.CardShape,
+                color = Hf.Ground,
+                border = BorderStroke(if (active) 2.dp else 1.5.dp, if (active) Hf.Green else Hf.Gold.copy(alpha = .75f)),
+            ) {
+                Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(Modifier.fillMaxWidth().height(94.dp), contentAlignment = Alignment.Center) {
+                        WordSiegeMascot(
+                            moveId = null,
+                            lastMoveMine = false,
+                            pendingCells = emptyList(),
+                            playerTurn = false,
+                            modifier = Modifier.size(91.dp),
+                            skin = skin,
+                        )
+                    }
+                    Text(sh(skin.titleTr, skin.titleEn), color = Hf.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Spacer(Modifier.weight(1f))
+                    ProfileUseButton(active = active, enabled = true) {
+                        bond.skinChoice = skin
+                        chosen = skin
+                        scope.launch { PlayerMascots.publish(skin) }
+                    }
+                }
+            }
+        }
+    })
+}
+
+/** Three even columns; a short last row keeps its cards the same width as the rest. */
+@Composable
+private fun CollectionGrid(tiles: List<@Composable (Modifier) -> Unit>) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        tiles.chunked(3).forEach { row ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { tile -> tile(Modifier.weight(1f).fillMaxHeight()) }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+/** What the free standard look of a slot is: a plain ring, bare Obi, a plain key, and so on. */
+@Composable
+private fun BoxScope.DefaultSlotPreview(kind: String) {
+    when (kind) {
+        "profile_frame" -> Box(
+            Modifier.align(Alignment.Center).size(58.dp).border(2.dp, Color(0xFFBDBDBD), CircleShape).background(Hf.Surface, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Rounded.Person, null, Modifier.size(34.dp), tint = Hf.TextMuted)
+        }
+        "mascot_hat" -> ObiHatPreview(hatId = "", modifier = Modifier.align(Alignment.Center).padding(6.dp))
+        "board_skin" -> androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.store_art_board_classic),
+            contentDescription = null,
+            modifier = Modifier.matchParentSize().padding(4.dp),
+        )
+        else -> Text(
+            when (kind) {
+                "victory_effect" -> "🏆"
+                "keyboard_theme" -> "⌨️"
+                else -> "Aa"
+            },
+            Modifier.align(Alignment.Center),
+            color = Hf.Text,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+/** Kullan / Kullanılıyor pill from the 06 preview. */
+@Composable
+private fun ProfileUseButton(active: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled && !active,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp),
+        shape = Hf.PillShape,
+        color = if (active) Hf.Green else Hf.Ivory,
+        border = if (active) BorderStroke(1.5.dp, Hf.GreenLight) else null,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                if (active) sh("✓ Takılı", "✓ On") else sh("Kullan", "Equip"),
+                color = if (active) Hf.OnAccent else Hf.Text,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
@@ -259,48 +480,66 @@ private fun OwnedStyleCard(
     item: ShopItemDto,
     active: Boolean,
     enabled: Boolean,
+    pending: Boolean = false,
+    modifier: Modifier = Modifier,
     onEquip: () -> Unit,
 ) {
     val supported = item.isSupportedOwnedStyle()
-    Card(
-        modifier = Modifier.width(248.dp),
-        colors = CardDefaults.cardColors(containerColor = MainUi.Surface),
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) MainUi.Green else MainUi.Border),
+    Surface(
+        modifier = modifier,
+        shape = Hf.CardShape,
+        color = Hf.Ground,
+        border = BorderStroke(if (active) 2.dp else 1.5.dp, if (active) Hf.Green else Hf.Gold.copy(alpha = .75f)),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.fillMaxWidth().height(76.dp), contentAlignment = Alignment.Center) {
-                if (item.kind == "profile_frame" && supported) {
-                    Icon(Icons.Rounded.Person, null, Modifier.size(36.dp), tint = MainUi.Blue)
-                    PurchasedProfileFrameOverlay(frameId = item.id, modifier = Modifier.size(76.dp))
-                } else {
-                    Icon(Icons.Rounded.Palette, null, Modifier.size(38.dp), tint = MainUi.Blue)
+        Box {
+            Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
+                    if (item.kind == "profile_frame" && supported) {
+                        Icon(Icons.Rounded.Person, null, Modifier.size(30.dp), tint = Hf.TextMuted)
+                        ProfileFrameArt(frameId = item.id, size = 52.dp)
+                    } else {
+                        StoreProductPreview(item, Modifier.fillMaxSize())
+                    }
+                }
+                Text(sh(item.nameTr, item.nameEn), color = Hf.Text, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                if (!item.active) {
+                    Text(sh("Arşiv ürünü", "Retired item"), color = Hf.TextMuted, fontSize = 10.sp)
+                }
+                if (!supported) {
+                    Text(
+                        sh(
+                            "Bu sürümde kullanılamıyor. Sahipliğin korunuyor.",
+                            "Unavailable in this version. You still own this item.",
+                        ),
+                        color = Hf.TextMuted,
+                        fontSize = 10.sp,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Button(
+                    onClick = onEquip,
+                    enabled = enabled && supported && !active,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                    shape = Hf.PillShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Hf.Ivory,
+                        contentColor = Hf.Text,
+                        disabledContainerColor = if (active) Hf.Green else Hf.Disabled,
+                        disabledContentColor = Hf.Text,
+                    ),
+                ) {
+                    if (pending) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = Hf.Text)
+                    } else {
+                        Text(if (active) sh("✓ Takılı", "✓ On") else sh("Kullan", "Equip"), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    }
                 }
             }
-            Text(sh(item.nameTr, item.nameEn), color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text(sh(item.descriptionTr, item.descriptionEn), color = MainUi.Muted, fontSize = 13.sp)
-            Text(
-                if (item.active) sh("Koleksiyonunda", "In your collection")
-                else sh("Arşiv ürünü • Koleksiyonunda", "Retired item • In your collection"),
-                color = MainUi.Blue,
-                fontSize = 12.sp,
-            )
-            if (!supported) {
-                Text(
-                    sh(
-                        "Bu sürümde kullanılamıyor. Sahipliğin korunuyor.",
-                        "Unavailable in this version. You still own this item.",
-                    ),
-                    color = MainUi.Muted,
-                    fontSize = 13.sp,
-                )
-            }
-            Button(
-                onClick = onEquip,
-                enabled = enabled && supported && !active,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            ) {
-                Text(if (active) sh("AKTİF", "EQUIPPED") else sh("KULLAN", "EQUIP"))
+            if (active) {
+                Surface(Modifier.align(Alignment.TopEnd).padding(5.dp).size(22.dp), shape = androidx.compose.foundation.shape.CircleShape, color = Hf.Green, border = BorderStroke(1.5.dp, Hf.GreenLight)) {
+                    Icon(Icons.Rounded.CheckCircle, null, tint = Hf.OnAccent, modifier = Modifier.padding(3.dp))
+                }
             }
         }
     }
