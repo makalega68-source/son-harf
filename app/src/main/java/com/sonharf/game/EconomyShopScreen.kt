@@ -197,8 +197,8 @@ private fun EconomyCatalogScreen(
                 val storefrontTask = async { runCatching { b.getStorefront() }.getOrNull() }
                 profile = profileTask.await()
                 owned = ownedTask.await()
-                items = itemsTask.await().filter { it.isRuntimeReadyStyle() &&
-                    (it.kind != "board_skin" || GameAvailability.wordSiege || it.id in owned) }
+                items = itemsTask.await().filter { it.isRuntimeReadyStyle() }
+                    .filter { it.kind != "board_skin" || GameAvailability.wordSiege || it.id in owned }
                 equipped = equippedTask.await()
                 storefront = storefrontTask.await()
             }
