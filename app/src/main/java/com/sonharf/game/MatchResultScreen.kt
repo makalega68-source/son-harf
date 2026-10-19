@@ -61,6 +61,8 @@ internal fun MatchResultScreen(
     onPrimary: () -> Unit,
     secondaryLabel: String,
     onSecondary: () -> Unit,
+    details: @Composable () -> Unit = {},
+    scoreExplanation: String? = null,
 ) {
     val reveal = remember { Animatable(0f) }
     LaunchedEffect(Unit) { reveal.animateTo(1f, tween(500)) }
@@ -173,7 +175,7 @@ internal fun MatchResultScreen(
                     if (scoreOrderDiffersFromResult) {
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            sh(
+                            scoreExplanation ?: sh(
                                 "Bunlar toplam puanlardır. Maç sonucu bitiş kuralına göre belirlenir; alan hâkimiyeti veya pes etme, puan sırasından farklı sonuç verebilir.",
                                 "These are total points. The result follows the match-ending rule; territory control or a forfeit can differ from the point order.",
                             ),
@@ -207,6 +209,7 @@ internal fun MatchResultScreen(
                             Text(primaryLabel, fontSize = 15.sp, fontWeight = FontWeight.Black, maxLines = 1)
                         }
                     }
+                    details()
                 }
             }
             if (landscape) {

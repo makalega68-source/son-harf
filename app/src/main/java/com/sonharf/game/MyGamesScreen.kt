@@ -201,7 +201,7 @@ internal fun GameInvitesScreen(backend: OnlineGameBackend, onOpen: (String,Strin
         items(invites,key={"${it.kind}:${it.id}"}) { i -> LobbyCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text(profiles[i.sender]?.displayName ?: sh("Oyuncu","Player"),fontWeight=FontWeight.Bold)
-                Text(when(i.kind){"son_harf"->"Son Harf";"series"->sh("Hızlı Düello","Quick Duel");else->sh("Kuşatma","Siege")},color=LobbyPalette.Muted)
+                Text(when(i.kind){"son_harf"->sh("Son Harf · Üç maçlık seri", "Last Letter · Three-match series");"series"->sh("Hızlı Düello","Quick Duel");else->sh("Kuşatma","Siege")},color=LobbyPalette.Muted)
                 Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(enabled=busy==null,onClick={respond(i,false)}) { Text(sh("Reddet","Decline")) }
                     Button(enabled=busy==null,onClick={respond(i,true)}) { Text(sh("Kabul et","Accept")) }

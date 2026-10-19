@@ -339,7 +339,8 @@ fun RewardCenterScreen() {
                         RewardVideoCard(
                             icon = icon,
                             title = title,
-                            description = sh("İpuçları bankana eklenir, maçta ipucu düğmesiyle kullanırsın (7 gün geçerli).", "Hints go to your bank; use them with the hint button in a match (valid 7 days)."),
+                            description = sh("İpuçları bankana eklenir ve AI maçlarında kullanılır (7 gün geçerli). Gerçek rakibe karşı herkesin 3 ipucu vardır.",
+                                "Hints go to your bank for AI matches (valid 7 days). Everyone gets 3 hints against a real rival."),
                             progress = periodLabel(key),
                             enabled = !isPro && canWatch(key),
                             busy = busy == key,

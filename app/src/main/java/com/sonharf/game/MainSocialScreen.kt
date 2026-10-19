@@ -171,7 +171,7 @@ internal fun MainSocialScreen(
                                     gameRequestResult { backend.inviteFriend(friend.id, SonHarfUiState.language) }
                                         .onSuccess { invite ->
                                             LastLetterInvitations.await(invite)
-                                            notice = sh("${friend.displayName} Son Harf'e davet edildi.", "${friend.displayName} was invited to Last Letter.")
+                                            notice = sh("${friend.displayName} üç maçlık Son Harf serisine davet edildi.", "${friend.displayName} was invited to a three-match Last Letter series.")
                                             SonHarfSoundFx.softNotify()
                                         }.onFailure { notice = sh("Oyun daveti gönderilemedi veya bekleyen bir davet var.", "Game invite could not be sent or one is already pending.") }
                                 }

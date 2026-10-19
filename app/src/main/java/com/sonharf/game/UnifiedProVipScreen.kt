@@ -108,6 +108,9 @@ internal fun UnifiedProVipScreen(
         }
         item {
             Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                Text(sh("PRO, dereceli maçta ek puan veya ilave ipucu sağlamaz. Gerçek oyuncuya karşı her oyuncunun maç başına 3 ipucu hakkı vardır.",
+                    "PRO gives no extra score or hints in ranked matches. Every player gets 3 hints per match against a real opponent."),
+                    color = UProMuted, fontSize = 12.sp, lineHeight = 17.sp)
                 Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     ProFeature(Icons.Rounded.Block,sh("Reklamsız","Ad-free"),sh("Menü, profil ve mağazada kesintisiz gezin.","Browse menus, profile and store without ads."),Modifier.weight(1f))
                     ProFeature(Icons.Rounded.WorkspacePremium,sh("Özel profil","Signature profile"),sh("Altın PRO çerçevesi ve üyelik rozeti.","Gold PRO frame and membership badge."),Modifier.weight(1f))

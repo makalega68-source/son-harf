@@ -232,6 +232,11 @@ internal fun premierRoomSnapshotIsOlder(candidate: GameRoomDto, current: GameRoo
 
 @Composable
 fun PremierWordDuelScreen() {
+    var showDailyChain by remember { mutableStateOf(false) }
+    if (showDailyChain) {
+        DailyLastLetterScreen(SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)) { showDailyChain = false }
+        return
+    }
     if (!SupabaseProvider.configured) {
         PremierCenteredMessage(
             title = sh("Sunucu bağlantısı yok", "Server connection unavailable"),
@@ -244,12 +249,14 @@ fun PremierWordDuelScreen() {
 
     val backend = remember { OnlineGameBackend() }
     val scope = rememberCoroutineScope()
+    val foreground = rememberAppForeground()
     val haptics = LocalHapticFeedback.current
     var stage by remember { mutableStateOf(PremierStage.Loading) }
     var language by remember { mutableStateOf(SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)) }
     var me by remember { mutableStateOf<ProfileDto?>(null) }
     var opponent by remember { mutableStateOf<ProfileDto?>(null) }
     var room by remember { mutableStateOf<GameRoomDto?>(null) }
+    var waitingRematchId by remember { mutableStateOf<String?>(null) }
     var words by remember { mutableStateOf<List<GameWordDto>>(emptyList()) }
     var chat by remember { mutableStateOf<List<ChatMessageDto>>(emptyList()) }
     var botChat by remember { mutableStateOf<List<ChatMessageDto>>(emptyList()) }
@@ -302,6 +309,7 @@ fun PremierWordDuelScreen() {
         val previousRoomId = room?.id
         room = next
         if (previousRoomId != next.id) {
+            waitingRematchId = null
             botChat = emptyList()
             words = emptyList()
             chat = emptyList()
@@ -792,6 +800,7 @@ fun PremierWordDuelScreen() {
                 profile = me,
                 notice = notice,
                 busy = busy,
+                onDaily = { showDailyChain = true },
                 onLanguage = { next ->
                     language = next
                     SonHarfUiState.language = next
@@ -963,10 +972,11 @@ fun PremierWordDuelScreen() {
                     language = language,
                     room = active,
                     meId = backend.currentUserId(),
-                    busy = busy,
+                    busy = busy || waitingRematchId == active.id,
                     notice = notice,
                     playerName = me?.displayName,
                     playerGender = me?.gender,
+                    words = words,
                     onRematch = {
                         if (busy) return@PremierResult
                         busy = true
@@ -977,15 +987,12 @@ fun PremierWordDuelScreen() {
                                     .onFailure { notice = premierError(language, it.message.orEmpty()) }
                             } else {
                                 gameRequestResult { backend.requestRematch(active.id) }
-                                    .onSuccess {
-                                        notice = pt(language, "Rövanş teklifi gönderildi.", "Rematch request sent.")
-                                        for (attempt in 0 until 16) {
-                                            delay(750)
-                                            val next = gameRequestResult { backend.findPremierActiveRoom() }.getOrNull()
-                                            if (next != null && next.id != active.id) {
-                                                adoptRoom(next, cinematic = true)
-                                                break
-                                            }
+                                    .onSuccess { next ->
+                                        if (next.id != active.id && next.rematchOf == active.id) adoptRoom(next, cinematic = true)
+                                        else {
+                                            acceptRoom(next)
+                                            waitingRematchId = active.id
+                                            notice = pt(language, "Rövanş teklifi gönderildi. Rakibinin kabulü bekleniyor.", "Rematch sent. Waiting for your rival to accept.")
                                         }
                                     }
                                     .onFailure { notice = premierError(language, it.message.orEmpty()) }
@@ -996,6 +1003,23 @@ fun PremierWordDuelScreen() {
                     onHome = { SonHarfUiState.homeRequest += 1 },
                 )
             }
+        }
+    }
+
+    LaunchedEffect(stage, room?.id, waitingRematchId, foreground, room?.hostRematch, room?.guestRematch) {
+        if (!foreground || stage != PremierStage.Finished) return@LaunchedEffect
+        val previous = room ?: return@LaunchedEffect
+        if (previous.isBot) return@LaunchedEffect
+        val meId = backend.currentUserId() ?: return@LaunchedEffect
+        val mineRequested = if (previous.hostId == meId) previous.hostRematch else previous.guestRematch
+        val requested = waitingRematchId ?: previous.id.takeIf { mineRequested } ?: return@LaunchedEffect
+        while (true) {
+            val next = gameRequestResult { backend.findPremierActiveRoom() }.getOrNull()
+            if (next != null && next.rematchOf == requested && next.id != requested) {
+                adoptRoom(next, cinematic = true)
+                return@LaunchedEffect
+            }
+            delay(1_500)
         }
     }
 
@@ -1043,6 +1067,7 @@ internal fun PremierLobby(
     onLanguage: (String) -> Unit,
     onPlay: () -> Unit,
     onHome: () -> Unit,
+    onDaily: () -> Unit = {},
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val owned = WordSiegeMascotOwnership.owned
@@ -1098,6 +1123,13 @@ internal fun PremierLobby(
                 }
             }
 
+            Surface(onClick = onDaily, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
+                color = LobbyPalette.Paper, border = BorderStroke(1.dp, LobbyPalette.Gold)) {
+                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(pt(language, "GÜNÜN ZİNCİRİ", "DAILY CHAIN"), color = LobbyPalette.Accent, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    Text(pt(language, "Aynı başlangıç · 60 saniye · Günde tek deneme", "Same start · 60 seconds · One daily attempt"), color = LobbyPalette.Muted, fontSize = 12.sp)
+                }
+            }
             PremierHowToPlay(language)
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1437,12 +1469,24 @@ private fun PremierArena(
         }
     }
     // Used, not left: ownership that loads after the match started still grants its free hints.
-    // Kept per match on the device, so leaving and returning does not give the hints back.
-    val hintKey = "sonharf:${room.id}"
-    var freeHintsUsed by remember(room.id) { mutableIntStateOf(MatchHintLedger.used(hintContext, hintKey)) }
+    // Server-backed for real rivals; retain the pre-upgrade device count as a minimum.
+    val hintKey = "sonharf:${room.id}:${meId.orEmpty()}"
+    var freeHintsUsed by remember(room.id, meId) { mutableIntStateOf(maxOf(
+        MatchHintLedger.used(hintContext, hintKey), MatchHintLedger.used(hintContext, "sonharf:${room.id}"),
+    )) }
+    LaunchedEffect(room.id, meId) {
+        if (!room.isBot && meId != null) {
+            gameRequestResult { com.sonharf.game.data.lastLetterFairHintsUsed(room.id, meId) }.onSuccess {
+                freeHintsUsed = maxOf(freeHintsUsed, it).coerceAtMost(3)
+                MatchHintLedger.record(hintContext, hintKey, freeHintsUsed)
+            }
+        }
+    }
     val hintsLeft = MascotHints.freeHintsLeft(realOpponent = !room.isBot, used = freeHintsUsed)
     var hintRequest by remember(room.id) { mutableStateOf<Pair<Int, String>?>(null) }
+    var hintShownAt by remember(room.id) { mutableLongStateOf(0L) }
     fun showHintText(text: String) {
+        hintShownAt = SystemClock.elapsedRealtime()
         hintRequest = ((hintRequest?.first ?: 0) + 1) to text
     }
     // Free hints used up against a bot: one more costs Son Coin (server-checked).
@@ -1463,12 +1507,28 @@ private fun PremierArena(
     var computingHint by remember(room.id) { mutableStateOf(false) }
     fun askFreeHint() {
         if (hintsLeft <= 0 || computingHint) return
-        freeHintsUsed += 1
-        MatchHintLedger.record(hintContext, hintKey, freeHintsUsed)
         computingHint = true
         hintScope.launch {
-            showHintText(safeHintText())
-            computingHint = false
+            try {
+                if (room.isBot) {
+                    freeHintsUsed += 1
+                    MatchHintLedger.record(hintContext, hintKey, freeHintsUsed)
+                    showHintText(safeHintText())
+                } else {
+                    gameRequestResult { com.sonharf.game.data.claimLastLetterFairHint(room.id, freeHintsUsed) }
+                        .onSuccess { used ->
+                            freeHintsUsed = used
+                            MatchHintLedger.record(hintContext, hintKey, used)
+                            showHintText(safeHintText())
+                        }.onFailure { error ->
+                            if ("hint_limit_reached" in error.message.orEmpty()) {
+                                freeHintsUsed = 3
+                                MatchHintLedger.record(hintContext, hintKey, 3)
+                                showHintText(pt(language, "Bu maçtaki üç ipucu hakkın kullanıldı.", "Your three hints for this match have been used."))
+                            } else showHintText(pt(language, "İpucu alınamadı. Sıra sendeyken tekrar dene.", "Hint unavailable. Retry on your turn."))
+                        }
+                }
+            } finally { computingHint = false }
         }
     }
     var buyingHint by remember(room.id) { mutableStateOf(false) }
@@ -1892,6 +1952,20 @@ private fun PremierArena(
         val mascotAnchors = if (slotCenter == null) emptyList() else listOf(Offset(.5f, .5f))
         val mascotDensity = LocalDensity.current
         val mascotBoxPx = with(mascotDensity) { mascotSize.toPx() }
+        var moveObservation by remember(room.id) { mutableStateOf<Pair<Int, String>?>(null) }
+        var lastObservationAt by remember(room.id) { mutableLongStateOf(0L) }
+        LaunchedEffect(latestMove?.id) {
+            val move = latestMove ?: return@LaunchedEffect
+            if (!latestMoveMine || move.isBot) return@LaunchedEffect
+            val prior = words.filter { it.id < move.id && it.playerId == meId && !it.isBot }.map { it.normalizedWord.ifBlank { it.word } }
+            val streak = if (room.hostId == meId) room.hostStreak else room.guestStreak
+            val line = lastLetterObservation(move.normalizedWord.ifBlank { move.word }, prior, streak, language) ?: return@LaunchedEffect
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastObservationAt > 10_000 && now - hintShownAt > 6_000) {
+                moveObservation = move.id.toInt() to line
+                lastObservationAt = now
+            }
+        }
         WordSiegeMascotCompanion(
             anchors = mascotAnchors,
             mascotSize = mascotSize,
@@ -1917,6 +1991,7 @@ private fun PremierArena(
             touches = mascotTouches,
             playerGender = me?.gender,
             hint = hintRequest,
+            announcement = moveObservation,
             // Above the perch is the last-word row: speak below it so the rival's word stays readable.
             bubblePlacement = WordSiegeMascotBubblePlacement.PREFER_BELOW,
         )
@@ -3260,7 +3335,11 @@ private fun premierQuickMessages(language: String): List<String> = if (language 
 }
 
 @Composable
-private fun PremierResult(language: String, room: GameRoomDto, meId: String?, busy: Boolean, notice: String, onRematch: () -> Unit, onHome: () -> Unit, playerName: String? = null, playerGender: String? = null) {
+private fun PremierResult(language: String, room: GameRoomDto, meId: String?, busy: Boolean, notice: String, onRematch: () -> Unit, onHome: () -> Unit, playerName: String? = null, playerGender: String? = null, words: List<GameWordDto> = emptyList()) {
+    var series by remember(room.id) { mutableStateOf<LastLetterSeries?>(null) }
+    LaunchedEffect(room.id, meId) {
+        if (!room.isBot && meId != null) gameRequestResult { OnlineGameBackend().lastLetterSeriesFor(room, meId) }.onSuccess { series = it }
+    }
     val amHost = meId == room.hostId
     val myScore = if (amHost) room.hostScore else room.guestScore
     val rivalScore = if (amHost) room.guestScore else room.hostScore
@@ -3290,10 +3369,14 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
             mine = ResultScore(pt(language, "SEN", "YOU"), "$myScore"),
             rival = ResultScore(pt(language, "RAKİP", "RIVAL"), "$rivalScore"),
             // The loser is invited to carry on straight away; the winner can offer a rematch too.
-            primaryLabel = if (busy) "…" else if (won) pt(language, "RÖVANŞ", "REMATCH") else pt(language, "DEVAM EDELİM", "LET'S GO AGAIN"),
+            primaryLabel = if (busy) "…" else if (series?.complete == true) pt(language, "YENİ SERİ", "NEW SERIES")
+                else if (won) pt(language, "RÖVANŞ", "REMATCH") else pt(language, "DEVAM EDELİM", "LET'S GO AGAIN"),
             onPrimary = { if (!busy) onRematch() },
             secondaryLabel = pt(language, "ANA SAYFA", "HOME"),
             onSecondary = onHome,
+            details = { LastLetterResultDetails(room, words, meId, series) },
+            scoreExplanation = pt(language, "Maç sonucu kazanılan rauntlara göre belirlenir. Süre aşımı veya pes etme de maçı bitirebilir; toplam puan sırası farklı olabilir.",
+                "The match result follows rounds won. A timeout or resignation can also end the match, so the total-score order may differ."),
         )
         return
     }
@@ -3301,7 +3384,7 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
     val glow by glowTransition.animateFloat(.6f, 1f, infiniteRepeatable(tween(1_100), RepeatMode.Reverse), label = "result-glow-value")
     Box(Modifier.fillMaxSize()) {
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(22.dp),
+        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -3347,6 +3430,7 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
         OutlinedButton(onClick = onHome, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), border = BorderStroke(1.dp, PremierUi.Border)) {
             Text(pt(language, "ANA MENÜ", "HOME"), color = PremierUi.Muted, fontWeight = FontWeight.Black)
         }
+        LastLetterResultDetails(room, words, meId, series, dark = false)
     }
     // The mascot flies in to celebrate a win (or to comfort after a loss), then perches above.
     WordSiegeMascotCompanion(

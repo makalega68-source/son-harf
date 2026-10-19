@@ -68,8 +68,8 @@ internal fun lobbyGuideTopics(): List<LobbyGuideTopic> = listOf(
             "The ranking resets every week; the countdown is on the Throne page."),
     )),
     LobbyGuideTopic("mascots", Icons.Rounded.Pets, sh("Maskotlar", "Mascots"), listOf(
-        sh("Maskotun maçlarda yanında durur, hamlelerine tepki verir ve konuşma balonlarıyla seni yüreklendirir. Maskot sahipleri her maçta 3 ipucu kazanır; ipucu bittiğinde Mağaza > Video Ödülleri'nden video izleyerek +2 ipucu alabilirsin.",
-            "Your mascot stands by you in matches, reacts to your moves and cheers you on in speech bubbles. Mascot owners get 3 hints every match; when they run out, watch a video in Store > Video Rewards for +2 hints."),
+        sh("Maskotun hamlelerine tepki verir ve gerçek maç verilerine göre kısa yorumlar yapar. Son Harf'te gerçek oyuncuya karşı herkes maç başına eşit 3 ipucu kullanır. Video veya Son Coin ile kazanılan ek ipuçları yalnız AI maçlarında kullanılabilir; maskot sahipleri AI maçlarında da 3 ücretsiz ipucu alır.",
+            "Your mascot reacts to moves and comments on real match data. In Last Letter, every player gets the same 3 hints against a real opponent. Extra video or Son Coin hints work only in AI matches; mascot owners also get 3 free hints against the AI."),
         sh("Obi mağazadan alınabilir. Eve, Taht'ta kazanılan 12 parçayla açılan 3B orman dostudur. Altın Kral ise yalnızca tahttaki oyuncuya bir haftalığına eşlik eder.",
             "Obi can be bought in the Store. Eve is the 3D forest friend unlocked with 12 shards won on the Throne. The Golden King accompanies only the throne holder, for one week."),
     )),
