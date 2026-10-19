@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -93,7 +94,7 @@ internal fun DailyLastLetterScreen(language: String, onBack: () -> Unit) {
             } finally { busy = false }
         }
     }
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().padding(16.dp)
+    Column(Modifier.fillMaxSize().background(LobbyPalette.Ground).statusBarsPadding().navigationBarsPadding().imePadding().padding(16.dp)
         .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         MainScreenHeader(sh("Günün Zinciri", "Daily Chain"), sh("Son Harf · Günlük mücadele", "Last Letter · Daily challenge"), onBack = onBack)
         Text(sh("Herkese aynı başlangıç. 60 saniye, günde tek deneme ve ipucusuz oyun.",

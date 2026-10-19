@@ -20,8 +20,8 @@ internal object MascotHints {
     /**
      * Free hints left in a match after [used] of them. Computed from hints used (not a count fixed
      * at match start), so mascot ownership that loads mid-match still grants its free hints.
-     * Against a real opponent a hint is only a strategy tip (fair play), so every player gets the
-     * tips for free and banked or bought hints are never spent on them.
+     * Against a real opponent every player gets the same three clear-answer hints for free;
+     * banked or bought hints are never spent on them.
      */
     fun freeHintsLeft(
         realOpponent: Boolean,

@@ -1123,7 +1123,7 @@ internal fun PremierLobby(
                 }
             }
 
-            Surface(onClick = onDaily, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
+            Surface(onClick = onDaily, enabled = !busy, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
                 color = LobbyPalette.Paper, border = BorderStroke(1.dp, LobbyPalette.Gold)) {
                 Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(pt(language, "GÜNÜN ZİNCİRİ", "DAILY CHAIN"), color = LobbyPalette.Accent, fontWeight = FontWeight.Black, fontSize = 15.sp)
