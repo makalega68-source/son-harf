@@ -1620,7 +1620,12 @@ class ObiOverlayService : Service() {
             t == "gizlen" || t == "saklan" || t.contains("obi gizlen") || t.contains("kendini gizle") -> {
                 hidePanel(); setUserHidden(true); return
             }
-            (t.contains("izin") || t.contains("izni")) && t.contains("alarm") -> { openExactAlarmSettings(); return }
+            (t.contains("izin") || t.contains("izni")) && t.contains("alarm") -> {
+                // Usually already allowed (USE_EXACT_ALARM); then the settings switch is grey and there is nothing to do.
+                if (store.canScheduleExact()) say("Alarm izni zaten açık ✓ Alarmlar ve hatırlatmalar tam saatinde çalar; ayarda bir şey yapmana gerek yok.", WordSiegeMascotAction.NOD)
+                else openExactAlarmSettings()
+                return
+            }
             (t.contains("izin") || t.contains("izni")) && t.contains("bildirim") -> {
                 openSettings(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)); return
             }
