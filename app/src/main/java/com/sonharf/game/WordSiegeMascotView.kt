@@ -225,15 +225,42 @@ private object WordSiegeMascotArt {
     )
 
     @Volatile private var cache: Map<String, Bitmap>? = null
+    @Volatile private var obiCache: Map<String, Bitmap>? = null
     private val skinCache = HashMap<WordSiegeMascotSkin, Map<String, Bitmap>>()
 
     /** Layers recoloured for [skin]; eye whites always keep the original art. Baked once per skin. */
     fun layers(context: Context, skin: WordSiegeMascotSkin): Map<String, Bitmap> {
         val base = layers(context)
+        if (skin == WordSiegeMascotSkin.ORB) return realisticObiLayers(context, base)
         val palette = WordSiegeMascotPalette.forSkin(skin) ?: return base
         return synchronized(skinCache) {
             skinCache.getOrPut(skin) {
                 base.mapValues { (name, bitmap) -> if (name.startsWith("eye_")) bitmap else palette.recolor(bitmap) }
+            }
+        }
+    }
+
+    /** New art is registered to the original rig; other purchased skins keep their original art. */
+    private fun realisticObiLayers(context: Context, base: Map<String, Bitmap>): Map<String, Bitmap> {
+        return obiCache ?: synchronized(this) {
+            obiCache ?: run {
+                val options = BitmapFactory.Options().apply {
+                    inScaled = false
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                }
+                val extra = mutableMapOf<String, Bitmap>()
+                try {
+                    for (name in arrayOf("obi_realistic_orb", "obi_realistic_tuft")) {
+                        val bitmap = context.applicationContext.assets.open("word_siege_mascot/$name.webp").use {
+                            BitmapFactory.decodeStream(it, null, options)
+                        } ?: return base
+                        bitmap.setHasMipMap(true)
+                        extra[name] = bitmap
+                    }
+                } catch (_: java.io.IOException) {
+                    return base
+                }
+                (base + extra + ("orb_face_base" to extra.getValue("obi_realistic_orb"))).also { obiCache = it }
             }
         }
     }
@@ -325,7 +352,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         return super.onTouchEvent(event)
     }
 
-    private var layers: Map<String, Bitmap> = WordSiegeMascotArt.layers(context)
+    private var layers: Map<String, Bitmap> = WordSiegeMascotArt.layers(context, WordSiegeMascotSkin.ORB)
     private val artRect = RectF(0f, 0f, ART, ART)
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
@@ -367,6 +394,28 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private val tonguePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
     }
+    // Materials are created once; only shader matrices move with the live facial rig.
+    private val eyeMaterialMatrix = Matrix()
+    private val mouthMaterialMatrix = Matrix()
+    private val tongueMaterialMatrix = Matrix()
+    private val eyeVolumePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+        shader = RadialGradient(-24f, -34f, 184f,
+            intArrayOf(0x00FFFFFF, 0x00FFFFFF, 0x40120930, 0x8A08051C.toInt()),
+            floatArrayOf(0f, .48f, .83f, 1f), Shader.TileMode.CLAMP)
+    }
+    private val eyeReflectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+        shader = RadialGradient(-36f, -62f, 94f,
+            intArrayOf(0x30FFFFFF, 0x0DFFFFFF, 0x00FFFFFF),
+            floatArrayOf(0f, .5f, 1f), Shader.TileMode.CLAMP)
+    }
+    private val mouthDepthShader = LinearGradient(0f, 0f, 0f, 1f,
+        intArrayOf(0xFF190C30.toInt(), 0xFF4B154D.toInt(), 0xFF982666.toInt()),
+        floatArrayOf(0f, .55f, 1f), Shader.TileMode.CLAMP)
+    private val tongueVolumeShader = RadialGradient(0f, 0f, 1f,
+        intArrayOf(0xFFFFADDC.toInt(), 0xFFEF66B3.toInt(), 0xFFB7348B.toInt()),
+        floatArrayOf(0f, .58f, 1f), Shader.TileMode.CLAMP)
     private val detailPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val cheekPaints = listOf(LEFT_CHEEK_X to CHEEK_Y, RIGHT_CHEEK_X to CHEEK_Y).map { (x, y) ->
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -398,6 +447,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     }
     // Skin: recoloured artwork plus the character's vector accessories.
     private var skin = WordSiegeMascotSkin.ORB
+    private val realisticObi: Boolean
+        get() = skin == WordSiegeMascotSkin.ORB && layers.containsKey("obi_realistic_tuft")
     private var decor = WordSiegeMascotDecor.of(WordSiegeMascotSkin.ORB)
     private val eyePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
 
@@ -720,7 +771,11 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     }
 
     private fun updateHandShader() {
-        handPaint.shader = RadialGradient(-18f, -23f, 74f, decor.handColors, null, Shader.TileMode.CLAMP)
+        handPaint.shader = if (realisticObi) {
+            RadialGradient(-22f, -28f, 104f,
+                intArrayOf(0xFFB1F8FF.toInt(), 0xFF519CFF.toInt(), 0xFF3843BB.toInt(), 0xFF1A164B.toInt()),
+                floatArrayOf(0f, .25f, .68f, 1f), Shader.TileMode.CLAMP)
+        } else RadialGradient(-18f, -23f, 74f, decor.handColors, null, Shader.TileMode.CLAMP)
         handCoverPaint.shader = handPaint.shader
     }
 
@@ -1160,6 +1215,11 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         ovalRect.set(ORB_CX - ORB_RX, ORB_CY - ORB_RY, ORB_CX + ORB_RX, ORB_CY + ORB_RY)
         // Sphere shading: darker away from the light, a soft key light and a small glint that
         // slide opposite to where the head turns, and a thin bounce light on the lower rim.
+        // The Higgsfield texture already contains the key light; keep live lighting subtle.
+        bodyShadePaint.alpha = if (realisticObi) 100 else 255
+        keyLightPaint.alpha = if (realisticObi) 50 else 255
+        glintPaint.alpha = if (realisticObi) 35 else 255
+        rimLightPaint.alpha = if (realisticObi) 100 else 255
         canvas.drawOval(ovalRect, bodyShadePaint)
         val lightX = ORB_CX - ORB_RX * .36f - headX * 26f
         val lightY = ORB_CY - ORB_RY * .44f - headY * 14f
@@ -1171,7 +1231,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         glintPaint.shader.setLocalMatrix(lightMatrix)
         canvas.drawCircle(lightX - ORB_RX * .08f, lightY - ORB_RY * .1f, 66f, glintPaint)
         canvas.drawOval(ovalRect, rimLightPaint)
-        edgePaint.alpha = (120f + 20f * sin(now / 950f) + glow).toInt().coerceIn(0, 255)
+        edgePaint.alpha = ((120f + 20f * sin(now / 950f) + glow) * if (realisticObi) .35f else 1f).toInt().coerceIn(0, 255)
         canvas.drawOval(ovalRect, edgePaint)
 
         // Face features ride slightly ahead of the orb: they follow the gaze and fold downward when
@@ -1272,7 +1332,10 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         if (hat != WordSiegeMascotHat.NONE) {
             drawHat(canvas, now)
         } else {
-            decor.drawTuft(canvas, now)
+            if (realisticObi) {
+                drawLayer(canvas, "obi_realistic_tuft", pivotX = 700f, pivotY = 230f,
+                    rotation = sin(now / 900f) * 3f)
+            } else decor.drawTuft(canvas, now)
             decor.drawCrown(canvas)
         }
         if (sleeping) drawSleepZ(canvas, now)
@@ -1315,6 +1378,28 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             WordSiegeMascotEmotion.SPEAKING -> SPEAKING_POSE
         }
         values.copyInto(out)
+        if (realisticObi) when (mood) {
+            WordSiegeMascotEmotion.CALM -> {
+                out[P_OPEN] = .10f
+                out[P_SMILE] = .42f
+                out[P_CHEEK] = .18f
+            }
+            WordSiegeMascotEmotion.FOCUS -> {
+                out[P_BROW_TILT] = -.06f
+                out[P_SLANT] = -.06f
+                out[P_LID] = .18f
+            }
+            WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.JUMP -> out[P_LOWER] = .24f
+            WordSiegeMascotEmotion.LAUGH -> {
+                out[P_LID] = .85f
+                out[P_LOWER] = .90f
+            }
+            WordSiegeMascotEmotion.SURPRISED -> {
+                out[P_WIDTH] = .65f
+                out[P_IRIS] = .90f
+            }
+            else -> Unit
+        }
         if (skin == WordSiegeMascotSkin.GOLD_KING) regalPose(out)
     }
 
@@ -1686,6 +1771,14 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.scale(irisScale, irisScale, irisX, IRIS_Y)
         canvas.drawBitmap(layers.getValue(iris), null, artRect, atopPaint)
         canvas.restore()
+        if (realisticObi) {
+            eyeMaterialMatrix.setTranslate(eyeX, EYE_Y)
+            eyeVolumePaint.shader.setLocalMatrix(eyeMaterialMatrix)
+            eyeReflectionPaint.shader.setLocalMatrix(eyeMaterialMatrix)
+            ovalRect.set(eyeX - 150f, EYE_Y - 150f, eyeX + 150f, EYE_Y + 150f)
+            canvas.drawOval(ovalRect, eyeVolumePaint)
+            canvas.drawOval(ovalRect, eyeReflectionPaint)
+        }
         if (water > .02f) {
             // Glassy tear film along the lower lid.
             detailPaint.color = 0xFFBDF4FF.toInt()
@@ -1763,14 +1856,19 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val top = MOUTH_Y - smile * 8f - open * 26f + max(0f, -smile) * -18f
         val bottom = max(top + 10f + open * 40f, MOUTH_Y + smile * 34f + open * 108f - max(0f, -smile) * 22f)
         mouthPath.rewind()
-        mouthPath.moveTo(MOUTH_X - halfW, corner)
-        mouthPath.cubicTo(MOUTH_X - halfW * .45f, top, MOUTH_X + halfW * .45f, top, MOUTH_X + halfW, corner)
-        mouthPath.cubicTo(MOUTH_X + halfW * .5f, bottom, MOUTH_X - halfW * .5f, bottom, MOUTH_X - halfW, corner)
-        mouthPath.close()
+        if (realisticObi && abs(smile) < .15f && open > .6f) {
+            ovalRect.set(MOUTH_X - halfW * .72f, top, MOUTH_X + halfW * .72f, bottom)
+            mouthPath.addOval(ovalRect, Path.Direction.CW)
+        } else {
+            mouthPath.moveTo(MOUTH_X - halfW, corner)
+            mouthPath.cubicTo(MOUTH_X - halfW * .45f, top, MOUTH_X + halfW * .45f, top, MOUTH_X + halfW, corner)
+            mouthPath.cubicTo(MOUTH_X + halfW * .5f, bottom, MOUTH_X - halfW * .5f, bottom, MOUTH_X - halfW, corner)
+            mouthPath.close()
+        }
 
         if (open < .1f) {
             // Nearly closed: a single soft line keeps the expression readable.
-            mouthLinePaint.strokeWidth = 12f
+            mouthLinePaint.strokeWidth = if (realisticObi) 8f else 12f
             path.rewind()
             path.moveTo(MOUTH_X - halfW, MOUTH_Y - smile * 18f)
             path.quadTo(MOUTH_X, MOUTH_Y + smile * 30f, MOUTH_X + halfW, MOUTH_Y - smile * 18f)
@@ -1779,15 +1877,27 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
         layerRect.set(MOUTH_X - halfW - 20f, min(top, corner) - 20f, MOUTH_X + halfW + 20f, bottom + 20f)
         val checkpoint = canvas.saveLayer(layerRect, null)
+        if (realisticObi) {
+            mouthMaterialMatrix.setScale(1f, max(1f, bottom - top))
+            mouthMaterialMatrix.postTranslate(MOUTH_X, top)
+            mouthDepthShader.setLocalMatrix(mouthMaterialMatrix)
+            mouthFillPaint.shader = mouthDepthShader
+        } else mouthFillPaint.shader = null
         canvas.drawPath(mouthPath, mouthFillPaint)
         val tongueTop = bottom - (bottom - top) * .52f
         tonguePaint.shader = null
         tonguePaint.color = 0xFFFC77D9.toInt()
+        if (realisticObi) {
+            tongueMaterialMatrix.setScale(halfW * .8f, max(1f, (bottom - top) * .48f))
+            tongueMaterialMatrix.postTranslate(MOUTH_X - halfW * .18f, tongueTop + (bottom - top) * .18f)
+            tongueVolumeShader.setLocalMatrix(tongueMaterialMatrix)
+            tonguePaint.shader = tongueVolumeShader
+        }
         tonguePaint.alpha = (min(1f, (open - .1f) * 4f) * 255f).toInt()
         ovalRect.set(MOUTH_X - halfW * .62f, tongueTop, MOUTH_X + halfW * .62f, bottom + (bottom - top) * .45f)
         canvas.drawOval(ovalRect, tonguePaint)
         canvas.restoreToCount(checkpoint)
-        mouthLinePaint.strokeWidth = 10f
+        mouthLinePaint.strokeWidth = if (realisticObi) 6f else 10f
         canvas.drawPath(mouthPath, mouthLinePaint)
     }
 
@@ -2345,6 +2455,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         handPath.addCircle(0f, 0f, 58f, Path.Direction.CW)
         handPath.addCircle(-42f, -35f, 24f, Path.Direction.CW)
         canvas.drawPath(handPath, handPaint)
+        handLinePaint.strokeWidth = if (realisticObi) 3f else 5f
         canvas.drawCircle(0f, 0f, 58f, handLinePaint)
         canvas.drawCircle(-42f, -35f, 24f, handLinePaint)
         // Hide the outline where the thumb meets the palm.
@@ -2355,8 +2466,14 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             canvas.drawCircle(9f, -25f, 9f, padPaint)
             canvas.drawCircle(30f, -9f, 9f, padPaint)
         }
-        detailPaint.color = 0xCCFFFFFF.toInt()
-        canvas.drawCircle(18f, -23f, 12f, detailPaint)
+        if (realisticObi) {
+            detailPaint.color = 0x80FFFFFF.toInt()
+            ovalRect.set(-29f, -39f, 5f, -21f)
+            canvas.drawOval(ovalRect, detailPaint)
+        } else {
+            detailPaint.color = 0xCCFFFFFF.toInt()
+            canvas.drawCircle(18f, -23f, 12f, detailPaint)
+        }
         detailPaint.alpha = 255
         canvas.restore()
     }
