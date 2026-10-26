@@ -1,0 +1,66 @@
+name: Obi 2D visual QA
+
+on:
+  push:
+    branches: [codex/obi-realistic-2d-20261026]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: obi-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 36
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+      - name: Unit tests and debug build
+        run: ./gradlew --no-daemon -Pkotlin.compiler.execution.strategy=in-process :app:testDebugUnitTest :app:assembleDebug --stacktrace
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Capture production mascot rig
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          disable-animations: false
+          script: |
+            adb install -r -t app/build/outputs/apk/debug/app-debug.apk
+            adb logcat -c
+            adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity --es review_stage mascot-face
+            sleep 3
+            adb exec-out screencap -p > Obi-face-first.png
+            sleep 2
+            adb exec-out screencap -p > Obi-face-second.png
+            adb logcat -d -s AndroidRuntime:E > Obi-runtime.log
+            test -s Obi-face-first.png
+            test -s Obi-face-second.png
+            if grep -q 'FATAL EXCEPTION' Obi-runtime.log; then cat Obi-runtime.log; exit 1; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: obi-2d-visual-qa
+          path: |
+            Obi-face-*.png
+            Obi-runtime.log
+            app/build/test-results/testDebugUnitTest/*.xml
+            app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
